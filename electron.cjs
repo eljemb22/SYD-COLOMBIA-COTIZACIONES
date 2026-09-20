@@ -49,9 +49,15 @@ function startServer() {
     ? path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'server.cjs')
     : path.join(__dirname, 'dist', 'server.cjs');
 
+  const serverCwd = app.isPackaged
+    ? path.join(process.resourcesPath, 'app.asar.unpacked')
+    : __dirname;
+
   console.log('Iniciando servidor:', serverPath);
+  console.log('Directorio del servidor:', serverCwd);
 
   serverProcess = fork(serverPath, [], {
+    cwd: serverCwd,
     env: {
       ...process.env,
       NODE_ENV: 'production',
@@ -95,11 +101,7 @@ async function createWindow() {
     }
   });
 
-  if (app.isPackaged) {
-    await win.loadURL(`http://${HOST}:${PORT}`);
-  } else {
-    await win.loadURL(`http://${HOST}:${PORT}`);
-  }
+  await win.loadURL(`http://${HOST}:${PORT}`);
 }
 
 app.whenReady().then(createWindow);
