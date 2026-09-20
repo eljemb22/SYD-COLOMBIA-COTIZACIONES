@@ -1,0 +1,51 @@
+name: Build Windows
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar aplicacion
+        run: npm run build
+
+      - name: Generar archivos Windows
+        run: npx electron-builder --win nsis portable zip
+
+      - name: Subir instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: SYD-Colombia-Installer
+          path: release/*Setup*.exe
+          if-no-files-found: error
+
+      - name: Subir portable
+        uses: actions/upload-artifact@v4
+        with:
+          name: SYD-Colombia-Portable
+          path: release/*.exe
+          if-no-files-found: error
+
+      - name: Subir ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: SYD-Colombia-ZIP
+          path: release/*.zip
+          if-no-files-found: error
