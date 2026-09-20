@@ -1,0 +1,17 @@
+{
+  "short_name": "SYD Colombia",
+  "name": "SYD Colombia - Software de Cotizaciones y Licitaciones",
+  "description": "Sistema Biomédico de Cotizaciones, Licitaciones y Contratos",
+  "icons": [
+    {
+      "src": "/logos/syd_colombia_iso_iqnet.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512 any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0b1329",
+  "theme_color": "#0284c7",
+  "display": "standalone",
+  "orientation": "any"
+}

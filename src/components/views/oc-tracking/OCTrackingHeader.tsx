@@ -1,0 +1,392 @@
+import React, { useState } from 'react';
+import {
+  FileSpreadsheet,
+  Search,
+  Building2,
+  CreditCard,
+  Activity,
+  FolderTree,
+  ListFilter,
+  DollarSign,
+  Clock,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+import {
+  PAYMENT_TERMS_OPTIONS,
+  PAYMENT_STATUS_OPTIONS,
+  OC_STATUS_OPTIONS,
+} from '../../../utils/ocTrackingStorage';
+
+interface OCTrackingHeaderProps {
+  viewMode: 'hierarchy' | 'supplier' | 'table';
+  onChangeViewMode: (mode: 'hierarchy' | 'supplier' | 'table') => void;
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  filterSupplier: string;
+  onFilterSupplierChange: (s: string) => void;
+  filterPaymentTerms: string;
+  onFilterPaymentTermsChange: (p: string) => void;
+  filterPaymentStatus: string;
+  onFilterPaymentStatusChange: (p: string) => void;
+  filterStatus: string;
+  onFilterStatusChange: (st: string) => void;
+  filterAlertOnly: boolean;
+  onFilterAlertOnlyChange: (val: boolean) => void;
+  distinctSuppliers: string[];
+  kpis: {
+    pendingOCs: number;
+    pendingItems: number;
+    pendingTotalCostCOP: number;
+    completedOCs: number;
+    completedItems: number;
+    completedTotalCostCOP: number;
+    totalContracts: number;
+    totalOCs: number;
+    totalItems: number;
+    totalCostCOP: number;
+    totalCreditOrders?: number;
+    totalAlerts?: number;
+  };
+  onOpenNewOCModal?: () => void;
+  onOpenSuppliersModal: () => void;
+  onExportExcel: () => void;
+  onSyncAwarded: () => void;
+  isReadOnly?: boolean;
+}
+
+export const OCTrackingHeader: React.FC<OCTrackingHeaderProps> = ({
+  viewMode,
+  onChangeViewMode,
+  searchTerm,
+  onSearchChange,
+  filterSupplier,
+  onFilterSupplierChange,
+  filterPaymentTerms,
+  onFilterPaymentTermsChange,
+  filterPaymentStatus,
+  onFilterPaymentStatusChange,
+  filterStatus,
+  onFilterStatusChange,
+  distinctSuppliers,
+  kpis,
+  onOpenSuppliersModal,
+  onExportExcel,
+  isReadOnly = false,
+}) => {
+  const [isKpiCollapsed, setIsKpiCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('oc_kpis_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleKpiCollapse = () => {
+    setIsKpiCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('oc_kpis_collapsed', String(next));
+      } catch {
+        // Ignore local storage error
+      }
+      return next;
+    });
+  };
+
+  return (
+    <div className="space-y-3.5">
+      {/* Top Action Bar */}
+      <div className="flex items-center justify-end flex-wrap gap-2.5 pb-2 border-b border-[#334d6e]">
+        <button
+          type="button"
+          onClick={onOpenSuppliersModal}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition shadow-sm cursor-pointer"
+          title="Directorio de proveedores, modificar información, ver OCs ligadas y trazabilidad"
+        >
+          <Building2 className="w-4 h-4 text-purple-400" />
+          <span>Directorio de Proveedores</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onExportExcel}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition cursor-pointer"
+          title="Exportar base completa a Excel"
+        >
+          <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+          <span>Exportar Excel</span>
+        </button>
+      </div>
+
+      {/* KPI Section: Collapsible & Focused strictly on Pending and Completed Counts and Totals */}
+      <div className="bg-[#15253d] border border-[#334d6e] rounded-2xl p-3 shadow-md transition-all">
+        {/* KPI Panel Header with Collapse / Expand Toggle */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black text-white flex items-center gap-1.5">
+              <span>Resumen de Órdenes de Compra</span>
+            </span>
+            <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-mono font-bold">
+              {kpis.totalOCs} OCs Registradas
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={toggleKpiCollapse}
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-400 hover:text-sky-300 hover:bg-sky-950/40 px-2.5 py-1 rounded-lg border border-sky-500/30 transition cursor-pointer"
+            title={isKpiCollapsed ? 'Desplegar panel de métricas' : 'Plegar / Minimizar panel de métricas'}
+          >
+            {isKpiCollapsed ? (
+              <>
+                <ChevronDown className="w-3.5 h-3.5" />
+                <span>Desplegar Métricas</span>
+              </>
+            ) : (
+              <>
+                <ChevronUp className="w-3.5 h-3.5" />
+                <span>Plegar / Minimizar</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Collapsed State: Compact Single-Row Strip */}
+        {isKpiCollapsed ? (
+          <div className="mt-2 pt-2 border-t border-[#233a57] flex items-center justify-between flex-wrap gap-2 text-xs">
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+              <div className="flex items-center gap-1.5 text-amber-300 font-bold">
+                <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>Pendientes por Entrega:</span>
+                <strong className="text-white font-mono">{kpis.pendingOCs} OCs</strong>
+                <span className="text-amber-400/90 font-mono">(${kpis.pendingTotalCostCOP.toLocaleString('es-CO')})</span>
+              </div>
+
+              <span className="text-slate-600 hidden sm:inline">•</span>
+
+              <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Completadas:</span>
+                <strong className="text-white font-mono">{kpis.completedOCs} OCs</strong>
+                <span className="text-emerald-400/90 font-mono">(${kpis.completedTotalCostCOP.toLocaleString('es-CO')})</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Expanded State: 4 Clean, Focused Cards */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 mt-2.5 pt-2.5 border-t border-[#233a57] animate-fadeIn">
+            {/* Card 1: N° OCs Pendientes por Entrega */}
+            <div className="bg-[#0f1b2c] border border-amber-500/40 rounded-xl p-3 flex flex-col justify-between shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10.5px] text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>OCs Pendientes Entrega</span>
+                </span>
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">
+                  En Proceso
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between gap-1">
+                <span className="text-2xl font-black text-amber-300 font-mono">
+                  {kpis.pendingOCs}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {kpis.pendingItems} equipos pendientes
+                </span>
+              </div>
+            </div>
+
+            {/* Card 2: Valor Total OCs Pendientes */}
+            <div className="bg-[#0f1b2c] border border-amber-500/40 rounded-xl p-3 flex flex-col justify-between shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10.5px] text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Valor Total OCs Pendientes</span>
+                </span>
+                <span className="text-[9.5px] bg-amber-950/80 text-amber-200 border border-amber-500/40 px-1.5 py-0.5 rounded font-bold font-mono">
+                  COP
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between gap-1">
+                <span className="text-base sm:text-lg font-black text-amber-300 font-mono truncate">
+                  ${kpis.pendingTotalCostCOP.toLocaleString('es-CO')}
+                </span>
+              </div>
+            </div>
+
+            {/* Card 3: N° OCs Completadas */}
+            <div className="bg-[#0f1b2c] border border-emerald-500/40 rounded-xl p-3 flex flex-col justify-between shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10.5px] text-emerald-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>OCs Completadas</span>
+                </span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-bold">
+                  Entregadas
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between gap-1">
+                <span className="text-2xl font-black text-emerald-300 font-mono">
+                  {kpis.completedOCs}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {kpis.completedItems} equipos entregados
+                </span>
+              </div>
+            </div>
+
+            {/* Card 4: Valor Total OCs Completadas */}
+            <div className="bg-[#0f1b2c] border border-emerald-500/40 rounded-xl p-3 flex flex-col justify-between shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10.5px] text-emerald-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Valor Total OCs Completadas</span>
+                </span>
+                <span className="text-[9.5px] bg-emerald-950/80 text-emerald-200 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold font-mono">
+                  COP
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between gap-1">
+                <span className="text-base sm:text-lg font-black text-emerald-300 font-mono truncate">
+                  ${kpis.completedTotalCostCOP.toLocaleString('es-CO')}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* View Mode Selector + Filters Bar */}
+      <div className="bg-[#15253d] p-3 rounded-2xl border border-[#334d6e] space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+          {/* View Mode Switcher */}
+          <div className="flex items-center bg-[#101b2b] p-1 rounded-xl border border-[#334d6e]">
+            <button
+              type="button"
+              onClick={() => onChangeViewMode('hierarchy')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                viewMode === 'hierarchy'
+                  ? 'bg-sky-500 text-slate-950 font-black shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FolderTree className="w-3.5 h-3.5" />
+              <span>Por Contrato / Cliente (Jerárquico)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onChangeViewMode('supplier')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                viewMode === 'supplier'
+                  ? 'bg-sky-500 text-slate-950 font-black shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Por Proveedor / Fabricante</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onChangeViewMode('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-sky-500 text-slate-950 font-black shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ListFilter className="w-3.5 h-3.5" />
+              <span>Tabla Consolidada</span>
+            </button>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar por Contrato, Cliente, OC, Proveedor, Equipo, Modelo..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full bg-[#101b2b] border border-[#334d6e] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-400 outline-none focus:border-[#38bdf8]"
+            />
+          </div>
+        </div>
+
+        {/* Filter Dropdowns Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t border-[#223854] text-xs">
+          {/* Supplier Filter */}
+          <div className="flex items-center gap-1.5 bg-[#101b2b] px-2.5 py-1.5 rounded-xl border border-[#334d6e] focus-within:border-sky-400">
+            <Building2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <select
+              value={filterSupplier}
+              onChange={(e) => onFilterSupplierChange(e.target.value)}
+              className="w-full bg-[#101b2b] text-white font-semibold outline-none cursor-pointer"
+            >
+              <option value="ALL" className="bg-[#101b2b] text-white">Todos los Proveedores</option>
+              {Array.from(new Set(distinctSuppliers)).map((s, idx) => (
+                <option key={`filter_sup_${s}_${idx}`} value={s} className="bg-[#101b2b] text-white">
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Forma de Pago Filter (Crédito, Contado, 50/50, etc.) */}
+          <div className="flex items-center gap-1.5 bg-[#101b2b] px-2.5 py-1.5 rounded-xl border border-[#334d6e] focus-within:border-indigo-400">
+            <CreditCard className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <select
+              value={filterPaymentTerms}
+              onChange={(e) => onFilterPaymentTermsChange(e.target.value)}
+              className="w-full bg-[#101b2b] text-white font-semibold outline-none cursor-pointer"
+            >
+              <option value="ALL" className="bg-[#101b2b] text-white">Todas las Formas de Pago</option>
+              {PAYMENT_TERMS_OPTIONS.map((opt) => (
+                <option key={opt.terms} value={opt.terms} className="bg-[#101b2b] text-white">
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Estado de Pago Filter */}
+          <div className="flex items-center gap-1.5 bg-[#101b2b] px-2.5 py-1.5 rounded-xl border border-[#334d6e] focus-within:border-emerald-400">
+            <DollarSign className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <select
+              value={filterPaymentStatus}
+              onChange={(e) => onFilterPaymentStatusChange(e.target.value)}
+              className="w-full bg-[#101b2b] text-white font-semibold outline-none cursor-pointer"
+            >
+              <option value="ALL" className="bg-[#101b2b] text-white">Todos los Estados de Pago</option>
+              {PAYMENT_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.status} value={opt.status} className="bg-[#101b2b] text-white">
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Estado Logístico Filter */}
+          <div className="flex items-center gap-1.5 bg-[#101b2b] px-2.5 py-1.5 rounded-xl border border-[#334d6e] focus-within:border-purple-400">
+            <Activity className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+            <select
+              value={filterStatus}
+              onChange={(e) => onFilterStatusChange(e.target.value)}
+              className="w-full bg-[#101b2b] text-white font-semibold outline-none cursor-pointer"
+            >
+              <option value="ALL" className="bg-[#101b2b] text-white">Todos los Estados Operativos</option>
+              {OC_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.status} value={opt.status} className="bg-[#101b2b] text-white">
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

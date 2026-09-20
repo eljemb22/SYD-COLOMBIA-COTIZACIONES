@@ -1,0 +1,187 @@
+{
+  "entities": {
+    "SavedQuote": {
+      "title": "SavedQuote",
+      "description": "Cotizaciones guardadas y emitidas en el sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "quoteNumber": { "type": "string" },
+        "date": { "type": "string" },
+        "dateCode": { "type": "string" },
+        "clientName": { "type": "string" },
+        "nit": { "type": "string" },
+        "city": { "type": "string" },
+        "subtotal": { "type": "number" },
+        "iva": { "type": "number" },
+        "total": { "type": "number" },
+        "status": { "type": "string" },
+        "items": { "type": "array" },
+        "savedAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "quoteNumber", "clientName", "total"]
+    },
+    "MedicalEquipment": {
+      "title": "MedicalEquipment",
+      "description": "Catálogo maestro de equipos biomédicos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "name": { "type": "string" },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "cost": { "type": "number" },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "TenderClientProject": {
+      "title": "TenderClientProject",
+      "description": "Proyectos y licitaciones activas",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientName": { "type": "string" },
+        "processNumber": { "type": "string" },
+        "items": { "type": "array" }
+      },
+      "required": ["id", "clientName"]
+    },
+    "OCTrackingContract": {
+      "title": "OCTrackingContract",
+      "description": "Órdenes de compra y seguimiento de seriales y entregas",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "contractNumber": { "type": "string" },
+        "clientName": { "type": "string" },
+        "items": { "type": "array" }
+      },
+      "required": ["id", "contractNumber", "clientName"]
+    },
+    "TechnicalDocument": {
+      "title": "TechnicalDocument",
+      "description": "Documentos técnicos y registros sanitarios de equipos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "equipmentId": { "type": "string" },
+        "title": { "type": "string" },
+        "docType": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    },
+    "SystemUser": {
+      "title": "SystemUser",
+      "description": "Cuentas de usuario registradas en el sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["id", "username", "role"]
+    },
+    "SystemSettings": {
+      "title": "SystemSettings",
+      "description": "Configuraciones globales como tema visual y membrete",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "theme": { "type": "object" },
+        "letterheadUrl": { "type": "string" },
+        "_updatedAt": { "type": "string" }
+      }
+    },
+    "ClientRecord": {
+      "title": "ClientRecord",
+      "description": "Directorio de clientes institucionales y privados",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nit": { "type": "string" },
+        "city": { "type": "string" },
+        "department": { "type": "string" },
+        "address": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "contactPhone": { "type": "string" }
+      },
+      "required": ["id", "name", "nit"]
+    },
+    "SalesOrderRecord": {
+      "title": "SalesOrderRecord",
+      "description": "Órdenes de Venta (OV) comerciales y licitatorias",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "salesOrderNumber": { "type": "string" },
+        "clientName": { "type": "string" },
+        "status": { "type": "string" },
+        "totalValueCOP": { "type": "number" },
+        "items": { "type": "array" }
+      },
+      "required": ["id", "salesOrderNumber", "clientName"]
+    },
+    "SalesInvoiceRecord": {
+      "title": "SalesInvoiceRecord",
+      "description": "Facturas de venta electrónicas emitidas",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "salesOrderId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "totalAmountCOP": { "type": "number" },
+        "paymentStatus": { "type": "string" }
+      },
+      "required": ["id", "invoiceNumber", "salesOrderId", "clientName"]
+    }
+  },
+  "firestore": {
+    "saved_quotes": {
+      "entity": "SavedQuote",
+      "description": "Colección de cotizaciones guardadas"
+    },
+    "equipments": {
+      "entity": "MedicalEquipment",
+      "description": "Colección de catálogo de equipos"
+    },
+    "tender_projects": {
+      "entity": "TenderClientProject",
+      "description": "Colección de proyectos y licitaciones"
+    },
+    "oc_contracts": {
+      "entity": "OCTrackingContract",
+      "description": "Colección de contratos y seguimiento de OC"
+    },
+    "technical_documents": {
+      "entity": "TechnicalDocument",
+      "description": "Colección de documentos técnicos"
+    },
+    "system_users": {
+      "entity": "SystemUser",
+      "description": "Colección de usuarios del sistema"
+    },
+    "system_settings": {
+      "entity": "SystemSettings",
+      "description": "Colección de configuración del sistema y membrete"
+    },
+    "clients": {
+      "entity": "ClientRecord",
+      "description": "Colección de clientes registrados"
+    },
+    "sales_orders": {
+      "entity": "SalesOrderRecord",
+      "description": "Colección de órdenes de venta"
+    },
+    "sales_invoices": {
+      "entity": "SalesInvoiceRecord",
+      "description": "Colección de facturas de venta"
+    }
+  }
+}

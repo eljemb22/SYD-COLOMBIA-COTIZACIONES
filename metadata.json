@@ -1,0 +1,8 @@
+{
+  "name": "SYD Colombia - Cotización y Licitaciones",
+  "description": "Sistema de gestión biomédica y cotizaciones para SYD Colombia con sincronización en la nube mediante Firebase Firestore, integración con Gmail, órdenes de compra, licitaciones y catálogo maestro.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
