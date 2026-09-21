@@ -1620,15 +1620,84 @@ export default function App() {
 
   // Sales Orders (Window 7) Update Handlers
   const handleUpdateSalesOrders = (updated: SalesOrderRecord[]) => {
-    setSalesOrders(updated);
+    setSalesOrders((previous) => {
+      const previousMap = new Map(previous.map((order) => [order.id, order]));
+
+      for (const order of updated) {
+        const previousOrder = previousMap.get(order.id);
+
+        if (!previousOrder || JSON.stringify(previousOrder) !== JSON.stringify(order)) {
+          saveSingleSalesOrderToFirestore(order).catch(() => {});
+        }
+      }
+
+      return updated;
+    });
+
     saveStoredSalesOrders(updated);
-    saveSalesOrdersBatchToFirestore(updated).catch(() => {});
   };
 
   const handleUpdateSalesInvoices = (updated: SalesInvoiceRecord[]) => {
-    setSalesInvoices(updated);
+    setSalesInvoices((previous) => {
+      const previousMap = new Map(previous.map((invoice) => [invoice.id, invoice]));
+
+      for (const invoice of updated) {
+        const previousInvoice = previousMap.get(invoice.id);
+
+        if (!previousInvoice || JSON.stringify(previousInvoice) !== JSON.stringify(invoice)) {
+          saveSingleSalesInvoiceToFirestore(invoice).catch(() => {});
+        }
+      }
+
+      return updated;
+    });
+
     saveStoredSalesInvoices(updated);
-    saveSalesInvoicesBatchToFirestore(updated).catch(() => {});
+  };
+
+  const handleUpdateOCContracts = (updated: OCTrackingContract[]) => {
+    const previousMap = new Map(ocContracts.map((contract) => [contract.id, contract]));
+    const updatedMap = new Map(updated.map((contract) => [contract.id, contract]));
+
+    // Detectar contratos nuevos o modificados y guardar únicamente esos documentos.
+    const changedContracts: OCTrackingContract[] = [];
+
+    for (const contract of updated) {
+      const previous = previousMap.get(contract.id);
+
+      if (!previous || JSON.stringify(previous) !== JSON.stringify(contract)) {
+        changedContracts.push(contract);
+      }
+    }
+
+    // Detectar contratos eliminados y borrarlos directamente de Firestore.
+    const deletedIds: string[] = [];
+
+    for (const previous of ocContracts) {
+      if (!updatedMap.has(previous.id)) {
+        deletedIds.push(previous.id);
+      }
+    }
+
+    setOcContracts(updated);
+    saveStoredOCTrackingContracts(updated);
+
+    // Cambios individuales: escritura inmediata.
+    if (changedContracts.length > 0 && changedContracts.length <= 10) {
+      for (const contract of changedContracts) {
+        saveSingleOCTrackingContractToFirestore(contract).catch(() => {});
+      }
+    }
+
+    // Operaciones masivas: conservar escritura por lote.
+    if (changedContracts.length > 10) {
+      saveOCTrackingContractsToFirestore(changedContracts).catch(() => {});
+    }
+
+    // Eliminaciones: borrar únicamente los documentos eliminados.
+    for (const contractId of deletedIds) {
+      deleteOCTrackingContractFromFirestore(contractId).catch(() => {});
+    }
   };
 
   const handleGenerateOCTrackingFromSalesOrder = (salesOrder: SalesOrderRecord) => {
@@ -1653,12 +1722,13 @@ export default function App() {
       updatedContracts = ocContracts.map((c) => (c.id === existing.id ? newContract : c));
       setOcContracts(updatedContracts);
       saveStoredOCTrackingContracts(updatedContracts);
+      saveSingleOCTrackingContractToFirestore(newContract).catch(() => {});
     } else {
       newContract = createOCTrackingContractFromSalesOrder(salesOrder, equipments);
       updatedContracts = [newContract, ...ocContracts];
       setOcContracts(updatedContracts);
       saveStoredOCTrackingContracts(updatedContracts);
-      saveOCTrackingContractsToFirestore(updatedContracts).catch(() => {});
+      saveSingleOCTrackingContractToFirestore(newContract).catch(() => {});
     }
 
     const updatedOrders = salesOrders.map((o) =>
@@ -1939,7 +2009,7 @@ export default function App() {
           {activeTab === 'seguimiento_oc' && (
             <OCTrackingView
               contracts={ocContracts}
-              onUpdateContracts={setOcContracts}
+              onUpdateContracts={handleUpdateOCContracts}
               tenderClients={tenderClients}
               equipments={equipments}
               currentUser={currentUser}
@@ -1974,7 +2044,7 @@ export default function App() {
               documents={documents}
               equipments={equipments}
               ocContracts={ocContracts}
-              onUpdateContracts={setOcContracts}
+              onUpdateContracts={handleUpdateOCContracts}
               onOpenNewDocumentModal={handleOpenDocumentModal}
               onSaveDocument={handleSaveNewDocument}
               onDeleteDocument={handleDeleteDocument}

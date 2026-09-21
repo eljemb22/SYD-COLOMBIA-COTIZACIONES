@@ -19,7 +19,7 @@ import {
 import {
   saveSingleEquipmentToFirestore,
   saveEquipmentsBatchToFirestore,
-  saveOCTrackingContractsToFirestore,
+  saveSingleOCTrackingContractToFirestore,
 } from '../services/realtimeSync';
 
 export interface ExtractedPartCandidate {
@@ -469,9 +469,9 @@ export async function convertOrderToPurchaseOrderAndSyncParts(params: {
     updatedContracts = [targetContract, ...existingContracts];
   }
 
-  // Persist contracts
+  // Persist local cache and only the affected contract in Firestore.
   saveStoredOCTrackingContracts(updatedContracts);
-  saveOCTrackingContractsToFirestore(updatedContracts).catch(() => {});
+  saveSingleOCTrackingContractToFirestore(targetContract).catch(() => {});
 
   // Dispatch storage event so all tabs/windows update in real time
   if (typeof window !== 'undefined') {

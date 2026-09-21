@@ -55,7 +55,7 @@ import { SalesOrderPrintModal } from './sales-orders/SalesOrderPrintModal';
 import { SalesOrderDetailsModal } from './sales-orders/SalesOrderDetailsModal';
 import { ContractTraceabilityView } from './sales-orders/ContractTraceabilityView';
 import { formatCOP } from '../../utils/formatters';
-import { deleteSalesOrderFromFirestore } from '../../services/realtimeSync';
+import { deleteSalesOrderFromFirestore, deleteSalesInvoiceFromFirestore } from '../../services/realtimeSync';
 import {
   ExcelColumnConfig,
   ExcelColumnHeader,
@@ -439,8 +439,11 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   const confirmDeleteOrder = () => {
     if (!orderToDelete) return;
     const orderId = orderToDelete.id;
+
+    // Actualizar únicamente el estado local.
+    // Firestore elimina directamente el documento correspondiente.
     const updated = salesOrders.filter((o) => o.id !== orderId);
-    onUpdateSalesOrders(updated);
+    onUpdateSalesOrders(updated.filter((o) => o.id !== orderId));
     deleteSalesOrderFromFirestore(orderId).catch(console.error);
 
     if (viewingOrder?.id === orderId) setViewingOrder(null);
@@ -472,7 +475,11 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   const handleDeleteInvoice = (invoiceId: string) => {
     const invoiceToDelete = salesInvoices.find((i) => i.id === invoiceId);
     const updated = salesInvoices.filter((i) => i.id !== invoiceId);
+
+    // Eliminar únicamente esta factura de Firestore.
+    // La colección completa ya no se vuelve a guardar.
     onUpdateSalesInvoices(updated);
+    deleteSalesInvoiceFromFirestore(invoiceId).catch(console.error);
 
     // If invoice was linked to an OV, recalculate order's invoice state
     if (invoiceToDelete?.salesOrderId) {

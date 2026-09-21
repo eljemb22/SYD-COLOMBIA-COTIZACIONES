@@ -12,7 +12,6 @@ import {
 } from '../types';
 import { MASTER_SUPPLIERS_CATALOG } from '../data/masterSuppliersCatalog';
 import {
-  saveOCTrackingContractsToFirestore,
   saveSuppliersBatchToFirestore,
   deleteSupplierFromFirestore,
   clearAllSuppliersFromFirestore,
@@ -499,8 +498,9 @@ export const getStoredOCTrackingContracts = (): OCTrackingContract[] => {
 
 export const saveStoredOCTrackingContracts = (contracts: OCTrackingContract[]): void => {
   try {
+    // localStorage is only a local cache.
+    // Firestore synchronization is handled explicitly by realtimeSync.ts callers.
     localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(contracts));
-    saveOCTrackingContractsToFirestore(contracts).catch((e) => console.error('Cloud OC sync error:', e));
   } catch (error) {
     console.error('Error saving OC tracking storage:', error);
   }

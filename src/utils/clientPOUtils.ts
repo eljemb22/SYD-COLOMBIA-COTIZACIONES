@@ -14,7 +14,7 @@ import {
 import {
   saveEquipmentsBatchToFirestore,
   saveTenderClientsToFirestore,
-  saveOCTrackingContractsToFirestore,
+  saveSingleOCTrackingContractToFirestore,
 } from '../services/realtimeSync';
 
 export interface ClientPOEquipmentItem {
@@ -692,7 +692,7 @@ export function generateSupplierOCsFromClientPO(
 
   try {
     localStorage.setItem('syd_oc_contracts_v1', JSON.stringify(updatedContracts));
-    saveOCTrackingContractsToFirestore(updatedContracts).catch(() => {});
+    saveSingleOCTrackingContractToFirestore(newContract).catch(() => {});
   } catch (e) {
     console.error('Error saving updated OC contracts:', e);
   }
