@@ -826,7 +826,14 @@ export default function App() {
       });
 
       saveStoredSalesOrders(updatedList);
-      saveSalesOrdersBatchToFirestore(updatedList).catch(() => {});
+      missingTenders.forEach((t) => {
+        const newOV = updatedList.find(
+          (o) => o.contractId === t.id || o.tenderClientId === t.id
+        );
+        if (newOV) {
+          saveSingleSalesOrderToFirestore(newOV).catch(() => {});
+        }
+      });
       return updatedList;
     });
   }, [tenderClients]);
@@ -1241,7 +1248,9 @@ export default function App() {
     if (newClients.length === 0) return;
     setTenderClients((prev) => [...newClients, ...prev]);
     setActiveTenderClientId(newClients[0].id);
-    saveTenderClientsToFirestore(newClients).catch(() => {});
+    newClients.forEach((client) => {
+      saveSingleTenderClientToFirestore(client).catch(() => {});
+    });
 
     // Sync all equipments to Catalog (Ventana 3)
     const allItems = newClients.flatMap((c) => c.items || []);
@@ -1518,7 +1527,15 @@ export default function App() {
     autoRegisterSuppliersFromEquipments(items);
     setEquipments((prev) => {
       const res = batchSyncTenderItemsToCatalog(items, prev);
-      saveEquipmentsBatchToFirestore(res.updatedEquipments).catch(() => {});
+      const previousById = new Map(prev.map((e) => [e.id, e]));
+
+      res.updatedEquipments.forEach((equipment) => {
+        const previous = previousById.get(equipment.id);
+        if (!previous || JSON.stringify(previous) !== JSON.stringify(equipment)) {
+          saveSingleEquipmentToFirestore(equipment).catch(() => {});
+        }
+      });
+
       return res.updatedEquipments;
     });
   };
@@ -1587,7 +1604,9 @@ export default function App() {
     // Auto-register all suppliers from imported/updated catalog items into Ventana 5 (Directorio de Proveedores)
     autoRegisterSuppliersFromEquipments(updatedCatalog);
     setEquipments(updatedCatalog);
-    saveEquipmentsBatchToFirestore(updatedCatalog).catch(() => {});
+    updatedCatalog.forEach((equipment) => {
+      saveSingleEquipmentToFirestore(equipment).catch(() => {});
+    });
   };
 
   const handleDeleteEquipment = (eqId: string) => {
@@ -1809,11 +1828,8 @@ export default function App() {
 
   const handleConvertQuoteToTender = (quote: SavedQuote | { header: QuoteHeader; items: QuoteItem[] }) => {
     const newTender = createTenderProjectFromQuote(quote, tenderClients, equipments);
-    setTenderClients((prev) => {
-      const updated = [newTender, ...prev];
-      saveTenderClientsToFirestore(updated).catch(() => {});
-      return updated;
-    });
+    setTenderClients((prev) => [newTender, ...prev]);
+    saveSingleTenderClientToFirestore(newTender).catch(() => {});
     setActiveTenderClientId(newTender.id);
     setActiveTab('licitaciones');
     confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
@@ -2228,7 +2244,11 @@ export default function App() {
               try {
                 localStorage.setItem('syd_equipments_catalog', JSON.stringify(updated));
               } catch (_) {}
-              saveEquipmentsBatchToFirestore(updated).catch(() => {});
+              newEqs.forEach((equipment) => {
+                if (updated.some((e) => e.id === equipment.id || e.code === equipment.code)) {
+                  saveSingleEquipmentToFirestore(equipment).catch(() => {});
+                }
+              });
               return updated;
             });
           }}

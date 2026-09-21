@@ -11,11 +11,6 @@ import {
   TenderItem,
   TechnicalRequirement,
 } from '../types';
-import {
-  saveSalesOrdersBatchToFirestore,
-  saveSalesInvoicesBatchToFirestore,
-} from '../services/realtimeSync';
-
 const SALES_ORDERS_STORAGE_KEY = 'syd_sales_orders_v1';
 const SALES_INVOICES_STORAGE_KEY = 'syd_sales_invoices_v1';
 
@@ -49,7 +44,6 @@ export function getStoredSalesOrders(): SalesOrderRecord[] {
 export function saveStoredSalesOrders(orders: SalesOrderRecord[]): void {
   try {
     localStorage.setItem(SALES_ORDERS_STORAGE_KEY, JSON.stringify(orders));
-    saveSalesOrdersBatchToFirestore(orders).catch(() => {});
   } catch (e) {
     console.error('Error saving sales orders to localStorage:', e);
   }
@@ -80,7 +74,6 @@ export function getStoredSalesInvoices(): SalesInvoiceRecord[] {
 export function saveStoredSalesInvoices(invoices: SalesInvoiceRecord[]): void {
   try {
     localStorage.setItem(SALES_INVOICES_STORAGE_KEY, JSON.stringify(invoices));
-    saveSalesInvoicesBatchToFirestore(invoices).catch(() => {});
   } catch (e) {
     console.error('Error saving sales invoices to localStorage:', e);
   }

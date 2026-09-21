@@ -455,33 +455,39 @@ export async function writeInChunks<T extends { id?: string; code?: string }>(
   for (let i = 0; i < validItems.length; i += CHUNK_SIZE) {
     const chunk = validItems.slice(i, i + CHUNK_SIZE);
     
-    // Batch commit with safe timeout fallback (never blocks indefinitely)
-    const commitPromise = (async () => {
+    // Commit each batch completely before continuing.
+    // Do not use a timeout race: a timed-out Firestore commit can
+    // continue in the background and overwrite newer changes or
+    // recreate documents that were already deleted.
+    try {
       const batch = writeBatch(db);
+
       chunk.forEach((item) => {
         try {
           const docRef = doc(db, collectionName, String(item.id));
-          batch.set(docRef, sanitizeForFirestore({ ...item, _updatedAt: new Date().toISOString() }), { merge: true });
+          batch.set(
+            docRef,
+            sanitizeForFirestore({
+              ...item,
+              _updatedAt: new Date().toISOString(),
+            }),
+            { merge: true }
+          );
         } catch (itemErr) {
           // ignore item formatting issues
         }
       });
+
       await batch.commit();
-    })();
-
-    const timeoutPromise = new Promise<void>((resolve) => {
-      setTimeout(() => {
-        resolve();
-      }, 4000); // 4 seconds max per chunk before proceeding smoothly
-    });
-
-    try {
-      await Promise.race([commitPromise, timeoutPromise]);
     } catch (batchErr) {
-      // ignore transient batch commit error
+      console.error(`Firestore batch write error (${collectionName}):`, batchErr);
+      throw batchErr;
     }
 
-    onProgressChunk?.(Math.min(i + chunk.length, validItems.length), validItems.length);
+    onProgressChunk?.(
+      Math.min(i + chunk.length, validItems.length),
+      validItems.length
+    );
   }
 }
 
