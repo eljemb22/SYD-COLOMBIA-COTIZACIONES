@@ -24,6 +24,7 @@ jobs:
           npm install
           npm install @rollup/rollup-win32-x64-msvc --save-dev
           npm install lightningcss-win32-x64-msvc --save-dev
+          npm install @tailwindcss/oxide-win32-x64-msvc --save-dev
           npm install --no-save electron electron-builder
 
       - name: Compilar aplicacion
