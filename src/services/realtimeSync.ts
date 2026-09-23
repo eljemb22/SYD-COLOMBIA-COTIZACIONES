@@ -114,6 +114,11 @@ let isSyncingFromRemote = false;
 let isRestoringFromBackup = false;
 let lastRemoteUpdateTime = 0;
 
+// IDs de equipos eliminados recientemente.
+// Evita que una escritura antigua pendiente pueda recrearlos.
+const recentlyDeletedEquipmentIds = new Map<string, number>();
+const RECENT_DELETE_PROTECTION_MS = 10000;
+
 export function recordRemoteUpdateReceived(): void {
   lastRemoteUpdateTime = Date.now();
 }
@@ -168,10 +173,21 @@ export function toSafeDocId(rawId: string | number | undefined, fallbackPrefix =
 export async function deleteEquipmentFromFirestore(equipmentId: string): Promise<void> {
   try {
     const safeId = toSafeDocId(equipmentId, 'eq');
+
+    // Marcar inmediatamente la eliminación para bloquear
+    // cualquier escritura antigua que todavía esté pendiente.
+    recentlyDeletedEquipmentIds.set(safeId, Date.now());
+
     const docRef = doc(db, 'equipments', safeId);
     await deleteDoc(docRef);
   } catch (err) {
+    // Si la eliminación falla, quitar la protección para permitir
+    // que el equipo pueda volver a guardarse correctamente.
+    const safeId = toSafeDocId(equipmentId, 'eq');
+    recentlyDeletedEquipmentIds.delete(safeId);
+
     handleFirestoreError(err, OperationType.DELETE, `equipments/${equipmentId}`);
+    throw err;
   }
 }
 
@@ -574,12 +590,49 @@ export async function directBatchRestoreToFirestore(
 
 export async function saveEquipmentsBatchToFirestore(equipments: MedicalEquipment[]): Promise<void> {
   if (isSyncingFromRemote || !equipments || equipments.length === 0) return;
+
   try {
     localStorage.removeItem('syd_catalog_cleared_by_admin');
   } catch (e) {}
+
+  // Copiar el catálogo en el momento de programar la escritura.
+  // Así evitamos depender de una referencia que pueda cambiar después.
+  const equipmentSnapshot = equipments.map((equipment) => ({ ...equipment }));
+
   debounceWrite('batch_equipments', 500, async () => {
     try {
-      await writeInChunks('equipments', equipments);
+      const now = Date.now();
+
+      // Limpiar protecciones antiguas y excluir de esta escritura
+      // los equipos eliminados recientemente.
+      const protectedIds = new Set<string>();
+
+      for (const [id, deletedAt] of recentlyDeletedEquipmentIds.entries()) {
+        if (now - deletedAt < RECENT_DELETE_PROTECTION_MS) {
+          protectedIds.add(id);
+        } else {
+          recentlyDeletedEquipmentIds.delete(id);
+        }
+      }
+
+      const safeEquipments = equipmentSnapshot.filter((equipment) => {
+        if (!equipment?.id) return false;
+
+        const safeId = toSafeDocId(equipment.id, 'eq');
+
+        if (protectedIds.has(safeId)) {
+          console.warn(
+            `[SYNC] Escritura por lote bloqueada para equipo eliminado recientemente: ${safeId}`
+          );
+          return false;
+        }
+
+        return true;
+      });
+
+      if (safeEquipments.length === 0) return;
+
+      await writeInChunks('equipments', safeEquipments);
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'equipments');
     }
@@ -588,12 +641,40 @@ export async function saveEquipmentsBatchToFirestore(equipments: MedicalEquipmen
 
 export async function saveSingleEquipmentToFirestore(equipment: MedicalEquipment): Promise<void> {
   if (!equipment || !equipment.id) return;
+
   try {
     const safeId = toSafeDocId(equipment.id, 'eq');
+
+    // Si este equipo fue eliminado recientemente, no permitir que
+    // una escritura antigua pendiente lo vuelva a crear.
+    const deletedAt = recentlyDeletedEquipmentIds.get(safeId);
+    if (deletedAt !== undefined) {
+      const age = Date.now() - deletedAt;
+
+      if (age < RECENT_DELETE_PROTECTION_MS) {
+        console.warn(
+          `[SYNC] Escritura bloqueada para equipo eliminado recientemente: ${safeId}`
+        );
+        return;
+      }
+
+      recentlyDeletedEquipmentIds.delete(safeId);
+    }
+
     const docRef = doc(db, 'equipments', safeId);
-    await setDoc(docRef, sanitizeForFirestore({ ...equipment, id: safeId, _updatedAt: new Date().toISOString() }), { merge: true });
+
+    await setDoc(
+      docRef,
+      sanitizeForFirestore({
+        ...equipment,
+        id: safeId,
+        _updatedAt: new Date().toISOString(),
+      }),
+      { merge: true }
+    );
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `equipments/${equipment.id}`);
+    throw err;
   }
 }
 
