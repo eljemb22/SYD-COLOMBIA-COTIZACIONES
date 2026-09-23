@@ -26,6 +26,7 @@ export function useAutoReloadOnServerUpdate() {
   const isReloadingRef = useRef<boolean>(false);
   const initialFirestoreSignalRef = useRef<number | null>(null);
   const serverWasOfflineRef = useRef<boolean>(false);
+  const mountTimeRef = useRef<number>(Date.now());
 
   // Initialize current version in storage on mount
   useEffect(() => {
@@ -34,6 +35,13 @@ export function useAutoReloadOnServerUpdate() {
 
   const triggerAppReload = (reason: string, targetVer?: string) => {
     if (isReloadingRef.current) return;
+
+    // Guard: Prevent reload during the first 10 seconds of app load
+    if (Date.now() - mountTimeRef.current < 10000) {
+      console.log('[AutoReload] Reload ignored during initial boot grace period:', reason);
+      return;
+    }
+
     isReloadingRef.current = true;
     console.log('[AutoReload] Triggering reload due to:', reason);
 
@@ -171,7 +179,7 @@ export function useAutoReloadOnServerUpdate() {
           return;
         }
 
-        // Server booted with a new build or version
+        // Server booted with a new build or version (only trigger if current session has been running for at least 15s)
         if (
           (initialBootTimeRef.current !== null && data.bootTime !== initialBootTimeRef.current) ||
           (data.version && initialVersionRef.current && data.version !== initialVersionRef.current)

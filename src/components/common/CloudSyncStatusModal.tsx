@@ -27,6 +27,8 @@ import {
 import { SyncConnectionStatus } from '../../services/realtimeSync';
 import {
   getPublicShareAppUrl,
+  getPublishedStudioAppUrl,
+  getCloudRunShareAppUrl,
   getAppQrCodeUrl,
   generateLocalhostBatScript,
   generateLocalhostHtmlFile,
@@ -56,6 +58,8 @@ export const CloudSyncStatusModal: React.FC<CloudSyncStatusModalProps> = ({
   onSendBackupNow,
 }) => {
   const [copiedPublic, setCopiedPublic] = useState(false);
+  const [copiedStudio, setCopiedStudio] = useState(false);
+  const [copiedCloudRun, setCopiedCloudRun] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
@@ -93,11 +97,13 @@ export const CloudSyncStatusModal: React.FC<CloudSyncStatusModalProps> = ({
     }
   };
 
+  const publishedStudioUrl = getPublishedStudioAppUrl();
+  const cloudRunUrl = getCloudRunShareAppUrl();
   const publicShareUrl = getPublicShareAppUrl();
-  const qrCodeUrl = getAppQrCodeUrl(publicShareUrl, 220);
+  const qrCodeUrl = getAppQrCodeUrl(publishedStudioUrl, 220);
 
   const handleDownloadBat = () => {
-    const script = generateLocalhostBatScript(publicShareUrl, 3000);
+    const script = generateLocalhostBatScript(publishedStudioUrl, 3000);
     const blob = new Blob([script], { type: 'application/x-bat;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -401,15 +407,15 @@ export const CloudSyncStatusModal: React.FC<CloudSyncStatusModalProps> = ({
             </div>
           </div>
 
-          {/* Primary Share Link Card */}
+          {/* Primary Share Link Card: Published AI Studio URL */}
           <div className="space-y-3 p-4 bg-gradient-to-r from-slate-950 via-indigo-950/40 to-slate-950 border border-sky-500/40 rounded-2xl shadow-lg">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <label className="text-xs font-bold text-white flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-sky-400" />
-                <span>Enlace Oficial Compartido (Para Otros PC, Móviles y Tablets)</span>
+                <span>1. Enlace Publicado Oficial (AI Studio)</span>
               </label>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                Acceso Público
+                Dominio Oficial Publish
               </span>
             </div>
 
@@ -417,20 +423,20 @@ export const CloudSyncStatusModal: React.FC<CloudSyncStatusModalProps> = ({
               <input
                 type="text"
                 readOnly
-                value={publicShareUrl}
+                value={publishedStudioUrl}
                 className="bg-transparent text-xs text-cyan-200 font-mono w-full px-2 py-1 outline-none select-all min-w-0"
               />
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(publicShareUrl, setCopiedPublic)}
+                  onClick={() => copyToClipboard(publishedStudioUrl, setCopiedStudio)}
                   className={`flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg transition shrink-0 cursor-pointer ${
-                    copiedPublic
+                    copiedStudio
                       ? 'bg-emerald-600 text-white'
                       : 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white shadow-md active:scale-95 border border-sky-400/40'
                   }`}
                 >
-                  {copiedPublic ? (
+                  {copiedStudio ? (
                     <>
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
                       <span>¡Copiado!</span>
@@ -445,7 +451,7 @@ export const CloudSyncStatusModal: React.FC<CloudSyncStatusModalProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => window.open(publicShareUrl, '_blank', 'noopener,noreferrer')}
+                  onClick={() => window.open(publishedStudioUrl, '_blank', 'noopener,noreferrer')}
                   title="Abrir enlace en una pestaña nueva para verificarlo"
                   className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer active:scale-95"
                 >
@@ -491,6 +497,61 @@ export const CloudSyncStatusModal: React.FC<CloudSyncStatusModalProps> = ({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Secondary Alternative Card: Direct Google Cloud Run URL */}
+          <div className="space-y-3 p-4 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-700/80 rounded-2xl shadow-lg">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <label className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                <Server className="w-4 h-4 text-cyan-400" />
+                <span>2. Enlace Directo Servidor en la Nube (Google Cloud Run)</span>
+              </label>
+              <span className="text-[10px] bg-sky-500/20 text-sky-300 font-bold px-2.5 py-0.5 rounded-full border border-sky-500/30">
+                Servidor Activo
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 bg-slate-950 border border-slate-800 rounded-xl">
+              <input
+                type="text"
+                readOnly
+                value={cloudRunUrl}
+                className="bg-transparent text-xs text-slate-300 font-mono w-full px-2 py-1 outline-none select-all min-w-0"
+              />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(cloudRunUrl, setCopiedCloudRun)}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition shrink-0 cursor-pointer ${
+                    copiedCloudRun
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 active:scale-95'
+                  }`}
+                >
+                  {copiedCloudRun ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>¡Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copiar</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.open(cloudRunUrl, '_blank', 'noopener,noreferrer')}
+                  title="Abrir enlace en una pestaña nueva para verificarlo"
+                  className="flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer active:scale-95"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Probar ↗</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Troubleshooting Accordion / Guide */}

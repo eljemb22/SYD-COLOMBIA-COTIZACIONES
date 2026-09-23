@@ -1595,35 +1595,43 @@ export async function fetchLatestServerBackupState(): Promise<{
 export async function syncDatabaseStateToServer(params: {
   equipments: MedicalEquipment[];
   quotes: SavedQuote[];
-  tenders: TenderClientProject[];
-  contracts: OCTrackingContract[];
+  tenders?: TenderClientProject[];
+  tenderProjects?: TenderClientProject[];
+  contracts?: OCTrackingContract[];
+  ocContracts?: OCTrackingContract[];
   salesOrders?: SalesOrderRecord[];
   salesInvoices?: SalesInvoiceRecord[];
-  documents: TechnicalDocument[];
-  users: StoredUserAccount[];
+  documents?: TechnicalDocument[];
+  technicalDocuments?: TechnicalDocument[];
+  users?: StoredUserAccount[];
 }): Promise<void> {
   try {
     const clientId = getClientSessionId();
+    const actualTenders = params.tenders || params.tenderProjects || [];
+    const actualContracts = params.contracts || params.ocContracts || [];
+    const actualDocuments = params.documents || params.technicalDocuments || [];
+    const actualUsers = params.users || [];
+
     const payload = {
       clientId,
       timestamp: new Date().toISOString(),
       equipmentsCount: params.equipments.length,
       quotesCount: params.quotes.length,
-      tendersCount: params.tenders.length,
-      contractsCount: params.contracts.length,
+      tendersCount: actualTenders.length,
+      contractsCount: actualContracts.length,
       salesOrdersCount: (params.salesOrders || []).length,
       salesInvoicesCount: (params.salesInvoices || []).length,
-      documentsCount: params.documents.length,
-      usersCount: params.users.length,
+      documentsCount: actualDocuments.length,
+      usersCount: actualUsers.length,
       data: {
         equipments: params.equipments,
         quotes: params.quotes,
-        tenderProjects: params.tenders,
-        ocContracts: params.contracts,
+        tenderProjects: actualTenders,
+        ocContracts: actualContracts,
         salesOrders: params.salesOrders || [],
         salesInvoices: params.salesInvoices || [],
-        technicalDocuments: params.documents,
-        systemUsers: params.users.map(u => ({ id: u.id, username: u.username, role: u.role, name: u.name, email: u.email, roleLabel: u.roleLabel, department: u.department })),
+        technicalDocuments: actualDocuments,
+        systemUsers: actualUsers.map(u => ({ id: u.id, username: u.username, role: u.role, name: u.name, email: u.email, roleLabel: u.roleLabel, department: u.department })),
       },
     };
 

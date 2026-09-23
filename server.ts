@@ -2582,6 +2582,17 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con la siguiente estructura:
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
+  // Version check for client synchronization and auto-reloading
+  app.get('/api/version', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.json({
+      bootTime: SERVER_BOOT_TIME,
+      version: APP_VERSION,
+      timestamp: Date.now(),
+      status: 'ok',
+    });
+  });
+
   // State cache for server-side hourly backup tasks
   const BACKUP_CACHE_FILE = path.join(process.cwd(), 'data_backup_snapshot.json');
   let inMemoryLatestState: BackupDataPayload | null = null;

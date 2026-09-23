@@ -30,6 +30,7 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
   private timerId: number | null = null;
   private repairTimeout1: number | null = null;
   private repairTimeout2: number | null = null;
+  private recoveryAttempts = 0;
 
   constructor(props: Props) {
     super(props);
@@ -79,7 +80,33 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
   };
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.warn('[AutoRecovery] Fallo capturado por el sistema de auto-reparación:', error, errorInfo);
+    console.error('[AutoRecovery] Fallo capturado por el sistema de auto-reparación:', error, errorInfo);
+    this.recoveryAttempts += 1;
+
+    // Track consecutive crashes in sessionStorage to stop infinite refresh loops
+    let recentCrashes = 0;
+    try {
+      const crashData = sessionStorage.getItem('syd_consecutive_crash_count');
+      recentCrashes = crashData ? parseInt(crashData, 10) || 0 : 0;
+      recentCrashes += 1;
+      sessionStorage.setItem('syd_consecutive_crash_count', String(recentCrashes));
+    } catch (_) {}
+
+    // If crashing repeatedly (more than 2 consecutive times), do not auto-loop indefinitely
+    if (recentCrashes > 2 || this.recoveryAttempts > 2) {
+      console.warn('[AutoRecovery] Múltiples anomalías consecutivas. Deteniendo auto-reinicio cíclico.');
+      this.performDataSelfRepair(error);
+      this.setState({
+        repairPhase: 'ready_reboot',
+        repairLogs: [
+          '[AVISO] Se detectaron múltiples reinicios consecutivos.',
+          '[ESTABILIZACIÓN] Catálogos y datos locales sanitizados y protegidos.',
+          '[LISTO] Presione "Reiniciar Aplicación" o abra la pantalla inicial.',
+        ],
+      });
+      return;
+    }
+
     this.startSelfHealingProcess(error);
   }
 
@@ -97,9 +124,9 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
           '[AUTOREPARACIÓN] Sanitizando registros y purgando estados inconsistentes...',
         ],
       }));
-    }, 500);
+    }, 400);
 
-    // Step 2: Restoring safe state defaults (1100ms)
+    // Step 2: Restoring safe state defaults (900ms)
     this.repairTimeout2 = window.setTimeout(() => {
       this.setState((prev) => ({
         repairPhase: 'restoring',
@@ -109,10 +136,10 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
           '[REINICIO ACTIVO] Reiniciando la aplicación limpia automáticamente...',
         ],
       }));
-    }, 1100);
+    }, 900);
 
-    // Step 3: Countdown ticker and automatic recovery (ticks every 800ms)
-    let currentCountdown = 3;
+    // Step 3: Countdown ticker and automatic recovery
+    let currentCountdown = 2;
     this.timerId = window.setInterval(() => {
       currentCountdown -= 1;
       if (currentCountdown <= 0) {
@@ -127,6 +154,11 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
   public executeImmediateRecovery = () => {
     this.clearAllTimers();
     this.performDataSelfRepair();
+
+    // Clear consecutive crash counter upon user or timer recovery
+    try {
+      sessionStorage.removeItem('syd_consecutive_crash_count');
+    } catch (_) {}
 
     // Reset error boundary state so React remounts the children with a fresh clean key
     this.setState((prev) => ({
@@ -327,13 +359,23 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
             </div>
           </div>
 
-          {/* Bottom Banner */}
-          <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-[#20324c]">
-            <span className="text-[11px]">No requiere presionar ningún botón. Restauración autónoma activa.</span>
-            <span className="text-emerald-400 font-semibold flex items-center gap-1 text-[11px]">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Protección de datos activa
+          {/* Bottom Banner & Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 pt-2 border-t border-[#20324c]">
+            <span className="text-[11px] text-center sm:text-left">
+              {repairPhase === 'ready_reboot'
+                ? 'Sistema estabilizado. Haga clic abajo para ingresar.'
+                : 'Restauración y sanitización en curso...'}
             </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={this.executeImmediateRecovery}
+                className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-sky-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Entrar a la Aplicación Ahora</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -129,6 +129,7 @@ import {
   mergeSalesOrders,
   mergeSalesInvoices,
 } from './utils/backupRestoreUtils';
+import { sanitizeEquipmentSuppliers } from './utils/supplierDeduplication';
 
 /**
  * Master financial sanitizer for QuoteItem: guarantees 100% mathematical consistency

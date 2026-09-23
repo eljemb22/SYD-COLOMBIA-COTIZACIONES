@@ -14,10 +14,13 @@ export type MarginListKey =
 
 export type ProductGroup =
   | 'Equipos Médicos'
+  | 'Equipos hospitalarios'
   | 'Instrumental Quirúrgico'
   | 'Muebles Hospitalarios'
+  | 'Muebles hospitalarios'
   | 'Dispositivos Médicos'
-  | 'Accesorios y Sensores';
+  | 'Accesorios y Sensores'
+  | string;
 
 export interface SupplierPriceQuote {
   supplier: string;
@@ -779,7 +782,8 @@ export interface BotActionOption {
     | 'new_oc'
     | 'alerts_widget'
     | 'app_updates'
-    | 'backup_modal';
+    | 'backup_modal'
+    | 'google_workspace_modal';
   queryPrompt?: string;
   primary?: boolean;
 }

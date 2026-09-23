@@ -7,8 +7,9 @@
  * The production shared URL `ais-pre-` works everywhere without authentication.
  */
 
-export const OFFICIAL_SHARED_APP_URL = 'https://ais-pre-uo66l6ibrctsw3rl2jw242-795278050657.us-east1.run.app';
-export const OFFICIAL_DEV_APP_URL = 'https://ais-dev-uo66l6ibrctsw3rl2jw242-795278050657.us-east1.run.app';
+export const OFFICIAL_AI_STUDIO_APP_URL = 'https://syd-colombia-cotizaci-n-y-licitaciones-1.ai.studio';
+export const OFFICIAL_SHARED_APP_URL = 'https://ais-pre-jabmz4qaeginepmblbriqe-423163017030.us-east5.run.app';
+export const OFFICIAL_DEV_APP_URL = 'https://ais-dev-jabmz4qaeginepmblbriqe-423163017030.us-east5.run.app';
 
 /**
  * Generates the content for a Windows .bat script that runs a zero-install
@@ -147,15 +148,44 @@ export function generateLocalhostHtmlFile(appUrl: string): string {
 }
 
 /**
+ * Returns the official published AI Studio URL
+ */
+export function getPublishedStudioAppUrl(): string {
+  return OFFICIAL_AI_STUDIO_APP_URL;
+}
+
+/**
+ * Returns the direct Google Cloud Run production URL
+ */
+export function getCloudRunShareAppUrl(): string {
+  if (typeof window === 'undefined') {
+    return OFFICIAL_SHARED_APP_URL;
+  }
+  const origin = window.location.origin || '';
+  if (origin.includes('ais-dev-')) {
+    return origin.replace('ais-dev-', 'ais-pre-');
+  }
+  if (origin.includes('ais-pre-')) {
+    return origin;
+  }
+  return OFFICIAL_SHARED_APP_URL;
+}
+
+/**
  * Returns the public shareable URL that can be opened on ANY computer,
  * tablet, or mobile phone.
  */
 export function getPublicShareAppUrl(): string {
   if (typeof window === 'undefined') {
-    return OFFICIAL_SHARED_APP_URL;
+    return OFFICIAL_AI_STUDIO_APP_URL;
   }
 
   const origin = window.location.origin || '';
+
+  // If already running on ai.studio domain, return it
+  if (origin.includes('.ai.studio')) {
+    return origin;
+  }
 
   // If running inside the developer container (ais-dev-...), convert to the public pre-release / production link (ais-pre-...)
   if (origin.includes('ais-dev-')) {
@@ -173,7 +203,7 @@ export function getPublicShareAppUrl(): string {
   }
 
   // Fallback for localhost / local preview
-  return OFFICIAL_SHARED_APP_URL;
+  return OFFICIAL_AI_STUDIO_APP_URL;
 }
 
 /**
