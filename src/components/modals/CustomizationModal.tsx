@@ -205,11 +205,6 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
     <div
       id="customization-modal-backdrop"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-fadeIn"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
     >
       <div
         id="customization-modal-container"

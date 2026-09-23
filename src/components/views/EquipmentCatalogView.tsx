@@ -1128,13 +1128,6 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
       {/* CLIENT PICKER MODAL (WHEN USER CLICKS + A LICITACIÓN) */}
       {selectedEqForTender && typeof document !== 'undefined' && createPortal(
         <div 
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setSelectedEqForTender(null);
-              setClientModalSearch('');
-              setIsCreatingQuickClient(false);
-            }
-          }}
           className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto animate-fadeIn"
         >
           <div className="bg-[#192b45] border border-purple-400/60 rounded-2xl max-w-4xl w-full p-4 sm:p-5 space-y-3.5 shadow-2xl animate-scaleUp max-h-[92vh] h-[88vh] flex flex-col overflow-hidden my-auto">
@@ -1380,9 +1373,6 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
       {/* Confirmation Modal for Equipment Deletion */}
       {equipmentToDelete && typeof document !== 'undefined' && createPortal(
         <div
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEquipmentToDelete(null);
-          }}
           className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-fadeIn"
         >
           <div className="bg-[#192b45] border border-rose-500/50 rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-3.5 shadow-2xl animate-scaleUp my-auto">
@@ -1426,11 +1416,6 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
       {/* Confirmation Modal for Clearing ALL Catalog Data (Protected with Admin Password) */}
       {isClearModalOpen && typeof document !== 'undefined' && createPortal(
         <div
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !isClearingData) {
-              setIsClearModalOpen(false);
-            }
-          }}
           className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fadeIn"
         >
           <div className="bg-[#192b45] border border-rose-500/60 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl animate-scaleUp my-auto">

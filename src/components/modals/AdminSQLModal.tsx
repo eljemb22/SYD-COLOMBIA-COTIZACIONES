@@ -99,9 +99,6 @@ export const AdminSQLModal: React.FC<AdminSQLModalProps> = ({
 
   return createPortal(
     <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose();
-      }}
       className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-slate-950/85 backdrop-blur-md animate-fadeIn overflow-y-auto"
     >
       <div className="bg-[#111c2e] border border-[#334d6e] rounded-2xl max-w-6xl w-full p-4 sm:p-5 shadow-2xl animate-scaleUp my-auto max-h-[92vh] h-[88vh] flex flex-col overflow-hidden text-slate-100">

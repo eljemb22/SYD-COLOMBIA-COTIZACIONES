@@ -256,7 +256,7 @@ export function analyzeClientPO(
           brand: 'MINDRAY',
           model: 'MOBIEYE 700',
           partCode: '70796', // Official created part in SYD catalog
-          supplier: 'TECNICA ELECTROMEDICA',
+          supplier: 'TECNICA',
         },
         {
           name: 'MESA DE CIRUGIA MINDRAY V5',
@@ -297,7 +297,7 @@ export function analyzeClientPO(
         brand: 'MINDRAY',
         model: 'MOBIEYE 700',
         partCode: '70796', // Parte oficial creada en el catálogo
-        supplier: 'TECNICA ELECTROMEDICA',
+        supplier: 'TECNICA',
       },
       {
         name: 'MESA DE CIRUGIA MINDRAY V5',

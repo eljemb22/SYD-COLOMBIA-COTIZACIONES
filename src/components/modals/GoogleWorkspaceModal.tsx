@@ -42,6 +42,8 @@ import {
   Key,
   Info,
   Bell,
+  Ban,
+  Edit3,
 } from 'lucide-react';
 import {
   googleWorkspaceService,
@@ -66,7 +68,12 @@ import {
   QuoteItem,
 } from '../../types';
 import { generateAppBackup } from '../../utils/backupRestoreUtils';
-import { SyncConnectionStatus } from '../../services/realtimeSync';
+import {
+  SyncConnectionStatus,
+  saveSingleEquipmentToFirestore,
+  saveCreatedSheetPartToFirestore,
+  subscribeToCreatedSheetParts,
+} from '../../services/realtimeSync';
 import { CreateEquipmentFromPartModal } from './CreateEquipmentFromPartModal';
 
 interface GoogleWorkspaceModalProps {
@@ -87,6 +94,7 @@ interface GoogleWorkspaceModalProps {
   onNavigateToBackup?: () => void;
   initialTab?: 'sheets' | 'drive';
   onAddEquipments?: (newEquipments: MedicalEquipment[]) => void;
+  onNavigateToCatalog?: () => void;
 }
 
 export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
@@ -107,6 +115,7 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
   onNavigateToBackup,
   initialTab = 'sheets',
   onAddEquipments,
+  onNavigateToCatalog,
 }) => {
   const [profile, setProfile] = useState<GoogleWorkspaceProfile | null>(() => googleWorkspaceService.getUserProfile());
   const [isConnected, setIsConnected] = useState<boolean>(() => googleWorkspaceService.isConnected());
@@ -233,6 +242,16 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
     return new Set();
   });
 
+  // Cloud Firestore real-time tracking of created sheet parts across all devices
+  const [cloudCreatedPartCodes, setCloudCreatedPartCodes] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const unsub = subscribeToCreatedSheetParts((codes) => {
+      setCloudCreatedPartCodes(new Set(codes.map((c) => String(c).trim().toLowerCase())));
+    });
+    return () => unsub();
+  }, []);
+
   // Modal for creating equipment directly from detected part or table row
   const [partForEquipmentModal, setPartForEquipmentModal] = useState<DetectedSheetPart | null>(null);
   const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
@@ -241,12 +260,72 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
     const cleanCode = (code || '').trim().toLowerCase();
     const cleanName = (name || '').trim().toLowerCase();
     if (!cleanCode && !cleanName) return false;
+
+    // 1. Check cloud real-time registry (synchronized across all devices/browsers/URLs)
+    if (cleanCode && cloudCreatedPartCodes.has(cleanCode)) return true;
+
+    // 2. Check local created parts registry
     if (cleanCode && createdPartCodes.has(cleanCode)) return true;
-    return (equipments || []).some((eq) => {
+
+    // 3. Check active equipments catalog state
+    const inEquipments = (equipments || []).some((eq) => {
       const eqCode = (eq.code || '').trim().toLowerCase();
       const eqName = (eq.name || '').trim().toLowerCase();
-      return (cleanCode && eqCode === cleanCode) || (cleanName && eqName === cleanName);
+      const eqId = (eq.id || '').trim().toLowerCase();
+      const eqSpecs = (eq.technicalSpecs || []).join(' ').toLowerCase();
+
+      const codeMatches =
+        cleanCode &&
+        (eqCode === cleanCode ||
+          eqCode.includes(cleanCode) ||
+          cleanCode.includes(eqCode) ||
+          eqId.includes(cleanCode) ||
+          eqSpecs.includes(cleanCode));
+
+      const nameMatches =
+        cleanName &&
+        (eqName === cleanName ||
+          (cleanName.length > 8 && eqName.includes(cleanName)) ||
+          (eqName.length > 8 && cleanName.includes(eqName)));
+
+      return Boolean(codeMatches || nameMatches);
     });
+    if (inEquipments) return true;
+
+    // 4. Check localStorage catalog cache directly
+    try {
+      const stored = localStorage.getItem('syd_equipments_catalog');
+      if (stored) {
+        const list: MedicalEquipment[] = JSON.parse(stored);
+        if (Array.isArray(list)) {
+          const inLocal = list.some((eq) => {
+            const eqCode = (eq.code || '').trim().toLowerCase();
+            const eqName = (eq.name || '').trim().toLowerCase();
+            const eqId = (eq.id || '').trim().toLowerCase();
+            const eqSpecs = (eq.technicalSpecs || []).join(' ').toLowerCase();
+
+            const codeMatches =
+              cleanCode &&
+              (eqCode === cleanCode ||
+                eqCode.includes(cleanCode) ||
+                cleanCode.includes(eqCode) ||
+                eqId.includes(cleanCode) ||
+                eqSpecs.includes(cleanCode));
+
+            const nameMatches =
+              cleanName &&
+              (eqName === cleanName ||
+                (cleanName.length > 8 && eqName.includes(cleanName)) ||
+                (eqName.length > 8 && cleanName.includes(eqName)));
+
+            return Boolean(codeMatches || nameMatches);
+          });
+          if (inLocal) return true;
+        }
+      }
+    } catch (_) {}
+
+    return false;
   };
 
   const handleOpenCreateEquipmentModal = (part: DetectedSheetPart) => {
@@ -255,22 +334,31 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
   };
 
   const handleSaveEquipmentFromPart = (newEq: MedicalEquipment) => {
+    // 1. Immediately store at index 0 in local catalog cache so it appears at top of Creación de Equipos
+    try {
+      const stored = localStorage.getItem('syd_equipments_catalog');
+      const list: MedicalEquipment[] = stored ? JSON.parse(stored) : [];
+      if (!list.some((e: any) => e.code === newEq.code || e.id === newEq.id)) {
+        list.unshift(newEq);
+        localStorage.setItem('syd_equipments_catalog', JSON.stringify(list));
+      }
+    } catch (_) {}
+
+    // 2. Persist to Firestore database immediately
+    saveSingleEquipmentToFirestore(newEq).catch(() => {});
+    if (newEq.code) {
+      saveCreatedSheetPartToFirestore(newEq.code, newEq.name).catch(() => {});
+    }
+
+    // 3. Notify app level state (will unshift into equipments state)
     if (onAddEquipments) {
       onAddEquipments([newEq]);
-    } else {
-      try {
-        const stored = localStorage.getItem('syd_equipments_catalog');
-        const list = stored ? JSON.parse(stored) : [];
-        if (!list.some((e: any) => e.code === newEq.code)) {
-          list.push(newEq);
-          localStorage.setItem('syd_equipments_catalog', JSON.stringify(list));
-        }
-      } catch (_) {}
     }
 
     const cleanCode = (newEq.code || '').trim().toLowerCase();
     const cleanName = (newEq.name || '').trim().toLowerCase();
     if (cleanCode) {
+      setCloudCreatedPartCodes((prev) => new Set([...prev, cleanCode]));
       setCreatedPartCodes((prev) => {
         const next = new Set(prev);
         next.add(cleanCode);
@@ -292,38 +380,43 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
     }
 
     setSheetConnectionSuccess(
-      `¡Equipo "${newEq.name}" (Parte: ${newEq.code}) creado exitosamente y añadido a la ventana de creación de equipos!`
+      `¡Equipo "${newEq.name}" (Parte: ${newEq.code}) creado exitosamente y disponible en la ventana de Creación de Equipos!`
     );
   };
 
   const handleOpenCreateFromRow = (row: string[], rowIndex: number) => {
     if (!previewData?.headers) return;
-    const parts = googleWorkspaceService.detectPartsFromSpreadsheetData(previewData.headers, [row]);
-    if (parts.length > 0) {
-      handleOpenCreateEquipmentModal(parts[0]);
-    } else {
-      // Build candidate part from row cells
-      const candidateCode =
-        row.find((c) => /^\d{4,8}$/i.test(c.trim()) || /^[A-Z0-9\-_]{3,15}$/i.test(c.trim())) ||
-        `PARTE-${rowIndex + 1}`;
-      const candidateName =
-        row.find((c) => c.length > 5 && !c.includes('@') && !/^\d+$/.test(c)) ||
-        `Parte Fila ${rowIndex + 1}`;
-      const candidatePart: DetectedSheetPart = {
-        id: `row-part-${rowIndex}-${Date.now()}`,
-        code: candidateCode,
-        name: candidateName,
-        supplier: row.find((c) => c.toLowerCase().includes('tecnica') || c.toLowerCase().includes('syd')) || 'SYD Biomedical',
-        brand: row.find((c) => c.toLowerCase().includes('mindray')) || 'MINDRAY',
-        model: 'Estándar',
-        costCOP: 150000,
-        hasIVA: '19%',
-        invimaRegister: 'No Aplica',
-        rawRow: {},
-        rowIndex: rowIndex + 1,
-      };
-      handleOpenCreateEquipmentModal(candidatePart);
+
+    // Use parseSpreadsheetRowToPart for full, accurate extraction of all columns (Model, Cost, Invima, Brand, Supplier, etc.)
+    const candidatePart = googleWorkspaceService.parseSpreadsheetRowToPart(
+      previewData.headers,
+      row,
+      rowIndex
+    );
+
+    if (!candidatePart.code || /^[-–—\s]+$/.test(candidatePart.code)) {
+      alert(
+        'Esta fila no tiene la casilla PARTE diligenciada en la hoja de cálculo. Solo se pueden crear equipos cuando esta casilla contenga un código de parte asignado.'
+      );
+      return;
     }
+
+    const reqType = (candidatePart.requestType || '').toUpperCase();
+    const isRowInactive = row.some((c) =>
+      String(c || '')
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .includes('INACTIV')
+    );
+    if (reqType.includes('INACTIV') || isRowInactive) {
+      alert(
+        `Esta parte (${candidatePart.code || 'seleccionada'}) tiene solicitud de INACTIVACIÓN en el formato N-FCO-03.\n\nHa sido descontinuada o dada de baja por la empresa y no debe crearse en el catálogo de equipos activos.`
+      );
+      return;
+    }
+
+    handleOpenCreateEquipmentModal(candidatePart);
   };
 
   // Dedicated N-FCO-03 search states
@@ -567,6 +660,13 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
       hasManual: false,
       hasQualityCert: false,
     };
+
+    saveSingleEquipmentToFirestore(newEq).catch(() => {});
+    if (newEq.code) {
+      saveCreatedSheetPartToFirestore(newEq.code, newEq.name).catch(() => {});
+      setCloudCreatedPartCodes((prev) => new Set([...prev, (newEq.code || '').trim().toLowerCase()]));
+      setCreatedPartCodes((prev) => new Set([...prev, (newEq.code || '').trim().toLowerCase()]));
+    }
 
     if (onAddEquipments) {
       onAddEquipments([newEq]);
@@ -1015,18 +1115,32 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
 
               {/* Feedback Notifications */}
               {sheetConnectionSuccess && (
-                <div className="py-2 px-3 rounded-lg bg-emerald-950/50 border border-emerald-500/40 flex items-center justify-between gap-2 text-xs text-emerald-200 shrink-0">
+                <div className="py-2.5 px-3.5 rounded-lg bg-emerald-950/80 border border-emerald-500/60 flex items-center justify-between gap-3 text-xs text-emerald-200 shrink-0 shadow-lg">
                   <div className="flex items-center gap-2 min-w-0">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span className="truncate">{sheetConnectionSuccess}</span>
+                    <span className="font-medium truncate">{sheetConnectionSuccess}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setSheetConnectionSuccess(null)}
-                    className="text-slate-400 hover:text-white text-xs cursor-pointer px-1.5 py-0.5 rounded bg-slate-800/80 shrink-0"
-                  >
-                    Cerrar
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onNavigateToCatalog && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onNavigateToCatalog();
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] px-2.5 py-1 rounded-md shadow transition cursor-pointer"
+                      >
+                        Ver en Creación Equipos →
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSheetConnectionSuccess(null)}
+                      className="text-slate-400 hover:text-white text-xs cursor-pointer px-1.5 py-0.5 rounded bg-slate-800/80"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1562,7 +1676,25 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                                   </div>
 
                                   <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                    {isCreated ? (
+                                    {part.requestType?.toUpperCase().includes('INACTIV') || part.status === 'Inactivada' ? (
+                                      <div
+                                        className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-rose-950/80 text-rose-300 border border-rose-700/60 select-none shadow-sm cursor-not-allowed"
+                                        title="Esta parte se encuentra en solicitud de INACTIVACIÓN en el formato N-FCO-03 (dada de baja o descontinuada). Ya no se utilizará."
+                                      >
+                                        <Ban className="w-4 h-4 text-rose-400" />
+                                        <span>Inactivada (No Utilizable)</span>
+                                      </div>
+                                    ) : part.requestType?.toUpperCase().includes('MODIFIC') ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenCreateEquipmentModal(part)}
+                                        className="px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-950/40 cursor-pointer transition active:scale-95"
+                                        title="Ajustar y actualizar datos del equipo según solicitud de modificación N-FCO-03"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5 text-slate-950" />
+                                        <span>{isCreated ? 'Ajustar Datos' : 'Modificar y Crear'}</span>
+                                      </button>
+                                    ) : isCreated ? (
                                       <div
                                         className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 select-none shadow-sm"
                                         title="Esta parte ya fue creada como equipo en el catálogo"
@@ -1575,7 +1707,7 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                                         type="button"
                                         onClick={() => handleOpenCreateEquipmentModal(part)}
                                         className="px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-950/40 cursor-pointer transition active:scale-95"
-                                        title="Crear equipo con los 9 datos detectados de esta parte (código, descripción, proveedor, marca, modelo, precio, fabricante, IVA, INVIMA)"
+                                        title="Crear equipo con los datos detectados de esta parte (código, descripción, proveedor, marca, modelo, precio, fabricante, IVA, INVIMA)"
                                       >
                                         <Plus className="w-3.5 h-3.5" />
                                         <span>Crear Equipo</span>
@@ -1724,11 +1856,56 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                                 ) : (
                                   visibleRows.map((row, rIdx) => {
                                     const actualIdx = startIndex + rIdx + 1;
-                                    const rowParts = googleWorkspaceService.detectPartsFromSpreadsheetData(previewData.headers, [row]);
-                                    const rowPart = rowParts.length > 0 ? rowParts[0] : null;
-                                    const candidateCode = rowPart?.code || row.find((c) => /^\d{4,8}$/i.test(String(c).trim()) || /^[A-Z0-9\-_]{3,15}$/i.test(String(c).trim()));
-                                    const candidateName = rowPart?.name || row.find((c) => String(c).length > 5 && !String(c).includes('@') && !/^\d+$/.test(String(c)));
-                                    const isRowCreated = isPartAlreadyCreated(candidateCode, candidateName);
+                                    
+                                    // Locate exact PARTE column
+                                    const normHeaders = (previewData.headers || []).map((h) =>
+                                      (h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+                                    );
+                                    const parteColIdx = normHeaders.findIndex((h) => 
+                                      h === 'parte' || h === 'codigo' || h === 'codigo de parte' || h.startsWith('parte') || h.includes('codigo')
+                                    );
+                                    const descColIdx = normHeaders.findIndex((h) =>
+                                      h.includes('descripcion') || h.includes('nombre') || h.includes('equipo')
+                                    );
+                                    const tipoColIdx = normHeaders.findIndex((h) =>
+                                      h.includes('tipo de solicitud') || h.includes('tipo solicitud') || h.includes('solicitud') || h === 'tipo' || h.includes('movimiento') || h.includes('accion')
+                                    );
+
+                                    const rawParte = parteColIdx >= 0 ? String(row[parteColIdx] || '').trim() : '';
+                                    const isParteFilled = Boolean(rawParte && rawParte.length > 0 && !/^[-–—\s]+$/.test(rawParte));
+                                    const rawDesc = descColIdx >= 0 ? String(row[descColIdx] || '').trim() : '';
+                                    const rawTipo = tipoColIdx >= 0 ? String(row[tipoColIdx] || '').trim().toUpperCase() : '';
+
+                                    // Scan all cells in this row to detect INACTIVACIÓN or MODIFICACIÓN even if header indexing shifts
+                                    const rowNormCells = row.map((cell) =>
+                                      String(cell || '')
+                                        .toUpperCase()
+                                        .normalize('NFD')
+                                        .replace(/[\u0300-\u036f]/g, '')
+                                        .trim()
+                                    );
+                                    const rowHasInactive = rowNormCells.some(
+                                      (c) =>
+                                        c === 'INACTIVACION' ||
+                                        c.includes('INACTIV') ||
+                                        c === 'INACTIVO' ||
+                                        c === 'INACTIVA' ||
+                                        c === 'BAJA' ||
+                                        c === 'DESCONTINUADO'
+                                    );
+                                    const rowHasModif =
+                                      !rowHasInactive &&
+                                      rowNormCells.some(
+                                        (c) =>
+                                          c === 'MODIFICACION' ||
+                                          c.includes('MODIFIC') ||
+                                          c === 'AJUSTE'
+                                      );
+
+                                    const isInactive = rowHasInactive || rawTipo.includes('INACTIV');
+                                    const isModification = !isInactive && (rowHasModif || rawTipo.includes('MODIFIC'));
+
+                                    const isRowCreated = isParteFilled ? isPartAlreadyCreated(rawParte, rawDesc) : false;
 
                                     return (
                                       <tr
@@ -1743,7 +1920,33 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                                           {actualIdx}
                                         </td>
                                         <td className="py-2 px-2.5 border-r border-slate-800/60 text-center whitespace-nowrap bg-slate-900/40">
-                                          {isRowCreated ? (
+                                          {!isParteFilled ? (
+                                            <span
+                                              className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-500 border border-slate-700/50 inline-flex items-center gap-1 cursor-not-allowed select-none"
+                                              title="La columna PARTE está vacía en esta fila. Solo se puede crear un equipo cuando esta casilla contenga un código de parte asignado."
+                                            >
+                                              <span className="text-slate-600 font-bold">—</span>
+                                              <span>Sin Parte</span>
+                                            </span>
+                                          ) : isInactive ? (
+                                            <span
+                                              className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-700/60 inline-flex items-center gap-1 select-none"
+                                              title={`Esta parte (${rawParte}) tiene solicitud de INACTIVACIÓN en el formato N-FCO-03. Ha sido descontinuada o dada de baja y no se utilizará más.`}
+                                            >
+                                              <Ban className="w-3 h-3 text-rose-400" />
+                                              <span>Inactivada</span>
+                                            </span>
+                                          ) : isModification ? (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleOpenCreateFromRow(row, startIndex + rIdx)}
+                                              className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 inline-flex items-center gap-1 shadow cursor-pointer transition active:scale-95"
+                                              title={`Ajustar y actualizar datos del equipo "${rawParte}" con los cambios de esta solicitud N-FCO-03`}
+                                            >
+                                              <Edit3 className="w-3 h-3 text-slate-950" />
+                                              <span>{isRowCreated ? 'Ajustar' : 'Modificar'}</span>
+                                            </button>
+                                          ) : isRowCreated ? (
                                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 inline-flex items-center gap-1">
                                               <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                                               <span>✓ Creado</span>
@@ -1753,7 +1956,7 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                                               type="button"
                                               onClick={() => handleOpenCreateFromRow(row, startIndex + rIdx)}
                                               className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white inline-flex items-center gap-1 shadow cursor-pointer transition active:scale-95"
-                                              title="Crear equipo con los datos de esta fila y añadir a creación de equipos"
+                                              title={`Crear equipo con código de parte "${rawParte}" y añadir a creación de equipos`}
                                             >
                                               <Plus className="w-3 h-3" />
                                               <span>Crear</span>

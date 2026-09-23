@@ -70,26 +70,31 @@ interface FloatingChatWidgetProps {
   onOpenNewOCModal?: () => void;
   onOpenAppUpdates?: () => void;
   onOpenBackupModal?: () => void;
+  onOpenWorkspaceModal?: () => void;
 }
 
 const INITIAL_BOT_MESSAGES: BotChatMessage[] = [
   {
     id: 'bot-welcome-mara',
     sender: 'bot',
-    text: '¡Hola! Soy **Mara**, tu Asistente Biomédica y Copiloto de Inteligencia Artificial en SYD Colombia.\n\nEstoy sincronizada en tiempo real con todos los módulos de la aplicación:\n• **Cotizador & PDF Oficial**: Creación de propuestas comerciales, IVA, descuentos y membretes.\n• **Gestor de Costos & TRM**: TRM actualizada automáticamente cada 2 horas y cálculo de márgenes (L1 a L8).\n• **Catálogo Biomédico & INVIMA**: Redacción con IA, registros sanitarios y accesorios.\n• **Licitaciones & SECOP II**: Optimizador de especificaciones técnicas con rangos amplios holgados.\n• **Seguimiento de OC & Proveedores**: Trazabilidad de órdenes de compra, alertas de 48h y directorio de fabricantes con fichas en paralelo.\n• **Atajo ESC**: Cierre instantáneo de cualquier ventana emergente.\n\n¿En qué te puedo colaborar o qué acción deseas ejecutar?',
+    text: '¡Hola! Soy **Mara**, tu Asistente Biomédica y Copiloto Oficial en SYD Colombia (v2.7.0).\n\nEstoy sincronizada en tiempo real con toda la operación:\n• **Google Workspace & Sheets (N-FCO-03)**: Creación de equipos validados, modificaciones ágiles y bloqueo automático de partes inactivadas.\n• **Gmail Compras**: Extracción inteligente de OCs en bandeja con almacenamiento optimizado sin errores de cuota.\n• **Órdenes de Venta (OV) & Facturación**: Despachos, remisiones firmadas, radicación de facturas y cartera.\n• **Cotizador & PDF Oficial**: Ofertas comerciales con IVA, márgenes L1-L8 y membrete.\n• **Gestor de Costos & TRM**: TRM actualizada automáticamente cada 2 horas.\n• **Catálogo Biomédico & INVIMA**: Redacción con IA, registros sanitarios y accesorios.\n• **Seguimiento de OC**: Trazabilidad de 11 estados logísticos y manifiestos DIAN.\n\n¿En qué te puedo colaborar hoy?',
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     actions: [
       { label: 'Ir al Cotizador', type: 'navigate', tab: 'ventas', primary: true },
+      { label: 'Órdenes de Venta (OV)', type: 'navigate', tab: 'ordenes_venta' },
+      { label: 'Google Workspace (Drive / Sheets)', type: 'modal', modalAction: 'google_workspace_modal' },
+      { label: 'Gmail Compras', type: 'navigate', tab: 'gmail_compras' },
       { label: 'Seguimiento de OC', type: 'navigate', tab: 'seguimiento_oc' },
       { label: 'Directorio de Proveedores', type: 'modal', modalAction: 'manage_suppliers' },
       { label: 'Gestor de Costos & TRM', type: 'navigate', tab: 'costos' },
       { label: 'Licitaciones SECOP II', type: 'navigate', tab: 'licitaciones' },
-      { label: 'Registrar Equipo', type: 'modal', modalAction: 'new_equipment' },
     ],
   },
 ];
 
 const BOT_QUICK_PROMPTS = [
+  '¿Cómo procesar partes del Formato N-FCO-03 de Google Drive?',
+  '¿Cómo funciona la detección de órdenes en Gmail Compras?',
   '¿Cómo hacer una nueva cotización paso a paso?',
   '¿Cómo hacer seguimiento a las Órdenes de Compra (OC)?',
   '¿Cómo gestionar proveedores y fabricantes?',
@@ -121,6 +126,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   onOpenNewOCModal,
   onOpenAppUpdates,
   onOpenBackupModal,
+  onOpenWorkspaceModal,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -402,6 +408,13 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
             window.dispatchEvent(new CustomEvent('syd_open_backup_modal'));
           }
           break;
+        case 'google_workspace_modal':
+          if (onOpenWorkspaceModal) {
+            onOpenWorkspaceModal();
+          } else {
+            window.dispatchEvent(new CustomEvent('syd-open-workspace-modal'));
+          }
+          break;
       }
     } else if (action.type === 'query' && action.queryPrompt) {
       handleSendBotMessage(action.queryPrompt);
@@ -421,13 +434,15 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     if (action.modalAction === 'alerts_widget') return <Bell className="w-3.5 h-3.5" />;
     if (action.modalAction === 'app_updates') return <Sparkles className="w-3.5 h-3.5 text-cyan-400" />;
     if (action.modalAction === 'backup_modal') return <Database className="w-3.5 h-3.5 text-blue-400" />;
+    if (action.modalAction === 'google_workspace_modal') return <Layers className="w-3.5 h-3.5 text-emerald-400" />;
     if (action.tab === 'ventas') return <FileSpreadsheet className="w-3.5 h-3.5" />;
     if (action.tab === 'costos') return <TrendingUp className="w-3.5 h-3.5" />;
     if (action.tab === 'catalogo') return <Layers className="w-3.5 h-3.5" />;
     if (action.tab === 'licitaciones') return <FolderOpen className="w-3.5 h-3.5" />;
     if (action.tab === 'seguimiento_oc') return <Truck className="w-3.5 h-3.5" />;
     if (action.tab === 'documentacion') return <FileCheck2 className="w-3.5 h-3.5" />;
-    return <ArrowRight className="w-3.5 h-3.5" />;
+    if (action.tab === 'ordenes_venta') return <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />;
+    if (action.tab === 'gmail_compras') return <FolderOpen className="w-3.5 h-3.5 text-amber-400" />;
   };
 
   // Send AI Bot message to Mara

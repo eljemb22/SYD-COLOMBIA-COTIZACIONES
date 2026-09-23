@@ -10,7 +10,7 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
   const SERVER_BOOT_TIME = Date.now();
-  const APP_VERSION = '2.6.0';
+  const APP_VERSION = '2.7.0';
 
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -2379,8 +2379,22 @@ ARQUITECTURA COMPLETA DE MÓDULOS Y CAPACIDADES EN LA APP SYD COLOMBIA:
     - Widget Flotante de Alertas: Alerta sobre cotizaciones por vencer, retrasos en OCs, pagos y registros INVIMA.
     - Chat Dual: Mara IA + Chat de Equipo interno en tiempo real (General y directos).
     - Administración de Usuarios & Roles RBAC: Matriz de 14 permisos granulares editables de seguido sin reinicios a admin. { "label": "Administrar Usuarios", "type": "modal", "modalAction": "user_management" }
-    - Centro de Actualizaciones: Notificaciones automáticas de nuevas versiones del sistema. { "label": "Centro de Actualizaciones", "type": "modal", "modalAction": "app_updates" }
+    - Centro de Actualizaciones: Notificaciones automáticas de nuevas versiones del sistema (Versión actual: v2.7.0). { "label": "Centro de Actualizaciones", "type": "modal", "modalAction": "app_updates" }
     - Personalización Visual: { "label": "Personalizar Logo & Colores", "type": "modal", "modalAction": "customization" }
+
+13. Integración Google Workspace & Formato N-FCO-03:
+    - Importación de partes y equipos médicos desde hojas oficiales Google Sheets.
+    - Validación estricta: Detección de solicitudes de INACTIVACIÓN bloqueando la creación de partes descontinuadas y marcándolas como inactivas. Modificaciones y creaciones limpias desde el código de parte.
+    - Botón acción: { "label": "Abrir Google Workspace", "type": "modal", "modalAction": "google_workspace" }
+
+14. Gmail Compras & Caché Local de Cuota:
+    - Monitoreo de correos de compras y confirmaciones de pedidos de proveedores con protección de cuota local.
+    - Botón acción: { "label": "Abrir Gmail Compras", "type": "modal", "modalAction": "gmail_compras" }
+
+15. Unificación Maestra de Proveedores & Directorio de Clientes:
+    - Fusión automática de proveedores duplicados (como Técnica Electromédica y Técnica) unificando marcas (Welch Allyn, Seca, Ca-Mi, Comen, Mindray) y todos sus equipos vinculados.
+    - Directorio de clientes con eliminación interactiva segura y persistente en la nube.
+    - Botón acción: { "label": "Abrir Directorio de Clientes", "type": "modal", "modalAction": "client_directory" }
 CONTEXTO DINÁMICO EN TIEMPO REAL DEL SISTEMA:
 - Pestaña activa actual: ${context?.activeTab || 'inicio'}
 - Usuario: ${context?.userName || 'Usuario'} (${context?.userRole || 'Miembro SYD'})
@@ -2804,22 +2818,55 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con la siguiente estructura:
   });
 
   // Vite middleware for development vs static build in production
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: false,
-        ws: false,
-      },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+  const dirName = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+  const candidateDirs = [
+    path.join(process.cwd(), 'dist'),
+    path.join(process.cwd(), 'build'),
+    dirName,
+    path.join(dirName, 'dist'),
+    path.join(dirName, 'build'),
+    path.join(dirName, '..', 'dist'),
+    path.join(dirName, '..', 'build'),
+  ];
+  const staticDir = candidateDirs.find((dir) =>
+    fs.existsSync(path.join(dir, 'index.html'))
+  );
+
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    !fs.existsSync(path.join(process.cwd(), 'src'));
+
+  if (isProduction && staticDir) {
+    app.use(express.static(staticDir));
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(staticDir, 'index.html');
+      res.sendFile(indexPath, (err) => {
+        if (err && !res.headersSent) {
+          res.status(500).send('Error loading application');
+        }
+      });
     });
+  } else {
+    // If running in development OR if static assets have not been pre-built, mount Vite SPA middleware
+    try {
+      const vite = await createViteServer({
+        server: {
+          middlewareMode: true,
+          hmr: false,
+          ws: false,
+        },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } catch (viteErr) {
+      console.error('Failed to initialize Vite dev server, falling back to static handler:', viteErr);
+      if (staticDir) {
+        app.use(express.static(staticDir));
+        app.get('*', (req, res) => {
+          res.sendFile(path.join(staticDir, 'index.html'));
+        });
+      }
+    }
   }
 
   const server = app.listen(PORT, '0.0.0.0', () => {

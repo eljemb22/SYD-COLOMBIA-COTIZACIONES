@@ -27,22 +27,30 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoginSuccess }
 
   if (!isOpen) return null;
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     setErrorMsg(null);
-    setIsLoading(true);
 
-    const cleanInput = (username || '').trim().toLowerCase();
-    if (cleanInput === 'papi' || cleanInput === 'hijo' || cleanInput === 'papi@syd.com.co' || cleanInput === 'hijo@syd.com.co') {
-      setTimeout(() => {
-        setIsLoading(false);
-        setErrorMsg('Este usuario ya no existe. El acceso está restringido únicamente a "Jairo" y "Fabian".');
-      }, 300);
+    const cleanUsername = (username || '').trim();
+    const cleanPassword = (password || '').trim();
+
+    if (!cleanUsername || !cleanPassword) {
+      setErrorMsg('Por favor ingrese su usuario y contraseña.');
       return;
     }
 
-    setTimeout(() => {
-      const user = authenticateUser(username, password);
+    const cleanInput = cleanUsername.toLowerCase();
+    if (cleanInput === 'papi' || cleanInput === 'hijo' || cleanInput === 'papi@syd.com.co' || cleanInput === 'hijo@syd.com.co') {
+      setErrorMsg('Este usuario ya no existe. El acceso está restringido únicamente a "Jairo" y "Fabian".');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const user = authenticateUser(cleanUsername, cleanPassword);
       if (user) {
         setIsLoading(false);
         setUsername('');
@@ -52,7 +60,32 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoginSuccess }
         setIsLoading(false);
         setErrorMsg('Credenciales incorrectas. Verifique su usuario y contraseña.');
       }
-    }, 300);
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMsg('Error al verificar credenciales.');
+    }
+  };
+
+  const handleQuickLogin = (quickUser: string, quickPass: string) => {
+    setUsername(quickUser);
+    setPassword(quickPass);
+    setErrorMsg(null);
+    setIsLoading(true);
+    try {
+      const user = authenticateUser(quickUser, quickPass);
+      if (user) {
+        setIsLoading(false);
+        setUsername('');
+        setPassword('');
+        onLoginSuccess(user);
+      } else {
+        setIsLoading(false);
+        setErrorMsg('No se pudo autenticar al usuario.');
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMsg('Error en el ingreso rápido.');
+    }
   };
 
   const modalContent = (

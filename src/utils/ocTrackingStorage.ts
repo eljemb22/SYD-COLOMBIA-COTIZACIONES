@@ -1176,7 +1176,36 @@ export const getStoredSupplierProfiles = (
 
   // Ensure fully unified result with no remaining duplicate clusters
   const finalUnified = unifyAllDuplicateSuppliers(Array.from(map.values()), contracts);
-  return finalUnified.unifiedSuppliers;
+  let resolvedSuppliers = finalUnified.unifiedSuppliers;
+
+  // Enforce single "TECNICA" profile containing all combined brands
+  const tecnicaProfiles = resolvedSuppliers.filter(
+    (p) => p.name.toLowerCase().includes('tecnica') || p.name.toLowerCase().includes('electromedica')
+  );
+  if (tecnicaProfiles.length > 1) {
+    const canonicalTecnica = tecnicaProfiles.find((p) => p.name.toUpperCase() === 'TECNICA') || tecnicaProfiles[0];
+    canonicalTecnica.name = 'TECNICA';
+    const allBrands = new Set<string>();
+    tecnicaProfiles.forEach((tp) => {
+      (tp.brands || []).forEach((b) => b && allBrands.add(b.trim()));
+      if (tp.id !== canonicalTecnica.id) {
+        deleteSupplierFromFirestore(tp.id).catch(() => {});
+      }
+    });
+    canonicalTecnica.brands = Array.from(allBrands);
+    resolvedSuppliers = resolvedSuppliers.filter(
+      (p) => p.id === canonicalTecnica.id || (!p.name.toLowerCase().includes('tecnica') && !p.name.toLowerCase().includes('electromedica'))
+    );
+  } else if (tecnicaProfiles.length === 1) {
+    tecnicaProfiles[0].name = 'TECNICA';
+  }
+
+  // Persist the clean consolidated list
+  try {
+    localStorage.setItem(SUPPLIERS_STORAGE_KEY, JSON.stringify(resolvedSuppliers));
+  } catch {}
+
+  return resolvedSuppliers;
 };
 
 export const saveStoredSupplierProfiles = (profiles: SupplierProfile[]): void => {

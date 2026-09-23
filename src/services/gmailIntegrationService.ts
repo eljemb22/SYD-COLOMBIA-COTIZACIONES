@@ -415,7 +415,7 @@ class GmailIntegrationService {
             this.messageDetailCache.set(order.id, order);
           });
           if (cleanOrders.length !== parsed.length) {
-            localStorage.setItem('syd_gmail_cached_orders_v4', JSON.stringify(cleanOrders));
+            this.persistOrderCache();
           }
         }
       }
@@ -441,10 +441,41 @@ class GmailIntegrationService {
           order.senderName !== 'Remitente Gmail' &&
           order.snippet !== 'Mensaje sincronizado desde bandeja'
       );
-      const trimmed = entries.slice(-600);
-      localStorage.setItem('syd_gmail_cached_orders_v4', JSON.stringify(trimmed));
-    } catch (e) {
-      console.warn('Could not persist order cache:', e);
+
+      // Lightweight serializer: strip heavy rawHtml and large body text before putting in localStorage
+      const sanitizeForStorage = (items: DetectedPurchaseOrder[], maxBodyLen = 400) => {
+        return items.map((o) => ({
+          ...o,
+          rawHtml: undefined,
+          rawBodyText: o.rawBodyText ? o.rawBodyText.slice(0, maxBodyLen) : undefined,
+          attachments: undefined,
+        }));
+      };
+
+      // Try tier 1: 150 items with 400 char body text
+      const trySave = (items: any[]): boolean => {
+        try {
+          localStorage.setItem('syd_gmail_cached_orders_v4', JSON.stringify(items));
+          return true;
+        } catch (e: any) {
+          return false;
+        }
+      };
+
+      const tier1 = sanitizeForStorage(entries.slice(-150), 400);
+      if (trySave(tier1)) return;
+
+      // Tier 2 fallback: clear stale versions and reduce to 80 items without rawBodyText
+      localStorage.removeItem('syd_gmail_cached_orders_v2');
+      localStorage.removeItem('syd_gmail_cached_orders_v3');
+      const tier2 = sanitizeForStorage(entries.slice(-80), 0);
+      if (trySave(tier2)) return;
+
+      // Tier 3 fallback: 30 items ultra-compact
+      const tier3 = sanitizeForStorage(entries.slice(-30), 0);
+      trySave(tier3);
+    } catch {
+      // Gracefully prevent any storage quota exceptions from interrupting app flow
     }
   }
 

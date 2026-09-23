@@ -388,9 +388,6 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
 
   return createPortal(
     <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
       className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto animate-fadeIn"
     >
       <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-5 shadow-2xl animate-scaleUp max-h-[82vh] h-[80vh] flex flex-col overflow-hidden my-auto">

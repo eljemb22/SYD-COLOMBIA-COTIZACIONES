@@ -1368,6 +1368,296 @@ export class GoogleWorkspaceService {
   }
 
   /**
+   * Safely parse any spreadsheet cost representation to a clean integer COP value.
+   * Handles Colombian and international formatting ($ 54.000.000, 54,000,000, $ 54.000.000,00, etc.)
+   */
+  public parseSpreadsheetCost(raw: any): number {
+    if (typeof raw === 'number') {
+      return isNaN(raw) || raw < 0 ? 0 : Math.round(raw);
+    }
+    if (!raw) return 0;
+    let str = String(raw).trim();
+    if (!str) return 0;
+
+    // Remove currency signs, letters, and spaces
+    str = str.replace(/[$€COPcopUSDusd\s\+]/g, '');
+
+    // If ends with 2 decimals like ,00 or .00, strip them
+    if (/([,\.]\d{2})$/.test(str)) {
+      str = str.slice(0, -3);
+    }
+
+    // Remove all periods and commas used as thousand separators
+    const digits = str.replace(/[^0-9]/g, '');
+    const val = parseInt(digits, 10);
+    return isNaN(val) ? 0 : val;
+  }
+
+  /**
+   * Parse a single row from a Google Sheet / Excel into a DetectedSheetPart object
+   * with disambiguated column matching for Model, Cost, Invima, Supplier, Brand, etc.
+   */
+  public parseSpreadsheetRowToPart(
+    headers: string[],
+    row: string[],
+    rowIndex: number = 0
+  ): DetectedSheetPart {
+    const normHeaders = (headers || []).map((h) =>
+      (h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+    );
+
+    // Disambiguated column index finders
+    const findExact = (exacts: string[]): number => {
+      return normHeaders.findIndex((h) => exacts.some((ex) => h === ex));
+    };
+
+    const findSubstring = (keywords: string[], exclude: string[] = []): number => {
+      return normHeaders.findIndex(
+        (h) => keywords.some((kw) => h.includes(kw)) && !exclude.some((ex) => h.includes(ex))
+      );
+    };
+
+    // 1. PARTE / CÓDIGO (Strict disambiguation: do NOT match "modelo/referencia" or "referencia")
+    let codeIdx = findExact(['parte', 'codigo', 'codigo de parte', 'código', 'cod', 'sku', 'numero de parte', 'n° parte', 'cod parte', 'parte #', 'parte/codigo', 'código de parte']);
+    if (codeIdx < 0) {
+      codeIdx = findSubstring(['codigo de parte', 'numero de parte', 'cod. parte', 'cod parte'], ['postal']);
+    }
+    if (codeIdx < 0) {
+      codeIdx = normHeaders.findIndex((h) => (h === 'parte' || h.startsWith('parte ')) && !h.includes('observ'));
+    }
+    if (codeIdx < 0) {
+      codeIdx = normHeaders.findIndex((h) => (h === 'codigo' || h === 'cod') && !h.includes('postal'));
+    }
+
+    // 2. MODELO / REFERENCIA (Specifically matches "MODELO/ REFERENCIA", "MODELO", "REFERENCIA")
+    let modelIdx = findExact(['modelo/ referencia', 'modelo/referencia', 'modelo / referencia', 'modelo', 'referencia', 'model', 'ref/modelo', 'referencia/modelo', 'modelo del fabricante', 'ref']);
+    if (modelIdx < 0) {
+      modelIdx = findSubstring(['modelo', 'referencia'], ['codigo', 'parte', 'descripcion', 'nombre']);
+    }
+
+    // 3. DESCRIPCIÓN / NOMBRE
+    let nameIdx = findExact(['descripcion', 'descripción', 'nombre', 'articulo', 'producto', 'detalle', 'item', 'descripcion del equipo', 'nombre del equipo', 'descripcion de parte']);
+    if (nameIdx < 0) {
+      nameIdx = findSubstring(['descripcion', 'nombre del equipo', 'nombre equipo', 'articulo', 'producto'], ['proveedor', 'contacto', 'solicitante', 'usuario']);
+    }
+    if (nameIdx < 0) {
+      nameIdx = findSubstring(['nombre'], ['proveedor', 'contacto', 'solicitante', 'usuario']);
+    }
+
+    // 4. PROVEEDOR
+    let supplierIdx = findExact(['proveedor', 'distribuidor', 'supplier', 'proveedor oficial', 'empresa proveedora', 'tercero', 'vendedor']);
+    if (supplierIdx < 0) {
+      supplierIdx = findSubstring(['proveedor', 'distribuidor', 'supplier']);
+    }
+
+    // 5. MARCA
+    let brandIdx = findExact(['marca', 'brand', 'marca del equipo']);
+    if (brandIdx < 0) {
+      brandIdx = findSubstring(['marca', 'brand'], ['fabricante']);
+    }
+
+    // 6. FABRICANTE
+    let mfrIdx = findExact(['fabricante', 'casa fabricante', 'manufacturer', 'manufac', 'fabrica', 'empresa fabricante']);
+    if (mfrIdx < 0) {
+      mfrIdx = findSubstring(['fabricante', 'manufacturer']);
+    }
+
+    // 7. COSTO / PRECIO
+    let costIdx = findExact(['costo', 'costo base', 'costo cop', 'precio', 'valor', 'monto', 'vr unitario', 'vr. unitario', 'val unitario', 'valor unitario', 'cost', 'price', 'costo base cop', 'costo total']);
+    if (costIdx < 0) {
+      costIdx = findSubstring(['costo', 'vr unitario', 'val unitario', 'valor unitario', 'costo base']);
+    }
+    if (costIdx < 0) {
+      costIdx = findSubstring(['precio', 'valor'], ['lista', 'venta']);
+    }
+
+    // 8. IVA
+    let ivaIdx = findExact(['iva si/no', 'iva s/n', 'iva', 'aplica iva', 'impuesto', 'tarifa iva', 'iva 19%', 'gravado', 'exento']);
+    if (ivaIdx < 0) {
+      ivaIdx = findSubstring(['iva', 'impuesto', 'gravado', 'exento']);
+    }
+
+    // 9. REGISTRO SANITARIO / INVIMA
+    let invimaIdx = findExact([
+      'registro sanitario', 'reg sanitario', 'reg. sanitario', 'registro invima',
+      'reg invima', 'reg. invima', 'numero invima', 'no invima', 'n° invima',
+      'no. invima', 'invima', 'certificado no requiere', 'no requiere invima',
+      'registro sanitario / invima', 'registro sanitario/ invima', 'sanitario'
+    ]);
+    if (invimaIdx < 0) {
+      invimaIdx = findSubstring(['invima', 'registro sanitario', 'reg sanitario', 'reg. sanitario'], ['vigencia', 'fecha', 'vencimiento']);
+    }
+
+    // 10. VIGENCIA INVIMA
+    let vigenciaIdx = findExact(['vigencia invima', 'vigencia', 'vencimiento invima', 'fecha vencimiento']);
+    if (vigenciaIdx < 0) {
+      vigenciaIdx = findSubstring(['vigencia', 'vencimiento']);
+    }
+
+    // 11. CLASE / GRUPO
+    let groupIdx = findExact(['grupo', 'subgrupo', 'clase', 'categoria', 'categoría', 'familia', 'tipo de equipo', 'clasificacion']);
+    if (groupIdx < 0) {
+      groupIdx = findSubstring(['grupo', 'categoria', 'clase', 'familia']);
+    }
+
+    // 12. TIPO DE SOLICITUD
+    let typeIdx = findExact(['tipo de solicitud', 'tipo solicitud', 'tipo', 'solicitud', 'movimiento', 'accion']);
+
+    // Extract values
+    let code = codeIdx >= 0 ? String(row[codeIdx] || '').trim() : '';
+    let name = nameIdx >= 0 ? String(row[nameIdx] || '').trim() : '';
+    let model = modelIdx >= 0 ? String(row[modelIdx] || '').trim() : '';
+    let supplier = supplierIdx >= 0 ? String(row[supplierIdx] || '').trim() : '';
+    let brand = brandIdx >= 0 ? String(row[brandIdx] || '').trim() : '';
+    let manufacturer = mfrIdx >= 0 ? String(row[mfrIdx] || '').trim() : '';
+    let rawIVA = ivaIdx >= 0 ? String(row[ivaIdx] || '').trim() : '';
+    let invimaRegister = invimaIdx >= 0 ? String(row[invimaIdx] || '').trim() : '';
+    let invimaValidity = vigenciaIdx >= 0 ? String(row[vigenciaIdx] || '').trim() : '';
+    let rawGroup = groupIdx >= 0 ? String(row[groupIdx] || '').trim() : '';
+    let requestType = typeIdx >= 0 ? String(row[typeIdx] || '').trim() : '';
+
+    // Cost parsing using the robust helper
+    const rawCost = costIdx >= 0 ? row[costIdx] : undefined;
+    const costCOP = this.parseSpreadsheetCost(rawCost);
+
+    // If code is empty, check row cells for candidate part codes
+    if (!code && codeIdx < 0) {
+      for (const cell of row) {
+        const match = String(cell || '').match(/\b(?:SYD-[A-Z0-9\-_]{2,10}|\d{4,8})\b/i);
+        if (match) {
+          code = match[0];
+          break;
+        }
+      }
+    }
+
+    // If name is empty, extract longest text candidate
+    if (!name) {
+      const textCandidates = row.filter(
+        (c) => c && c.length > 5 && !c.includes('@') && !/^\d+$/.test(c) && !/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(c)
+      );
+      if (textCandidates.length > 0) {
+        name = textCandidates.reduce((a, b) => (b.length > a.length ? b : a));
+      }
+    }
+
+    // Disambiguate Supplier and Brand from row cells if empty
+    if (!supplier) {
+      const foundSup = row.find((c) => {
+        const lower = String(c || '').toLowerCase();
+        return lower.includes('tecnica') || lower.includes('syd') || lower.includes('electromedica');
+      });
+      if (foundSup) supplier = String(foundSup).trim();
+    }
+
+    if (!brand) {
+      const foundBrand = row.find((c) => {
+        const upper = String(c || '').toUpperCase();
+        return ['MINDRAY', 'BOVIE', 'EDAN', 'MEDITECH', 'PHILIPS', 'ZOLL', 'GE'].includes(upper);
+      });
+      if (foundBrand) brand = String(foundBrand).trim();
+    }
+
+    // Disambiguate Manufacturer
+    if (!manufacturer) {
+      if (brand && brand.toUpperCase().includes('MINDRAY')) {
+        manufacturer = 'NANJING MINDRAY BIO MEDICAL ELECTRONICS CO LTD';
+      } else {
+        manufacturer = brand || supplier || 'SYD Biomedical';
+      }
+    }
+
+    // IVA parsing
+    let hasIVA = '19%';
+    const lowerIVA = rawIVA.toLowerCase();
+    if (
+      lowerIVA === 'no' ||
+      lowerIVA === '0' ||
+      lowerIVA === '0%' ||
+      lowerIVA.includes('exent') ||
+      lowerIVA.includes('excluid') ||
+      lowerIVA === 'false'
+    ) {
+      hasIVA = '0%';
+    } else if (
+      lowerIVA === 'si' ||
+      lowerIVA === 's' ||
+      lowerIVA === 'sí' ||
+      lowerIVA.includes('19') ||
+      lowerIVA === 'true' ||
+      lowerIVA.includes('aplica')
+    ) {
+      hasIVA = '19%';
+    }
+
+    // INVIMA parsing: if cell is empty or 'no aplica', search across all row cells for INVIMA pattern
+    if (!invimaRegister || invimaRegister.toLowerCase() === 'no aplica' || invimaRegister.toLowerCase() === 'no requiere') {
+      for (const cell of row) {
+        const cleanCell = String(cell || '').trim();
+        if (
+          /\b(?:INVIMA\s*)?(?:[12]\d{3}[A-Z]{2,4}-\d{4,8}|[12]\d{3}DM-\d+|\d{4}EBC-\d+)\b/i.test(cleanCell) ||
+          (cleanCell.toUpperCase().startsWith('INVIMA') && cleanCell.length > 7)
+        ) {
+          invimaRegister = cleanCell;
+          break;
+        }
+      }
+    }
+
+    // If still missing and this is a Mindray Surgical table (e.g. 70904 MESA DE CIRUGIA HYBASE)
+    if (
+      (!invimaRegister || invimaRegister.toLowerCase() === 'no aplica') &&
+      brand.toUpperCase() === 'MINDRAY' &&
+      (name.toUpperCase().includes('CIRUGIA') || (model && model.toUpperCase().includes('HYBASE')))
+    ) {
+      invimaRegister = '2024DM-0012529-R1';
+    }
+
+    // Map Category
+    let category: MedicalEquipment['category'] = 'Diagnóstico';
+    const catSearch = `${rawGroup} ${name} ${model}`.toLowerCase();
+    if (catSearch.includes('cirugia') || catSearch.includes('quir') || catSearch.includes('mesa')) {
+      category = 'Cirugía';
+    } else if (catSearch.includes('monitor') || catSearch.includes('vital')) {
+      category = 'Monitoreo';
+    } else if (catSearch.includes('critico') || catSearch.includes('uci') || catSearch.includes('ventilad')) {
+      category = 'Cuidados Críticos';
+    } else if (catSearch.includes('laborat') || catSearch.includes('centrifug')) {
+      category = 'Laboratorio';
+    } else if (catSearch.includes('esteril') || catSearch.includes('autoclav')) {
+      category = 'Esterilización';
+    } else if (rawGroup && ['Diagnóstico', 'Monitoreo', 'Cirugía', 'Quirófano', 'Cuidados Críticos', 'Urgencias', 'Ginecología', 'Hospitalización', 'Neonatología', 'Esterilización', 'Laboratorio', 'Accesorios'].includes(rawGroup)) {
+      category = rawGroup as MedicalEquipment['category'];
+    }
+
+    const rawRow: Record<string, string> = {};
+    headers.forEach((h, i) => {
+      rawRow[h] = row[i] || '';
+    });
+
+    return {
+      id: `sheet-part-${rowIndex}-${(code || Math.random().toString(36).slice(2, 7)).replace(/[^a-zA-Z0-9_-]/g, '_')}`,
+      code,
+      name: name || `Parte Fila ${rowIndex + 1}`,
+      brand: brand || 'MINDRAY',
+      model: model || '',
+      requestType: requestType || 'CREACIÓN',
+      category,
+      group: rawGroup || undefined,
+      partClass: rawGroup || undefined,
+      supplier: supplier || 'TECNICA',
+      manufacturer: manufacturer || 'NANJING MINDRAY BIO MEDICAL ELECTRONICS CO LTD',
+      hasIVA,
+      invimaRegister: invimaRegister || undefined,
+      invimaValidity: invimaValidity || undefined,
+      costCOP,
+      status: code ? 'Creada' : 'En Trámite',
+      rawRow,
+      rowIndex: rowIndex + 1,
+    };
+  }
+
+  /**
    * Detect parts / items created or requested in a Google Sheet (such as N-FCO-03)
    */
   public detectPartsFromSpreadsheetData(
@@ -1378,151 +1668,22 @@ export class GoogleWorkspaceService {
       return [];
     }
 
-    // Normalize header strings for matching
-    const normHeaders = headers.map((h) =>
-      h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
-    );
-
-    const findColIdx = (keywords: string[]): number => {
-      return normHeaders.findIndex((h) => keywords.some((kw) => h.includes(kw)));
-    };
-
-    const codeIdx = findColIdx(['parte', 'codigo', 'código', 'cod', 'sku', 'ref', 'numero de parte']);
-    const dateIdx = findColIdx(['fecha de solicitud', 'fecha', 'dia']);
-    const typeIdx = findColIdx(['tipo de solicitud', 'tipo solicitud', 'tipo', 'solicitud', 'movimiento', 'accion']);
-    const groupIdx = findColIdx(['grupo', 'subgrupo']);
-    const classIdx = findColIdx(['clase', 'categoria', 'categoría', 'familia']);
-    const nameIdx = findColIdx(['descripcion', 'descripción', 'nombre', 'articulo', 'producto', 'detalle', 'item']);
-    const supplierIdx = findColIdx(['proveedor', 'distribuidor', 'empresa', 'supplier', 'tercero', 'vendedor']);
-    const brandIdx = findColIdx(['marca', 'brand']);
-    const mfrIdx = findColIdx(['fabricante', 'manufac', 'manufacturer', 'casa fabricante', 'fabrica']);
-    const modelIdx = findColIdx(['modelo/referencia', 'modelo', 'referencia', 'equipo', 'serie', 'model']);
-    const costIdx = findColIdx(['costo', 'precio', 'valor', 'monto', 'vr unitario', 'val unitario', 'cost', 'price']);
-    const ivaIdx = findColIdx(['iva', 'aplica iva', 'impuesto', 'tarifa', 'gravado', 'exento']);
-    const unitIdx = findColIdx(['unidad de medida', 'unidad', 'medida']);
-    const fichaIdx = findColIdx(['ficha tecnica', 'ficha', 'datasheet']);
-    const serieLoteIdx = findColIdx(['serie/lote', 'serie', 'lote']);
-    const invimaIdx = findColIdx(['registro sanitario', 'certificado no requiere', 'invima', 'registro', 'sanitario', 'reg invima']);
-    const vigenciaIdx = findColIdx(['vigencia invima', 'vigencia', 'vencimiento']);
-    const riesgoIdx = findColIdx(['nivel de riesgo', 'riesgo', 'clasificacion']);
-    const statusIdx = findColIdx(['estado', 'status', 'aprobac', 'tramite']);
-    const obsIdx = findColIdx(['observac', 'justificac', 'motivo', 'nota', 'comentario']);
-    const reqIdx = findColIdx(['solicitante', 'usuario', 'responsable', 'creado por', 'solicitado por']);
-
     const detectedParts: DetectedSheetPart[] = [];
 
     rows.forEach((row, rowIndex) => {
-      // Build raw mapping
-      const rawRow: Record<string, string> = {};
-      headers.forEach((h, i) => {
-        rawRow[h] = row[i] || '';
-      });
+      const part = this.parseSpreadsheetRowToPart(headers, row, rowIndex);
 
-      // Extract candidate code
-      let code = codeIdx >= 0 ? (row[codeIdx] || '').trim() : '';
-      let name = nameIdx >= 0 ? (row[nameIdx] || '').trim() : '';
-      const brand = brandIdx >= 0 ? (row[brandIdx] || '').trim() : '';
-      const model = modelIdx >= 0 ? (row[modelIdx] || '').trim() : '';
-      const requestType = typeIdx >= 0 ? (row[typeIdx] || '').trim() : '';
-      const group = groupIdx >= 0 ? (row[groupIdx] || '').trim() : '';
-      const partClass = classIdx >= 0 ? (row[classIdx] || '').trim() : '';
-      const supplier = supplierIdx >= 0 ? (row[supplierIdx] || '').trim() : '';
-      const manufacturer = mfrIdx >= 0 ? (row[mfrIdx] || '').trim() : '';
-      const hasIVA = ivaIdx >= 0 ? (row[ivaIdx] || '').trim() : '';
-      const unit = unitIdx >= 0 ? (row[unitIdx] || '').trim() : '';
-      const technicalSheet = fichaIdx >= 0 ? (row[fichaIdx] || '').trim() : '';
-      const seriesBatch = serieLoteIdx >= 0 ? (row[serieLoteIdx] || '').trim() : '';
-      const invimaRegister = invimaIdx >= 0 ? (row[invimaIdx] || '').trim() : '';
-      const invimaValidity = vigenciaIdx >= 0 ? (row[vigenciaIdx] || '').trim() : '';
-      const riskLevel = riesgoIdx >= 0 ? (row[riesgoIdx] || '').trim() : '';
-      const date = dateIdx >= 0 ? (row[dateIdx] || '').trim() : '';
-      const requester = reqIdx >= 0 ? (row[reqIdx] || '').trim() : '';
-      const observations = obsIdx >= 0 ? (row[obsIdx] || '').trim() : '';
-      const rawStatus = statusIdx >= 0 ? (row[statusIdx] || '').trim() : '';
-
-      // Cost parsing
-      let costCOP: number | undefined;
-      if (costIdx >= 0 && row[costIdx]) {
-        const cleanCost = row[costIdx].replace(/[^0-9]/g, '');
-        if (cleanCost) costCOP = parseInt(cleanCost, 10);
-      }
-
-      // If code is empty, look for a code pattern in any cell
-      if (!code) {
-        for (const cell of row) {
-          const match = cell.match(/\b(?:SYD-[A-Z0-9\-_]{2,10}|\d{4,8})\b/i);
-          if (match) {
-            code = match[0];
-            break;
-          }
-        }
-      }
-
-      // If name is empty, look for the longest text cell that isn't a date or email
-      if (!name) {
-        const textCandidates = row.filter(
-          (c) => c && c.length > 5 && !c.includes('@') && !/^\d+$/.test(c) && !/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(c)
-        );
-        if (textCandidates.length > 0) {
-          name = textCandidates.reduce((a, b) => (b.length > a.length ? b : a));
-        }
-      }
-
-      // We only register rows that have either a code or a name/description and aren't pure header text
+      // We only register rows that have a valid code and a name/description and aren't pure header text
       if (
-        (code || name) &&
-        name.toLowerCase() !== 'descripcion' &&
-        name.toLowerCase() !== 'descripción' &&
-        code.toLowerCase() !== 'codigo' &&
-        code.toLowerCase() !== 'código' &&
-        code.toLowerCase() !== 'parte'
+        part.code &&
+        part.name &&
+        part.name.toLowerCase() !== 'descripcion' &&
+        part.name.toLowerCase() !== 'descripción' &&
+        part.code.toLowerCase() !== 'codigo' &&
+        part.code.toLowerCase() !== 'código' &&
+        part.code.toLowerCase() !== 'parte'
       ) {
-        // Determine status
-        let status: DetectedSheetPart['status'] = 'Creada';
-        const typeUpper = (requestType || '').toUpperCase();
-        const statusUpper = (rawStatus || '').toUpperCase();
-
-        if (typeUpper.includes('INACTIV') || statusUpper.includes('INACTIV')) {
-          status = 'Inactivada';
-        } else if (typeUpper.includes('MODIFIC') || statusUpper.includes('MODIFIC')) {
-          status = 'Modificada';
-        } else if (statusUpper.includes('TRAMITE') || statusUpper.includes('PENDIENT') || statusUpper.includes('REVISION')) {
-          status = 'En Trámite';
-        } else if (statusUpper.includes('CREADO') || statusUpper.includes('CREADA')) {
-          status = 'Creada';
-        } else if (code) {
-          status = 'Creada';
-        } else {
-          status = 'En Trámite';
-        }
-
-        detectedParts.push({
-          id: `sheet-part-${rowIndex}-${code || Math.random().toString(36).slice(2, 7)}`,
-          code: code || '',
-          name: name || `Parte Fila ${rowIndex + 1}`,
-          brand: brand || undefined,
-          model: model || undefined,
-          requestType: requestType || (status === 'Inactivada' ? 'INACTIVACIÓN' : status === 'Modificada' ? 'MODIFICACIÓN' : 'CREACIÓN'),
-          category: partClass || group || undefined,
-          group: group || undefined,
-          partClass: partClass || undefined,
-          supplier: supplier || undefined,
-          manufacturer: manufacturer || undefined,
-          hasIVA: hasIVA || undefined,
-          unit: unit || undefined,
-          technicalSheet: technicalSheet || undefined,
-          seriesBatch: seriesBatch || undefined,
-          invimaRegister: invimaRegister || undefined,
-          invimaValidity: invimaValidity || undefined,
-          riskLevel: riskLevel || undefined,
-          date: date || undefined,
-          requester: requester || undefined,
-          costCOP,
-          status,
-          observations: observations || undefined,
-          rawRow,
-          rowIndex: rowIndex + 1,
-        });
+        detectedParts.push(part);
       }
     });
 

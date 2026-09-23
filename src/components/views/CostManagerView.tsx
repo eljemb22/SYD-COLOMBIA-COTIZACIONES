@@ -1332,12 +1332,6 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
       {/* Searchable & Spacious Add Equipment Modal */}
       {isAddEquipmentDrawerOpen && typeof document !== 'undefined' && createPortal(
         <div
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setIsAddEquipmentDrawerOpen(false);
-              setCostSearchQuery('');
-            }
-          }}
           className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto animate-fadeIn"
         >
           <div className="bg-[#192b45] border border-[#38bdf8]/60 rounded-2xl max-w-4xl w-full max-h-[90vh] h-[86vh] flex flex-col shadow-2xl overflow-hidden animate-scaleUp my-auto">

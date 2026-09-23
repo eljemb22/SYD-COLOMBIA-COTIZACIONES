@@ -506,9 +506,6 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
 
   return createPortal(
     <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
       className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-y-auto animate-fadeIn"
     >
       <div className="bg-[#192b45] border border-[#38bdf8]/60 rounded-2xl max-w-5xl lg:max-w-6xl w-full shadow-2xl animate-scaleUp max-h-[92vh] flex flex-col overflow-hidden my-auto">

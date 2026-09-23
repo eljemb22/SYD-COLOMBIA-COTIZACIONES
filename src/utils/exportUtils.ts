@@ -534,18 +534,15 @@ export const exportQuoteToWord = async (
   // Determine letterhead: prioritize active/permanent attached letterhead, then official SyD corporate letterhead
   let rawLetterheadUrl = margins?.companyLetterheadUrl;
   if (!rawLetterheadUrl && typeof localStorage !== 'undefined') {
-    const permanent = localStorage.getItem('syd_permanent_default_letterhead');
-    if (permanent && permanent !== 'none' && permanent.length > 20) {
-      rawLetterheadUrl = permanent;
+    const manual = localStorage.getItem('syd_custom_manual_letterhead');
+    if (manual && manual !== 'none' && manual.length > 20 && !manual.includes('OFICIAL SYD COLOMBIA')) {
+      rawLetterheadUrl = manual;
     } else {
       const saved = localStorage.getItem('syd_active_letterhead_url');
-      if (saved && saved !== 'none' && saved.length > 20) {
+      if (saved && saved !== 'none' && saved.length > 20 && !saved.includes('OFICIAL SYD COLOMBIA')) {
         rawLetterheadUrl = saved;
       }
     }
-  }
-  if (!rawLetterheadUrl) {
-    rawLetterheadUrl = getOfficialSyDLetterheadDataUrl() || generateCorporateLetterheadDataUrl();
   }
   const letterheadInfo = rawLetterheadUrl ? dataUrlToImageInfo(rawLetterheadUrl) : null;
 

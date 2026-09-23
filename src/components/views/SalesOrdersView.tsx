@@ -615,18 +615,26 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
             )}
           </button>
 
-          <button
-            onClick={() => {
-              setEditingOrder(null);
-              setQuoteToConvert(null);
-              setTenderToConvert(null);
-              setIsNewOrderModalOpen(true);
-            }}
-            className="px-3.5 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-amber-500/20 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nueva Orden de Venta</span>
-          </button>
+          {/* Single primary button: Nueva Orden de Venta */}
+          {!isReadOnly ? (
+            <button
+              onClick={() => {
+                setEditingOrder(null);
+                setQuoteToConvert(null);
+                setTenderToConvert(null);
+                setIsNewOrderModalOpen(true);
+              }}
+              className="px-3.5 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-amber-500/20 cursor-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nueva Orden de Venta</span>
+            </button>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-xs font-semibold">
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Modo Lectura</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -723,30 +731,6 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
             Trazabilidad entre Ventanas
           </button>
         </div>
-
-        {/* Action Button: New OV or Lock badge */}
-        <div>
-          {!isReadOnly ? (
-            <button
-              type="button"
-              onClick={() => {
-                setEditingOrder(null);
-                setQuoteToConvert(null);
-                setTenderToConvert(null);
-                setIsNewOrderModalOpen(true);
-              }}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer transition active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nueva Orden de Venta (OV)</span>
-            </button>
-          ) : (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-xs font-semibold">
-              <Lock className="w-3.5 h-3.5 text-amber-400" />
-              <span>Modo Lectura (Sin permiso de edición)</span>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* SUBTAB 1: Órdenes de Venta (OV) */}
@@ -829,20 +813,9 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
             <div className="py-12 text-center bg-slate-900/60 border border-slate-800 rounded-2xl">
               <PackageCheck className="w-12 h-12 text-slate-500 mx-auto mb-2 opacity-50" />
               <h3 className="text-sm font-bold text-white mb-1">No hay Órdenes de Venta que coincidan</h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto mb-4">
-                Las OVs de licitaciones adjudicadas y cotizaciones se generan automáticamente aquí, o puedes crear una OV de venta directa.
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Las OVs de licitaciones adjudicadas y cotizaciones se generan automáticamente aquí, o puedes crear una OV de venta directa usando el botón superior "Nueva Orden de Venta".
               </p>
-              <button
-                onClick={() => {
-                  setEditingOrder(null);
-                  setQuoteToConvert(null);
-                  setTenderToConvert(null);
-                  setIsNewOrderModalOpen(true);
-                }}
-                className="px-4 py-2 bg-amber-500 text-slate-950 text-xs font-bold rounded-xl hover:bg-amber-400 transition-colors cursor-pointer"
-              >
-                Crear Primera OV
-              </button>
             </div>
           ) : ordersViewMode === 'grid' ? (
             /* Orders Cards Grid */

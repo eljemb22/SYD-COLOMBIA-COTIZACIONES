@@ -29,6 +29,7 @@ import {
   normalizeClientName,
   resolveDepartmentFromCity,
   getClientDataStatus,
+  markClientAsPermanentlyDeleted,
 } from '../../utils/clientStorage';
 import type { ClientPendingField } from '../../utils/clientStorage';
 import { deleteClientFromFirestore } from '../../services/realtimeSync';
@@ -71,6 +72,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editingClient, setEditingClient] = useState<Partial<ClientRecord> | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [clientToDelete, setClientToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Map quotes to clients for fast lookup and display
   const clientQuotesMap = useMemo(() => {
@@ -175,20 +177,26 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
   };
 
   const handleDeleteClient = (clientId: string, clientName: string) => {
-    if (!confirm(`¿Está seguro de eliminar el cliente "${clientName}" del directorio?`)) return;
+    setClientToDelete({ id: clientId, name: clientName });
+  };
+
+  const confirmDeleteClient = () => {
+    if (!clientToDelete) return;
+    const { id: clientId, name: clientName } = clientToDelete;
+    markClientAsPermanentlyDeleted(clientId, clientName);
     const remaining = clients.filter((c) => c.id !== clientId);
     persistClients(remaining);
     setClients(remaining);
     deleteClientFromFirestore(clientId).catch(() => {});
+    setClientToDelete(null);
+    setFormSuccess(`¡Cliente "${clientName}" eliminado exitosamente del directorio!`);
+    setTimeout(() => setFormSuccess(null), 3000);
   };
 
   if (!isOpen) return null;
 
   return createPortal(
     <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
       className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn"
     >
       <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-5xl w-full shadow-2xl animate-scaleUp max-h-[92vh] flex flex-col overflow-hidden my-auto">
@@ -870,6 +878,48 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
             Cerrar Directorio
           </button>
         </div>
+
+        {/* Modal de confirmación para eliminar cliente sin depender de window.confirm */}
+        {clientToDelete && (
+          <div className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-[#1e293b] border border-red-500/60 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 animate-scaleUp">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-white">¿Eliminar cliente del directorio?</h4>
+                  <p className="text-xs text-slate-400">Esta acción removerá el cliente permanentemente.</p>
+                </div>
+              </div>
+
+              <div className="bg-[#0f172a] p-3 rounded-xl border border-slate-700/60 text-xs text-slate-300">
+                Está a punto de eliminar a:
+                <p className="mt-1 font-bold text-white text-sm">
+                  {clientToDelete.name}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setClientToDelete(null)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-600 transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteClient}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-900/40 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Sí, Eliminar Definitivamente
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>,
     document.body

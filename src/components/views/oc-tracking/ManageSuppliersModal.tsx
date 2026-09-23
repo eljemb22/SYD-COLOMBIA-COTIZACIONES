@@ -369,8 +369,13 @@ export const ManageSuppliersModal: React.FC<ManageSuppliersModalProps> = ({
           eq.supplierPrices.forEach((sp) => sp.supplier && eqAllSupps.push(sp.supplier.trim().toLowerCase()));
         }
 
+        const isTecnicaGroup = sNameLower.includes('tecnica');
         const isSupplierMatch = eqAllSupps.some(
-          (supp) => supp === sNameLower || supp.includes(sNameLower) || sNameLower.includes(supp)
+          (supp) =>
+            supp === sNameLower ||
+            supp.includes(sNameLower) ||
+            sNameLower.includes(supp) ||
+            (isTecnicaGroup && (supp === 'tecnica' || supp.includes('tecnica') || supp.includes('electromedica')))
         );
 
         if (isSupplierMatch || sBrandsLower.has(eqBrandLower) || (eqBrandLower && sNameLower.includes(eqBrandLower))) {
@@ -509,8 +514,13 @@ export const ManageSuppliersModal: React.FC<ManageSuppliersModalProps> = ({
         e.supplierPrices.forEach((sp) => sp.supplier && eqAllSupps.push(sp.supplier.trim().toLowerCase()));
       }
 
+      const isTecnicaGroup = sNameLower.includes('tecnica');
       const isSupplierMatch = eqAllSupps.some(
-        (supp) => supp === sNameLower || supp.includes(sNameLower) || sNameLower.includes(supp)
+        (supp) =>
+          supp === sNameLower ||
+          supp.includes(sNameLower) ||
+          sNameLower.includes(supp) ||
+          (isTecnicaGroup && (supp === 'tecnica' || supp.includes('tecnica') || supp.includes('electromedica')))
       );
 
       return (
@@ -685,9 +695,6 @@ export const ManageSuppliersModal: React.FC<ManageSuppliersModalProps> = ({
 
   return (
     <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
       className="fixed inset-0 z-50 bg-slate-950/85 flex items-center justify-center p-2.5 sm:p-4 md:p-6 backdrop-blur-xs animate-fadeIn overflow-y-auto"
     >
       <div className="bg-[#15253d] border border-[#334d6e] rounded-2xl w-full max-w-6xl max-h-[86vh] h-[82vh] min-h-[500px] flex flex-col shadow-2xl overflow-hidden text-xs my-auto">

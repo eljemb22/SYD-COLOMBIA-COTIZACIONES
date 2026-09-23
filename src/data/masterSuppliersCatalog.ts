@@ -3,6 +3,20 @@ import { SupplierProfile } from '../types';
 
 export const MASTER_SUPPLIERS_CATALOG: SupplierProfile[] = [
   {
+    id: "supp-master-tecnica",
+    name: "TECNICA",
+    nit: "890.900.547-1",
+    contactPerson: "Asesor Comercial Biomédico",
+    phone: "(601) 314-5500",
+    email: "ventas@tecnica.com.co",
+    city: "Bogotá D.C.",
+    brands: ["COMEN", "MINDRAY", "WELCH ALLYN", "SECA", "CA-MI", "DRAGER", "KAWE"],
+    defaultPaymentTerms: "Crédito 30 días",
+    notes: "Distribuidor mayorista autorizado de equipos médicos, monitorización, succión quirúrgica y diagnóstico.",
+    createdAt: "2026-08-01",
+    updatedAt: "2026-09-22"
+  },
+  {
     id: "supp-master-mindray",
     name: "Mindray Medical Colombia S.A.S.",
     nit: "900.234.567-8",

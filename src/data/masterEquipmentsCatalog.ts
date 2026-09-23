@@ -4,6 +4,166 @@ import { MedicalEquipment } from "../types";
 
 export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
   {
+    "id": "eq_70904",
+    "code": "70904",
+    "name": "MESA DE CIRUGIA",
+    "brand": "SYD Biomedical",
+    "model": "Quirúrgica Avanzada",
+    "category": "Quirófano",
+    "productGroup": "Equipos hospitalarios",
+    "supplier": "SYD Biomedical",
+    "allSuppliers": ["SYD Biomedical"],
+    "baseCostCOP": 18500000,
+    "defaultMarginList": "L3",
+    "taxExempt": false,
+    "taxRate": 0.19,
+    "invimaRecordNumber": "2021EBC-0008450",
+    "invimaStatus": "Vigente",
+    "invimaExpiryDate": "",
+    "warrantyMonths": 12,
+    "originCountry": "Colombia",
+    "description": "MESA DE CIRUGIA para quirófano con ajustes electrohidráulicos multiposición y accesorios estándar.",
+    "technicalSpecs": [
+      "Código de parte: 70904",
+      "Grupo: MuEqHosp",
+      "Clase: Equipos hospitalarios",
+      "Descripción: MESA DE CIRUGIA"
+    ],
+    "standardAccessories": [],
+    "hasDocSheet": false,
+    "hasInvimaDoc": true,
+    "hasManual": false,
+    "hasQualityCert": false
+  },
+  {
+    "id": "eq_70905",
+    "code": "70905",
+    "name": "BANDA THERABAND DE ALTA RESISTENCIA",
+    "brand": "TheraBand",
+    "model": "Alta Resistencia",
+    "category": "Hospitalización",
+    "productGroup": "Equipos hospitalarios",
+    "supplier": "SYD Biomedical",
+    "allSuppliers": ["SYD Biomedical"],
+    "baseCostCOP": 65000,
+    "defaultMarginList": "L1",
+    "taxExempt": false,
+    "taxRate": 0.19,
+    "invimaRecordNumber": "No Aplica",
+    "invimaStatus": "No Aplica",
+    "invimaExpiryDate": "",
+    "warrantyMonths": 12,
+    "originCountry": "Colombia",
+    "description": "Banda elástica terapéutica para rehabilitación física y fisioterapia de alta resistencia.",
+    "technicalSpecs": [
+      "Código de parte: 70905",
+      "Grupo: MuEqHosp",
+      "Clase: Equipos hospitalarios",
+      "Descripción: BANDA THERABAND DE ALTA RESISTENCIA"
+    ],
+    "standardAccessories": [],
+    "hasDocSheet": false,
+    "hasInvimaDoc": false,
+    "hasManual": false,
+    "hasQualityCert": false
+  },
+  {
+    "id": "eq_70909",
+    "code": "70909",
+    "name": "CALENTADOR RADIANTE INFANTIL",
+    "brand": "SYD Biomedical",
+    "model": "Neonatal Pro",
+    "category": "Neonatología",
+    "productGroup": "Equipos hospitalarios",
+    "supplier": "SYD Biomedical",
+    "allSuppliers": ["SYD Biomedical"],
+    "baseCostCOP": 12500000,
+    "defaultMarginList": "L3",
+    "taxExempt": false,
+    "taxRate": 0.19,
+    "invimaRecordNumber": "2020EBC-0004123",
+    "invimaStatus": "Vigente",
+    "invimaExpiryDate": "",
+    "warrantyMonths": 12,
+    "originCountry": "Colombia",
+    "description": "Unidad de calor radiante infantil para estabilización y cuidado crítico del recién nacido.",
+    "technicalSpecs": [
+      "Código de parte: 70909",
+      "Grupo: MuEqHosp",
+      "Clase: Equipos hospitalarios",
+      "Descripción: CALENTADOR RADIANTE INFANTIL"
+    ],
+    "standardAccessories": [],
+    "hasDocSheet": false,
+    "hasInvimaDoc": true,
+    "hasManual": false,
+    "hasQualityCert": false
+  },
+  {
+    "id": "eq_70910",
+    "code": "70910",
+    "name": "SILLA DE RUEDAS BARIATRICA",
+    "brand": "SYD Biomedical",
+    model: "Bariátrica Heavy-Duty",
+    "category": "Hospitalización",
+    "productGroup": "Muebles hospitalarios",
+    "supplier": "SYD Biomedical",
+    "allSuppliers": ["SYD Biomedical"],
+    "baseCostCOP": 1450000,
+    "defaultMarginList": "L2",
+    "taxExempt": false,
+    "taxRate": 0.19,
+    "invimaRecordNumber": "No Aplica",
+    "invimaStatus": "No Aplica",
+    "invimaExpiryDate": "",
+    "warrantyMonths": 12,
+    "originCountry": "Colombia",
+    "description": "Silla de ruedas para uso hospitalario reforzada para transporte de pacientes bariátricos.",
+    "technicalSpecs": [
+      "Código de parte: 70910",
+      "Grupo: MuEqHosp",
+      "Clase: Muebles hospitalarios",
+      "Descripción: SILLA DE RUEDAS BARIATRICA"
+    ],
+    "standardAccessories": [],
+    "hasDocSheet": false,
+    "hasInvimaDoc": false,
+    "hasManual": false,
+    "hasQualityCert": false
+  },
+  {
+    "id": "eq_70923",
+    "code": "70923",
+    "name": "ARCO EN C",
+    "brand": "SYD Biomedical",
+    "model": "Digital Fluoroscopia Pro",
+    "category": "Diagnóstico",
+    "productGroup": "Equipos hospitalarios",
+    "supplier": "SYD Biomedical",
+    "allSuppliers": ["SYD Biomedical"],
+    "baseCostCOP": 145000000,
+    "defaultMarginList": "L3_5",
+    "taxExempt": false,
+    "taxRate": 0.19,
+    "invimaRecordNumber": "2019EBC-0007890",
+    "invimaStatus": "Vigente",
+    "invimaExpiryDate": "",
+    "warrantyMonths": 12,
+    "originCountry": "Colombia",
+    "description": "Sistema de fluoroscopia e imagen radiológica quirúrgica Arco en C digital con intensificador de imagen.",
+    "technicalSpecs": [
+      "Código de parte: 70923",
+      "Grupo: MuEqHosp",
+      "Clase: Equipos hospitalarios",
+      "Descripción: ARCO EN C"
+    ],
+    "standardAccessories": [],
+    "hasDocSheet": false,
+    "hasInvimaDoc": true,
+    "hasManual": false,
+    "hasQualityCert": false
+  },
+  {
     "id": "eq_70860_1",
     "code": "70860",
     "name": "LARINGOSCOPIO CON HOJAS PARA ADULTO/NEONATAL CON ESTUCHE",
@@ -11,9 +171,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "FIBRA OPTICA",
     "category": "Cuidados Críticos",
     "productGroup": "Equipos Médicos",
-    "supplier": "Técnica Electromédica",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "Técnica Electromédica"
+      "TECNICA"
     ],
     "baseCostCOP": 3912941,
     "defaultMarginList": "L1",
@@ -28,7 +188,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "technicalSpecs": [
       "Parte creada por departamento de compras",
       "Referencia: LARINGOSCOPIO CON HOJAS PARA ADULTO/NEONATAL CON ESTUCHE",
-      "Marca: Técnica Electromédica"
+      "Marca: TECNICA"
     ],
     "standardAccessories": [],
     "hasDocSheet": false,
@@ -44,9 +204,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "Adulto/Pediátrico con Estuche",
     "category": "Cuidados Críticos",
     "productGroup": "Equipos Médicos",
-    "supplier": "Técnica Electromédica",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "Técnica Electromédica"
+      "TECNICA"
     ],
     "baseCostCOP": 4325665,
     "defaultMarginList": "L1",
@@ -61,7 +221,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "technicalSpecs": [
       "Parte creada por departamento de compras",
       "Referencia: LARINGOSCOPIO CON HOJAS PARA ADULTO/PEDIATRICO CON ESTUCHE",
-      "Marca: Técnica Electromédica"
+      "Marca: TECNICA"
     ],
     "standardAccessories": [],
     "hasDocSheet": false,
@@ -77,9 +237,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "DUR09",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 80960,
     "defaultMarginList": "L4",
@@ -139,9 +299,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "69061",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 251271,
     "defaultMarginList": "L4",
@@ -201,9 +361,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "69062",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 251232,
     "defaultMarginList": "L4",
@@ -263,9 +423,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "69063",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 251200,
     "defaultMarginList": "L4",
@@ -325,9 +485,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "68065",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 235667,
     "defaultMarginList": "L4",
@@ -387,9 +547,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "68061",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 251025,
     "defaultMarginList": "L4",
@@ -1069,9 +1229,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "60813",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 478877,
     "defaultMarginList": "L4",
@@ -2123,9 +2283,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "N/A",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 30000,
     "defaultMarginList": "L4",
@@ -2433,9 +2593,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "68063",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 272525,
     "defaultMarginList": "L4",
@@ -3239,9 +3399,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "5079-145",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 420000,
     "defaultMarginList": "L4",
@@ -3730,9 +3890,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "DS44-09C",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 277433,
     "defaultMarginList": "L4",
@@ -3792,9 +3952,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "DS44-11C",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 271053,
     "defaultMarginList": "L4",
@@ -3854,9 +4014,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "5079-135",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 373742,
     "defaultMarginList": "L4",
@@ -4908,9 +5068,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "7670-10",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1063000,
     "defaultMarginList": "L4",
@@ -5642,9 +5802,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "7052-34",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 230831,
     "defaultMarginList": "L4",
@@ -5888,9 +6048,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "92871BLK",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 914882,
     "defaultMarginList": "L4",
@@ -6012,9 +6172,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "374",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 2315200,
     "defaultMarginList": "L4",
@@ -6074,9 +6234,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "201",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 35038,
     "defaultMarginList": "L4",
@@ -6260,9 +6420,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "NEW ASPIRET 310001 1000M",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 418200,
     "defaultMarginList": "L4",
@@ -6753,9 +6913,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "EPM12",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 3530341,
     "defaultMarginList": "L4",
@@ -6827,9 +6987,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "856",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 488750,
     "defaultMarginList": "L4",
@@ -6889,9 +7049,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "68064",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 250000,
     "defaultMarginList": "L4",
@@ -6951,9 +7111,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "68062",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 250540,
     "defaultMarginList": "L4",
@@ -7013,9 +7173,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "312",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 374341,
     "defaultMarginList": "L4",
@@ -7273,9 +7433,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "878",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 2120281,
     "defaultMarginList": "L4",
@@ -7496,9 +7656,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "BENEVIEW",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 7450000,
     "defaultMarginList": "L4",
@@ -7560,9 +7720,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "354M",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 792378,
     "defaultMarginList": "L4",
@@ -7679,9 +7839,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "417",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 762350,
     "defaultMarginList": "L4",
@@ -7741,9 +7901,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "7670-01",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 682000,
     "defaultMarginList": "L4",
@@ -7803,9 +7963,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "813",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 490000,
     "defaultMarginList": "L4",
@@ -7865,9 +8025,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "874",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1730000,
     "defaultMarginList": "L4",
@@ -7927,9 +8087,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "DS45-11",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 416200,
     "defaultMarginList": "L4",
@@ -8051,9 +8211,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "354",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 782980,
     "defaultMarginList": "L4",
@@ -8113,9 +8273,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "92871-BLU",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 969843,
     "defaultMarginList": "L4",
@@ -8304,9 +8464,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "213",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 680000,
     "defaultMarginList": "L4",
@@ -8366,9 +8526,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "416",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 602638,
     "defaultMarginList": "L4",
@@ -8490,9 +8650,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "334",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1847500,
     "defaultMarginList": "L4",
@@ -9464,9 +9624,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "212",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 224300,
     "defaultMarginList": "L4",
@@ -9702,9 +9862,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "BENEHEART C2",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 4790000,
     "defaultMarginList": "L4",
@@ -10098,9 +10258,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "HYBASE V3",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 44653100,
     "defaultMarginList": "L4",
@@ -10363,9 +10523,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "C1A",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 3790000,
     "defaultMarginList": "L4",
@@ -10771,9 +10931,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "216",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 550000,
     "defaultMarginList": "L4",
@@ -11178,9 +11338,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "GS 600",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 3140400,
     "defaultMarginList": "L4",
@@ -11235,9 +11395,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "97200CL",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1490000,
     "defaultMarginList": "L4",
@@ -11370,9 +11530,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "777",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1805357,
     "defaultMarginList": "L4",
@@ -11432,9 +11592,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "NEW ASKIR 230",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1350000,
     "defaultMarginList": "L4",
@@ -11494,9 +11654,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "HOSPIVAC 350",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 3650000,
     "defaultMarginList": "L4",
@@ -11630,9 +11790,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "GS 300",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1814844,
     "defaultMarginList": "L4",
@@ -11687,9 +11847,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "NEW ASKIR 30",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 790000,
     "defaultMarginList": "L4",
@@ -11749,9 +11909,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "DUR06",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 81100,
     "defaultMarginList": "L4",
@@ -11811,9 +11971,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "206",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 69900,
     "defaultMarginList": "L4",
@@ -11873,9 +12033,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "60814-LED",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 534900,
     "defaultMarginList": "L4",
@@ -11935,9 +12095,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "EPM12M",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 19502900,
     "defaultMarginList": "L4",
@@ -12009,9 +12169,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "115-034110-00",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 19770000,
     "defaultMarginList": "L4",
@@ -12567,9 +12727,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "EPM12M+AG",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -12998,9 +13158,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "PROBP 2000",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -13060,9 +13220,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "76700",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 75000,
     "defaultMarginList": "L4",
@@ -13184,9 +13344,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "52432-U Y 52434-U",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -13246,9 +13406,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "77790-3",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -13456,9 +13616,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "876",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1532470,
     "defaultMarginList": "L4",
@@ -13881,9 +14041,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "GS 900",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 11890000,
     "defaultMarginList": "L4",
@@ -14188,9 +14348,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "CSM-1",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 16900000,
     "defaultMarginList": "L4",
@@ -14443,9 +14603,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "A8",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 54382200,
     "defaultMarginList": "L4",
@@ -14834,9 +14994,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "EPM12+2IBP+CO+CO2",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 9800000,
     "defaultMarginList": "L4",
@@ -14908,9 +15068,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "210",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -15327,9 +15487,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "UMEC 100",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 2890000,
     "defaultMarginList": "L4",
@@ -15401,9 +15561,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "UMEC 120 2IBP/CO",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 5150000,
     "defaultMarginList": "L4",
@@ -15475,9 +15635,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "UMEC 120 2IBP/CO+CO2",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 8400000,
     "defaultMarginList": "L4",
@@ -15549,9 +15709,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "UMED 20",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 9562000,
     "defaultMarginList": "L4",
@@ -15615,9 +15775,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "A5",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 86737736,
     "defaultMarginList": "L4",
@@ -15817,9 +15977,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "H190-5620",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 95000,
     "defaultMarginList": "L4",
@@ -15879,9 +16039,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "874 +",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1272325,
     "defaultMarginList": "L4",
@@ -15941,9 +16101,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "200S",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 6000000,
     "defaultMarginList": "L4",
@@ -16184,9 +16344,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "VS600",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -16248,9 +16408,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "777-SM2XXX",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 2448600,
     "defaultMarginList": "L4",
@@ -16434,9 +16594,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "HOSPIVAC 400",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 4350000,
     "defaultMarginList": "L4",
@@ -16496,9 +16656,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "834",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1350470,
     "defaultMarginList": "L4",
@@ -16558,9 +16718,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "GS IV",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 4152700,
     "defaultMarginList": "L4",
@@ -16615,9 +16775,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "045-003426-00",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1350000,
     "defaultMarginList": "L4",
@@ -17313,9 +17473,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "BENEVISION",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -17568,9 +17728,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "TV50",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 27087700,
     "defaultMarginList": "L4",
@@ -17708,9 +17868,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "SV300",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -17786,9 +17946,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "HYLED 760",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 24000000,
     "defaultMarginList": "L4",
@@ -17843,9 +18003,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "EVP",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 3291000,
     "defaultMarginList": "L4",
@@ -17903,9 +18063,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "UVP",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1575000,
     "defaultMarginList": "L4",
@@ -18206,9 +18366,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "DS45-09",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -18325,9 +18485,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "HYLED200",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -18382,9 +18542,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "60814",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 392152,
     "defaultMarginList": "L4",
@@ -18444,9 +18604,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "MOBIEYE 700",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 255000000,
     "defaultMarginList": "L4",
@@ -18506,9 +18666,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "WALKFREE",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -18573,9 +18733,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "WALK200B",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -18637,9 +18797,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "BENEHEART R700",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -18704,9 +18864,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "DIGIEYE 330",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -18766,9 +18926,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "EPX43X43R",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1,
     "defaultMarginList": "L4",
@@ -19014,9 +19174,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "69064",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 249789,
     "defaultMarginList": "L4",
@@ -19295,9 +19455,9 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
     "model": "RECARGABLE PARA DEA  BENEHEART D1",
     "category": "Diagnóstico",
     "productGroup": "Equipos Médicos",
-    "supplier": "TECNICA ELECTROMEDICA",
+    "supplier": "TECNICA",
     "allSuppliers": [
-      "TECNICA ELECTROMEDICA"
+      "TECNICA"
     ],
     "baseCostCOP": 1005300,
     "baseCostUSD": 296,

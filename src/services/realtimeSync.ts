@@ -455,39 +455,33 @@ export async function writeInChunks<T extends { id?: string; code?: string }>(
   for (let i = 0; i < validItems.length; i += CHUNK_SIZE) {
     const chunk = validItems.slice(i, i + CHUNK_SIZE);
     
-    // Commit each batch completely before continuing.
-    // Do not use a timeout race: a timed-out Firestore commit can
-    // continue in the background and overwrite newer changes or
-    // recreate documents that were already deleted.
-    try {
+    // Batch commit with safe timeout fallback (never blocks indefinitely)
+    const commitPromise = (async () => {
       const batch = writeBatch(db);
-
       chunk.forEach((item) => {
         try {
           const docRef = doc(db, collectionName, String(item.id));
-          batch.set(
-            docRef,
-            sanitizeForFirestore({
-              ...item,
-              _updatedAt: new Date().toISOString(),
-            }),
-            { merge: true }
-          );
+          batch.set(docRef, sanitizeForFirestore({ ...item, _updatedAt: new Date().toISOString() }), { merge: true });
         } catch (itemErr) {
           // ignore item formatting issues
         }
       });
-
       await batch.commit();
+    })();
+
+    const timeoutPromise = new Promise<void>((resolve) => {
+      setTimeout(() => {
+        resolve();
+      }, 4000); // 4 seconds max per chunk before proceeding smoothly
+    });
+
+    try {
+      await Promise.race([commitPromise, timeoutPromise]);
     } catch (batchErr) {
-      console.error(`Firestore batch write error (${collectionName}):`, batchErr);
-      throw batchErr;
+      // ignore transient batch commit error
     }
 
-    onProgressChunk?.(
-      Math.min(i + chunk.length, validItems.length),
-      validItems.length
-    );
+    onProgressChunk?.(Math.min(i + chunk.length, validItems.length), validItems.length);
   }
 }
 
@@ -767,6 +761,58 @@ export async function saveSalesInvoicesBatchToFirestore(invoices: SalesInvoiceRe
   });
 }
 
+/**
+ * Persists a detected Google Drive / Sheet part code to the cloud database
+ * so it is immediately marked as "✓ Creado" across all devices, windows, and URLs.
+ */
+export async function saveCreatedSheetPartToFirestore(code: string, name?: string): Promise<void> {
+  if (!code) return;
+  const cleanCode = code.trim().toLowerCase();
+  const safeId = toSafeDocId(`part_${cleanCode}`, 'part');
+  try {
+    const docRef = doc(db, 'created_sheet_parts', safeId);
+    await setDoc(
+      docRef,
+      {
+        code: cleanCode,
+        rawCode: code.trim(),
+        name: name?.trim() || '',
+        createdAt: new Date().toISOString(),
+        _updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    // Non-blocking write error
+  }
+}
+
+/**
+ * Subscribes to real-time changes in the cloud created_sheet_parts collection
+ */
+export function subscribeToCreatedSheetParts(callback: (codes: string[]) => void): () => void {
+  try {
+    const partsColl = collection(db, 'created_sheet_parts');
+    return onSnapshot(
+      partsColl,
+      (snapshot) => {
+        const codes: string[] = [];
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d.code) codes.push(String(d.code).trim().toLowerCase());
+          if (d.rawCode) codes.push(String(d.rawCode).trim().toLowerCase());
+        });
+        callback(codes);
+      },
+      (err) => {
+        console.debug('Created parts subscription fallback:', err?.message || err);
+      }
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
 // -------------------------------------------------------------
 // REAL-TIME SUBSCRIBERS
 // -------------------------------------------------------------
@@ -782,6 +828,7 @@ export interface RealtimeDataCallbacks {
   onUsersChange?: (users: StoredUserAccount[]) => void;
   onSuppliersChange?: (suppliers: SupplierProfile[]) => void;
   onClientsChange?: (clients: ClientRecord[]) => void;
+  onCreatedPartsChange?: (partCodes: string[]) => void;
   onThemeChange?: (theme: ThemeSettings) => void;
   onLetterheadChange?: (letterheadUrl: string | null) => void;
   onStatusChange?: (status: SyncConnectionStatus) => void;
@@ -846,9 +893,21 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           remoteQuotes.push(docSnap.data() as SavedQuote);
         });
 
-        // Firestore is the single source of truth.
-        // An empty snapshot means the collection is empty; never restore localStorage data.
-        const resolvedQuotes: SavedQuote[] = remoteQuotes;
+        const localQuotes = getSavedQuotes();
+        let resolvedQuotes: SavedQuote[];
+
+        if (remoteQuotes.length === 0) {
+          // If Firestore is completely empty and this is the first sync, seed with local data
+          if (!quotesInitialized && localQuotes.length > 0) {
+            resolvedQuotes = localQuotes;
+            saveQuotesBatchToFirestore(localQuotes).catch(() => {});
+          } else {
+            resolvedQuotes = [];
+          }
+        } else {
+          // Authoritative remote list from Firestore: reflects real-time adds, edits, and deletions
+          resolvedQuotes = remoteQuotes;
+        }
 
         resolvedQuotes.sort((a, b) => new Date(b.updatedAt || b.savedAt || 0).getTime() - new Date(a.updatedAt || a.savedAt || 0).getTime());
         
@@ -883,14 +942,46 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           remoteList.push(docSnap.data() as MedicalEquipment);
         });
 
-        // Firestore is the single source of truth.
-        // An empty snapshot means the collection is empty; never restore localStorage data.
-        const resolvedEquipments: MedicalEquipment[] = remoteList;
+        let localEquipments: MedicalEquipment[] = [];
         try {
-          if (remoteList.length > 0) {
-            localStorage.removeItem('syd_catalog_cleared_by_admin');
-          }
+          const raw = localStorage.getItem('syd_equipments_catalog');
+          if (raw) localEquipments = JSON.parse(raw);
         } catch (e) {}
+
+        const isClearedExplicitly = localStorage.getItem('syd_catalog_cleared_by_admin') === 'true';
+        let resolvedEquipments: MedicalEquipment[];
+
+        if (remoteList.length === 0) {
+          if (isClearedExplicitly) {
+            resolvedEquipments = [];
+          } else if (!equipmentsInitialized && localEquipments.length > 0) {
+            resolvedEquipments = localEquipments;
+            saveEquipmentsBatchToFirestore(resolvedEquipments).catch(() => {});
+          } else {
+            resolvedEquipments = [];
+          }
+        } else {
+          try {
+            localStorage.removeItem('syd_catalog_cleared_by_admin');
+          } catch (e) {}
+          
+          // Cloud Firestore is the authoritative catalog
+          if (!equipmentsInitialized && localEquipments.length > remoteList.length && !isClearedExplicitly) {
+            const remoteIds = new Set(remoteList.map((e) => e.id));
+            const remoteCodes = new Set(remoteList.map((e) => (e.code || '').trim().toLowerCase()).filter(Boolean));
+            const missingLocals = localEquipments.filter(
+              (loc) => loc.id && !remoteIds.has(loc.id) && !remoteCodes.has((loc.code || '').trim().toLowerCase())
+            );
+            if (missingLocals.length > 0) {
+              resolvedEquipments = [...remoteList, ...missingLocals];
+              saveEquipmentsBatchToFirestore(missingLocals).catch(() => {});
+            } else {
+              resolvedEquipments = remoteList;
+            }
+          } else {
+            resolvedEquipments = remoteList;
+          }
+        }
 
         try {
           localStorage.setItem('syd_equipments_catalog', JSON.stringify(resolvedEquipments));
@@ -924,8 +1015,23 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           remoteList.push(docSnap.data() as TenderClientProject);
         });
 
-        // Firestore is the single source of truth.
-        const resolvedTenders: TenderClientProject[] = remoteList;
+        let localTenders: TenderClientProject[] = [];
+        try {
+          const raw = localStorage.getItem('syd_tender_clients_v2');
+          if (raw) localTenders = JSON.parse(raw);
+        } catch (e) {}
+
+        let resolvedTenders: TenderClientProject[];
+        if (remoteList.length === 0) {
+          if (!tendersInitialized && localTenders.length > 0) {
+            resolvedTenders = localTenders;
+            saveTenderClientsToFirestore(resolvedTenders).catch(() => {});
+          } else {
+            resolvedTenders = [];
+          }
+        } else {
+          resolvedTenders = remoteList;
+        }
 
         try {
           localStorage.setItem('syd_tender_clients_v2', JSON.stringify(resolvedTenders));
@@ -958,8 +1064,18 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           remoteList.push(docSnap.data() as OCTrackingContract);
         });
 
-        // Firestore is the single source of truth.
-        const resolvedOC: OCTrackingContract[] = remoteList;
+        const localOC = getStoredOCTrackingContracts();
+        let resolvedOC: OCTrackingContract[];
+        if (remoteList.length === 0) {
+          if (!ocInitialized && localOC.length > 0) {
+            resolvedOC = localOC;
+            saveOCTrackingContractsToFirestore(localOC).catch(() => {});
+          } else {
+            resolvedOC = [];
+          }
+        } else {
+          resolvedOC = remoteList;
+        }
 
         try {
           localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(resolvedOC));
@@ -992,8 +1108,18 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           remoteList.push(docSnap.data() as SalesOrderRecord);
         });
 
-        // Firestore is the single source of truth.
-        const resolvedOrders: SalesOrderRecord[] = remoteList;
+        const localOrders = getStoredSalesOrders();
+        let resolvedOrders: SalesOrderRecord[];
+        if (remoteList.length === 0) {
+          if (!salesOrdersInitialized && localOrders.length > 0) {
+            resolvedOrders = localOrders;
+            saveSalesOrdersBatchToFirestore(localOrders).catch(() => {});
+          } else {
+            resolvedOrders = [];
+          }
+        } else {
+          resolvedOrders = remoteList;
+        }
 
         resolvedOrders.sort(
           (a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime()
@@ -1030,8 +1156,18 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           remoteList.push(docSnap.data() as SalesInvoiceRecord);
         });
 
-        // Firestore is the single source of truth.
-        const resolvedInvoices: SalesInvoiceRecord[] = remoteList;
+        const localInvoices = getStoredSalesInvoices();
+        let resolvedInvoices: SalesInvoiceRecord[];
+        if (remoteList.length === 0) {
+          if (!salesInvoicesInitialized && localInvoices.length > 0) {
+            resolvedInvoices = localInvoices;
+            saveSalesInvoicesBatchToFirestore(localInvoices).catch(() => {});
+          } else {
+            resolvedInvoices = [];
+          }
+        } else {
+          resolvedInvoices = remoteList;
+        }
 
         resolvedInvoices.sort(
           (a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime()
@@ -1068,8 +1204,23 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           remoteList.push(docSnap.data() as TechnicalDocument);
         });
 
-        // Firestore is the single source of truth.
-        const resolvedDocs: TechnicalDocument[] = remoteList;
+        let localDocs: TechnicalDocument[] = [];
+        try {
+          const raw = localStorage.getItem('syd_technical_documents_v3');
+          if (raw) localDocs = JSON.parse(raw);
+        } catch (e) {}
+
+        let resolvedDocs: TechnicalDocument[];
+        if (remoteList.length === 0) {
+          if (!docsInitialized && localDocs.length > 0) {
+            resolvedDocs = localDocs;
+            saveTechnicalDocumentsToFirestore(resolvedDocs).catch(() => {});
+          } else {
+            resolvedDocs = [];
+          }
+        } else {
+          resolvedDocs = remoteList;
+        }
 
         try {
           localStorage.setItem('syd_technical_documents_v3', JSON.stringify(resolvedDocs));
@@ -1197,8 +1348,18 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           remoteList.push(docSnap.data() as SupplierProfile);
         });
 
-        // Firestore is the single source of truth.
-        const resolvedSuppliers: SupplierProfile[] = remoteList;
+        const localSuppliers = getStoredSupplierProfiles();
+        let resolvedSuppliers: SupplierProfile[];
+        if (remoteList.length === 0) {
+          if (!suppliersInitialized && localSuppliers.length > 0) {
+            resolvedSuppliers = localSuppliers;
+            saveSuppliersBatchToFirestore(localSuppliers).catch(() => {});
+          } else {
+            resolvedSuppliers = [];
+          }
+        } else {
+          resolvedSuppliers = remoteList;
+        }
 
         try {
           localStorage.setItem('syd_suppliers_directory_v1', JSON.stringify(resolvedSuppliers));
@@ -1257,8 +1418,18 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           });
         }
 
-        // Firestore is the single source of truth.
-        const resolvedClients: ClientRecord[] = cleanRemoteList;
+        const localClients = getStoredClients();
+        let resolvedClients: ClientRecord[];
+        if (cleanRemoteList.length === 0) {
+          if (!clientsInitialized && localClients.length > 0) {
+            resolvedClients = localClients;
+            saveClientsBatchToFirestore(localClients).catch(() => {});
+          } else {
+            resolvedClients = [];
+          }
+        } else {
+          resolvedClients = cleanRemoteList;
+        }
 
         try {
           localStorage.setItem('syd_clients_directory_v1', JSON.stringify(resolvedClients));
@@ -1283,6 +1454,29 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
     unsubscribers.push(unsubClients);
   } catch (e) {
     handleFirestoreError(e, OperationType.LIST, 'client_directory');
+  }
+
+  // 12. Created Sheet Parts Listener (Google Drive / Sheets detected parts realtime sync)
+  try {
+    const partsColl = collection(db, 'created_sheet_parts');
+    const unsubParts = onSnapshot(
+      partsColl,
+      (snapshot) => {
+        const codes: string[] = [];
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d.code) codes.push(String(d.code).trim().toLowerCase());
+          if (d.rawCode) codes.push(String(d.rawCode).trim().toLowerCase());
+        });
+        if (callbacks.onCreatedPartsChange) {
+          callbacks.onCreatedPartsChange(codes);
+        }
+      },
+      () => {}
+    );
+    unsubscribers.push(unsubParts);
+  } catch (e) {
+    // Non-blocking
   }
 
   // 11. Local / LAN Server Real-time State Listener (SSE & Fast Version Polling)

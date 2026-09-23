@@ -24,6 +24,7 @@ import {
   AlertCircle,
   UserCheck,
   PackageCheck,
+  Trash2,
 } from 'lucide-react';
 import { QuoteHeader, QuoteItem, MedicalEquipment, AuthUser, SavedQuote } from '../../types';
 import { formatCOP, numberToSpanishWords } from '../../utils/formatters';
@@ -127,33 +128,30 @@ export const SalesView: React.FC<SalesViewProps> = ({
     onUpdateMarginSettings?.({ subirBajar, izqDer, tableScale: nextVal });
   };
 
-  // Unified Letterhead State (synced with parent/root state and permanent storage)
+  // Unified Letterhead State (defaults to official SyD letterhead covering whole sheet)
   const [localLetterheadUrl, setLocalLetterheadUrl] = useState<string | null>(() => {
-    if (customLetterheadUrlProp !== undefined && customLetterheadUrlProp !== null) return customLetterheadUrlProp;
+    if (customLetterheadUrlProp !== undefined && customLetterheadUrlProp !== null) {
+      return customLetterheadUrlProp;
+    }
     try {
-      const version = localStorage.getItem('syd_letterhead_version');
-      if (version === 'v4_official_syd') {
-        const permanent = localStorage.getItem('syd_permanent_default_letterhead');
-        if (permanent && permanent.length > 20 && permanent !== 'none') return permanent;
-        const saved = localStorage.getItem('syd_active_letterhead_url');
-        if (saved && saved.length > 20 && saved !== 'none') return saved;
+      const savedManual = localStorage.getItem('syd_custom_manual_letterhead');
+      if (savedManual && savedManual.length > 20 && savedManual !== 'none') return savedManual;
+      const saved = localStorage.getItem('syd_active_letterhead_url');
+      if (saved === 'none') return 'none';
+      if (saved && saved.length > 20) {
+        return saved;
       }
     } catch {}
-    const defaultUrl = getOfficialSyDLetterheadDataUrl();
-    try {
-      localStorage.setItem('syd_letterhead_version', 'v4_official_syd');
-      if (defaultUrl) {
-        localStorage.setItem('syd_active_letterhead_url', defaultUrl);
-        localStorage.setItem('syd_permanent_default_letterhead', defaultUrl);
-      }
-    } catch {}
-    return defaultUrl || null;
+    return getOfficialSyDLetterheadDataUrl() || OFFICIAL_SYD_LETTERHEAD_SVG_PATH;
   });
   const customLetterheadUrl = customLetterheadUrlProp !== undefined ? customLetterheadUrlProp : localLetterheadUrl;
 
-  // The effective letterhead URL guarantees the official corporate letterhead is always rendered
+  // The effective letterhead URL: defaults to official SyD Colombia letterhead covering the whole sheet
   const effectiveLetterhead = useMemo(() => {
-    if (customLetterheadUrl && customLetterheadUrl !== 'none' && customLetterheadUrl.length > 20) {
+    if (customLetterheadUrl === 'none') {
+      return null;
+    }
+    if (customLetterheadUrl && customLetterheadUrl.length > 20) {
       return customLetterheadUrl;
     }
     return getOfficialSyDLetterheadDataUrl() || OFFICIAL_SYD_LETTERHEAD_SVG_PATH;
@@ -163,11 +161,11 @@ export const SalesView: React.FC<SalesViewProps> = ({
     setLocalLetterheadUrl(url);
     try {
       if (url) {
-        localStorage.setItem('syd_letterhead_version', 'v4_official_syd');
+        localStorage.setItem('syd_custom_manual_letterhead', url);
         localStorage.setItem('syd_active_letterhead_url', url);
-        localStorage.setItem('syd_permanent_default_letterhead', url);
       } else {
         localStorage.setItem('syd_active_letterhead_url', 'none');
+        localStorage.removeItem('syd_custom_manual_letterhead');
         localStorage.removeItem('syd_permanent_default_letterhead');
       }
     } catch (e) {
@@ -176,13 +174,10 @@ export const SalesView: React.FC<SalesViewProps> = ({
     onUpdateLetterhead?.(url);
   };
 
-  const handleRestoreOfficialLetterhead = () => {
-    const officialUrl = getOfficialSyDLetterheadDataUrl();
-    if (officialUrl) {
-      setCustomLetterheadUrl(officialUrl);
-      setSaveSuccessMsg('¡Membrete corporativo oficial SyD restablecido y guardado como permanente!');
-      setTimeout(() => setSaveSuccessMsg(null), 4000);
-    }
+  const handleRemoveLetterhead = () => {
+    setCustomLetterheadUrl(null);
+    setSaveSuccessMsg('Membrete removido. La cotización se presentará limpia sin membrete.');
+    setTimeout(() => setSaveSuccessMsg(null), 3500);
   };
 
   const letterheadFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -553,29 +548,51 @@ export const SalesView: React.FC<SalesViewProps> = ({
             </button>
           </div>
 
-          {/* GRUPO 2: MEMBRETE */}
+          {/* GRUPO 2: MEMBRETE OFICIAL SYD */}
           {!isReadOnly && (
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                id="btn-restore-letterhead"
-                onClick={handleRestoreOfficialLetterhead}
-                title="Membrete corporativo oficial de SyD Colombia (permanente en cotizaciones)"
-                className="inline-flex items-center gap-1.5 bg-[#0284c7]/20 hover:bg-[#0284c7]/35 text-[#38bdf8] border border-[#0284c7]/50 text-[11.5px] font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-[#38bdf8]" />
-                <span>Membrete Oficial SyD</span>
-                <span className="bg-[#0284c7]/40 text-white text-[9.5px] px-1.5 py-0.5 rounded-full font-bold">Activo</span>
-              </button>
-
-              <button
-                id="btn-upload-letterhead"
-                onClick={() => letterheadFileInputRef.current?.click()}
-                title="Cargar imagen de membrete o presionar Ctrl + V para pegar desde el portapapeles"
-                className="inline-flex items-center gap-1.5 bg-[#15253d] hover:bg-[#1f375b] text-slate-300 border border-slate-700 hover:text-white text-[11.5px] font-medium px-2.5 py-1.5 rounded-lg transition cursor-pointer"
-              >
-                <Upload className="w-3.5 h-3.5 text-[#38bdf8]" />
-                <span>Personalizar (Ctrl+V)</span>
-              </button>
+              {effectiveLetterhead ? (
+                <>
+                  <div className="inline-flex items-center gap-1.5 bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-[11px] font-bold px-2.5 py-1.5 rounded-lg shadow-2xs">
+                    <Check className="w-3.5 h-3.5 text-cyan-400 stroke-[2.5]" />
+                    <span>Membrete Oficial SYD Activo</span>
+                  </div>
+                  <button
+                    id="btn-remove-letterhead"
+                    type="button"
+                    onClick={handleRemoveLetterhead}
+                    title="Quitar el membrete actual de la cotización y dejar la hoja blanca"
+                    className="inline-flex items-center gap-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-[11px] font-semibold px-2 py-1.5 rounded-lg transition cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Quitar</span>
+                  </button>
+                  <button
+                    id="btn-upload-letterhead"
+                    type="button"
+                    onClick={() => letterheadFileInputRef.current?.click()}
+                    title="Cambiar la imagen del membrete o presionar Ctrl + V para pegar desde el portapapeles"
+                    className="inline-flex items-center gap-1 bg-[#15253d] hover:bg-[#1f375b] text-sky-300 border border-[#38bdf8]/40 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Cambiar (Ctrl+V)</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  id="btn-restore-letterhead"
+                  type="button"
+                  onClick={() => {
+                    const official = getOfficialSyDLetterheadDataUrl() || OFFICIAL_SYD_LETTERHEAD_SVG_PATH;
+                    setCustomLetterheadUrl(official);
+                  }}
+                  title="Activar el membrete oficial corporativo de SyD Colombia cubriendo toda la hoja"
+                  className="inline-flex items-center gap-1.5 bg-[#15253d] hover:bg-[#1f375b] text-sky-300 hover:text-white border border-[#38bdf8]/50 text-[11.5px] font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer shadow-xs active:scale-95"
+                >
+                  <Upload className="w-3.5 h-3.5 text-[#38bdf8]" />
+                  <span>Activar Membrete Oficial</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -795,12 +812,16 @@ export const SalesView: React.FC<SalesViewProps> = ({
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
             }}
           >
-            {/* FULL PAGE LETTERHEAD OVERLAY */}
-            <img
-              src={effectiveLetterhead}
-              alt="Membrete Hoja 1"
-              className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
-            />
+            {/* MEMBRETE CUBRIENDO TODA LA HOJA */}
+            {effectiveLetterhead ? (
+              <div className="absolute inset-0 w-full h-full pointer-events-none z-0 select-none print:w-full print:h-full overflow-hidden">
+                <img
+                  src={effectiveLetterhead}
+                  alt="Membrete Hoja 1"
+                  className="w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
+                />
+              </div>
+            ) : null}
 
             {/* DOCUMENT CONTENT */}
             <div
@@ -1032,12 +1053,16 @@ export const SalesView: React.FC<SalesViewProps> = ({
                   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
                 }}
               >
-                {/* FULL PAGE LETTERHEAD OVERLAY */}
-                <img
-                  src={effectiveLetterhead}
-                  alt={`Membrete Hoja ${pageChunk.globalPageNumber}`}
-                  className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
-                />
+                {/* MEMBRETE CUBRIENDO TODA LA HOJA */}
+                {effectiveLetterhead ? (
+                  <div className="absolute inset-0 w-full h-full pointer-events-none z-0 select-none print:w-full print:h-full overflow-hidden">
+                    <img
+                      src={effectiveLetterhead}
+                      alt={`Membrete Hoja ${pageChunk.globalPageNumber}`}
+                      className="w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
+                    />
+                  </div>
+                ) : null}
 
                 {/* DOCUMENT CONTENT */}
                 <div
@@ -1493,12 +1518,16 @@ export const SalesView: React.FC<SalesViewProps> = ({
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
               }}
             >
-              {/* FULL PAGE LETTERHEAD OVERLAY */}
-              <img
-                src={effectiveLetterhead}
-                alt={`Membrete Hoja ${totalPagesCount}`}
-                className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
-              />
+              {/* MEMBRETE CUBRIENDO TODA LA HOJA */}
+              {effectiveLetterhead ? (
+                <div className="absolute inset-0 w-full h-full pointer-events-none z-0 select-none print:w-full print:h-full overflow-hidden">
+                  <img
+                    src={effectiveLetterhead}
+                    alt={`Membrete Hoja ${totalPagesCount}`}
+                    className="w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
+                  />
+                </div>
+              ) : null}
 
               {/* DOCUMENT CONTENT */}
               <div
@@ -1635,9 +1664,6 @@ export const SalesView: React.FC<SalesViewProps> = ({
       {isClientModalOpen &&
         createPortal(
           <div
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setIsClientModalOpen(false);
-            }}
             className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
           >
             <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-xl w-full shadow-2xl animate-scaleUp overflow-hidden flex flex-col text-slate-200">

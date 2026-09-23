@@ -135,6 +135,25 @@ export function ExcelFilterPopover<T>({
     return new Set(selectedValues);
   });
 
+  // Handle search value change: when user types in the filter search box, automatically select matching visible items
+  const handleSearchChange = (val: string) => {
+    setSearchValue(val);
+    if (val.trim()) {
+      const query = val.toLowerCase().trim();
+      const matched = distinctItems
+        .filter((item) => item.label.toLowerCase().includes(query) || item.key.toLowerCase().includes(query))
+        .map((i) => i.key);
+      setTempSelected(new Set(matched));
+    } else {
+      // If cleared, restore selection based on original selectedValues or all
+      if (selectedValues === undefined) {
+        setTempSelected(new Set(allDistinctValues));
+      } else {
+        setTempSelected(new Set(selectedValues));
+      }
+    }
+  };
+
   // Filter distinct items by search term
   const visibleItems = useMemo(() => {
     if (!searchValue.trim()) return distinctItems;
@@ -181,9 +200,23 @@ export function ExcelFilterPopover<T>({
 
   // Handle Apply
   const handleApply = () => {
-    // If all distinct values are selected, we treat it as no filter (undefined)
+    // If a search query was typed, filter strictly to the checked matching visible items!
+    if (searchValue.trim()) {
+      const activeMatching = visibleKeys.filter((k) => tempSelected.has(k));
+      if (activeMatching.length === 0) {
+        onApplyFilter(column.id, ['__NO_MATCHING_VALUE__']);
+      } else {
+        onApplyFilter(column.id, activeMatching);
+      }
+      onClose();
+      return;
+    }
+
+    // Normal mode without search:
     if (tempSelected.size === allDistinctValues.length && allDistinctValues.every((k) => tempSelected.has(k))) {
       onApplyFilter(column.id, undefined);
+    } else if (tempSelected.size === 0) {
+      onApplyFilter(column.id, ['__NO_MATCHING_VALUE__']);
     } else {
       onApplyFilter(column.id, Array.from(tempSelected));
     }
@@ -336,7 +369,7 @@ export function ExcelFilterPopover<T>({
           <input
             type="text"
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Buscar valores..."
             className="w-full bg-[#182a44] text-white placeholder-slate-400 border border-[#334d6e] rounded-lg pl-7 pr-7 py-1.5 text-xs focus:outline-none focus:border-[#38bdf8] transition"
             autoFocus
@@ -344,7 +377,7 @@ export function ExcelFilterPopover<T>({
           {searchValue && (
             <button
               type="button"
-              onClick={() => setSearchValue('')}
+              onClick={() => handleSearchChange('')}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
@@ -633,20 +666,25 @@ export function useExcelTableFilters<T = any>(
           const accessor = colConfig?.accessor || ((r: any) => r[colId]);
           const raw = accessor(row);
 
-          const allowedSet = new Set(selectedVals);
+          if (selectedVals.includes('__NO_MATCHING_VALUE__') || selectedVals.length === 0) {
+            return false;
+          }
+
+          const allowedExact = new Set(selectedVals);
+          const allowedNormalized = new Set(selectedVals.map((v) => String(v).trim().toLowerCase()));
 
           if (raw === undefined || raw === null || raw === '' || (Array.isArray(raw) && raw.length === 0)) {
-            if (!allowedSet.has(BLANK_VALUE_KEY)) return false;
+            if (!allowedExact.has(BLANK_VALUE_KEY)) return false;
           } else if (Array.isArray(raw)) {
             // For arrays, item matches if any item string is in allowedSet
             const hasMatch = raw.some((it) => {
               const str = typeof it === 'object' ? it?.name || JSON.stringify(it) : String(it);
-              return allowedSet.has(str);
+              return allowedExact.has(str) || allowedNormalized.has(str.trim().toLowerCase());
             });
             if (!hasMatch) return false;
           } else {
             const strVal = String(raw);
-            if (!allowedSet.has(strVal)) return false;
+            if (!allowedExact.has(strVal) && !allowedNormalized.has(strVal.trim().toLowerCase())) return false;
           }
         }
         return true;

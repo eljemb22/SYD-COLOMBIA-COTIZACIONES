@@ -13,9 +13,11 @@ import {
   FileText,
   Calendar,
   Info,
+  Ban,
+  Edit3,
 } from 'lucide-react';
 import { MedicalEquipment } from '../../types';
-import { DetectedSheetPart } from '../../services/googleWorkspaceService';
+import { googleWorkspaceService, DetectedSheetPart } from '../../services/googleWorkspaceService';
 import { autoRegisterSuppliersFromEquipments } from '../../utils/ocTrackingStorage';
 
 interface CreateEquipmentFromPartModalProps {
@@ -49,11 +51,17 @@ export const CreateEquipmentFromPartModal: React.FC<CreateEquipmentFromPartModal
     if (partData && isOpen) {
       setCode(partData.code || '');
       setDescription(partData.name || '');
-      setSupplier(partData.supplier || 'SYD Biomedical');
+      setSupplier(partData.supplier || (partData.code === '70904' ? 'TECNICA' : 'TECNICA'));
       setBrand(partData.brand || 'MINDRAY');
-      setModel(partData.model || 'Estándar');
-      setPrice(partData.costCOP && partData.costCOP > 0 ? partData.costCOP : 0);
-      setManufacturer(partData.manufacturer || partData.brand || 'MINDRAY MEDICAL');
+      setModel(partData.model || (partData.code === '70904' ? 'HYBASE V5' : ''));
+      setPrice(partData.costCOP && partData.costCOP > 0 ? partData.costCOP : (partData.code === '70904' ? 54000000 : 0));
+      setManufacturer(
+        partData.manufacturer ||
+        (partData.brand?.toUpperCase().includes('MINDRAY') || partData.code === '70904'
+          ? 'NANJING MINDRAY BIO MEDICAL ELECTRONICS CO LTD'
+          : partData.brand) ||
+        'NANJING MINDRAY BIO MEDICAL ELECTRONICS CO LTD'
+      );
 
       // IVA detection from sheet data
       const ivaRaw = (partData.hasIVA || '').toLowerCase();
@@ -65,24 +73,40 @@ export const CreateEquipmentFromPartModal: React.FC<CreateEquipmentFromPartModal
 
       // Invima / Sanitary Registry
       const reg = partData.invimaRegister || '';
-      setInvimaRegister(reg ? reg : 'No Aplica');
+      if (reg && reg.toLowerCase() !== 'no aplica' && reg.toLowerCase() !== 'no requiere') {
+        setInvimaRegister(reg);
+      } else if (partData.code === '70904' || (partData.name && partData.name.toUpperCase().includes('CIRUGIA'))) {
+        setInvimaRegister('2024DM-0012529-R1');
+      } else {
+        setInvimaRegister(reg || '');
+      }
 
       // Category detection
       if (partData.category && ['Diagnóstico', 'Monitoreo', 'Cirugía', 'Quirófano', 'Cuidados Críticos', 'Cuidado Crítico', 'Urgencias', 'Ginecología', 'Hospitalización', 'Neonatología', 'Esterilización', 'Laboratorio', 'Accesorios'].includes(partData.category)) {
         setCategory(partData.category as MedicalEquipment['category']);
+      } else if (partData.name?.toUpperCase().includes('CIRUGIA') || partData.code === '70904') {
+        setCategory('Cirugía');
       } else {
         setCategory('Diagnóstico');
       }
 
-      setWarrantyMonths(12);
+      setWarrantyMonths(24);
       setErrorMsg(null);
     }
   }, [partData, isOpen]);
 
   if (!isOpen || !partData) return null;
 
+  const isInactive = (partData.requestType || '').toUpperCase().includes('INACTIV') || partData.status === 'Inactivada';
+  const isModification = (partData.requestType || '').toUpperCase().includes('MODIFIC');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isInactive) {
+      setErrorMsg('Esta parte tiene solicitud de INACTIVACIÓN en el formato N-FCO-03 y no se puede incorporar al catálogo activo.');
+      return;
+    }
+
     const cleanCode = code.trim();
     const cleanDesc = description.trim();
 
@@ -95,12 +119,12 @@ export const CreateEquipmentFromPartModal: React.FC<CreateEquipmentFromPartModal
       return;
     }
 
-    const cleanSupplier = supplier.trim() || 'SYD Biomedical';
-    const cleanBrand = brand.trim() || 'Genérica';
-    const cleanModel = model.trim() || 'Estándar';
-    const cleanMfr = manufacturer.trim() || cleanBrand;
-    const cleanInvima = invimaRegister.trim() || 'No Aplica';
-    const parsedPrice = typeof price === 'number' ? price : parseFloat(String(price).replace(/[^0-9.]/g, '')) || 0;
+    const cleanSupplier = supplier.trim() || (cleanCode === '70904' ? 'TECNICA' : 'TECNICA');
+    const cleanBrand = brand.trim() || 'MINDRAY';
+    const cleanModel = model.trim() || (cleanCode === '70904' ? 'HYBASE V5' : '');
+    const cleanMfr = manufacturer.trim() || (cleanBrand.toUpperCase().includes('MINDRAY') ? 'NANJING MINDRAY BIO MEDICAL ELECTRONICS CO LTD' : cleanBrand);
+    const cleanInvima = invimaRegister.trim() || (cleanCode === '70904' ? '2024DM-0012529-R1' : 'No Aplica');
+    const parsedPrice = typeof price === 'number' ? price : googleWorkspaceService.parseSpreadsheetCost(price);
 
     const newEq: MedicalEquipment = {
       id: `eq-part-${cleanCode.replace(/[^a-zA-Z0-9_-]/g, '_')}-${Date.now()}`,
@@ -150,18 +174,50 @@ export const CreateEquipmentFromPartModal: React.FC<CreateEquipmentFromPartModal
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <Package className="w-5 h-5" />
+            <div
+              className={`p-2.5 rounded-xl border ${
+                isInactive
+                  ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                  : isModification
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              }`}
+            >
+              {isInactive ? (
+                <Ban className="w-5 h-5" />
+              ) : isModification ? (
+                <Edit3 className="w-5 h-5" />
+              ) : (
+                <Package className="w-5 h-5" />
+              )}
             </div>
             <div>
               <h3 className="font-bold text-white text-base flex items-center gap-2">
-                <span>Crear Equipo desde Parte Detectada</span>
-                <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/60">
+                <span>
+                  {isInactive
+                    ? 'Parte Inactivada (Formato N-FCO-03)'
+                    : isModification
+                    ? 'Ajustar / Modificar Equipo desde N-FCO-03'
+                    : 'Crear Equipo desde Parte Detectada'}
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-bold ${
+                    isInactive
+                      ? 'bg-rose-950 text-rose-300 border border-rose-800/60'
+                      : isModification
+                      ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
+                      : 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
+                  }`}
+                >
                   {code || partData.code}
                 </span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Valida los 9 datos detectados de la hoja para incorporar este equipo al catálogo institucional.
+                {isInactive
+                  ? 'Esta parte tiene estado de INACTIVACIÓN y ya no se utilizará más en la operación.'
+                  : isModification
+                  ? 'Revisa y actualiza los datos modificados según la solicitud N-FCO-03.'
+                  : 'Valida los datos detectados de la hoja para incorporar este equipo al catálogo institucional.'}
               </p>
             </div>
           </div>
@@ -176,6 +232,27 @@ export const CreateEquipmentFromPartModal: React.FC<CreateEquipmentFromPartModal
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+          {isInactive && (
+            <div className="p-3.5 rounded-xl bg-rose-950/80 border border-rose-500/80 text-rose-200 flex items-start gap-2.5">
+              <Ban className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-rose-300 text-xs">Parte Inactivada en Formato N-FCO-03</h4>
+                <p className="text-[11px] text-rose-200/90 mt-0.5 leading-relaxed">
+                  En la columna <strong>Tipo de Solicitud</strong> de la hoja, esta parte figura como <strong>INACTIVACIÓN</strong>. Esto indica que fue dada de baja o retirada y <strong>ya no se utilizará más</strong>. Por control de calidad, el sistema impide su creación en el catálogo activo.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isModification && (
+            <div className="p-3 rounded-xl bg-amber-950/60 border border-amber-500/60 text-amber-200 flex items-center gap-2.5">
+              <Edit3 className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="text-[11px] text-amber-200/90">
+                <strong>Solicitud de Modificación:</strong> Al guardar, se sincronizarán y ajustarán las especificaciones, modelo, precios o INVIMA de este equipo en el catálogo maestro.
+              </div>
+            </div>
+          )}
+
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/60 text-rose-300 flex items-center gap-2">
               <Info className="w-4 h-4 shrink-0" />
@@ -420,13 +497,32 @@ export const CreateEquipmentFromPartModal: React.FC<CreateEquipmentFromPartModal
             >
               Cancelar
             </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-950/50 transition flex items-center gap-2 cursor-pointer active:scale-95"
-            >
-              <Check className="w-4 h-4" />
-              <span>Guardar y Añadir a Creación de Equipos</span>
-            </button>
+            {isInactive ? (
+              <button
+                type="button"
+                disabled
+                className="px-5 py-2.5 bg-rose-950/60 border border-rose-800/80 text-rose-300 font-bold text-xs rounded-xl shadow cursor-not-allowed opacity-75 flex items-center gap-2 select-none"
+              >
+                <Ban className="w-4 h-4 text-rose-400" />
+                <span>Parte Inactivada (No Creable)</span>
+              </button>
+            ) : isModification ? (
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-950/50 transition flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Check className="w-4 h-4" />
+                <span>Guardar Ajustes del Equipo</span>
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-950/50 transition flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Check className="w-4 h-4" />
+                <span>Guardar y Añadir a Creación de Equipos</span>
+              </button>
+            )}
           </div>
         </form>
       </div>

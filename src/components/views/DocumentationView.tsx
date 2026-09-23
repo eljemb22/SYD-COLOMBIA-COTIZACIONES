@@ -1148,12 +1148,6 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
       {/* ========================================================================= */}
       {isAddEquipmentModalOpen && typeof document !== 'undefined' && createPortal(
         <div 
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setIsAddEquipmentModalOpen(false);
-              setEquipmentSearchModal('');
-            }
-          }}
           className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto animate-fadeIn"
         >
           <div className="bg-[#192b45] border border-[#38bdf8]/60 rounded-2xl max-w-4xl w-full shadow-2xl animate-scaleUp max-h-[90vh] h-[86vh] flex flex-col overflow-hidden my-auto">
@@ -1321,9 +1315,6 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
       {/* ========================================================================= */}
       {previewDoc && typeof document !== 'undefined' && createPortal(
         <div
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPreviewDoc(null);
-          }}
           className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fadeIn"
         >
           <div className="bg-[#192b45] border border-[#38bdf8]/60 rounded-2xl max-w-5xl w-full p-4 sm:p-5 space-y-3.5 shadow-2xl animate-scaleUp max-h-[92vh] h-[88vh] flex flex-col my-auto">
@@ -1660,9 +1651,6 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
       {/* ========================================================================= */}
       {docToDelete && typeof document !== 'undefined' && createPortal(
         <div
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDocToDelete(null);
-          }}
           className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-fadeIn"
         >
           <div className="bg-[#192b45] border border-rose-500/50 rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-3.5 shadow-2xl animate-scaleUp my-auto">

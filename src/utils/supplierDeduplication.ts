@@ -16,13 +16,31 @@ export const normalizeSupplierQuery = (str: string): string => {
 
 /**
  * Strips common corporate suffixes, country designations, and distribution noise
- * to extract the true canonical entity root (e.g., "STRYKER" and "Stryker Colombia S.A.S." both yield "stryker")
+ * to extract the true canonical entity root (e.g., "STRYKER" and "Stryker Colombia S.A.S." both yield "stryker",
+ * "TECNICA" and "Técnica Electromédica" both yield "tecnica")
  */
 export const getSupplierCanonicalKey = (name: string): string => {
   if (!name) return '';
   let s = normalizeSupplierQuery(name);
 
-  // Common corporate & geographic noise patterns
+  // Exact canonical alias handling for prominent medical suppliers in Colombia
+  if (s.includes('tecnica') || s.includes('electromedica')) {
+    return 'tecnica';
+  }
+  if (s.includes('stryker')) {
+    return 'stryker';
+  }
+  if (s.includes('mindray')) {
+    return 'mindray';
+  }
+  if (s.includes('philips')) {
+    return 'philips';
+  }
+  if (s.includes('welch') && s.includes('allyn')) {
+    return 'welch allyn';
+  }
+
+  // Common corporate, industry & geographic noise patterns
   const corporateNoisePatterns: RegExp[] = [
     /\b(s\s*a\s*s|sas)\b/g,
     /\b(s\s*a|sa)\b/g,
@@ -30,9 +48,10 @@ export const getSupplierCanonicalKey = (name: string): string => {
     /\b(inc|incorporated)\b/g,
     /\b(corp|corporation)\b/g,
     /\b(llc|gmbh|srl|spa)\b/g,
-    /\b(colombia|bogota|de colombia|en colombia|sucursal colombia)\b/g,
+    /\b(colombia|bogota|medellin|cali|barranquilla|de colombia|en colombia|sucursal colombia)\b/g,
     /\b(latin america|latam)\b/g,
-    /\b(medical|healthcare|instruments|endoscopia|distribuciones|distribuidor|distribuidora|equipos medicos|linea medica|soluciones medicas|suministros)\b/g,
+    /\b(medical|healthcare|instruments|endoscopia|distribuciones|distribuidor|distribuidora|equipos medicos|linea medica|soluciones medicas|suministros|suministro y dotaciones)\b/g,
+    /\b(electromedica|electromedico|electromedicos|biomedica|biomedicos|hospitalaria|hospitalario|hospitalarios)\b/g,
     /\b(y cia|cia)\b/g,
   ];
 
@@ -104,11 +123,19 @@ export const evaluateSupplierPairSimilarity = (
     }
   }
 
-  // 4. Canonical corporate root match (e.g. STRYKER vs Stryker Colombia S.A.S.)
+  // 4. Canonical corporate root match (e.g. STRYKER vs Stryker Colombia S.A.S., TECNICA vs Técnica Electromédica)
   const canonA = getSupplierCanonicalKey(nameA);
   const canonB = getSupplierCanonicalKey(nameB);
-  if (canonA && canonB && canonA === canonB) {
-    return { isDuplicate: true, confidence: 0.95, reason: 'Misma razón social base (variación de S.A.S./Colombia/Tipo)' };
+  if (canonA && canonB) {
+    if (canonA === canonB) {
+      return { isDuplicate: true, confidence: 0.98, reason: 'Misma razón social o entidad base (ej: Stryker vs Stryker Colombia S.A.S. / Técnica)' };
+    }
+    // Substring / containment detection (e.g. "stryker" and "stryker endoscopia", or "tecnica" and "tecnica electromedica")
+    const shorter = canonA.length < canonB.length ? canonA : canonB;
+    const longer = canonA.length < canonB.length ? canonB : canonA;
+    if (shorter.length >= 3 && (longer.startsWith(shorter) || longer.includes(shorter))) {
+      return { isDuplicate: true, confidence: 0.96, reason: 'Misma entidad corporativa con sufijo o especialidad' };
+    }
   }
 
   // 5. Brand and name cross-matching (e.g. STRYKER brand in Stryker Colombia S.A.S.)
@@ -175,10 +202,15 @@ export const computeSupplierCompletenessScore = (profile: SupplierProfile): numb
   // Brands defined
   if (profile.brands && profile.brands.length > 0) score += 10;
 
-  // Casing: Title Case is preferred over ALL CAPS (e.g. "Técnica Electromédica" > "TECNICA ELECTROMEDICA")
+  // Casing: Title Case is preferred over ALL CAPS
   const name = profile.name.trim();
   const isAllCaps = name === name.toUpperCase() && /[A-Z]/.test(name);
   if (!isAllCaps) score += 10;
+
+  // Strict priority requested by user: "deja tecnica y ya"
+  if (name.toUpperCase() === 'TECNICA') {
+    score += 1000;
+  }
 
   // Specific corporate details (e.g. "S.A.S." shows registered legal name)
   if (/s\.?a\.?s|ltda|s\.?a\b/i.test(name)) score += 10;
@@ -259,6 +291,17 @@ export const mergeSupplierProfiles = (
   duplicates: SupplierProfile[]
 ): SupplierProfile => {
   const merged: SupplierProfile = { ...canonical };
+
+  // If this group is the Tecnica / Tecnica Electromedica entity, enforce canonical name "TECNICA" as requested
+  const isTecnicaGroup =
+    merged.name.toLowerCase().includes('tecnica') ||
+    merged.name.toLowerCase().includes('electromedica') ||
+    duplicates.some(
+      (d) => d.name.toLowerCase().includes('tecnica') || d.name.toLowerCase().includes('electromedica')
+    );
+  if (isTecnicaGroup) {
+    merged.name = 'TECNICA';
+  }
 
   // Combine and deduplicate brands
   const brandSet = new Set<string>();
@@ -488,5 +531,81 @@ export const unifySingleDuplicateGroup = (
     mergedCanonical,
     deletedIds: Array.from(deletedIds),
   };
+};
+
+/**
+ * Normalizes and unifies supplier names across equipment items.
+ * Specifically converts any reference to "TECNICA ELECTROMEDICA", "Técnica Electromédica", etc. to "TECNICA",
+ * as requested: "deja tecnica y ya" and "cambia los equipos que tenga que ver con estos dos nombres y cambialo por el que vas a dejar, deja tecnica y ya".
+ */
+export const sanitizeEquipmentSuppliers = <T extends {
+  supplier?: string;
+  alternateSuppliers?: string[];
+  allSuppliers?: string[];
+  supplierPrices?: any[];
+}>(equipments: T[]): T[] => {
+  if (!equipments || !Array.isArray(equipments)) return equipments;
+
+  return equipments.map((eq) => {
+    let modified = false;
+    let s = eq.supplier;
+    if (s && (s.toLowerCase().includes('tecnica') || s.toLowerCase().includes('electromedica'))) {
+      if (s !== 'TECNICA') {
+        s = 'TECNICA';
+        modified = true;
+      }
+    }
+
+    let alt = eq.alternateSuppliers;
+    if (alt && Array.isArray(alt)) {
+      const newAlt = alt.map((item) =>
+        item && (item.toLowerCase().includes('tecnica') || item.toLowerCase().includes('electromedica'))
+          ? 'TECNICA'
+          : item
+      );
+      if (JSON.stringify(newAlt) !== JSON.stringify(alt)) {
+        alt = Array.from(new Set(newAlt));
+        modified = true;
+      }
+    }
+
+    let allS = eq.allSuppliers;
+    if (allS && Array.isArray(allS)) {
+      const newAllS = allS.map((item) =>
+        item && (item.toLowerCase().includes('tecnica') || item.toLowerCase().includes('electromedica'))
+          ? 'TECNICA'
+          : item
+      );
+      if (JSON.stringify(newAllS) !== JSON.stringify(allS)) {
+        allS = Array.from(new Set(newAllS));
+        modified = true;
+      }
+    }
+
+    let sps = eq.supplierPrices;
+    if (sps && Array.isArray(sps)) {
+      const newSps = sps.map((p) => {
+        if (p && p.supplier && (p.supplier.toLowerCase().includes('tecnica') || p.supplier.toLowerCase().includes('electromedica'))) {
+          if (p.supplier !== 'TECNICA') {
+            modified = true;
+            return { ...p, supplier: 'TECNICA' };
+          }
+        }
+        return p;
+      });
+      if (modified) sps = newSps;
+    }
+
+    if (modified) {
+      return {
+        ...eq,
+        supplier: s,
+        alternateSuppliers: alt,
+        allSuppliers: allS,
+        supplierPrices: sps,
+      };
+    }
+    return eq;
+  });
 };
 

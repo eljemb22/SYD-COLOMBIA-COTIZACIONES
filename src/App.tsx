@@ -112,6 +112,7 @@ import {
   performDailyAutomaticBackup,
   syncDatabaseStateToServer,
   fetchLatestServerBackupState,
+  saveCreatedSheetPartToFirestore,
   SyncConnectionStatus,
   getIsSyncingFromRemote,
   isRecentRemoteUpdate,
@@ -424,76 +425,110 @@ export default function App() {
       },
     });
 
-    // 2. Hydrate from server disk backup ONLY if local client has no data at all (first-time browser load)
+    // 2. Hydrate from server disk backup snapshot to guarantee all devices and fresh browser sessions receive complete catalog & data
     fetchLatestServerBackupState().then((serverState) => {
       if (!serverState) return;
 
       setEquipments((prev) => {
-        if (prev.length === 0 && serverState.equipments && serverState.equipments.length > 0) {
+        if (!serverState.equipments || serverState.equipments.length === 0) return prev;
+        const isExplicitlyCleared = localStorage.getItem('syd_catalog_cleared_by_admin') === 'true';
+        if (isExplicitlyCleared) return prev;
+
+        const hasCustomLocal = Boolean(localStorage.getItem('syd_equipments_catalog'));
+        if (!hasCustomLocal || serverState.equipments.length > prev.length) {
+          const prevCodes = new Set(prev.map((e) => (e.code || '').trim().toLowerCase()).filter(Boolean));
+          const prevIds = new Set(prev.map((e) => e.id));
+
+          const merged = [...serverState.equipments];
+          prev.forEach((item) => {
+            const itemCode = (item.code || '').trim().toLowerCase();
+            if (!prevIds.has(item.id) && (!itemCode || !prevCodes.has(itemCode))) {
+              merged.unshift(item);
+            }
+          });
+          const sanitized = sanitizeEquipmentSuppliers(merged);
           try {
-            localStorage.setItem('syd_equipments_catalog', JSON.stringify(serverState.equipments));
+            localStorage.setItem('syd_equipments_catalog', JSON.stringify(sanitized));
           } catch (e) {}
-          return serverState.equipments;
+          return sanitized;
         }
         return prev;
       });
 
       setSavedQuotes((prev) => {
-        if (prev.length === 0 && serverState.quotes && serverState.quotes.length > 0) {
+        if (!serverState.quotes || serverState.quotes.length === 0) return prev;
+        const hasCustomLocal = Boolean(localStorage.getItem('syd_saved_quotes_database_v2'));
+        if (!hasCustomLocal || serverState.quotes.length > prev.length) {
+          const result = !hasCustomLocal ? serverState.quotes : [...serverState.quotes];
           try {
-            localStorage.setItem('syd_saved_quotes_database_v2', JSON.stringify(serverState.quotes));
+            localStorage.setItem('syd_saved_quotes_database_v2', JSON.stringify(result));
           } catch (e) {}
-          return serverState.quotes;
+          return result;
         }
         return prev;
       });
 
       setTenderClients((prev) => {
-        if (prev.length === 0 && serverState.tenderProjects && serverState.tenderProjects.length > 0) {
+        if (!serverState.tenderProjects || serverState.tenderProjects.length === 0) return prev;
+        const hasCustomLocal = Boolean(localStorage.getItem('syd_tender_clients_v2'));
+        if (!hasCustomLocal || serverState.tenderProjects.length > prev.length) {
+          const result = serverState.tenderProjects;
           try {
-            localStorage.setItem('syd_tender_clients_v2', JSON.stringify(serverState.tenderProjects));
+            localStorage.setItem('syd_tender_clients_v2', JSON.stringify(result));
           } catch (e) {}
-          return serverState.tenderProjects;
+          return result;
         }
         return prev;
       });
 
       setOcContracts((prev) => {
-        if (prev.length === 0 && serverState.ocContracts && serverState.ocContracts.length > 0) {
+        if (!serverState.ocContracts || serverState.ocContracts.length === 0) return prev;
+        const hasCustomLocal = Boolean(localStorage.getItem('syd_oc_tracking_contracts_v3'));
+        if (!hasCustomLocal || serverState.ocContracts.length > prev.length) {
+          const result = serverState.ocContracts;
           try {
-            localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(serverState.ocContracts));
+            localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(result));
           } catch (e) {}
-          return serverState.ocContracts;
+          return result;
         }
         return prev;
       });
 
       setSalesOrders((prev) => {
-        if (prev.length === 0 && serverState.salesOrders && serverState.salesOrders.length > 0) {
+        if (!serverState.salesOrders || serverState.salesOrders.length === 0) return prev;
+        const hasCustomLocal = Boolean(localStorage.getItem('syd_sales_orders_v1'));
+        if (!hasCustomLocal || serverState.salesOrders.length > prev.length) {
+          const result = serverState.salesOrders;
           try {
-            localStorage.setItem('syd_sales_orders_v1', JSON.stringify(serverState.salesOrders));
+            localStorage.setItem('syd_sales_orders_v1', JSON.stringify(result));
           } catch (e) {}
-          return serverState.salesOrders;
+          return result;
         }
         return prev;
       });
 
       setSalesInvoices((prev) => {
-        if (prev.length === 0 && serverState.salesInvoices && serverState.salesInvoices.length > 0) {
+        if (!serverState.salesInvoices || serverState.salesInvoices.length === 0) return prev;
+        const hasCustomLocal = Boolean(localStorage.getItem('syd_sales_invoices_v1'));
+        if (!hasCustomLocal || serverState.salesInvoices.length > prev.length) {
+          const result = serverState.salesInvoices;
           try {
-            localStorage.setItem('syd_sales_invoices_v1', JSON.stringify(serverState.salesInvoices));
+            localStorage.setItem('syd_sales_invoices_v1', JSON.stringify(result));
           } catch (e) {}
-          return serverState.salesInvoices;
+          return result;
         }
         return prev;
       });
 
       setDocuments((prev) => {
-        if (prev.length === 0 && serverState.technicalDocuments && serverState.technicalDocuments.length > 0) {
+        if (!serverState.technicalDocuments || serverState.technicalDocuments.length === 0) return prev;
+        const hasCustomLocal = Boolean(localStorage.getItem('syd_technical_documents_v3'));
+        if (!hasCustomLocal || serverState.technicalDocuments.length > prev.length) {
+          const result = serverState.technicalDocuments;
           try {
-            localStorage.setItem('syd_technical_documents_v3', JSON.stringify(serverState.technicalDocuments));
+            localStorage.setItem('syd_technical_documents_v3', JSON.stringify(result));
           } catch (e) {}
-          return serverState.technicalDocuments;
+          return result;
         }
         return prev;
       });
@@ -509,6 +544,11 @@ export default function App() {
     setCurrentUser(user);
     setStoredAuthUser(user);
     setIsSuspended(false);
+    // User requested: Al iniciar sesión con usuario y contraseña, la app debe abrir siempre en el inicio
+    setActiveTab('inicio');
+    try {
+      localStorage.setItem('syd_active_tab', 'inicio');
+    } catch {}
   };
 
   // Command to suspend and lock the entire application
@@ -522,12 +562,20 @@ export default function App() {
     setCurrentUser(user);
     setStoredAuthUser(user);
     setIsSuspended(false);
+    setActiveTab('inicio');
+    try {
+      localStorage.setItem('syd_active_tab', 'inicio');
+    } catch {}
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     setStoredAuthUser(null);
     setIsSuspended(false);
+    setActiveTab('inicio');
+    try {
+      localStorage.setItem('syd_active_tab', 'inicio');
+    } catch {}
   };
 
   const handleUpdateCurrentUserPhoto = (photoUrl: string) => {
@@ -605,49 +653,31 @@ export default function App() {
     } catch {}
   }, [quoteItems]);
 
-  // Active Commercial Quote Letterhead & Calibration State (persists permanently across all tabs, quotes, reloads, and Word exports)
+  // Active Commercial Quote Letterhead: clean by default; user can manually place their centered letterhead
   const [activeLetterheadUrl, setActiveLetterheadUrl] = useState<string | null>(() => {
     try {
-      const version = localStorage.getItem('syd_letterhead_version');
-      if (version === 'v4_official_syd') {
-        const permanent = localStorage.getItem('syd_permanent_default_letterhead');
-        if (permanent && permanent.length > 20 && permanent !== 'none') {
-          return permanent;
-        }
-        const saved = localStorage.getItem('syd_active_letterhead_url');
-        if (saved && saved.length > 20 && saved !== 'none') {
-          return saved;
-        }
+      const savedManual = localStorage.getItem('syd_custom_manual_letterhead');
+      if (savedManual && savedManual.length > 20 && savedManual !== 'none') {
+        return savedManual;
+      }
+      const saved = localStorage.getItem('syd_active_letterhead_url');
+      if (saved && saved.length > 20 && saved !== 'none' && !saved.includes('OFICIAL SYD COLOMBIA')) {
+        return saved;
       }
     } catch {}
-    // Default to the official complete SyD Colombia Corporate Letterhead
-    const official = getOfficialSyDLetterheadDataUrl();
-    try {
-      localStorage.setItem('syd_letterhead_version', 'v4_official_syd');
-      if (official) {
-        localStorage.setItem('syd_active_letterhead_url', official);
-        localStorage.setItem('syd_permanent_default_letterhead', official);
-      }
-    } catch {}
-    return official || null;
+    return null;
   });
 
-  // Ensure default official letterhead is always populated
+  // Remove any legacy auto-injected official letterhead so quotation sheet is clean
   useEffect(() => {
     try {
-      const version = localStorage.getItem('syd_letterhead_version');
-      if (version !== 'v4_official_syd' || !activeLetterheadUrl) {
-        const defaultUrl = getOfficialSyDLetterheadDataUrl();
-        if (defaultUrl) {
-          setActiveLetterheadUrl(defaultUrl);
-          localStorage.setItem('syd_letterhead_version', 'v4_official_syd');
-          localStorage.setItem('syd_active_letterhead_url', defaultUrl);
-          localStorage.setItem('syd_permanent_default_letterhead', defaultUrl);
-        }
+      const saved = localStorage.getItem('syd_active_letterhead_url');
+      if (saved && saved.includes('OFICIAL SYD COLOMBIA')) {
+        localStorage.setItem('syd_active_letterhead_url', 'none');
+        localStorage.removeItem('syd_permanent_default_letterhead');
+        setActiveLetterheadUrl(null);
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch {}
   }, []);
 
   const [activeMarginSettings, setActiveMarginSettings] = useState<{ subirBajar: number; izqDer: number; tableScale: number }>(() => {
@@ -826,14 +856,7 @@ export default function App() {
       });
 
       saveStoredSalesOrders(updatedList);
-      missingTenders.forEach((t) => {
-        const newOV = updatedList.find(
-          (o) => o.contractId === t.id || o.tenderClientId === t.id
-        );
-        if (newOV) {
-          saveSingleSalesOrderToFirestore(newOV).catch(() => {});
-        }
-      });
+      saveSalesOrdersBatchToFirestore(updatedList).catch(() => {});
       return updatedList;
     });
   }, [tenderClients]);
@@ -1248,9 +1271,7 @@ export default function App() {
     if (newClients.length === 0) return;
     setTenderClients((prev) => [...newClients, ...prev]);
     setActiveTenderClientId(newClients[0].id);
-    newClients.forEach((client) => {
-      saveSingleTenderClientToFirestore(client).catch(() => {});
-    });
+    saveTenderClientsToFirestore(newClients).catch(() => {});
 
     // Sync all equipments to Catalog (Ventana 3)
     const allItems = newClients.flatMap((c) => c.items || []);
@@ -1527,15 +1548,7 @@ export default function App() {
     autoRegisterSuppliersFromEquipments(items);
     setEquipments((prev) => {
       const res = batchSyncTenderItemsToCatalog(items, prev);
-      const previousById = new Map(prev.map((e) => [e.id, e]));
-
-      res.updatedEquipments.forEach((equipment) => {
-        const previous = previousById.get(equipment.id);
-        if (!previous || JSON.stringify(previous) !== JSON.stringify(equipment)) {
-          saveSingleEquipmentToFirestore(equipment).catch(() => {});
-        }
-      });
-
+      saveEquipmentsBatchToFirestore(res.updatedEquipments).catch(() => {});
       return res.updatedEquipments;
     });
   };
@@ -1604,9 +1617,7 @@ export default function App() {
     // Auto-register all suppliers from imported/updated catalog items into Ventana 5 (Directorio de Proveedores)
     autoRegisterSuppliersFromEquipments(updatedCatalog);
     setEquipments(updatedCatalog);
-    updatedCatalog.forEach((equipment) => {
-      saveSingleEquipmentToFirestore(equipment).catch(() => {});
-    });
+    saveEquipmentsBatchToFirestore(updatedCatalog).catch(() => {});
   };
 
   const handleDeleteEquipment = (eqId: string) => {
@@ -1639,84 +1650,15 @@ export default function App() {
 
   // Sales Orders (Window 7) Update Handlers
   const handleUpdateSalesOrders = (updated: SalesOrderRecord[]) => {
-    setSalesOrders((previous) => {
-      const previousMap = new Map(previous.map((order) => [order.id, order]));
-
-      for (const order of updated) {
-        const previousOrder = previousMap.get(order.id);
-
-        if (!previousOrder || JSON.stringify(previousOrder) !== JSON.stringify(order)) {
-          saveSingleSalesOrderToFirestore(order).catch(() => {});
-        }
-      }
-
-      return updated;
-    });
-
+    setSalesOrders(updated);
     saveStoredSalesOrders(updated);
+    saveSalesOrdersBatchToFirestore(updated).catch(() => {});
   };
 
   const handleUpdateSalesInvoices = (updated: SalesInvoiceRecord[]) => {
-    setSalesInvoices((previous) => {
-      const previousMap = new Map(previous.map((invoice) => [invoice.id, invoice]));
-
-      for (const invoice of updated) {
-        const previousInvoice = previousMap.get(invoice.id);
-
-        if (!previousInvoice || JSON.stringify(previousInvoice) !== JSON.stringify(invoice)) {
-          saveSingleSalesInvoiceToFirestore(invoice).catch(() => {});
-        }
-      }
-
-      return updated;
-    });
-
+    setSalesInvoices(updated);
     saveStoredSalesInvoices(updated);
-  };
-
-  const handleUpdateOCContracts = (updated: OCTrackingContract[]) => {
-    const previousMap = new Map(ocContracts.map((contract) => [contract.id, contract]));
-    const updatedMap = new Map(updated.map((contract) => [contract.id, contract]));
-
-    // Detectar contratos nuevos o modificados y guardar únicamente esos documentos.
-    const changedContracts: OCTrackingContract[] = [];
-
-    for (const contract of updated) {
-      const previous = previousMap.get(contract.id);
-
-      if (!previous || JSON.stringify(previous) !== JSON.stringify(contract)) {
-        changedContracts.push(contract);
-      }
-    }
-
-    // Detectar contratos eliminados y borrarlos directamente de Firestore.
-    const deletedIds: string[] = [];
-
-    for (const previous of ocContracts) {
-      if (!updatedMap.has(previous.id)) {
-        deletedIds.push(previous.id);
-      }
-    }
-
-    setOcContracts(updated);
-    saveStoredOCTrackingContracts(updated);
-
-    // Cambios individuales: escritura inmediata.
-    if (changedContracts.length > 0 && changedContracts.length <= 10) {
-      for (const contract of changedContracts) {
-        saveSingleOCTrackingContractToFirestore(contract).catch(() => {});
-      }
-    }
-
-    // Operaciones masivas: conservar escritura por lote.
-    if (changedContracts.length > 10) {
-      saveOCTrackingContractsToFirestore(changedContracts).catch(() => {});
-    }
-
-    // Eliminaciones: borrar únicamente los documentos eliminados.
-    for (const contractId of deletedIds) {
-      deleteOCTrackingContractFromFirestore(contractId).catch(() => {});
-    }
+    saveSalesInvoicesBatchToFirestore(updated).catch(() => {});
   };
 
   const handleGenerateOCTrackingFromSalesOrder = (salesOrder: SalesOrderRecord) => {
@@ -1741,13 +1683,12 @@ export default function App() {
       updatedContracts = ocContracts.map((c) => (c.id === existing.id ? newContract : c));
       setOcContracts(updatedContracts);
       saveStoredOCTrackingContracts(updatedContracts);
-      saveSingleOCTrackingContractToFirestore(newContract).catch(() => {});
     } else {
       newContract = createOCTrackingContractFromSalesOrder(salesOrder, equipments);
       updatedContracts = [newContract, ...ocContracts];
       setOcContracts(updatedContracts);
       saveStoredOCTrackingContracts(updatedContracts);
-      saveSingleOCTrackingContractToFirestore(newContract).catch(() => {});
+      saveOCTrackingContractsToFirestore(updatedContracts).catch(() => {});
     }
 
     const updatedOrders = salesOrders.map((o) =>
@@ -1828,8 +1769,11 @@ export default function App() {
 
   const handleConvertQuoteToTender = (quote: SavedQuote | { header: QuoteHeader; items: QuoteItem[] }) => {
     const newTender = createTenderProjectFromQuote(quote, tenderClients, equipments);
-    setTenderClients((prev) => [newTender, ...prev]);
-    saveSingleTenderClientToFirestore(newTender).catch(() => {});
+    setTenderClients((prev) => {
+      const updated = [newTender, ...prev];
+      saveTenderClientsToFirestore(updated).catch(() => {});
+      return updated;
+    });
     setActiveTenderClientId(newTender.id);
     setActiveTab('licitaciones');
     confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
@@ -2025,7 +1969,7 @@ export default function App() {
           {activeTab === 'seguimiento_oc' && (
             <OCTrackingView
               contracts={ocContracts}
-              onUpdateContracts={handleUpdateOCContracts}
+              onUpdateContracts={setOcContracts}
               tenderClients={tenderClients}
               equipments={equipments}
               currentUser={currentUser}
@@ -2060,7 +2004,7 @@ export default function App() {
               documents={documents}
               equipments={equipments}
               ocContracts={ocContracts}
-              onUpdateContracts={handleUpdateOCContracts}
+              onUpdateContracts={setOcContracts}
               onOpenNewDocumentModal={handleOpenDocumentModal}
               onSaveDocument={handleSaveNewDocument}
               onDeleteDocument={handleDeleteDocument}
@@ -2233,23 +2177,38 @@ export default function App() {
           syncStatus={syncStatus}
           onNavigateToGmail={() => setActiveTab('gmail_compras')}
           onNavigateToBackup={() => setIsBackupModalOpen(true)}
+          onNavigateToCatalog={() => {
+            setIsGoogleWorkspaceModalOpen(false);
+            setActiveTab('catalogo');
+          }}
           onAddEquipments={(newEqs) => {
             setEquipments((prev) => {
               const updated = [...prev];
               newEqs.forEach((item) => {
                 if (!updated.some((e) => e.code === item.code || e.id === item.id)) {
-                  updated.push(item);
+                  updated.unshift(item); // Prepend so it appears right at the top of Creación de Equipos
                 }
               });
               try {
                 localStorage.setItem('syd_equipments_catalog', JSON.stringify(updated));
               } catch (_) {}
-              newEqs.forEach((equipment) => {
-                if (updated.some((e) => e.id === equipment.id || e.code === equipment.code)) {
-                  saveSingleEquipmentToFirestore(equipment).catch(() => {});
-                }
-              });
+              saveEquipmentsBatchToFirestore(updated).catch(() => {});
+              syncDatabaseStateToServer({
+                equipments: updated,
+                quotes: savedQuotes,
+                tenderProjects: tenderClients,
+                ocContracts,
+                salesOrders,
+                salesInvoices,
+                technicalDocuments: documents,
+              }).catch(() => {});
               return updated;
+            });
+            newEqs.forEach((item) => {
+              saveSingleEquipmentToFirestore(item).catch(() => {});
+              if (item.code) {
+                saveCreatedSheetPartToFirestore(item.code, item.name).catch(() => {});
+              }
             });
           }}
         />
@@ -2398,6 +2357,7 @@ export default function App() {
             onOpenPrintModal={() => setIsPrintModalOpen(true)}
             onOpenAppUpdates={() => setIsAppUpdatesModalOpen(true)}
             onOpenBackupModal={() => setIsBackupModalOpen(true)}
+            onOpenWorkspaceModal={() => setIsGoogleWorkspaceModalOpen(true)}
           />
         )}
 

@@ -10,10 +10,25 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '2.6.0';
-export const CURRENT_RELEASE_DATE = '2026-08-29';
+export const CURRENT_APP_VERSION = '2.7.0';
+export const CURRENT_RELEASE_DATE = '2026-09-22';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.7.0',
+    releaseDate: '2026-09-22',
+    title: 'Validación N-FCO-03, Unificación de Proveedores, Directorio Robusto & Optimización Gmail Compras',
+    summary:
+      'Actualización mayor con validación estricta de solicitudes de inactivación N-FCO-03, unificación automática de proveedores duplicados (Técnica Electromédica), eliminación interactiva segura en Directorio de Clientes y protección de cuota en Gmail Compras.',
+    highlights: [
+      '🚫 Bloqueo Estricto de Inactivación N-FCO-03: Detección inteligente de solicitudes de inactivación en Google Sheets, bloqueando la creación de partes descontinuadas y mostrando el estado "Inactivada (No Utilizable)" claramente en la interfaz.',
+      '🏢 Unificación de Proveedores: Fusión automática de registros duplicados (como Técnica Electromédica y Técnica) consolidando marcas autorizadas (Welch Allyn, Seca, Ca-Mi, Comen, Mindray) y vinculando todos sus equipos médicos del catálogo.',
+      '🗑️ Directorio de Clientes con Eliminación Interactiva: Diálogo de confirmación en modal nativo (sin bloqueos de navegador), borrado permanente multidispositivo y protección contra fragmentos no deseados.',
+      '📧 Gmail Compras con Caché y Protección de Cuota: Consulta inteligente de correos de compras optimizando las llamadas a la API de Google Workspace para evitar cuotas agotadas.',
+      '🤖 Mara IA v2.7.0: Asistente biomédico actualizado con conocimiento completo de todas las nuevas funcionalidades del sistema.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.6.0',
     releaseDate: '2026-08-29',

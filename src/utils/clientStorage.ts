@@ -296,6 +296,71 @@ export function resolveDepartmentFromCity(city?: string): string {
 // Clean initial state: no mock clients stored by default
 const DEFAULT_CLIENTS: ClientRecord[] = [];
 
+const DELETED_CLIENT_IDS_KEY = 'syd_deleted_client_ids_v1';
+const DELETED_CLIENT_NAMES_KEY = 'syd_deleted_client_names_v1';
+
+/**
+ * Checks if a client was permanently deleted by the user
+ */
+export function isClientPermanentlyDeleted(clientId?: string, clientName?: string): boolean {
+  if (clientName) {
+    const trimmed = clientName.trim().toUpperCase();
+    if (trimmed === 'HOS' || trimmed.length < 4) return true;
+    try {
+      const rawNames = localStorage.getItem(DELETED_CLIENT_NAMES_KEY);
+      if (rawNames) {
+        const list: string[] = JSON.parse(rawNames);
+        if (list.includes(normalizeClientName(clientName))) return true;
+      }
+    } catch {}
+  }
+  if (clientId) {
+    try {
+      const rawIds = localStorage.getItem(DELETED_CLIENT_IDS_KEY);
+      if (rawIds) {
+        const list: string[] = JSON.parse(rawIds);
+        if (list.includes(clientId)) return true;
+      }
+    } catch {}
+  }
+  return false;
+}
+
+/**
+ * Records a client as permanently deleted in local storage
+ */
+export function markClientAsPermanentlyDeleted(clientId: string, clientName?: string): void {
+  try {
+    if (clientId) {
+      const rawIds = localStorage.getItem(DELETED_CLIENT_IDS_KEY);
+      const set = new Set<string>(rawIds ? JSON.parse(rawIds) : []);
+      set.add(clientId);
+      localStorage.setItem(DELETED_CLIENT_IDS_KEY, JSON.stringify(Array.from(set)));
+    }
+    if (clientName) {
+      const rawNames = localStorage.getItem(DELETED_CLIENT_NAMES_KEY);
+      const set = new Set<string>(rawNames ? JSON.parse(rawNames) : []);
+      set.add(normalizeClientName(clientName));
+      localStorage.setItem(DELETED_CLIENT_NAMES_KEY, JSON.stringify(Array.from(set)));
+    }
+  } catch (e) {
+    console.error('Error marking client as permanently deleted:', e);
+  }
+}
+
+/**
+ * Deletes client document from Firestore
+ */
+export async function deleteClientFromFirestore(clientId: string): Promise<void> {
+  try {
+    if (!db || !clientId) return;
+    const docRef = doc(db, 'client_directory', clientId);
+    await deleteDoc(docRef);
+  } catch (e) {
+    console.warn('Could not delete client from firestore:', e);
+  }
+}
+
 /**
  * Loads all saved clients from localStorage without mock data
  */
@@ -307,17 +372,20 @@ export function getStoredClients(): ClientRecord[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      // Filter out any mock/dummy clients
+      // Filter out any mock/dummy clients, deleted clients, and fragments like "HOS"
       const filtered = parsed.filter(
         (c: any) =>
           c &&
           c.name &&
+          c.name.trim().length >= 4 &&
+          c.name.trim().toUpperCase() !== 'HOS' &&
           !c.id?.startsWith('client-nazareth-') &&
           !c.id?.startsWith('client-merced-') &&
           !c.id?.startsWith('client-prado-') &&
           !c.id?.startsWith('client-suba-') &&
           c.name !== 'NOMBRE DEL CLIENTE O INSTITUCIÓN' &&
-          c.name !== 'CLIENTE NO ESPECIFICADO'
+          c.name !== 'CLIENTE NO ESPECIFICADO' &&
+          !isClientPermanentlyDeleted(c.id, c.name)
       );
       if (filtered.length !== parsed.length) {
         localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(filtered));
@@ -462,7 +530,14 @@ export function harvestAllClientsFromSystem(
   (tenderClients || []).forEach((t) => {
     const rawName = t.clientName || t.header?.clientName || t.header?.entityName || '';
     const norm = normalizeClientName(rawName);
-    if (norm && !registeredNames.has(norm)) {
+    if (
+      norm &&
+      norm.length >= 4 &&
+      norm.toUpperCase() !== 'HOS' &&
+      norm !== 'CLIENTE NO ESPECIFICADO' &&
+      !isClientPermanentlyDeleted(undefined, norm) &&
+      !registeredNames.has(norm)
+    ) {
       registeredNames.add(norm);
       const rawCity = t.header?.city || '';
       const dept = resolveDepartmentFromCity(rawCity);
@@ -485,7 +560,14 @@ export function harvestAllClientsFromSystem(
   // From Saved Quotes
   (savedQuotes || []).forEach((q) => {
     const norm = normalizeClientName(q.clientName);
-    if (norm && norm !== 'CLIENTE NO ESPECIFICADO' && !registeredNames.has(norm)) {
+    if (
+      norm &&
+      norm.length >= 4 &&
+      norm.toUpperCase() !== 'HOS' &&
+      norm !== 'CLIENTE NO ESPECIFICADO' &&
+      !isClientPermanentlyDeleted(undefined, norm) &&
+      !registeredNames.has(norm)
+    ) {
       registeredNames.add(norm);
       const rawCity = q.city || '';
       const dept = resolveDepartmentFromCity(rawCity);
@@ -508,7 +590,14 @@ export function harvestAllClientsFromSystem(
   // From OC Contracts
   (ocContracts || []).forEach((oc) => {
     const norm = normalizeClientName(oc.clientName);
-    if (norm && !registeredNames.has(norm)) {
+    if (
+      norm &&
+      norm.length >= 4 &&
+      norm.toUpperCase() !== 'HOS' &&
+      norm !== 'CLIENTE NO ESPECIFICADO' &&
+      !isClientPermanentlyDeleted(undefined, norm) &&
+      !registeredNames.has(norm)
+    ) {
       registeredNames.add(norm);
       const rawCity = oc.city || '';
       const dept = resolveDepartmentFromCity(rawCity);
@@ -546,7 +635,16 @@ export function subscribeToClientDirectory(
       (snap) => {
         const remoteClients: ClientRecord[] = [];
         snap.forEach((docSnap) => {
-          remoteClients.push(docSnap.data() as ClientRecord);
+          const data = docSnap.data() as ClientRecord;
+          if (
+            data &&
+            data.name &&
+            data.name.trim().length >= 4 &&
+            data.name.trim().toUpperCase() !== 'HOS' &&
+            !isClientPermanentlyDeleted(data.id, data.name)
+          ) {
+            remoteClients.push(data);
+          }
         });
 
         const localClients = getStoredClients();
