@@ -28,6 +28,7 @@ import {
   Share2,
   Database,
   Mail,
+  Moon,
 } from 'lucide-react';
 import { ActiveTab, AuthUser, ThemeSettings } from '../types';
 import { SyDLogo } from './common/SyDLogo';
@@ -388,8 +389,8 @@ export const Navigation: React.FC<NavigationProps> = ({
                 </div>
               </div>
 
-              {/* Row 2: Compact User Management & Logout Action Buttons */}
-              <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-700/30">
+              {/* Row 2: Compact User Management, Standby & Logout Action Buttons */}
+              <div className={`grid ${onSuspendApp ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5 pt-1 border-t border-slate-700/30`}>
                 {onOpenUserManagement && (
                   <button
                     type="button"
@@ -403,10 +404,22 @@ export const Navigation: React.FC<NavigationProps> = ({
                       backgroundColor: 'var(--syd-sidebar-bg)',
                       borderColor: 'var(--syd-border-color)',
                     }}
-                    className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg hover:opacity-90 text-[#38bdf8] hover:text-white border text-[10.5px] font-black transition cursor-pointer"
+                    className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg hover:opacity-90 text-[#38bdf8] hover:text-white border text-[10px] font-black transition cursor-pointer"
                   >
                     <KeyRound className="w-3 h-3 shrink-0" />
                     <span className="truncate">{currentUser?.role === 'admin' ? 'Usuarios' : 'Clave'}</span>
+                  </button>
+                )}
+
+                {onSuspendApp && (
+                  <button
+                    type="button"
+                    onClick={onSuspendApp}
+                    title="Suspender sesión en Standby (Ctrl+L o Alt+S)"
+                    className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-100 border border-amber-500/30 text-[10px] font-black transition cursor-pointer"
+                  >
+                    <Moon className="w-3 h-3 shrink-0" />
+                    <span className="truncate">Standby</span>
                   </button>
                 )}
 
@@ -414,7 +427,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                   type="button"
                   onClick={onLogout}
                   title="Cerrar sesión actual"
-                  className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-100 border border-rose-500/30 text-[10.5px] font-black transition cursor-pointer"
+                  className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-100 border border-rose-500/30 text-[10px] font-black transition cursor-pointer"
                 >
                   <LogOut className="w-3 h-3 shrink-0" />
                   <span className="truncate">Salir</span>
@@ -529,6 +542,17 @@ export const Navigation: React.FC<NavigationProps> = ({
                   className="w-8 h-8 rounded-lg text-[#38bdf8] hover:text-white border flex items-center justify-center transition cursor-pointer"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {onSuspendApp && (
+                <button
+                  type="button"
+                  onClick={onSuspendApp}
+                  title="Modo Suspensión / Standby (Ctrl+L o Alt+S)"
+                  className="w-8 h-8 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-100 border border-amber-500/30 flex items-center justify-center transition cursor-pointer"
+                >
+                  <Moon className="w-3.5 h-3.5" />
                 </button>
               )}
 

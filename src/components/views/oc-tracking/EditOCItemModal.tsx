@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Edit3, X, Save, Building2, CreditCard, DollarSign, Activity, FileText } from 'lucide-react';
+import { Edit3, X, Save, Building2, CreditCard, DollarSign, Activity, FileText, Lock } from 'lucide-react';
 import { OCTrackingItem, OCStatus, OCPaymentTerms, OCPaymentStatus } from '../../../types';
+import { isValidOCNumber } from '../../../utils/formatters';
 import {
   COMMON_SUPPLIERS,
   KNOWN_MANUFACTURERS,
@@ -43,6 +44,19 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
   const [novedadNote, setNovedadNote] = useState('');
 
   const storedProfiles = useMemo(() => getStoredSupplierProfiles(), []);
+
+  // Compute registered suppliers for the brand of this equipment
+  const suppliersForThisBrand = useMemo(() => {
+    const brand = (item.brand || '').trim().toLowerCase();
+    if (!brand) return [];
+    return storedProfiles.filter((p) => {
+      const matchBrand = (p.brands || []).some(
+        (b) => b.toLowerCase().includes(brand) || brand.includes(b.toLowerCase())
+      );
+      const matchName = p.name.toLowerCase().includes(brand);
+      return matchBrand || matchName;
+    });
+  }, [item.brand, storedProfiles]);
 
   const quickManufacturersList = useMemo(() => {
     const list: string[] = [];
@@ -131,14 +145,28 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
         <form onSubmit={handleSubmit} className="p-3.5 sm:p-4 overflow-y-auto flex-1 space-y-3 text-xs">
           {/* Main Status Selector */}
           <div className="bg-[#15253d] p-3 rounded-xl border border-[#334d6e] space-y-1">
-            <label className="block text-slate-200 font-bold flex items-center gap-1.5 text-xs">
-              <Activity className="w-3.5 h-3.5 text-purple-400" />
-              <span>Estado Logístico del Equipo / OC:</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-slate-200 font-bold flex items-center gap-1.5 text-xs">
+                <Activity className="w-3.5 h-3.5 text-purple-400" />
+                <span>Estado Logístico del Equipo / OC:</span>
+              </label>
+              {!isValidOCNumber(formData.ocNumber) && (
+                <span className="text-[10px] text-amber-300 font-bold flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-amber-400" />
+                  <span>Requiere N° OC</span>
+                </span>
+              )}
+            </div>
             <select
+              disabled={!isValidOCNumber(formData.ocNumber)}
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as OCStatus })}
-              className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg p-2 text-white font-bold outline-none focus:border-[#38bdf8] cursor-pointer"
+              className={`w-full bg-[#101b2b] border rounded-lg p-2 text-white font-bold outline-none ${
+                !isValidOCNumber(formData.ocNumber)
+                  ? 'opacity-40 border-slate-700 cursor-not-allowed bg-slate-900 text-slate-400'
+                  : 'border-[#334d6e] focus:border-[#38bdf8] cursor-pointer'
+              }`}
+              title={!isValidOCNumber(formData.ocNumber) ? 'Debe asignar primero el número de OC abajo' : 'Cambiar estado del equipo'}
             >
               {OC_STATUS_OPTIONS.map((opt) => (
                 <option key={opt.status} value={opt.status}>
@@ -146,6 +174,11 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
                 </option>
               ))}
             </select>
+            {!isValidOCNumber(formData.ocNumber) && (
+              <p className="text-[10px] text-amber-300 font-medium">
+                ⚠️ Ingrese primero el número consecutivo de la OC en el campo de abajo para habilitar la manipulación del estado del equipo.
+              </p>
+            )}
           </div>
 
           {/* Supplier & OC # */}
@@ -176,10 +209,46 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
                   type="text"
                   value={formData.ocNumber}
                   onChange={(e) => setFormData({ ...formData, ocNumber: e.target.value })}
+                  placeholder="Ej: OC-9021 o 10452"
                   className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg p-2 text-sky-300 font-mono font-bold outline-none focus:border-[#38bdf8]"
                 />
               </div>
             </div>
+
+            {/* Brand-Specific Suppliers Selector */}
+            {suppliersForThisBrand.length > 0 && (
+              <div className="p-2.5 rounded-lg bg-sky-950/70 border border-sky-500/40 space-y-1.5 mt-1">
+                <div className="flex items-center justify-between text-[10.5px]">
+                  <span className="font-bold text-sky-300 flex items-center gap-1">
+                    <Building2 className="w-3 h-3 text-sky-400" />
+                    Proveedores registrados para la marca <strong>"{item.brand}"</strong>:
+                  </span>
+                  <span className="text-[10px] text-slate-400 italic">Clic para elegir a cuál comprar</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {suppliersForThisBrand.map((sup) => {
+                    const isSelected = formData.supplier.toLowerCase().trim() === sup.name.toLowerCase().trim();
+                    return (
+                      <button
+                        key={sup.id || sup.name}
+                        type="button"
+                        onClick={() => handleSelectSupplierPill(sup.name)}
+                        className={`text-xs px-2.5 py-1 rounded-md font-bold transition cursor-pointer flex items-center gap-1 ${
+                          isSelected
+                            ? 'bg-sky-500 text-slate-950 border border-sky-300 shadow-xs'
+                            : 'bg-slate-800/90 text-slate-200 border border-slate-700 hover:bg-slate-700 hover:text-white'
+                        }`}
+                      >
+                        <span>{sup.name}</span>
+                        {isSelected && (
+                          <span className="text-[9.5px] bg-slate-950/40 text-sky-200 px-1 py-0.2 rounded font-mono">✓ Seleccionado</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Quick Fabricantes Pills */}
             <div className="flex items-center gap-1 flex-wrap pt-0.5">

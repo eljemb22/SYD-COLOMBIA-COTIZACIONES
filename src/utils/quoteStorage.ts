@@ -2,6 +2,7 @@ import { SavedQuote, QuoteHeader, QuoteItem, QuoteStatus } from '../types';
 import { extractDateCode, getTodayDateCode, incrementConsecutive, parseQuoteNumber, setConsecutive } from './quoteConsecutive';
 import { saveQuoteToFirestore, deleteQuoteFromFirestore } from '../services/realtimeSync';
 import { saveOrUpdateClientRecord } from './clientStorage';
+import { isQuoteDeleted, markQuoteAsDeleted, unmarkQuoteAsDeleted } from './tombstones';
 
 const QUOTES_STORAGE_KEY = 'syd_saved_quotes_database_v2';
 
@@ -18,7 +19,9 @@ export function getSavedQuotes(): SavedQuote[] {
       return [];
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    // Strict filter to guarantee deleted quotes (like 23092026-1) are never returned
+    return parsed.filter((q) => q && !isQuoteDeleted(q.id, q.quoteNumber));
   } catch (e) {
     console.error('Failed to load saved quotes from localStorage', e);
     return [];
@@ -30,14 +33,16 @@ export function getSavedQuotes(): SavedQuote[] {
  */
 function persistQuotes(quotes: SavedQuote[]): void {
   try {
-    localStorage.setItem(QUOTES_STORAGE_KEY, JSON.stringify(quotes));
+    // Purge any deleted quotes before persisting
+    const clean = quotes.filter((q) => q && !isQuoteDeleted(q.id, q.quoteNumber));
+    localStorage.setItem(QUOTES_STORAGE_KEY, JSON.stringify(clean));
   } catch (e) {
     console.error('Failed to persist quotes to localStorage', e);
   }
 }
 
 /**
- * Saves or updates a quote in the database
+ * Saves or updates a quote in the database with strict validation
  */
 export function saveOrUpdateQuote(
   header: QuoteHeader,
@@ -50,22 +55,23 @@ export function saveOrUpdateQuote(
   const quotes = getSavedQuotes();
   const now = new Date().toISOString();
 
-  const subtotal = items.reduce((acc, it) => acc + (it.totalSalePrice || 0), 0);
-  const iva = items.reduce((acc, it) => {
+  // Strict validation check: filter out malformed or empty items
+  const validItems = (items || []).filter((it) => it && (it.name || it.code || it.totalSalePrice));
+  const subtotal = validItems.reduce((acc, it) => acc + (it.totalSalePrice || 0), 0);
+  const iva = validItems.reduce((acc, it) => {
     const rate = it.taxExempt ? 0 : (it.taxRate !== undefined ? it.taxRate : (header.taxRate ?? 0.19));
     return acc + Math.round((it.totalSalePrice || 0) * rate);
   }, 0);
   const total = subtotal + iva;
-  const totalQuantity = items.reduce((acc, it) => acc + (it.quantity || 0), 0);
+  const totalQuantity = validItems.reduce((acc, it) => acc + (it.quantity || 0), 0);
   const dateCode = extractDateCode(header.date);
 
-  // Check if we are updating an existing quote by ID or quoteNumber
+  // Check if we are updating an existing quote by ID or quoteNumber (ensuring not tombstoned)
   let targetIndex = -1;
   if (existingId) {
-    targetIndex = quotes.findIndex((q) => q.id === existingId);
-  } else {
-    // If quote with same quoteNumber exists, update it
-    targetIndex = quotes.findIndex((q) => q.quoteNumber === header.quoteNumber);
+    targetIndex = quotes.findIndex((q) => q.id === existingId && !isQuoteDeleted(q.id, q.quoteNumber));
+  } else if (header.quoteNumber) {
+    targetIndex = quotes.findIndex((q) => q.quoteNumber === header.quoteNumber && !isQuoteDeleted(q.id, q.quoteNumber));
   }
 
   const quoteRecord: SavedQuote = {
@@ -91,7 +97,7 @@ export function saveOrUpdateQuote(
     advisorPhone: header.advisorPhone || '',
     advisorEmail: header.advisorEmail || '',
     notes: header.notes || '',
-    items: JSON.parse(JSON.stringify(items)),
+    items: JSON.parse(JSON.stringify(validItems)),
     subtotal,
     iva,
     total,
@@ -106,6 +112,9 @@ export function saveOrUpdateQuote(
       tableScale: 85,
     },
   };
+
+  // Re-activate this quote in case it had previously been tombstoned
+  unmarkQuoteAsDeleted(quoteRecord.id, quoteRecord.quoteNumber);
 
   if (targetIndex >= 0) {
     quotes[targetIndex] = quoteRecord;
@@ -157,15 +166,29 @@ export function updateQuoteStatus(id: string, newStatus: QuoteStatus): SavedQuot
 }
 
 /**
- * Deletes a quote from the database
+ * Deletes a quote from the database permanently and cleans all cached drafts
  */
 export function deleteSavedQuote(id: string): boolean {
   const quotes = getSavedQuotes();
-  const filtered = quotes.filter((q) => q.id !== id);
-  if (filtered.length === quotes.length) return false;
+  const target = quotes.find((q) => q.id === id);
+  if (target) {
+    markQuoteAsDeleted(target.id, target.quoteNumber);
+  } else {
+    markQuoteAsDeleted(id);
+  }
+
+  const filtered = quotes.filter((q) => q.id !== id && (!target || q.quoteNumber !== target.quoteNumber));
   persistQuotes(filtered);
-  // Realtime Cloud Deletion with Error Handler
-  deleteQuoteFromFirestore(id).catch(() => {});
+
+  // Purge any temporary draft keys from localStorage
+  try {
+    localStorage.removeItem('syd_current_quote_draft');
+    localStorage.removeItem('syd_quote_draft');
+    localStorage.removeItem('syd_active_quote_id');
+  } catch (_) {}
+
+  // Realtime Cloud Deletion with Error Handler and server snapshot sync
+  deleteQuoteFromFirestore(id, target?.quoteNumber).catch(() => {});
   return true;
 }
 

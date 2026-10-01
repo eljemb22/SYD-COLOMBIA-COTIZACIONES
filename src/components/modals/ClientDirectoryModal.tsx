@@ -180,14 +180,18 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
     setClientToDelete({ id: clientId, name: clientName });
   };
 
-  const confirmDeleteClient = () => {
+  const confirmDeleteClient = async () => {
     if (!clientToDelete) return;
     const { id: clientId, name: clientName } = clientToDelete;
     markClientAsPermanentlyDeleted(clientId, clientName);
     const remaining = clients.filter((c) => c.id !== clientId);
     persistClients(remaining);
     setClients(remaining);
-    deleteClientFromFirestore(clientId).catch(() => {});
+    try {
+      await deleteClientFromFirestore(clientId);
+    } catch (e) {
+      console.error('Error deleting client from Firestore:', e);
+    }
     setClientToDelete(null);
     setFormSuccess(`¡Cliente "${clientName}" eliminado exitosamente del directorio!`);
     setTimeout(() => setFormSuccess(null), 3000);

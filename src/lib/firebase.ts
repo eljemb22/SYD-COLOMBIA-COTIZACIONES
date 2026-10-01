@@ -3,12 +3,31 @@ import {
   initializeFirestore,
   getFirestore,
   Firestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
+  memoryLocalCache,
   setLogLevel,
+  doc,
+  getDocFromServer,
 } from 'firebase/firestore';
 import { getAuth, Auth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
+
+// Automatically purge any stale Firestore WebStorage mutation queues from previous error loops
+if (typeof window !== 'undefined' && window.localStorage) {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key && (key.startsWith('firestore_') || key.startsWith('firestore:'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => {
+      try {
+        window.localStorage.removeItem(k);
+      } catch (_) {}
+    });
+  } catch (_) {}
+}
 
 // Configure log level to avoid spamming the console with transient connection/offline warnings
 try {
@@ -29,9 +48,7 @@ try {
   const firestoreSettings = {
     ignoreUndefinedProperties: true,
     experimentalAutoDetectLongPolling: true,
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
+    localCache: memoryLocalCache(),
   };
 
   if (firestoreDbId) {
@@ -48,6 +65,7 @@ try {
     const fallbackSettings = {
       ignoreUndefinedProperties: true,
       experimentalAutoDetectLongPolling: true,
+      localCache: memoryLocalCache(),
     };
     firestoreInstance = firestoreDbId
       ? initializeFirestore(app, fallbackSettings, firestoreDbId)
@@ -78,6 +96,18 @@ if (typeof window !== 'undefined' && auth) {
       });
     }
   });
+
+  // Validate connection to Firestore
+  async function testConnection() {
+    try {
+      await getDocFromServer(doc(db, 'test', 'connection'));
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('the client is offline')) {
+        console.warn('Firebase Firestore is operating in offline/reconnecting mode.');
+      }
+    }
+  }
+  testConnection().catch(() => {});
 }
 
 export { app };

@@ -8,6 +8,7 @@ import {
   writeBatch,
   Unsubscribe,
   serverTimestamp,
+  arrayUnion,
   Firestore,
 } from 'firebase/firestore';
 import { db, defaultDb, auth, getFirestoreInstances } from '../lib/firebase';
@@ -42,14 +43,45 @@ import {
   mergeSuppliers,
   mergeClients,
 } from '../utils/backupRestoreUtils';
+import { deduplicateTenderProjects } from '../utils/tenderDeduplication';
 import { getSavedQuotes } from '../utils/quoteStorage';
-import { getStoredOCTrackingContracts, getStoredSupplierProfiles } from '../utils/ocTrackingStorage';
+import {
+  getStoredOCTrackingContracts,
+  getStoredSupplierProfiles,
+  deduplicateOCTrackingContracts,
+} from '../utils/ocTrackingStorage';
 import { getStoredClients } from '../utils/clientStorage';
 import { isRateLimitError, notifyRateLimit } from '../utils/rateLimitHandler';
 import {
   getStoredSalesOrders,
   getStoredSalesInvoices,
+  deduplicateSalesOrders,
 } from '../utils/salesOrdersStorage';
+import {
+  isQuoteDeleted,
+  markQuoteAsDeleted,
+  unmarkQuoteAsDeleted,
+  isEquipmentDeleted,
+  markEquipmentAsDeleted,
+  unmarkEquipmentAsDeleted,
+  isTenderDeleted,
+  markTenderAsDeleted,
+  unmarkTenderAsDeleted,
+  isContractDeleted,
+  markContractAsDeleted,
+  unmarkContractAsDeleted,
+  isDocumentDeleted,
+  markDocumentAsDeleted,
+  unmarkDocumentAsDeleted,
+  isSalesOrderDeleted,
+  markSalesOrderAsDeleted,
+  unmarkSalesOrderAsDeleted,
+  isSalesInvoiceDeleted,
+  markSalesInvoiceAsDeleted,
+  unmarkSalesInvoiceAsDeleted,
+  mergeCloudTombstones,
+  CloudTombstonesPayload,
+} from '../utils/tombstones';
 
 export type SyncConnectionStatus = 'connecting' | 'connected' | 'syncing' | 'offline' | 'error';
 
@@ -170,22 +202,112 @@ export function toSafeDocId(rawId: string | number | undefined, fallbackPrefix =
   return cleaned || `${fallbackPrefix}_${Date.now()}`;
 }
 
-export async function deleteEquipmentFromFirestore(equipmentId: string): Promise<void> {
+export function getStoredTenders(): TenderClientProject[] {
+  try {
+    const raw = localStorage.getItem('syd_tender_clients_v2');
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return [];
+    const deduped = deduplicateTenderProjects(list);
+    if (deduped.length !== list.length) {
+      localStorage.setItem('syd_tender_clients_v2', JSON.stringify(deduped));
+    }
+    return deduped;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Persists deleted entity identifiers into Firestore system_settings/tombstones
+ * so that any other browser, mobile PWA, or computer listening in real-time
+ * immediately registers the tombstone and drops the entity from memory and screen.
+ */
+export async function recordCloudTombstone(
+  type: 'tender' | 'contract' | 'salesOrder' | 'salesInvoice' | 'quote' | 'equipment' | 'document',
+  id: string,
+  extra: Record<string, any> = {}
+): Promise<void> {
+  if (!id) return;
+  try {
+    const tombstoneDoc = doc(db, 'system_settings', 'tombstones');
+    const updatePayload: Record<string, any> = {
+      updatedAt: serverTimestamp(),
+      lastAction: {
+        type,
+        id,
+        timestamp: Date.now(),
+        ...extra,
+      },
+    };
+    if (type === 'tender') updatePayload.deletedTenders = arrayUnion(id);
+    else if (type === 'contract') updatePayload.deletedContracts = arrayUnion(id);
+    else if (type === 'salesOrder') updatePayload.deletedSalesOrders = arrayUnion(id);
+    else if (type === 'salesInvoice') updatePayload.deletedSalesInvoices = arrayUnion(id);
+    else if (type === 'quote') updatePayload.deletedQuotes = arrayUnion(id);
+    else if (type === 'equipment') updatePayload.deletedEquipments = arrayUnion(id);
+    else if (type === 'document') updatePayload.deletedDocuments = arrayUnion(id);
+
+    await setDoc(tombstoneDoc, updatePayload, { merge: true });
+  } catch (e) {
+    // Non-blocking fallback
+    console.debug('Failed to record cloud tombstone:', e);
+  }
+}
+
+export async function deleteEquipmentFromFirestore(equipmentId: string, equipmentCode?: string): Promise<void> {
   try {
     const safeId = toSafeDocId(equipmentId, 'eq');
+    markEquipmentAsDeleted(equipmentId, equipmentCode);
+    await recordCloudTombstone('equipment', equipmentId, { code: equipmentCode });
 
-    // Marcar inmediatamente la eliminación para bloquear
-    // cualquier escritura antigua que todavía esté pendiente.
+    // Cancel pending debounce writes
+    if (debounceTimers[`equipment_${safeId}`]) {
+      clearTimeout(debounceTimers[`equipment_${safeId}`]);
+      delete debounceTimers[`equipment_${safeId}`];
+    }
+
     recentlyDeletedEquipmentIds.set(safeId, Date.now());
 
     const docRef = doc(db, 'equipments', safeId);
     await deleteDoc(docRef);
-  } catch (err) {
-    // Si la eliminación falla, quitar la protección para permitir
-    // que el equipo pueda volver a guardarse correctamente.
-    const safeId = toSafeDocId(equipmentId, 'eq');
-    recentlyDeletedEquipmentIds.delete(safeId);
 
+    // Also delete any doc that might have used the code directly as ID
+    if (equipmentCode) {
+      try {
+        const codeSafeId = toSafeDocId(equipmentCode, 'eq');
+        if (codeSafeId !== safeId) {
+          await deleteDoc(doc(db, 'equipments', codeSafeId));
+        }
+      } catch (_) {}
+    }
+
+    // Clean local storage cache immediately
+    try {
+      const raw = localStorage.getItem('syd_equipments_catalog');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter((e) => e.id !== equipmentId && (!equipmentCode || e.code !== equipmentCode));
+          localStorage.setItem('syd_equipments_catalog', JSON.stringify(filtered));
+        }
+      }
+    } catch (_) {}
+
+    broadcastLocalDataSync({
+      type: 'ENTITY_DELETED',
+      entityType: 'equipment',
+      id: equipmentId,
+      code: equipmentCode,
+    });
+
+    // Immediately remove from server disk backup snapshot so it never resurrects
+    await fetch('/api/backup/delete-entity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'equipment', id: equipmentId, code: equipmentCode }),
+    }).catch(() => {});
+  } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, `equipments/${equipmentId}`);
     throw err;
   }
@@ -225,33 +347,179 @@ export async function clearAllEquipmentsFromFirestore(): Promise<void> {
   }
 }
 
-export async function deleteTenderClientFromFirestore(clientId: string): Promise<void> {
+export async function deleteTenderClientFromFirestore(clientId: string, processNumber?: string): Promise<void> {
   try {
     const safeId = toSafeDocId(clientId, 'tender');
+    markTenderAsDeleted(clientId, processNumber);
+    await recordCloudTombstone('tender', clientId, { processNumber });
+
+    if (debounceTimers[`tender_${safeId}`]) {
+      clearTimeout(debounceTimers[`tender_${safeId}`]);
+      delete debounceTimers[`tender_${safeId}`];
+    }
     const docRef = doc(db, 'tender_projects', safeId);
     await deleteDoc(docRef);
+
+    if (safeId !== clientId) {
+      try {
+        await deleteDoc(doc(db, 'tender_projects', clientId));
+      } catch (_) {}
+    }
+
+    // Thorough deletion across collection for any matching IDs or processNumbers
+    try {
+      const coll = collection(db, 'tender_projects');
+      const snap = await getDocs(coll);
+      snap.forEach((d) => {
+        const data = d.data();
+        if (
+          d.id === safeId ||
+          d.id === clientId ||
+          data?.id === clientId ||
+          data?.id === safeId ||
+          (processNumber && (d.id === processNumber || data?.header?.processNumber === processNumber))
+        ) {
+          deleteDoc(d.ref).catch(() => {});
+        }
+      });
+    } catch (_) {}
+
+    try {
+      const list = getStoredTenders().filter(
+        (t) => t.id !== clientId && (!processNumber || t.header?.processNumber !== processNumber)
+      );
+      localStorage.setItem('syd_tender_clients_v2', JSON.stringify(list));
+    } catch (_) {}
+
+    broadcastLocalDataSync({
+      type: 'ENTITY_DELETED',
+      entityType: 'tender',
+      id: clientId,
+      processNumber,
+    });
+
+    await fetch('/api/backup/delete-entity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'tender', id: clientId, processNumber }),
+    }).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, `tender_projects/${clientId}`);
+    throw err;
   }
 }
 
-export async function deleteOCTrackingContractFromFirestore(contractId: string): Promise<void> {
+export async function deleteOCTrackingContractFromFirestore(
+  contractId: string,
+  contractNumber?: string,
+  salesOrderNumber?: string,
+  tenderClientId?: string
+): Promise<void> {
   try {
     const safeId = toSafeDocId(contractId, 'oc');
+    markContractAsDeleted(contractId, contractNumber, salesOrderNumber, tenderClientId);
+    await recordCloudTombstone('contract', contractId, { contractNumber, salesOrderNumber, tenderClientId });
+
+    if (debounceTimers[`oc_${safeId}`]) {
+      clearTimeout(debounceTimers[`oc_${safeId}`]);
+      delete debounceTimers[`oc_${safeId}`];
+    }
     const docRef = doc(db, 'oc_contracts', safeId);
     await deleteDoc(docRef);
+
+    if (safeId !== contractId) {
+      try {
+        await deleteDoc(doc(db, 'oc_contracts', contractId));
+      } catch (_) {}
+    }
+
+    // Thorough deletion across collection for any matching IDs, contract numbers, or SO numbers
+    try {
+      const coll = collection(db, 'oc_contracts');
+      const snap = await getDocs(coll);
+      snap.forEach((d) => {
+        const data = d.data();
+        if (
+          d.id === safeId ||
+          d.id === contractId ||
+          data?.id === contractId ||
+          data?.id === safeId ||
+          (contractNumber && (d.id === contractNumber || data?.contractNumber === contractNumber)) ||
+          (salesOrderNumber && (d.id === salesOrderNumber || data?.salesOrderNumber === salesOrderNumber)) ||
+          (tenderClientId && (d.id === tenderClientId || data?.tenderClientId === tenderClientId))
+        ) {
+          deleteDoc(d.ref).catch(() => {});
+        }
+      });
+    } catch (_) {}
+
+    try {
+      const list = getStoredOCTrackingContracts().filter(
+        (c) =>
+          c.id !== contractId &&
+          (!contractNumber || c.contractNumber !== contractNumber) &&
+          (!salesOrderNumber || c.salesOrderNumber !== salesOrderNumber)
+      );
+      localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(list));
+    } catch (_) {}
+
+    broadcastLocalDataSync({
+      type: 'ENTITY_DELETED',
+      entityType: 'contract',
+      id: contractId,
+      contractNumber,
+      salesOrderNumber,
+      tenderClientId,
+    });
+
+    await fetch('/api/backup/delete-entity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'contract', id: contractId, contractNumber, salesOrderNumber, tenderClientId }),
+    }).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, `oc_contracts/${contractId}`);
+    throw err;
   }
 }
 
 export async function deleteTechnicalDocumentFromFirestore(docId: string): Promise<void> {
   try {
     const safeId = toSafeDocId(docId, 'doc');
+    markDocumentAsDeleted(docId);
+    await recordCloudTombstone('document', docId);
+
+    if (debounceTimers[`doc_${safeId}`]) {
+      clearTimeout(debounceTimers[`doc_${safeId}`]);
+      delete debounceTimers[`doc_${safeId}`];
+    }
     const docRef = doc(db, 'technical_documents', safeId);
     await deleteDoc(docRef);
+
+    try {
+      const raw = localStorage.getItem('syd_technical_documents_v3');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          localStorage.setItem('syd_technical_documents_v3', JSON.stringify(parsed.filter((d) => d.id !== docId)));
+        }
+      }
+    } catch (_) {}
+
+    broadcastLocalDataSync({
+      type: 'ENTITY_DELETED',
+      entityType: 'document',
+      id: docId,
+    });
+
+    await fetch('/api/backup/delete-entity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'document', id: docId }),
+    }).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, `technical_documents/${docId}`);
+    throw err;
   }
 }
 
@@ -265,33 +533,185 @@ export async function deleteUserFromFirestore(userId: string): Promise<void> {
   }
 }
 
-export async function deleteSalesOrderFromFirestore(orderId: string): Promise<void> {
+export async function deleteSalesOrderFromFirestore(
+  orderId: string,
+  salesOrderNumber?: string,
+  tenderClientId?: string,
+  contractId?: string
+): Promise<void> {
   try {
+    markSalesOrderAsDeleted(orderId, salesOrderNumber, tenderClientId, contractId);
+    await recordCloudTombstone('salesOrder', orderId, { salesOrderNumber, tenderClientId, contractId });
+
+    if (debounceTimers['batch_sales_orders']) {
+      clearTimeout(debounceTimers['batch_sales_orders']);
+      delete debounceTimers['batch_sales_orders'];
+    }
     const safeId = toSafeDocId(orderId, 'ov');
     const docRef = doc(db, 'sales_orders', safeId);
     await deleteDoc(docRef);
+
+    // Also delete any document that might have used raw orderId or salesOrderNumber as ID
+    if (orderId && orderId !== safeId) {
+      try {
+        await deleteDoc(doc(db, 'sales_orders', orderId));
+      } catch (_) {}
+    }
+
+    if (salesOrderNumber && salesOrderNumber !== safeId) {
+      try {
+        const numSafeId = toSafeDocId(salesOrderNumber, 'ov');
+        await deleteDoc(doc(db, 'sales_orders', numSafeId));
+      } catch (_) {}
+    }
+
+    // Immediately purge from local storage cache so zero residual data remains
+    try {
+      const stored = getStoredSalesOrders().filter(
+        (o) => o.id !== orderId && (!salesOrderNumber || o.salesOrderNumber !== salesOrderNumber)
+      );
+      localStorage.setItem('syd_sales_orders_v1', JSON.stringify(stored));
+    } catch (_) {}
+
+    // Broadcast entity deletion across all open tabs and PWA immediately
+    broadcastLocalDataSync({
+      type: 'ENTITY_DELETED',
+      entityType: 'salesOrder',
+      id: orderId,
+      salesOrderNumber,
+      tenderClientId,
+      contractId,
+    });
+
+    await fetch('/api/backup/delete-entity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'salesOrder', id: orderId, salesOrderNumber, tenderClientId, contractId }),
+    }).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, `sales_orders/${orderId}`);
+    throw err;
   }
 }
 
-export async function deleteSalesInvoiceFromFirestore(invoiceId: string): Promise<void> {
+export async function deleteSalesInvoiceFromFirestore(
+  invoiceId: string,
+  invoiceNumber?: string,
+  salesOrderId?: string
+): Promise<void> {
   try {
+    markSalesInvoiceAsDeleted(invoiceId, invoiceNumber, salesOrderId);
+    await recordCloudTombstone('salesInvoice', invoiceId, { invoiceNumber, salesOrderId });
+
+    if (debounceTimers['batch_sales_invoices']) {
+      clearTimeout(debounceTimers['batch_sales_invoices']);
+      delete debounceTimers['batch_sales_invoices'];
+    }
     const safeId = toSafeDocId(invoiceId, 'inv');
     const docRef = doc(db, 'sales_invoices', safeId);
     await deleteDoc(docRef);
+
+    if (invoiceId && invoiceId !== safeId) {
+      try {
+        await deleteDoc(doc(db, 'sales_invoices', invoiceId));
+      } catch (_) {}
+    }
+
+    // Immediately purge from local storage cache
+    try {
+      const stored = getStoredSalesInvoices().filter(
+        (i) => i.id !== invoiceId && (!invoiceNumber || i.invoiceNumber !== invoiceNumber)
+      );
+      localStorage.setItem('syd_sales_invoices_v1', JSON.stringify(stored));
+    } catch (_) {}
+
+    broadcastLocalDataSync({
+      type: 'ENTITY_DELETED',
+      entityType: 'salesInvoice',
+      id: invoiceId,
+      invoiceNumber,
+      salesOrderId,
+    });
+
+    await fetch('/api/backup/delete-entity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'salesInvoice', id: invoiceId, invoiceNumber, salesOrderId }),
+    }).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, `sales_invoices/${invoiceId}`);
+    throw err;
   }
 }
 
-export async function deleteQuoteFromFirestore(quoteId: string): Promise<void> {
+export async function deleteQuoteFromFirestore(quoteId: string, quoteNumber?: string): Promise<void> {
   try {
     const safeId = toSafeDocId(quoteId, 'quote');
+    markQuoteAsDeleted(quoteId, quoteNumber);
+    await recordCloudTombstone('quote', quoteId, { quoteNumber });
+
+    if (debounceTimers[`quote_${safeId}`]) {
+      clearTimeout(debounceTimers[`quote_${safeId}`]);
+      delete debounceTimers[`quote_${safeId}`];
+    }
     const docRef = doc(db, 'saved_quotes', safeId);
     await deleteDoc(docRef);
+
+    if (quoteId && quoteId !== safeId) {
+      try {
+        await deleteDoc(doc(db, 'saved_quotes', quoteId));
+      } catch (_) {}
+    }
+
+    // Also delete any document that might have used the quoteNumber directly as ID
+    if (quoteNumber && quoteNumber !== safeId) {
+      try {
+        const numSafeId = toSafeDocId(quoteNumber, 'quote');
+        await deleteDoc(doc(db, 'saved_quotes', numSafeId));
+      } catch (_) {}
+    }
+
+    // Thorough check across collection to eliminate any orphan duplicates
+    try {
+      const coll = collection(db, 'saved_quotes');
+      const snap = await getDocs(coll);
+      snap.forEach((d) => {
+        const data = d.data();
+        if (
+          d.id === safeId ||
+          d.id === quoteId ||
+          data?.id === quoteId ||
+          (quoteNumber && (d.id === quoteNumber || data?.quoteNumber === quoteNumber))
+        ) {
+          deleteDoc(d.ref).catch(() => {});
+        }
+      });
+    } catch (_) {}
+
+    // Immediately purge from local storage cache
+    try {
+      const quotes = getSavedQuotes().filter(
+        (q) => q.id !== quoteId && (!quoteNumber || q.quoteNumber !== quoteNumber)
+      );
+      localStorage.setItem('syd_saved_quotes_database_v2', JSON.stringify(quotes));
+    } catch (_) {}
+
+    broadcastLocalDataSync({
+      type: 'ENTITY_DELETED',
+      entityType: 'quote',
+      id: quoteId,
+      quoteNumber,
+    });
+
+    // Immediately remove from server disk backup snapshot
+    await fetch('/api/backup/delete-entity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'quote', id: quoteId, quoteNumber }),
+    }).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, `saved_quotes/${quoteId}`);
+    throw err;
   }
 }
 
@@ -300,8 +720,27 @@ export async function deleteClientFromFirestore(clientId: string): Promise<void>
     const safeId = toSafeDocId(clientId, 'client');
     const docRef = doc(db, 'client_directory', safeId);
     await deleteDoc(docRef);
+
+    if (clientId && clientId !== safeId) {
+      try {
+        await deleteDoc(doc(db, 'client_directory', clientId));
+      } catch (_) {}
+    }
+
+    try {
+      const list = getStoredClients().filter((c) => c.id !== clientId);
+      localStorage.setItem('syd_clients_directory_v1', JSON.stringify(list));
+      localStorage.setItem('syd_client_directory_v2', JSON.stringify(list));
+    } catch (_) {}
+
+    await fetch('/api/backup/delete-entity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'client', id: clientId }),
+    }).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, `client_directory/${clientId}`);
+    throw err;
   }
 }
 
@@ -417,28 +856,46 @@ function debounceWrite(key: string, delay: number, fn: () => Promise<void>): voi
   }, delay);
 }
 
-export async function saveQuoteToFirestore(quote: SavedQuote): Promise<void> {
-  if (isSyncingFromRemote) return;
-  const safeId = toSafeDocId(quote.id, 'quote');
-  debounceWrite(`quote_${safeId}`, 300, async () => {
-    try {
-      const clean = sanitizeForFirestore({ ...quote, id: safeId });
-      const docRef = doc(db, 'saved_quotes', safeId);
-      await setDoc(docRef, {
-        ...clean,
-        _updatedAt: serverTimestamp(),
-      }, { merge: true });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `saved_quotes/${quote.id}`);
+export function broadcastLocalDataSync(payload: { type: string; [key: string]: any }): void {
+  try {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      const bc = new BroadcastChannel('syd_realtime_data_bus');
+      bc.postMessage({
+        ...payload,
+        senderSessionId: getClientSessionId(),
+        timestamp: Date.now(),
+      });
+      bc.close();
     }
-  });
+  } catch (e) {}
+}
+
+export async function saveQuoteToFirestore(quote: SavedQuote): Promise<void> {
+  if (isSyncingFromRemote || !quote || !quote.id) return;
+  unmarkQuoteAsDeleted(quote.id, quote.quoteNumber);
+  const safeId = toSafeDocId(quote.id, 'quote');
+  broadcastLocalDataSync({ type: 'QUOTES_SYNC', quotes: getSavedQuotes() });
+  
+  try {
+    const clean = sanitizeForFirestore({ ...quote, id: safeId });
+    const docRef = doc(db, 'saved_quotes', safeId);
+    await setDoc(docRef, {
+      ...clean,
+      _updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `saved_quotes/${quote.id}`);
+    throw err;
+  }
 }
 
 export async function saveQuotesBatchToFirestore(quotes: SavedQuote[]): Promise<void> {
   if (isSyncingFromRemote || !quotes || quotes.length === 0) return;
+  const safeQuotes = quotes.filter((q) => q && !isQuoteDeleted(q.id, q.quoteNumber));
+  if (safeQuotes.length === 0) return;
   debounceWrite('batch_quotes', 400, async () => {
     try {
-      await writeInChunks('saved_quotes', quotes);
+      await writeInChunks('saved_quotes', safeQuotes);
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'saved_quotes');
     }
@@ -510,8 +967,12 @@ export async function directBatchRestoreToFirestore(
     equipments?: MedicalEquipment[];
     tenderProjects?: TenderClientProject[];
     ocContracts?: OCTrackingContract[];
+    salesOrders?: SalesOrderRecord[];
+    salesInvoices?: SalesInvoiceRecord[];
     technicalDocuments?: TechnicalDocument[];
     systemUsers?: StoredUserAccount[];
+    suppliers?: SupplierProfile[];
+    clients?: ClientRecord[];
     themeSettings?: ThemeSettings;
     activeLetterheadUrl?: string | null;
   },
@@ -544,6 +1005,18 @@ export async function directBatchRestoreToFirestore(
       });
     }
 
+    if (data.salesOrders && data.salesOrders.length > 0) {
+      await writeInChunks('sales_orders', data.salesOrders, (done, total) => {
+        onProgress?.(`Guardando ${total} órdenes de venta en Firestore (${done}/${total})...`);
+      });
+    }
+
+    if (data.salesInvoices && data.salesInvoices.length > 0) {
+      await writeInChunks('sales_invoices', data.salesInvoices, (done, total) => {
+        onProgress?.(`Guardando ${total} facturas en Firestore (${done}/${total})...`);
+      });
+    }
+
     if (data.technicalDocuments && data.technicalDocuments.length > 0) {
       await writeInChunks('technical_documents', data.technicalDocuments, (done, total) => {
         onProgress?.(`Guardando ${total} documentos técnicos en Firestore (${done}/${total})...`);
@@ -553,6 +1026,18 @@ export async function directBatchRestoreToFirestore(
     if (data.systemUsers && data.systemUsers.length > 0) {
       await writeInChunks('system_users', data.systemUsers, (done, total) => {
         onProgress?.(`Guardando ${total} usuarios en Firestore (${done}/${total})...`);
+      });
+    }
+
+    if (data.suppliers && data.suppliers.length > 0) {
+      await writeInChunks('suppliers', data.suppliers, (done, total) => {
+        onProgress?.(`Guardando ${total} proveedores en Firestore (${done}/${total})...`);
+      });
+    }
+
+    if (data.clients && data.clients.length > 0) {
+      await writeInChunks('clients', data.clients, (done, total) => {
+        onProgress?.(`Guardando ${total} clientes en Firestore (${done}/${total})...`);
       });
     }
 
@@ -642,24 +1127,12 @@ export async function saveEquipmentsBatchToFirestore(equipments: MedicalEquipmen
 export async function saveSingleEquipmentToFirestore(equipment: MedicalEquipment): Promise<void> {
   if (!equipment || !equipment.id) return;
 
+  // Unmark tombstone since user is actively saving/creating this equipment
+  unmarkEquipmentAsDeleted(equipment.id, equipment.code);
+
   try {
     const safeId = toSafeDocId(equipment.id, 'eq');
-
-    // Si este equipo fue eliminado recientemente, no permitir que
-    // una escritura antigua pendiente lo vuelva a crear.
-    const deletedAt = recentlyDeletedEquipmentIds.get(safeId);
-    if (deletedAt !== undefined) {
-      const age = Date.now() - deletedAt;
-
-      if (age < RECENT_DELETE_PROTECTION_MS) {
-        console.warn(
-          `[SYNC] Escritura bloqueada para equipo eliminado recientemente: ${safeId}`
-        );
-        return;
-      }
-
-      recentlyDeletedEquipmentIds.delete(safeId);
-    }
+    recentlyDeletedEquipmentIds.delete(safeId);
 
     const docRef = doc(db, 'equipments', safeId);
 
@@ -672,6 +1145,17 @@ export async function saveSingleEquipmentToFirestore(equipment: MedicalEquipment
       }),
       { merge: true }
     );
+
+    // Broadcast update across open tabs immediately
+    let localEq: MedicalEquipment[] = [];
+    try {
+      const raw = localStorage.getItem('syd_equipments_catalog');
+      if (raw) localEq = JSON.parse(raw);
+    } catch (e) {}
+    const updated = localEq.some((e) => e.id === equipment.id)
+      ? localEq.map((e) => (e.id === equipment.id ? { ...e, ...equipment } : e))
+      : [equipment, ...localEq];
+    broadcastLocalDataSync({ type: 'EQUIPMENTS_SYNC', equipments: updated });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `equipments/${equipment.id}`);
     throw err;
@@ -680,17 +1164,39 @@ export async function saveSingleEquipmentToFirestore(equipment: MedicalEquipment
 
 export async function saveSingleTenderClientToFirestore(tender: TenderClientProject): Promise<void> {
   if (!tender || !tender.id) return;
+  unmarkTenderAsDeleted(tender.id, tender.header?.processNumber);
   try {
     const safeId = toSafeDocId(tender.id, 'tender');
     const docRef = doc(db, 'tender_projects', safeId);
-    await setDoc(docRef, sanitizeForFirestore({ ...tender, id: safeId, _updatedAt: new Date().toISOString() }), { merge: true });
+    await setDoc(docRef, sanitizeForFirestore({ ...tender, id: safeId, _updatedAt: new Date().toISOString() }));
+
+    // Broadcast update across open tabs immediately
+    try {
+      const stored = getStoredTenders();
+      const idx = stored.findIndex(
+        (t) => t.id === tender.id || (tender.header?.processNumber && t.header?.processNumber === tender.header.processNumber)
+      );
+      let nextStored: TenderClientProject[];
+      if (idx >= 0) {
+        nextStored = [...stored];
+        nextStored[idx] = { ...nextStored[idx], ...tender };
+      } else {
+        nextStored = [tender, ...stored];
+      }
+      localStorage.setItem('syd_tender_clients_v2', JSON.stringify(nextStored));
+    } catch (_) {}
+
+    broadcastLocalDataSync({ type: 'TENDERS_SYNC', tenders: getStoredTenders() });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `tender_projects/${tender.id}`);
+    throw err;
   }
 }
 
 export async function saveTenderClientsToFirestore(tenders: TenderClientProject[]): Promise<void> {
-  if (isSyncingFromRemote) return;
+  if (isSyncingFromRemote || !tenders || tenders.length === 0) return;
+  tenders.forEach((t) => t && t.id && unmarkTenderAsDeleted(t.id));
+  broadcastLocalDataSync({ type: 'TENDERS_SYNC', tenders });
   debounceWrite('batch_tenders', 400, async () => {
     try {
       await writeInChunks('tender_projects', tenders);
@@ -702,17 +1208,36 @@ export async function saveTenderClientsToFirestore(tenders: TenderClientProject[
 
 export async function saveSingleOCTrackingContractToFirestore(contract: OCTrackingContract): Promise<void> {
   if (!contract || !contract.id) return;
+  unmarkContractAsDeleted(contract.id, contract.contractNumber, contract.salesOrderNumber, contract.tenderClientId);
   try {
     const safeId = toSafeDocId(contract.id, 'oc');
     const docRef = doc(db, 'oc_contracts', safeId);
-    await setDoc(docRef, sanitizeForFirestore({ ...contract, id: safeId, _updatedAt: new Date().toISOString() }), { merge: true });
+    await setDoc(docRef, sanitizeForFirestore({ ...contract, id: safeId, _updatedAt: new Date().toISOString() }));
+
+    // Broadcast update across open tabs immediately
+    try {
+      const stored = getStoredOCTrackingContracts();
+      const idx = stored.findIndex((c) => c.id === contract.id);
+      let nextStored: OCTrackingContract[];
+      if (idx >= 0) {
+        nextStored = [...stored];
+        nextStored[idx] = { ...nextStored[idx], ...contract };
+      } else {
+        nextStored = [contract, ...stored];
+      }
+      localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(nextStored));
+    } catch (_) {}
+
+    broadcastLocalDataSync({ type: 'OC_SYNC', contracts: getStoredOCTrackingContracts() });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `oc_contracts/${contract.id}`);
+    throw err;
   }
 }
 
 export async function saveOCTrackingContractsToFirestore(contracts: OCTrackingContract[]): Promise<void> {
   if (isSyncingFromRemote) return;
+  broadcastLocalDataSync({ type: 'OC_SYNC', contracts });
   debounceWrite('batch_oc', 400, async () => {
     try {
       await writeInChunks('oc_contracts', contracts);
@@ -800,17 +1325,36 @@ export async function saveLetterheadToFirestore(letterheadUrl: string | null): P
 
 export async function saveSingleSalesOrderToFirestore(order: SalesOrderRecord): Promise<void> {
   if (!order || !order.id) return;
+  unmarkSalesOrderAsDeleted(order.id, order.salesOrderNumber, order.tenderClientId, order.contractId);
   try {
     const safeId = toSafeDocId(order.id, 'ov');
     const docRef = doc(db, 'sales_orders', safeId);
     await setDoc(docRef, sanitizeForFirestore({ ...order, id: safeId, _updatedAt: new Date().toISOString() }), { merge: true });
+
+    // Also update local storage cache immediately
+    try {
+      const stored = getStoredSalesOrders();
+      const idx = stored.findIndex((o) => o.id === order.id || (order.salesOrderNumber && o.salesOrderNumber === order.salesOrderNumber));
+      let nextStored: SalesOrderRecord[];
+      if (idx >= 0) {
+        nextStored = [...stored];
+        nextStored[idx] = { ...nextStored[idx], ...order };
+      } else {
+        nextStored = [order, ...stored];
+      }
+      localStorage.setItem('syd_sales_orders_v1', JSON.stringify(nextStored));
+    } catch (_) {}
+
+    broadcastLocalDataSync({ type: 'ORDERS_SYNC', orders: getStoredSalesOrders() });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `sales_orders/${order.id}`);
+    throw err;
   }
 }
 
 export async function saveSalesOrdersBatchToFirestore(orders: SalesOrderRecord[]): Promise<void> {
   if (isSyncingFromRemote) return;
+  broadcastLocalDataSync({ type: 'ORDERS_SYNC', orders });
   debounceWrite('batch_sales_orders', 600, async () => {
     try {
       await writeInChunks('sales_orders', orders);
@@ -822,17 +1366,35 @@ export async function saveSalesOrdersBatchToFirestore(orders: SalesOrderRecord[]
 
 export async function saveSingleSalesInvoiceToFirestore(invoice: SalesInvoiceRecord): Promise<void> {
   if (!invoice || !invoice.id) return;
+  unmarkSalesInvoiceAsDeleted(invoice.id, invoice.invoiceNumber, invoice.salesOrderId);
   try {
     const safeId = toSafeDocId(invoice.id, 'inv');
     const docRef = doc(db, 'sales_invoices', safeId);
     await setDoc(docRef, sanitizeForFirestore({ ...invoice, id: safeId, _updatedAt: new Date().toISOString() }), { merge: true });
+
+    try {
+      const stored = getStoredSalesInvoices();
+      const idx = stored.findIndex((i) => i.id === invoice.id || (invoice.invoiceNumber && i.invoiceNumber === invoice.invoiceNumber));
+      let nextStored: SalesInvoiceRecord[];
+      if (idx >= 0) {
+        nextStored = [...stored];
+        nextStored[idx] = { ...nextStored[idx], ...invoice };
+      } else {
+        nextStored = [invoice, ...stored];
+      }
+      localStorage.setItem('syd_sales_invoices_v1', JSON.stringify(nextStored));
+    } catch (_) {}
+
+    broadcastLocalDataSync({ type: 'INVOICES_SYNC', invoices: getStoredSalesInvoices() });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `sales_invoices/${invoice.id}`);
+    throw err;
   }
 }
 
 export async function saveSalesInvoicesBatchToFirestore(invoices: SalesInvoiceRecord[]): Promise<void> {
   if (isSyncingFromRemote) return;
+  broadcastLocalDataSync({ type: 'INVOICES_SYNC', invoices });
   debounceWrite('batch_sales_invoices', 600, async () => {
     try {
       await writeInChunks('sales_invoices', invoices);
@@ -963,6 +1525,92 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
     }
   };
 
+  // 0. Cloud Tombstones Listener (Realtime Deletion Sync Across All Devices & PWAs)
+  try {
+    const tombstoneDoc = doc(db, 'system_settings', 'tombstones');
+    const unsubTombstones = onSnapshot(
+      tombstoneDoc,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data() as CloudTombstonesPayload;
+          mergeCloudTombstones(data);
+
+          // Immediately remove deleted items from memory & local storage and notify callbacks
+          // 1. Tenders
+          const freshTenders = getStoredTenders().filter((t) => t && !isTenderDeleted(t.id, t.header?.processNumber));
+          try {
+            localStorage.setItem('syd_tender_clients_v2', JSON.stringify(freshTenders));
+          } catch (e) {}
+          callbacks.onTendersChange?.(freshTenders);
+
+          // 2. Contracts
+          const freshContracts = getStoredOCTrackingContracts().filter((c) => c && !isContractDeleted(c.id));
+          try {
+            localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(freshContracts));
+          } catch (e) {}
+          callbacks.onOCContractsChange?.(freshContracts);
+
+          // 3. Sales Orders
+          const freshOrders = getStoredSalesOrders().filter(
+            (o) => o && !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId)
+          );
+          try {
+            localStorage.setItem('syd_sales_orders_v1', JSON.stringify(freshOrders));
+          } catch (e) {}
+          callbacks.onSalesOrdersChange?.(freshOrders);
+
+          // 4. Sales Invoices
+          const freshInvoices = getStoredSalesInvoices().filter(
+            (i) => i && !isSalesInvoiceDeleted(i.id, i.invoiceNumber, i.salesOrderId)
+          );
+          try {
+            localStorage.setItem('syd_sales_invoices_v1', JSON.stringify(freshInvoices));
+          } catch (e) {}
+          callbacks.onSalesInvoicesChange?.(freshInvoices);
+
+          // 5. Quotes
+          const freshQuotes = getSavedQuotes().filter((q) => q && !isQuoteDeleted(q.id, q.quoteNumber));
+          try {
+            localStorage.setItem('syd_saved_quotes_database_v2', JSON.stringify(freshQuotes));
+          } catch (e) {}
+          callbacks.onQuotesChange?.(freshQuotes);
+
+          // 6. Equipments
+          try {
+            const rawEq = localStorage.getItem('syd_equipments_catalog');
+            if (rawEq) {
+              const parsed = JSON.parse(rawEq);
+              if (Array.isArray(parsed)) {
+                const freshEq = parsed.filter((eq) => eq && !isEquipmentDeleted(eq.id, eq.code));
+                localStorage.setItem('syd_equipments_catalog', JSON.stringify(freshEq));
+                callbacks.onEquipmentsChange?.(freshEq);
+              }
+            }
+          } catch (e) {}
+
+          // 7. Documents
+          try {
+            const rawDocs = localStorage.getItem('syd_technical_documents_v3');
+            if (rawDocs) {
+              const parsed = JSON.parse(rawDocs);
+              if (Array.isArray(parsed)) {
+                const freshDocs = parsed.filter((d) => d && !isDocumentDeleted(d.id));
+                localStorage.setItem('syd_technical_documents_v3', JSON.stringify(freshDocs));
+                callbacks.onDocumentsChange?.(freshDocs);
+              }
+            }
+          } catch (e) {}
+        }
+      },
+      (err) => {
+        handleFirestoreError(err, OperationType.GET, 'system_settings/tombstones');
+      }
+    );
+    unsubscribers.push(unsubTombstones);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.GET, 'system_settings/tombstones');
+  }
+
   // 1. Saved Quotes Listener
   try {
     const quotesColl = collection(db, 'saved_quotes');
@@ -971,27 +1619,18 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
       (snapshot) => {
         const remoteQuotes: SavedQuote[] = [];
         snapshot.forEach((docSnap) => {
-          remoteQuotes.push(docSnap.data() as SavedQuote);
+          const q = docSnap.data() as SavedQuote;
+          if (q && !isQuoteDeleted(q.id, q.quoteNumber)) {
+            remoteQuotes.push(q);
+          }
         });
 
-        const localQuotes = getSavedQuotes();
-        let resolvedQuotes: SavedQuote[];
+        const resolvedQuotes = remoteQuotes;
 
-        if (remoteQuotes.length === 0) {
-          // If Firestore is completely empty and this is the first sync, seed with local data
-          if (!quotesInitialized && localQuotes.length > 0) {
-            resolvedQuotes = localQuotes;
-            saveQuotesBatchToFirestore(localQuotes).catch(() => {});
-          } else {
-            resolvedQuotes = [];
-          }
-        } else {
-          // Authoritative remote list from Firestore: reflects real-time adds, edits, and deletions
-          resolvedQuotes = remoteQuotes;
-        }
+        resolvedQuotes.sort(
+          (a, b) => new Date(b.updatedAt || b.savedAt || 0).getTime() - new Date(a.updatedAt || a.savedAt || 0).getTime()
+        );
 
-        resolvedQuotes.sort((a, b) => new Date(b.updatedAt || b.savedAt || 0).getTime() - new Date(a.updatedAt || a.savedAt || 0).getTime());
-        
         try {
           localStorage.setItem('syd_saved_quotes_database_v2', JSON.stringify(resolvedQuotes));
         } catch (e) {}
@@ -1012,7 +1651,7 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
     handleFirestoreError(e, OperationType.LIST, 'saved_quotes');
   }
 
-  // 2. Equipments Listener (Authoritative cloud source of truth)
+  // 2. Equipments Listener (Authoritative cloud source of truth with local creation preservation)
   try {
     const eqColl = collection(db, 'equipments');
     const unsubEq = onSnapshot(
@@ -1020,49 +1659,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
       (snapshot) => {
         const remoteList: MedicalEquipment[] = [];
         snapshot.forEach((docSnap) => {
-          remoteList.push(docSnap.data() as MedicalEquipment);
+          const eq = docSnap.data() as MedicalEquipment;
+          if (eq && !isEquipmentDeleted(eq.id, eq.code)) {
+            remoteList.push(eq);
+          }
         });
 
-        let localEquipments: MedicalEquipment[] = [];
-        try {
-          const raw = localStorage.getItem('syd_equipments_catalog');
-          if (raw) localEquipments = JSON.parse(raw);
-        } catch (e) {}
-
-        const isClearedExplicitly = localStorage.getItem('syd_catalog_cleared_by_admin') === 'true';
-        let resolvedEquipments: MedicalEquipment[];
-
-        if (remoteList.length === 0) {
-          if (isClearedExplicitly) {
-            resolvedEquipments = [];
-          } else if (!equipmentsInitialized && localEquipments.length > 0) {
-            resolvedEquipments = localEquipments;
-            saveEquipmentsBatchToFirestore(resolvedEquipments).catch(() => {});
-          } else {
-            resolvedEquipments = [];
-          }
-        } else {
-          try {
-            localStorage.removeItem('syd_catalog_cleared_by_admin');
-          } catch (e) {}
-          
-          // Cloud Firestore is the authoritative catalog
-          if (!equipmentsInitialized && localEquipments.length > remoteList.length && !isClearedExplicitly) {
-            const remoteIds = new Set(remoteList.map((e) => e.id));
-            const remoteCodes = new Set(remoteList.map((e) => (e.code || '').trim().toLowerCase()).filter(Boolean));
-            const missingLocals = localEquipments.filter(
-              (loc) => loc.id && !remoteIds.has(loc.id) && !remoteCodes.has((loc.code || '').trim().toLowerCase())
-            );
-            if (missingLocals.length > 0) {
-              resolvedEquipments = [...remoteList, ...missingLocals];
-              saveEquipmentsBatchToFirestore(missingLocals).catch(() => {});
-            } else {
-              resolvedEquipments = remoteList;
-            }
-          } else {
-            resolvedEquipments = remoteList;
-          }
-        }
+        const resolvedEquipments: MedicalEquipment[] = remoteList;
 
         try {
           localStorage.setItem('syd_equipments_catalog', JSON.stringify(resolvedEquipments));
@@ -1093,26 +1696,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
       (snapshot) => {
         const remoteList: TenderClientProject[] = [];
         snapshot.forEach((docSnap) => {
-          remoteList.push(docSnap.data() as TenderClientProject);
+          const t = docSnap.data() as TenderClientProject;
+          if (t && !isTenderDeleted(t.id, t.header?.processNumber)) {
+            remoteList.push(t);
+          }
         });
 
-        let localTenders: TenderClientProject[] = [];
-        try {
-          const raw = localStorage.getItem('syd_tender_clients_v2');
-          if (raw) localTenders = JSON.parse(raw);
-        } catch (e) {}
-
-        let resolvedTenders: TenderClientProject[];
-        if (remoteList.length === 0) {
-          if (!tendersInitialized && localTenders.length > 0) {
-            resolvedTenders = localTenders;
-            saveTenderClientsToFirestore(resolvedTenders).catch(() => {});
-          } else {
-            resolvedTenders = [];
-          }
-        } else {
-          resolvedTenders = remoteList;
-        }
+        const resolvedTenders = deduplicateTenderProjects(remoteList);
 
         try {
           localStorage.setItem('syd_tender_clients_v2', JSON.stringify(resolvedTenders));
@@ -1142,21 +1732,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
       (snapshot) => {
         const remoteList: OCTrackingContract[] = [];
         snapshot.forEach((docSnap) => {
-          remoteList.push(docSnap.data() as OCTrackingContract);
+          const c = docSnap.data() as OCTrackingContract;
+          if (c && !isContractDeleted(c.id)) {
+            remoteList.push(c);
+          }
         });
 
-        const localOC = getStoredOCTrackingContracts();
-        let resolvedOC: OCTrackingContract[];
-        if (remoteList.length === 0) {
-          if (!ocInitialized && localOC.length > 0) {
-            resolvedOC = localOC;
-            saveOCTrackingContractsToFirestore(localOC).catch(() => {});
-          } else {
-            resolvedOC = [];
-          }
-        } else {
-          resolvedOC = remoteList;
-        }
+        const resolvedOC = deduplicateOCTrackingContracts(remoteList);
 
         try {
           localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(resolvedOC));
@@ -1186,21 +1768,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
       (snapshot) => {
         const remoteList: SalesOrderRecord[] = [];
         snapshot.forEach((docSnap) => {
-          remoteList.push(docSnap.data() as SalesOrderRecord);
+          const o = docSnap.data() as SalesOrderRecord;
+          if (o && o.id && !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId)) {
+            remoteList.push(o);
+          }
         });
 
-        const localOrders = getStoredSalesOrders();
-        let resolvedOrders: SalesOrderRecord[];
-        if (remoteList.length === 0) {
-          if (!salesOrdersInitialized && localOrders.length > 0) {
-            resolvedOrders = localOrders;
-            saveSalesOrdersBatchToFirestore(localOrders).catch(() => {});
-          } else {
-            resolvedOrders = [];
-          }
-        } else {
-          resolvedOrders = remoteList;
-        }
+        const resolvedOrders = deduplicateSalesOrders(remoteList);
 
         resolvedOrders.sort(
           (a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime()
@@ -1234,21 +1808,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
       (snapshot) => {
         const remoteList: SalesInvoiceRecord[] = [];
         snapshot.forEach((docSnap) => {
-          remoteList.push(docSnap.data() as SalesInvoiceRecord);
+          const inv = docSnap.data() as SalesInvoiceRecord;
+          if (inv && inv.id && !isSalesInvoiceDeleted(inv.id, inv.invoiceNumber, inv.salesOrderId)) {
+            remoteList.push(inv);
+          }
         });
 
-        const localInvoices = getStoredSalesInvoices();
-        let resolvedInvoices: SalesInvoiceRecord[];
-        if (remoteList.length === 0) {
-          if (!salesInvoicesInitialized && localInvoices.length > 0) {
-            resolvedInvoices = localInvoices;
-            saveSalesInvoicesBatchToFirestore(localInvoices).catch(() => {});
-          } else {
-            resolvedInvoices = [];
-          }
-        } else {
-          resolvedInvoices = remoteList;
-        }
+        const resolvedInvoices = remoteList;
 
         resolvedInvoices.sort(
           (a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime()
@@ -1282,7 +1848,10 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
       (snapshot) => {
         const remoteList: TechnicalDocument[] = [];
         snapshot.forEach((docSnap) => {
-          remoteList.push(docSnap.data() as TechnicalDocument);
+          const doc = docSnap.data() as TechnicalDocument;
+          if (doc && doc.id && !isDocumentDeleted(doc.id)) {
+            remoteList.push(doc);
+          }
         });
 
         let localDocs: TechnicalDocument[] = [];
@@ -1290,18 +1859,9 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           const raw = localStorage.getItem('syd_technical_documents_v3');
           if (raw) localDocs = JSON.parse(raw);
         } catch (e) {}
+        localDocs = localDocs.filter((d) => d && d.id && !isDocumentDeleted(d.id));
 
-        let resolvedDocs: TechnicalDocument[];
-        if (remoteList.length === 0) {
-          if (!docsInitialized && localDocs.length > 0) {
-            resolvedDocs = localDocs;
-            saveTechnicalDocumentsToFirestore(resolvedDocs).catch(() => {});
-          } else {
-            resolvedDocs = [];
-          }
-        } else {
-          resolvedDocs = remoteList;
-        }
+        const resolvedDocs = remoteList;
 
         try {
           localStorage.setItem('syd_technical_documents_v3', JSON.stringify(resolvedDocs));
@@ -1418,7 +1978,7 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
     handleFirestoreError(e, OperationType.GET, 'system_settings/letterhead');
   }
 
-  // 9. Suppliers Directory Listener
+  // 9. Suppliers Directory Listener (Authoritative Cloud Source of Truth)
   try {
     const suppColl = collection(db, 'supplier_directory');
     const unsubSupp = onSnapshot(
@@ -1426,21 +1986,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
       (snapshot) => {
         const remoteList: SupplierProfile[] = [];
         snapshot.forEach((docSnap) => {
-          remoteList.push(docSnap.data() as SupplierProfile);
+          const s = docSnap.data() as SupplierProfile;
+          if (s && s.id) {
+            remoteList.push(s);
+          }
         });
 
-        const localSuppliers = getStoredSupplierProfiles();
-        let resolvedSuppliers: SupplierProfile[];
-        if (remoteList.length === 0) {
-          if (!suppliersInitialized && localSuppliers.length > 0) {
-            resolvedSuppliers = localSuppliers;
-            saveSuppliersBatchToFirestore(localSuppliers).catch(() => {});
-          } else {
-            resolvedSuppliers = [];
-          }
-        } else {
-          resolvedSuppliers = remoteList;
-        }
+        const resolvedSuppliers = remoteList;
 
         try {
           localStorage.setItem('syd_suppliers_directory_v1', JSON.stringify(resolvedSuppliers));
@@ -1466,7 +2018,7 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
     handleFirestoreError(e, OperationType.LIST, 'supplier_directory');
   }
 
-  // 10. Clients Directory Listener
+  // 10. Clients Directory Listener (Authoritative Cloud Source of Truth)
   try {
     const clientColl = collection(db, 'client_directory');
     const unsubClients = onSnapshot(
@@ -1474,7 +2026,10 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
       (snapshot) => {
         const remoteList: ClientRecord[] = [];
         snapshot.forEach((docSnap) => {
-          remoteList.push(docSnap.data() as ClientRecord);
+          const c = docSnap.data() as ClientRecord;
+          if (c && c.name && c.id) {
+            remoteList.push(c);
+          }
         });
 
         const cleanRemoteList = remoteList.filter(
@@ -1499,18 +2054,7 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           });
         }
 
-        const localClients = getStoredClients();
-        let resolvedClients: ClientRecord[];
-        if (cleanRemoteList.length === 0) {
-          if (!clientsInitialized && localClients.length > 0) {
-            resolvedClients = localClients;
-            saveClientsBatchToFirestore(localClients).catch(() => {});
-          } else {
-            resolvedClients = [];
-          }
-        } else {
-          resolvedClients = cleanRemoteList;
-        }
+        const resolvedClients = cleanRemoteList;
 
         try {
           localStorage.setItem('syd_clients_directory_v1', JSON.stringify(resolvedClients));
@@ -1560,71 +2104,130 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
     // Non-blocking
   }
 
-  // 11. Local / LAN Server Real-time State Listener (SSE & Fast Version Polling)
-  // Ensures all computers connected via IP / Localhost receive updates from each other instantly in real time
+  // 11. Local / LAN Server Real-time State Listener & Instant Multi-Tab Broadcast
   if (typeof window !== 'undefined') {
-    let lastKnownVersion = 0;
     const clientSessionId = getClientSessionId();
 
-    const applyServerSyncData = (serverData: any) => {
-      if (!serverData) return;
-      wrapRemoteUpdate(() => {
-        if (serverData.equipments && Array.isArray(serverData.equipments)) {
-          callbacks.onEquipmentsChange?.(serverData.equipments);
-        }
-        if (serverData.quotes && Array.isArray(serverData.quotes)) {
-          callbacks.onQuotesChange?.(serverData.quotes);
-        }
-        if (serverData.tenderProjects && Array.isArray(serverData.tenderProjects)) {
-          callbacks.onTendersChange?.(serverData.tenderProjects);
-        }
-        if (serverData.ocContracts && Array.isArray(serverData.ocContracts)) {
-          callbacks.onOCContractsChange?.(serverData.ocContracts);
-        }
-        if (serverData.salesOrders && Array.isArray(serverData.salesOrders)) {
-          callbacks.onSalesOrdersChange?.(serverData.salesOrders);
-        }
-        if (serverData.salesInvoices && Array.isArray(serverData.salesInvoices)) {
-          callbacks.onSalesInvoicesChange?.(serverData.salesInvoices);
-        }
-        if (serverData.technicalDocuments && Array.isArray(serverData.technicalDocuments)) {
-          callbacks.onDocumentsChange?.(serverData.technicalDocuments);
-        }
-        if (serverData.systemUsers && Array.isArray(serverData.systemUsers)) {
-          callbacks.onUsersChange?.(serverData.systemUsers);
-        }
-      });
-    };
+    // Multi-tab instant synchronization channel
+    let realtimeChannel: BroadcastChannel | null = null;
+    try {
+      if ('BroadcastChannel' in window) {
+        realtimeChannel = new BroadcastChannel('syd_realtime_data_bus');
+        realtimeChannel.onmessage = (event) => {
+          const msg = event.data;
+          if (!msg || msg.senderSessionId === clientSessionId) return;
 
-    // Periodic lightweight fallback polling (every 60s, only when tab is visible)
-    const pollInterval = setInterval(async () => {
-      if (typeof document !== 'undefined' && document.hidden) {
-        return;
-      }
-      try {
-        const res = await fetch('/api/realtime/version', { cache: 'no-store' });
-        if (res.status === 429) {
-          notifyRateLimit('Sincronización Local');
-          return;
-        }
-        if (res.ok) {
-          const vJson = await res.json();
-          if (vJson && vJson.version && vJson.version > lastKnownVersion) {
-            lastKnownVersion = vJson.version;
-            const stateRes = await fetch('/api/backup/latest-state', { cache: 'no-store' });
-            if (stateRes.ok) {
-              const stateJson = await stateRes.json();
-              if (stateJson?.success && stateJson?.data) {
-                applyServerSyncData(stateJson.data);
+          wrapRemoteUpdate(() => {
+            if (msg.type === 'QUOTES_SYNC' && Array.isArray(msg.quotes)) {
+              const cleanQuotes = msg.quotes.filter((q: any) => q && !isQuoteDeleted(q.id, q.quoteNumber));
+              try {
+                localStorage.setItem('syd_saved_quotes_database_v2', JSON.stringify(cleanQuotes));
+              } catch (e) {}
+              callbacks.onQuotesChange?.(cleanQuotes);
+            } else if (msg.type === 'EQUIPMENTS_SYNC' && Array.isArray(msg.equipments)) {
+              const cleanEq = msg.equipments.filter((e: any) => e && !isEquipmentDeleted(e.id, e.code));
+              try {
+                localStorage.setItem('syd_equipments_catalog', JSON.stringify(cleanEq));
+              } catch (e) {}
+              callbacks.onEquipmentsChange?.(cleanEq);
+            } else if (msg.type === 'OC_SYNC' && Array.isArray(msg.contracts)) {
+              const cleanOC = msg.contracts.filter((c: any) => c && !isContractDeleted(c.id));
+              try {
+                localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(cleanOC));
+              } catch (e) {}
+              callbacks.onOCContractsChange?.(cleanOC);
+            } else if (msg.type === 'ORDERS_SYNC' && Array.isArray(msg.orders)) {
+              const cleanOrders = deduplicateSalesOrders(
+                msg.orders.filter((o: any) => o && !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId))
+              );
+              try {
+                localStorage.setItem('syd_sales_orders_v1', JSON.stringify(cleanOrders));
+              } catch (e) {}
+              callbacks.onSalesOrdersChange?.(cleanOrders);
+            } else if (msg.type === 'TENDERS_SYNC' && Array.isArray(msg.tenders)) {
+              const currentTenders = deduplicateTenderProjects(
+                msg.tenders.filter((t: any) => t && t.id && !isTenderDeleted(t.id, t.header?.processNumber))
+              );
+              try {
+                localStorage.setItem('syd_tender_clients_v2', JSON.stringify(currentTenders));
+              } catch (e) {}
+              callbacks.onTendersChange?.(currentTenders);
+            } else if (msg.type === 'INVOICES_SYNC' && Array.isArray(msg.invoices)) {
+              const currentInv = msg.invoices.filter((i: any) => !isSalesInvoiceDeleted(i.id, i.invoiceNumber, i.salesOrderId));
+              try {
+                localStorage.setItem('syd_sales_invoices_v1', JSON.stringify(currentInv));
+              } catch (e) {}
+              callbacks.onSalesInvoicesChange?.(currentInv);
+            } else if (msg.type === 'ENTITY_DELETED') {
+              if (msg.entityType === 'salesOrder') {
+                markSalesOrderAsDeleted(msg.id, msg.salesOrderNumber, msg.tenderClientId, msg.contractId);
+                const current = getStoredSalesOrders().filter(
+                  (o) => !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId)
+                );
+                try {
+                  localStorage.setItem('syd_sales_orders_v1', JSON.stringify(current));
+                } catch (e) {}
+                callbacks.onSalesOrdersChange?.(current);
+              } else if (msg.entityType === 'salesInvoice') {
+                markSalesInvoiceAsDeleted(msg.id, msg.invoiceNumber, msg.salesOrderId);
+                const current = getStoredSalesInvoices().filter(
+                  (i) => !isSalesInvoiceDeleted(i.id, i.invoiceNumber, i.salesOrderId)
+                );
+                try {
+                  localStorage.setItem('syd_sales_invoices_v1', JSON.stringify(current));
+                } catch (e) {}
+                callbacks.onSalesInvoicesChange?.(current);
+              } else if (msg.entityType === 'contract') {
+                markContractAsDeleted(msg.id);
+                const current = getStoredOCTrackingContracts().filter((c) => !isContractDeleted(c.id));
+                try {
+                  localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(current));
+                } catch (e) {}
+                callbacks.onOCContractsChange?.(current);
+              } else if (msg.entityType === 'tender') {
+                markTenderAsDeleted(msg.id, msg.processNumber);
+                const current = getStoredTenders().filter((t) => !isTenderDeleted(t.id, t.header?.processNumber));
+                try {
+                  localStorage.setItem('syd_tender_clients_v2', JSON.stringify(current));
+                } catch (e) {}
+                callbacks.onTendersChange?.(current);
+              } else if (msg.entityType === 'equipment') {
+                markEquipmentAsDeleted(msg.id, msg.code);
+                let localEq: MedicalEquipment[] = [];
+                try {
+                  const raw = localStorage.getItem('syd_equipments_catalog');
+                  if (raw) localEq = JSON.parse(raw);
+                } catch (e) {}
+                const current = localEq.filter((eq) => !isEquipmentDeleted(eq.id, eq.code));
+                try {
+                  localStorage.setItem('syd_equipments_catalog', JSON.stringify(current));
+                } catch (e) {}
+                callbacks.onEquipmentsChange?.(current);
+              } else if (msg.entityType === 'document') {
+                markDocumentAsDeleted(msg.id);
+                let localDocs: TechnicalDocument[] = [];
+                try {
+                  const raw = localStorage.getItem('syd_technical_documents_v3');
+                  if (raw) localDocs = JSON.parse(raw);
+                } catch (e) {}
+                const current = localDocs.filter((d) => !isDocumentDeleted(d.id));
+                try {
+                  localStorage.setItem('syd_technical_documents_v3', JSON.stringify(current));
+                } catch (e) {}
+                callbacks.onDocumentsChange?.(current);
               }
             }
-          }
-        }
-      } catch (e) {}
-    }, 60000);
+          });
+        };
+      }
+    } catch (e) {}
 
     unsubscribers.push(() => {
-      clearInterval(pollInterval);
+      if (realtimeChannel) {
+        try {
+          realtimeChannel.close();
+        } catch (e) {}
+      }
     });
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   FileSpreadsheet,
   Download,
@@ -22,8 +22,8 @@ import {
   X,
   RotateCcw,
 } from 'lucide-react';
-import { TenderClientProject, TenderItem } from '../../types';
-import { formatCOP } from '../../utils/formatters';
+import { TenderClientProject, TenderItem, OCTrackingContract, SalesOrderRecord, SalesInvoiceRecord } from '../../types';
+import { formatCOP, normalizeClean } from '../../utils/formatters';
 import {
   ExcelColumnConfig,
   ExcelColumnHeader,
@@ -108,13 +108,16 @@ interface TenderAwardedViewProps {
   onUpdateTenderItem: (clientId: string, itemId: string, updates: Partial<TenderItem>) => void;
   onDeleteTenderItem: (clientId: string, itemId: string) => void;
   onOpenExcelImportModal: () => void;
-  onOpenCatalogModal: () => void;
-  onOpenManualItemModal: () => void;
+  onOpenCatalogModal?: () => void;
+  onOpenManualItemModal?: () => void;
   onOpenEditClientModal: () => void;
   onDownloadExcelTemplate: () => void;
   onSwitchToSpecificationsTab: (filterItemId?: string) => void;
   onNavigateToOCTracking?: () => void;
   isReadOnly?: boolean;
+  contracts?: OCTrackingContract[];
+  salesOrders?: SalesOrderRecord[];
+  salesInvoices?: SalesInvoiceRecord[];
 }
 
 export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
@@ -130,6 +133,9 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
   onSwitchToSpecificationsTab,
   onNavigateToOCTracking,
   isReadOnly,
+  contracts = [],
+  salesOrders = [],
+  salesInvoices = [],
 }) => {
   const [isConfirmClearModalOpen, setIsConfirmClearModalOpen] = useState(false);
   const items = activeClient.items || [];
@@ -161,6 +167,149 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
 
   const totalSpecsCount = items.reduce((acc, it) => acc + (it.requirements?.length || 0), 0);
   const isAwarded = activeClient.status === 'Adjudicada';
+  const isFulfilled = activeClient.status === 'Cumplido / Archivado';
+
+  // 1. Verify equipment delivery in Seguimiento de OC
+  const linkedContracts = useMemo(() => {
+    const normClient = normalizeClean(activeClient.clientName || activeClient.header?.entityName);
+    const normProcess = normalizeClean(activeClient.header?.processNumber);
+
+    return (contracts || []).filter((c) => {
+      if (c.tenderClientId === activeClient.id || c.id === activeClient.id) return true;
+      if (normProcess && c.contractNumber && normalizeClean(c.contractNumber).includes(normProcess)) return true;
+      if (c.salesOrderId && (salesOrders || []).some(so => (so.tenderClientId === activeClient.id || so.contractId === activeClient.id) && so.id === c.salesOrderId)) return true;
+      if (c.id && (salesOrders || []).some(so => (so.tenderClientId === activeClient.id || so.contractId === activeClient.id) && so.ocContractId === c.id)) return true;
+      if (normClient && c.clientName) {
+        const cNorm = normalizeClean(c.clientName);
+        if (cNorm === normClient || cNorm.includes(normClient) || normClient.includes(cNorm)) return true;
+      }
+      return false;
+    });
+  }, [contracts, activeClient.id, activeClient.header?.processNumber, activeClient.clientName, activeClient.header?.entityName, salesOrders]);
+
+  const allOCItemsDelivered = useMemo(() => {
+    const ocItems = linkedContracts.flatMap((c) => c.items || []);
+    const isOCDelivered = (status?: string) => {
+      if (!status) return false;
+      const s = normalizeClean(status);
+      return (
+        s.includes('entregad') ||
+        s.includes('instalad') ||
+        s.includes('despachad') ||
+        s.includes('bodega') ||
+        s.includes('cerrad') ||
+        s.includes('concluid') ||
+        s.includes('pagad') ||
+        s.includes('facturad')
+      );
+    };
+
+    if (ocItems.length > 0 && ocItems.every((it) => isOCDelivered(it.status))) {
+      return true;
+    }
+
+    if (activeClient.items && activeClient.items.length > 0) {
+      const normClient = normalizeClean(activeClient.clientName || activeClient.header?.entityName);
+      const normProcess = normalizeClean(activeClient.header?.processNumber);
+
+      const allClientItemsDelivered = activeClient.items.every((tIt) => {
+        const normTName = normalizeClean(tIt.name);
+        const normTCode = normalizeClean(tIt.code);
+
+        const foundOC = ocItems.find(
+          (oIt) =>
+            (oIt.equipmentId && tIt.equipmentId && oIt.equipmentId === tIt.equipmentId) ||
+            (oIt.code && tIt.code && normalizeClean(oIt.code) === normTCode) ||
+            (oIt.name && tIt.name && (
+              normalizeClean(oIt.name) === normTName ||
+              normalizeClean(oIt.name).includes(normTName) ||
+              normTName.includes(normalizeClean(oIt.name))
+            ))
+        );
+        if (foundOC && isOCDelivered(foundOC.status)) return true;
+
+        const foundSO = (salesOrders || [])
+          .filter(
+            (so) =>
+              so.tenderClientId === activeClient.id ||
+              so.contractId === activeClient.id ||
+              (normProcess && so.contractNumber && normalizeClean(so.contractNumber).includes(normProcess)) ||
+              (normProcess && so.salesOrderNumber && normalizeClean(so.salesOrderNumber).includes(normProcess)) ||
+              (activeClient.linkedQuoteNumber && so.quoteNumber && normalizeClean(so.quoteNumber) === normalizeClean(activeClient.linkedQuoteNumber)) ||
+              (activeClient.linkedQuoteId && so.quoteId === activeClient.linkedQuoteId) ||
+              (normClient && so.clientName && (
+                normalizeClean(so.clientName) === normClient ||
+                normalizeClean(so.clientName).includes(normClient) ||
+                normClient.includes(normalizeClean(so.clientName))
+              ))
+          )
+          .flatMap((so) => so.items || [])
+          .find(
+            (sIt) =>
+              (sIt.equipmentId && tIt.equipmentId && sIt.equipmentId === tIt.equipmentId) ||
+              (sIt.code && tIt.code && normalizeClean(sIt.code) === normTCode) ||
+              (sIt.name && tIt.name && (
+                normalizeClean(sIt.name) === normTName ||
+                normalizeClean(sIt.name).includes(normTName) ||
+                normTName.includes(normalizeClean(sIt.name))
+              ))
+          );
+        if (foundSO && isOCDelivered(foundSO.equipmentStatus)) return true;
+
+        return false;
+      });
+
+      if (allClientItemsDelivered) return true;
+    }
+
+    return false;
+  }, [linkedContracts, activeClient.items, activeClient.id, activeClient.header?.processNumber, activeClient.clientName, activeClient.header?.entityName, activeClient.linkedQuoteNumber, activeClient.linkedQuoteId, salesOrders]);
+
+  // 2. Verify invoicing & invoice attachment in Órdenes de Venta & Facturas
+  const linkedOrders = useMemo(() => {
+    const normClient = normalizeClean(activeClient.clientName || activeClient.header?.entityName);
+    const normProcess = normalizeClean(activeClient.header?.processNumber);
+
+    return (salesOrders || []).filter(
+      (so) =>
+        so.tenderClientId === activeClient.id ||
+        so.contractId === activeClient.id ||
+        (normProcess && so.contractNumber && normalizeClean(so.contractNumber).includes(normProcess)) ||
+        (normProcess && so.salesOrderNumber && normalizeClean(so.salesOrderNumber).includes(normProcess)) ||
+        (activeClient.linkedQuoteNumber && so.quoteNumber && normalizeClean(so.quoteNumber) === normalizeClean(activeClient.linkedQuoteNumber)) ||
+        (activeClient.linkedQuoteId && so.quoteId === activeClient.linkedQuoteId) ||
+        (normClient && so.clientName && (
+          normalizeClean(so.clientName) === normClient ||
+          normalizeClean(so.clientName).includes(normClient) ||
+          normClient.includes(normalizeClean(so.clientName))
+        ))
+    );
+  }, [salesOrders, activeClient.id, activeClient.header?.processNumber, activeClient.clientName, activeClient.header?.entityName, activeClient.linkedQuoteNumber, activeClient.linkedQuoteId]);
+
+  const hasOrders = linkedOrders.length > 0;
+  const isOrderBilledAndUploaded =
+    hasOrders &&
+    linkedOrders.every((so) => {
+      const isFacturada = so.status === 'Facturada' || so.invoicedStatus === 'Facturada Total';
+      const hasInvoiceNumber = Boolean(so.invoiceNumber && so.invoiceNumber.trim().length > 0);
+      const hasInvoiceFile = Boolean(
+        so.attachedInvoiceFile?.dataUrl ||
+        (salesInvoices || []).some((inv) => (inv.salesOrderId === so.id || (so.salesOrderNumber && inv.salesOrderNumber === so.salesOrderNumber)) && Boolean(inv.attachedInvoiceFile?.dataUrl))
+      );
+      return isFacturada || hasInvoiceNumber || hasInvoiceFile;
+    });
+
+  // Ready to fulfill requirement: both OC equipments delivered and invoice uploaded
+  const isReadyToFulfill = allOCItemsDelivered && isOrderBilledAndUploaded;
+
+  // Auto-mark as fulfilled when both conditions are satisfied (protected with ref to run once per client)
+  const fulfilledHandledForIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isReadyToFulfill && activeClient.status !== 'Cumplido / Archivado' && fulfilledHandledForIdRef.current !== activeClient.id) {
+      fulfilledHandledForIdRef.current = activeClient.id;
+      onUpdateClient(activeClient.id, { status: 'Cumplido / Archivado' });
+    }
+  }, [isReadyToFulfill, activeClient.id, activeClient.status, onUpdateClient]);
 
   const handleStatusChange = (newStatus: TenderClientProject['status']) => {
     onUpdateClient(activeClient.id, { status: newStatus });
@@ -183,7 +332,12 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
             <h3 className="text-sm sm:text-base font-black text-white truncate">
               {activeClient.clientName}
             </h3>
-            {isAwarded ? (
+            {isFulfilled ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full shadow-xs">
+                <CheckCircle2 className="w-3 h-3 text-purple-300" />
+                <span>CUMPLIDO / ARCHIVADO</span>
+              </span>
+            ) : isAwarded ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full shadow-xs">
                 <Award className="w-3 h-3" />
                 <span>ADJUDICADA</span>
@@ -200,23 +354,35 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
           <div className="flex items-center gap-1.5 flex-wrap">
             {!isReadOnly && (
               <>
-                {isAwarded ? (
-                  <button
-                    type="button"
-                    onClick={() => handleStatusChange('En Preparación')}
-                    className="inline-flex items-center gap-1 text-xs text-slate-300 bg-[#15253d] hover:bg-[#1e314b] border border-[#334d6e] px-2.5 py-1 rounded-lg font-bold transition cursor-pointer"
-                  >
-                    <span>Cambiar a En Preparación</span>
-                  </button>
+                {!isFulfilled ? (
+                  isReadyToFulfill ? (
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange('Cumplido / Archivado')}
+                      className="inline-flex items-center gap-1.5 text-xs text-slate-950 bg-emerald-400 hover:bg-emerald-300 px-3 py-1.5 rounded-lg font-black transition cursor-pointer shadow-sm active:scale-95"
+                      title="Equipos entregados en OC y facturados con soporte. Clic para marcar cumplido y archivar."
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Marcar Cumplido / Archivado</span>
+                    </button>
+                  ) : (
+                    <div
+                      className="inline-flex items-center gap-1.5 text-[10px] bg-[#111c2e] border border-[#334d6e] text-slate-300 px-2.5 py-1 rounded-lg"
+                      title="El botón para marcar cumplido aparecerá cuando los equipos se hayan entregado en Seguimiento de OC y la Orden de Venta esté facturada con factura subida."
+                    >
+                      <Clock className="w-3 h-3 text-amber-400" />
+                      <span>
+                        OC: <strong className={allOCItemsDelivered ? 'text-emerald-400' : 'text-amber-400'}>{allOCItemsDelivered ? 'Entregados ✓' : 'Pendiente'}</strong> • Factura: <strong className={isOrderBilledAndUploaded ? 'text-emerald-400' : 'text-amber-400'}>{isOrderBilledAndUploaded ? 'Subida ✓' : 'Pendiente'}</strong>
+                      </span>
+                    </div>
+                  )
                 ) : (
                   <button
                     type="button"
                     onClick={() => handleStatusChange('Adjudicada')}
-                    className="inline-flex items-center gap-1 text-xs text-slate-950 bg-emerald-400 hover:bg-emerald-300 px-3 py-1 rounded-lg font-black transition cursor-pointer shadow-sm active:scale-95"
-                    title="Marca este contrato como adjudicado"
+                    className="inline-flex items-center gap-1 text-xs text-slate-300 bg-[#15253d] hover:bg-[#1e314b] border border-[#334d6e] px-2.5 py-1 rounded-lg font-bold transition cursor-pointer"
                   >
-                    <Award className="w-3.5 h-3.5" />
-                    <span>Marcar Adjudicada</span>
+                    <span>Reabrir Contrato</span>
                   </button>
                 )}
 
@@ -313,24 +479,6 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                 >
                   <UploadCloud className="w-3.5 h-3.5" />
                   <span>Importar Excel</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onOpenCatalogModal}
-                  className="inline-flex items-center gap-1 text-[11px] text-slate-950 bg-[#38bdf8] hover:bg-[#0284c7] px-3 py-1.5 rounded-lg font-black transition cursor-pointer shadow-xs active:scale-95"
-                >
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>+ De Catálogo</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onOpenManualItemModal}
-                  className="inline-flex items-center gap-1 text-[11px] text-purple-200 bg-purple-500/20 hover:bg-purple-500/30 px-2.5 py-1.5 rounded-lg border border-purple-500/40 font-bold transition cursor-pointer"
-                >
-                  <Stethoscope className="w-3.5 h-3.5 text-purple-300" />
-                  <span>+ Manual</span>
                 </button>
 
                 {items.length > 0 && (

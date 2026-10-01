@@ -8,9 +8,9 @@ import { sendHourlyBackupEmail, BackupDataPayload } from './src/services/backupE
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = parseInt(process.env.PORT || process.env.DEFAULT_APP_PORT || '3000', 10);
   const SERVER_BOOT_TIME = Date.now();
-  const APP_VERSION = '2.7.0';
+  const APP_VERSION = '2.10.1';
 
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -2703,6 +2703,67 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con la siguiente estructura:
       res.json({ success: true, version: currentServerStateVersion, cachedAt: new Date().toISOString() });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err?.message || 'Error caching state' });
+    }
+  });
+
+  // API endpoint: Permanently remove a deleted entity from server backup snapshot and disk cache
+  app.post('/api/backup/delete-entity', (req, res) => {
+    try {
+      const { type, id, code, quoteNumber } = req.body || {};
+      if (!type || (!id && !code && !quoteNumber)) {
+        return res.status(400).json({ success: false, error: 'Missing type or id' });
+      }
+
+      if (!inMemoryLatestState) {
+        inMemoryLatestState = readCachedStateSafely();
+      }
+
+      if (inMemoryLatestState) {
+        const root = inMemoryLatestState as any;
+        const d = inMemoryLatestState.data || root;
+        if (type === 'quote') {
+          if (Array.isArray(d.quotes)) d.quotes = d.quotes.filter((q: any) => q.id !== id && (!quoteNumber || q.quoteNumber !== quoteNumber));
+          if (Array.isArray(root.quotes)) root.quotes = root.quotes.filter((q: any) => q.id !== id && (!quoteNumber || q.quoteNumber !== quoteNumber));
+        } else if (type === 'equipment') {
+          if (Array.isArray(d.equipments)) d.equipments = d.equipments.filter((e: any) => e.id !== id && (!code || (e.code || '').trim().toUpperCase() !== String(code).trim().toUpperCase()));
+          if (Array.isArray(root.equipments)) root.equipments = root.equipments.filter((e: any) => e.id !== id && (!code || (e.code || '').trim().toUpperCase() !== String(code).trim().toUpperCase()));
+        } else if (type === 'tender') {
+          if (Array.isArray(d.tenderProjects)) d.tenderProjects = d.tenderProjects.filter((t: any) => t.id !== id);
+          if (Array.isArray(root.tenderProjects)) root.tenderProjects = root.tenderProjects.filter((t: any) => t.id !== id);
+        } else if (type === 'contract') {
+          if (Array.isArray(d.ocContracts)) d.ocContracts = d.ocContracts.filter((c: any) => c.id !== id);
+          if (Array.isArray(root.ocContracts)) root.ocContracts = root.ocContracts.filter((c: any) => c.id !== id);
+        } else if (type === 'salesOrder') {
+          const { salesOrderNumber, tenderClientId, contractId } = req.body || {};
+          const isTargetOrder = (o: any) =>
+            (id && o.id === id) ||
+            (salesOrderNumber && (o.salesOrderNumber || '').trim().toLowerCase() === String(salesOrderNumber).trim().toLowerCase()) ||
+            (tenderClientId && (o.tenderClientId === tenderClientId || o.contractId === tenderClientId)) ||
+            (contractId && (o.contractId === contractId || o.tenderClientId === contractId));
+          if (Array.isArray(d.salesOrders)) d.salesOrders = d.salesOrders.filter((o: any) => !isTargetOrder(o));
+          if (Array.isArray(root.salesOrders)) root.salesOrders = root.salesOrders.filter((o: any) => !isTargetOrder(o));
+        } else if (type === 'salesInvoice') {
+          if (Array.isArray(d.salesInvoices)) d.salesInvoices = d.salesInvoices.filter((i: any) => i.id !== id);
+          if (Array.isArray(root.salesInvoices)) root.salesInvoices = root.salesInvoices.filter((i: any) => i.id !== id);
+        } else if (type === 'document') {
+          if (Array.isArray(d.technicalDocuments)) d.technicalDocuments = d.technicalDocuments.filter((doc: any) => doc.id !== id);
+          if (Array.isArray(root.technicalDocuments)) root.technicalDocuments = root.technicalDocuments.filter((doc: any) => doc.id !== id);
+        }
+
+        try {
+          fs.writeFileSync(BACKUP_CACHE_FILE, JSON.stringify(inMemoryLatestState, null, 2), 'utf-8');
+          const backupRedundantFile = path.join(process.cwd(), 'data_backup_snapshot.backup.json');
+          fs.writeFileSync(backupRedundantFile, JSON.stringify(inMemoryLatestState, null, 2), 'utf-8');
+        } catch (fsErr) {
+          console.warn('Failed to write updated backup snapshot after deletion:', fsErr);
+        }
+      }
+
+      // Notify and bump version so all polling clients and tabs receive the deletion immediately
+      broadcastRealtimeStateUpdate();
+      res.json({ success: true, message: 'Entity deleted from server snapshot', version: currentServerStateVersion });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || 'Error deleting entity from server snapshot' });
     }
   });
 

@@ -35,11 +35,18 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
+  FolderTree,
+  MapPin,
+  Tag,
+  Building2,
   RotateCcw,
   X,
+  Check,
 } from 'lucide-react';
 import {
   SalesOrderRecord,
+  SalesOrderItem,
   SalesInvoiceRecord,
   OCTrackingContract,
   TenderClientProject,
@@ -49,13 +56,30 @@ import {
   SavedQuote,
   AuthUser,
 } from '../../types';
+import {
+  markSalesOrderAsDeleted,
+  markSalesInvoiceAsDeleted,
+  unmarkSalesOrderAsDeleted,
+  unmarkSalesInvoiceAsDeleted,
+  isSalesOrderDeleted,
+  isSalesInvoiceDeleted,
+} from '../../utils/tombstones';
+import {
+  createSalesOrderFromOCTrackingContract,
+  deduplicateSalesOrders,
+} from '../../utils/salesOrdersStorage';
 import { NewSalesOrderModal } from './sales-orders/NewSalesOrderModal';
 import { AttachInvoiceModal } from './sales-orders/AttachInvoiceModal';
 import { SalesOrderPrintModal } from './sales-orders/SalesOrderPrintModal';
 import { SalesOrderDetailsModal } from './sales-orders/SalesOrderDetailsModal';
 import { ContractTraceabilityView } from './sales-orders/ContractTraceabilityView';
-import { formatCOP } from '../../utils/formatters';
-import { deleteSalesOrderFromFirestore, deleteSalesInvoiceFromFirestore } from '../../services/realtimeSync';
+import { formatCOP, isValidOCNumber, normalizeClean } from '../../utils/formatters';
+import {
+  deleteSalesOrderFromFirestore,
+  deleteSalesInvoiceFromFirestore,
+  saveSingleSalesOrderToFirestore,
+  saveSingleSalesInvoiceToFirestore,
+} from '../../services/realtimeSync';
 import {
   ExcelColumnConfig,
   ExcelColumnHeader,
@@ -157,6 +181,56 @@ const SALES_INVOICE_COLUMNS: ExcelColumnConfig<SalesInvoiceRecord>[] = [
   },
 ];
 
+export function computeOrderInvoicingData(order: SalesOrderRecord, salesInvoices: SalesInvoiceRecord[] = []) {
+  if (!order) {
+    return {
+      orderInvoices: [],
+      totalInvoicedCOP: 0,
+      totalOrderCOP: 0,
+      isFullyInvoiced: false,
+      remainingToInvoiceCOP: 0,
+      invoiceCount: 0,
+      invoiceNumbers: '',
+      percentInvoiced: 0,
+    };
+  }
+
+  const invoices = salesInvoices || [];
+  const orderInvoices = invoices.filter(
+    (inv) =>
+      Boolean(inv && inv.id && inv.salesOrderId && inv.salesOrderId === order.id) ||
+      Boolean(order.invoiceId && inv.id === order.invoiceId)
+  );
+
+  const totalInvoicedCOP =
+    orderInvoices.length > 0
+      ? orderInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmountCOP) || 0), 0)
+      : (order.totalInvoicedCOP || 0);
+
+  const totalOrderCOP = Number(order.totalValueCOP) || 0;
+  const isFullyInvoiced =
+    (totalOrderCOP > 0 && totalInvoicedCOP >= totalOrderCOP) ||
+    order.status === 'Facturada' ||
+    order.invoicedStatus === 'Facturada Total';
+  const remainingToInvoiceCOP = Math.max(0, totalOrderCOP - totalInvoicedCOP);
+  const invoiceCount = orderInvoices.length;
+  const invoiceNumbers =
+    Array.from(new Set(orderInvoices.map((i) => i.invoiceNumber).filter(Boolean))).join(', ') || order.invoiceNumber || '';
+  const percentInvoiced =
+    totalOrderCOP > 0 ? Math.min(100, Math.round((totalInvoicedCOP / totalOrderCOP) * 100)) : 0;
+
+  return {
+    orderInvoices,
+    totalInvoicedCOP,
+    totalOrderCOP,
+    isFullyInvoiced,
+    remainingToInvoiceCOP,
+    invoiceCount,
+    invoiceNumbers,
+    percentInvoiced,
+  };
+}
+
 interface SalesOrdersViewProps {
   salesOrders: SalesOrderRecord[];
   onUpdateSalesOrders: (orders: SalesOrderRecord[]) => void;
@@ -166,6 +240,7 @@ interface SalesOrdersViewProps {
   onUpdateContracts?: (contracts: OCTrackingContract[]) => void;
   savedQuotes: SavedQuote[];
   tenderClients?: TenderClientProject[];
+  onUpdateTenderClient?: (clientId: string, updates: Partial<TenderClientProject>) => void;
   equipments: MedicalEquipment[];
   currentUser?: AuthUser | null;
   onNavigateToTab?: (tab: string) => void;
@@ -186,6 +261,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   onUpdateContracts,
   savedQuotes,
   tenderClients = [],
+  onUpdateTenderClient,
   equipments,
   currentUser,
   onNavigateToTab,
@@ -196,6 +272,9 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   initialTenderToConvert,
   onClearInitialTenderToConvert,
 }) => {
+  // Helper to compute invoicing breakdown for any sales order (initialized at top to eliminate any TDZ ReferenceError)
+  const getOrderInvoicingData = (order: SalesOrderRecord) => computeOrderInvoicingData(order, salesInvoices);
+
   // Main subtab selection
   const [activeSubTab, setActiveSubTab] = useState<'orders' | 'invoices' | 'traceability'>('orders');
 
@@ -206,7 +285,26 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   const [orderSearchText, setOrderSearchText] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
   const [orderOriginFilter, setOrderOriginFilter] = useState<'all' | 'tender' | 'quote' | 'direct'>('all');
-  const [ordersViewMode, setOrdersViewMode] = useState<'grid' | 'list'>('list');
+  const [orderLifecycleFilter, setOrderLifecycleFilter] = useState<'active' | 'archived' | 'all'>('active');
+  const [ordersViewMode, setOrdersViewMode] = useState<'clients' | 'list' | 'grid'>('clients');
+  const [collapsedClientKeys, setCollapsedClientKeys] = useState<Set<string>>(new Set());
+
+  const toggleClientCollapse = (key: string) => {
+    setCollapsedClientKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const expandAllClients = () => {
+    setCollapsedClientKeys(new Set());
+  };
+
+  const collapseAllClients = (allKeys: string[]) => {
+    setCollapsedClientKeys(new Set(allKeys));
+  };
 
   // Search & Filter State (Invoices)
   const [invoiceSearchText, setInvoiceSearchText] = useState('');
@@ -268,6 +366,130 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [viewingOrder, setViewingOrder] = useState<SalesOrderRecord | null>(null);
 
+  // Helper to resolve live item status and styled badge from linked OC Tracking contracts
+  const resolveItemStatusAndBadge = (order: SalesOrderRecord, item: SalesOrderItem) => {
+    let liveStatus = item.equipmentStatus || 'Pendiente de OC';
+    let liveOCNumber = (isValidOCNumber(item.linkedSupplierOCNumber) ? item.linkedSupplierOCNumber : null) ||
+                       (isValidOCNumber(item.supplierOCRef) ? item.supplierOCRef : null);
+
+    const normOrderClient = normalizeClean(order.clientName);
+    const normOrderSO = normalizeClean(order.salesOrderNumber?.replace(/^ov:\s*/i, ''));
+    const normOrderContract = normalizeClean(order.contractNumber?.replace(/^n°?o?hboc/i, 'hboc'));
+
+    if (contracts && contracts.length > 0) {
+      const candidateContracts = contracts.filter((c) => {
+        if (order.ocContractId && c.id === order.ocContractId) return true;
+        if (order.id && c.salesOrderId === order.id) return true;
+        if (order.tenderClientId && (c.tenderClientId === order.tenderClientId || c.id === order.tenderClientId)) return true;
+        if (order.contractId && (c.id === order.contractId || c.tenderClientId === order.contractId)) return true;
+        if (normOrderSO && normOrderSO.length >= 3 && !['ov', 'sinov', 'na', 'n/a'].includes(normOrderSO)) {
+          const cSO = normalizeClean(c.salesOrderNumber?.replace(/^ov:\s*/i, ''));
+          if (cSO === normOrderSO || cSO.includes(normOrderSO) || normOrderSO.includes(cSO)) return true;
+        }
+        if (normOrderContract && normOrderContract.length >= 4 && !['nohboc', 'hboc', 'na', 'n/a'].includes(normOrderContract)) {
+          const cContract = normalizeClean(c.contractNumber?.replace(/^n°?o?hboc/i, 'hboc'));
+          if (cContract === normOrderContract || cContract.includes(normOrderContract) || normOrderContract.includes(cContract)) return true;
+        }
+        if (normOrderClient && normOrderClient.length >= 4 && c.clientName) {
+          const cNorm = normalizeClean(c.clientName);
+          if (cNorm === normOrderClient || cNorm.includes(normOrderClient) || normOrderClient.includes(cNorm)) return true;
+        }
+        return false;
+      });
+
+      const normItemName = normalizeClean(item.name);
+      const normItemCode = normalizeClean(item.code);
+
+      for (const matchedContract of candidateContracts) {
+        if (!matchedContract.items || matchedContract.items.length === 0) continue;
+
+        const cItem = matchedContract.items.find((cIt) => {
+          if (cIt.equipmentId && item.equipmentId && cIt.equipmentId === item.equipmentId) return true;
+          if (cIt.code && item.code && (normalizeClean(cIt.code) === normItemCode || normalizeClean(cIt.code).includes(normItemCode) || normItemCode.includes(normalizeClean(cIt.code)))) return true;
+          if (cIt.name && item.name && (
+            normalizeClean(cIt.name) === normItemName ||
+            normalizeClean(cIt.name).includes(normItemName) ||
+            normItemName.includes(normalizeClean(cIt.name))
+          )) return true;
+          return false;
+        }) || (matchedContract.items.length === (order.items || []).length ? matchedContract.items[0] : null);
+
+        if (cItem) {
+          if (cItem.status) {
+            liveStatus = cItem.status;
+          }
+          if (isValidOCNumber(cItem.ocNumber)) {
+            liveOCNumber = cItem.ocNumber;
+          }
+          break;
+        }
+      }
+    }
+
+    // Normalize delivery state
+    const normLiveStatus = normalizeClean(liveStatus);
+    const isDeliveredState =
+      normLiveStatus.includes('entregad') ||
+      normLiveStatus.includes('instalad') ||
+      normLiveStatus.includes('despachad') ||
+      normLiveStatus.includes('bodega') ||
+      normLiveStatus.includes('cerrad') ||
+      normLiveStatus.includes('concluid') ||
+      normLiveStatus.includes('pagad') ||
+      normLiveStatus.includes('facturad');
+
+    // If an OC number was assigned but status is still initial, reflect that OC is assigned!
+    if (liveOCNumber && (!liveStatus || liveStatus === 'Pendiente de OC' || liveStatus === 'Pendiente')) {
+      liveStatus = 'OC Asignada';
+    }
+
+    // If equipment is delivered, NEVER erase status to 'Pendiente de OC'
+    if (!isDeliveredState && (!liveStatus || liveStatus === 'Pendiente de OC' || !liveOCNumber)) {
+      if (!liveOCNumber) {
+        return {
+          status: 'Pendiente de OC',
+          badgeClass: 'bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium',
+          ocNumber: null,
+        };
+      }
+    }
+
+    let badgeClass = 'bg-purple-500/15 text-purple-300 border border-purple-500/30 font-medium';
+    switch (liveStatus) {
+      case 'Despachado al Cliente':
+      case 'Entregado e Instalado':
+      case 'Cerrado / Concluido':
+      case 'Entregada al Cliente':
+        badgeClass = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold';
+        break;
+      case 'Equipos en Bodega':
+      case 'Equipos en Bodega SYD':
+      case 'En Bodega SYD':
+      case 'Listo para Despacho a Cliente':
+      case 'Listo para Despacho':
+      case 'En Ingreso Técnico & Calidad':
+      case 'En Ingreso Técnico':
+        badgeClass = 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-bold';
+        break;
+      case 'En Tránsito / Despachada':
+      case 'En Aduana / Nacionalización':
+      case 'En Fabricación / Procesamiento':
+      case 'Confirmada por Proveedor':
+      case 'Emitida / Enviada al Proveedor':
+        badgeClass = 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-medium';
+        break;
+      default:
+        badgeClass = 'bg-purple-500/15 text-purple-300 border border-purple-500/30 font-medium';
+        break;
+    }
+
+    return {
+      status: liveStatus,
+      badgeClass,
+      ocNumber: liveOCNumber,
+    };
+  };
+
   // Helper to determine origin info for an OV
   const getOrderOriginInfo = (order: SalesOrderRecord) => {
     if (order.contractNumber || order.contractId || order.tenderClientId) {
@@ -300,9 +522,28 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
     };
   };
 
-  // Base Filtered Orders (Search & Quick Status Filters)
+  // Consolidated deduplicated sales orders (user-controlled OVs)
+  const deduplicatedSalesOrders = useMemo(() => {
+    return deduplicateSalesOrders(salesOrders);
+  }, [salesOrders]);
+
+  // Base Filtered Orders (Search & Quick Status & Lifecycle Filters)
   const baseSalesOrders = useMemo(() => {
-    return salesOrders.filter((order) => {
+    return deduplicatedSalesOrders.filter((order) => {
+      // Lifecycle Filter: Activas vs Culminadas / Archivadas
+      const hasInvoiceFile = Boolean(
+        order.attachedInvoiceFile?.dataUrl ||
+        (salesInvoices || []).some(
+          (inv) =>
+            (inv.salesOrderId === order.id || (order.salesOrderNumber && inv.salesOrderNumber === order.salesOrderNumber)) &&
+            Boolean(inv.attachedInvoiceFile?.dataUrl)
+        )
+      );
+      const isArchived = order.status === 'Facturada' || (hasInvoiceFile && order.invoicedStatus === 'Facturada Total');
+
+      if (orderLifecycleFilter === 'active' && isArchived) return false;
+      if (orderLifecycleFilter === 'archived' && !isArchived) return false;
+
       if (orderStatusFilter !== 'all' && order.status !== orderStatusFilter) {
         return false;
       }
@@ -334,7 +575,36 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
       }
       return true;
     });
-  }, [salesOrders, orderStatusFilter, orderOriginFilter, orderSearchText]);
+  }, [deduplicatedSalesOrders, orderStatusFilter, orderOriginFilter, orderSearchText, orderLifecycleFilter, salesInvoices]);
+
+  // Counts for active vs archived orders
+  const activeOrdersCount = useMemo(() => {
+    return deduplicatedSalesOrders.filter((order) => {
+      const hasInvoiceFile = Boolean(
+        order.attachedInvoiceFile?.dataUrl ||
+        (salesInvoices || []).some(
+          (inv) =>
+            (inv.salesOrderId === order.id || (order.salesOrderNumber && inv.salesOrderNumber === order.salesOrderNumber)) &&
+            Boolean(inv.attachedInvoiceFile?.dataUrl)
+        )
+      );
+      return !(order.status === 'Facturada' || (hasInvoiceFile && order.invoicedStatus === 'Facturada Total'));
+    }).length;
+  }, [deduplicatedSalesOrders, salesInvoices]);
+
+  const archivedOrdersCount = useMemo(() => {
+    return deduplicatedSalesOrders.filter((order) => {
+      const hasInvoiceFile = Boolean(
+        order.attachedInvoiceFile?.dataUrl ||
+        (salesInvoices || []).some(
+          (inv) =>
+            (inv.salesOrderId === order.id || (order.salesOrderNumber && inv.salesOrderNumber === order.salesOrderNumber)) &&
+            Boolean(inv.attachedInvoiceFile?.dataUrl)
+        )
+      );
+      return order.status === 'Facturada' || (hasInvoiceFile && order.invoicedStatus === 'Facturada Total');
+    }).length;
+  }, [deduplicatedSalesOrders, salesInvoices]);
 
   const {
     filteredRows: filteredOrders,
@@ -347,6 +617,58 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
     isFilteredOrSorted: isOrderExcelFilteredOrSorted,
     activeFiltersCount: orderExcelActiveFiltersCount,
   } = useExcelTableFilters(baseSalesOrders, SALES_ORDER_COLUMNS);
+
+  // Group filtered orders by client for accordion foldable view
+  interface ClientGroupedOV {
+    clientKey: string;
+    clientName: string;
+    clientNit?: string;
+    clientCity?: string;
+    clientContactPerson?: string;
+    clientContactPhone?: string;
+    orders: SalesOrderRecord[];
+    totalCOP: number;
+    totalInvoicedCOP: number;
+    totalItems: number;
+    isFullyInvoiced: boolean;
+  }
+
+  const groupedClientsOrders = useMemo((): ClientGroupedOV[] => {
+    const map = new Map<string, ClientGroupedOV>();
+
+    filteredOrders.forEach((order) => {
+      const name = (order.clientName || 'Cliente No Especificado').trim();
+      const key = normalizeClean(name) || 'sin-cliente';
+
+      if (!map.has(key)) {
+        map.set(key, {
+          clientKey: key,
+          clientName: name,
+          clientNit: order.clientNit,
+          clientCity: order.clientCity,
+          clientContactPerson: order.clientContactPerson,
+          clientContactPhone: order.clientContactPhone,
+          orders: [],
+          totalCOP: 0,
+          totalInvoicedCOP: 0,
+          totalItems: 0,
+          isFullyInvoiced: true,
+        });
+      }
+
+      const group = map.get(key)!;
+      group.orders.push(order);
+      group.totalCOP += order.totalValueCOP || 0;
+      const invData = getOrderInvoicingData(order);
+      group.totalInvoicedCOP += invData.totalInvoicedCOP;
+      group.totalItems += order.items?.length || 0;
+      if (!invData.isFullyInvoiced) {
+        group.isFullyInvoiced = false;
+      }
+    });
+
+    return Array.from(map.values());
+  }, [filteredOrders, salesInvoices]);
 
   // Base Filtered Invoices (Search & Status)
   const baseSalesInvoices = useMemo(() => {
@@ -397,30 +719,39 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   };
 
   // KPI Calculations (OVs)
-  const totalOrdersCount = salesOrders.length;
-  const enProcesoCount = salesOrders.filter((o) => o.status === 'En Proceso' || o.status === 'Borrador').length;
-  const enBodegaCount = salesOrders.filter((o) => o.status === 'Equipos en Bodega').length;
-  const facturadasCount = salesOrders.filter((o) => o.status === 'Facturada').length;
-  const totalOVValueCOP = salesOrders
+  const totalOrdersCount = deduplicatedSalesOrders.length;
+  const enProcesoCount = deduplicatedSalesOrders.filter((o) => o.status === 'En Proceso' || o.status === 'Borrador').length;
+  const enBodegaCount = deduplicatedSalesOrders.filter((o) => o.status === 'Equipos en Bodega').length;
+  const facturadasCount = deduplicatedSalesOrders.filter((o) => o.status === 'Facturada').length;
+  const totalOVValueCOP = deduplicatedSalesOrders
     .filter((o) => o.status !== 'Cancelada')
     .reduce((acc, o) => acc + (Number(o.totalValueCOP) || 0), 0);
 
   // Active OVs pending purchase orders (OC)
   const ordersWithoutOC = useMemo(() => {
-    return salesOrders.filter((o) => o.status !== 'Cancelada' && !o.hasLinkedOC);
-  }, [salesOrders]);
+    return deduplicatedSalesOrders.filter((o) => o.status !== 'Cancelada' && !o.hasLinkedOC);
+  }, [deduplicatedSalesOrders]);
 
   // Handlers for Save / Delete
-  const handleSaveOrder = (savedOrder: SalesOrderRecord, generateOCNow?: boolean) => {
-    const existingIndex = salesOrders.findIndex((o) => o.id === savedOrder.id);
+  const handleSaveOrder = async (savedOrder: SalesOrderRecord, generateOCNow?: boolean) => {
+    unmarkSalesOrderAsDeleted(savedOrder.id, savedOrder.salesOrderNumber, savedOrder.tenderClientId, savedOrder.contractId);
+
+    const existingIndex = deduplicatedSalesOrders.findIndex((o) => o.id === savedOrder.id);
     let updatedOrders: SalesOrderRecord[];
     if (existingIndex >= 0) {
-      updatedOrders = [...salesOrders];
+      updatedOrders = [...deduplicatedSalesOrders];
       updatedOrders[existingIndex] = savedOrder;
     } else {
-      updatedOrders = [savedOrder, ...salesOrders];
+      updatedOrders = [savedOrder, ...deduplicatedSalesOrders];
     }
     onUpdateSalesOrders(updatedOrders);
+
+    // Guaranteed cloud persistence before proceeding
+    try {
+      await saveSingleSalesOrderToFirestore(savedOrder);
+    } catch (e) {
+      console.error('Error saving sales order to Firestore:', e);
+    }
 
     // If requested to generate OC now in Ventana 5
     if (generateOCNow && onGenerateOCTracking) {
@@ -430,56 +761,347 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
 
   const handleDeleteOrder = (orderIdOrOrder: string | SalesOrderRecord) => {
     const target = typeof orderIdOrOrder === 'string'
-      ? salesOrders.find((o) => o.id === orderIdOrOrder)
+      ? deduplicatedSalesOrders.find((o) => o.id === orderIdOrOrder)
       : orderIdOrOrder;
     if (!target) return;
     setOrderToDelete(target);
   };
 
-  const confirmDeleteOrder = () => {
+  // Inline Manual OV Number Editing State
+  const [editingOVNumberId, setEditingOVNumberId] = useState<string | null>(null);
+  const [editingOVNumberValue, setEditingOVNumberValue] = useState<string>('');
+
+  const handleStartEditOVNumber = (order: SalesOrderRecord, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingOVNumberId(order.id);
+    setEditingOVNumberValue(order.salesOrderNumber || '');
+  };
+
+  const handleSaveOVNumber = (orderId: string, e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.stopPropagation();
+    const cleanNum = editingOVNumberValue.trim();
+    const updated = deduplicatedSalesOrders.map((o) =>
+      o.id === orderId ? { ...o, salesOrderNumber: cleanNum, updatedAt: new Date().toISOString() } : o
+    );
+    onUpdateSalesOrders(updated);
+    setEditingOVNumberId(null);
+  };
+
+  const handleCancelEditOVNumber = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingOVNumberId(null);
+  };
+
+  const confirmDeleteOrder = async () => {
     if (!orderToDelete) return;
     const orderId = orderToDelete.id;
+    const soNum = orderToDelete.salesOrderNumber;
+    const tenderId = orderToDelete.tenderClientId;
+    const contractId = orderToDelete.contractId;
 
-    // Actualizar únicamente el estado local.
-    // Firestore elimina directamente el documento correspondiente.
+    // 1. Mark tombstone immediately in local memory/storage so it can NEVER resurrect
+    markSalesOrderAsDeleted(orderId, soNum, tenderId, contractId);
+
+    // 2. Remove from local state
     const updated = salesOrders.filter((o) => o.id !== orderId);
-    onUpdateSalesOrders(updated.filter((o) => o.id !== orderId));
-    deleteSalesOrderFromFirestore(orderId).catch(console.error);
+    onUpdateSalesOrders(updated);
+
+    try {
+      localStorage.setItem('syd_sales_orders_v1', JSON.stringify(updated));
+    } catch (e) {}
+
+    // 3. Remove permanently from Firestore and server disk snapshot, awaited
+    try {
+      await deleteSalesOrderFromFirestore(orderId, soNum, tenderId, contractId);
+    } catch (e) {
+      console.error('Error deleting sales order from Firestore:', e);
+    }
+
+    // 4. Clean up any linked OC Tracking contracts generated for this sales order so old data is not reused
+    if (onUpdateContracts && contracts && contracts.length > 0) {
+      const remainingContracts = contracts.filter((c) => {
+        if (c.salesOrderId && c.salesOrderId === orderId) return false;
+        if (orderToDelete.ocContractId && c.id === orderToDelete.ocContractId) return false;
+        return true;
+      });
+      if (remainingContracts.length !== contracts.length) {
+        onUpdateContracts(remainingContracts);
+        try {
+          localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(remainingContracts));
+        } catch (_) {}
+      }
+    }
+
+    // 5. Clean up any linked sales invoices for this sales order so old invoice data is not reused
+    if (salesInvoices && salesInvoices.length > 0) {
+      const remainingInvoices = salesInvoices.filter(
+        (inv) => inv.salesOrderId !== orderId && (!soNum || inv.salesOrderNumber !== soNum)
+      );
+      if (remainingInvoices.length !== salesInvoices.length) {
+        onUpdateSalesInvoices(remainingInvoices);
+        try {
+          localStorage.setItem('syd_sales_invoices_v1', JSON.stringify(remainingInvoices));
+        } catch (_) {}
+      }
+    }
 
     if (viewingOrder?.id === orderId) setViewingOrder(null);
     if (editingOrder?.id === orderId) setEditingOrder(null);
     setOrderToDelete(null);
   };
 
+  // Helper to check if all equipment linked to a Sales Order is delivered in Seguimiento de OC
+  const isOrderEquipmentDeliveredInOC = (order: SalesOrderRecord): { isDelivered: boolean; pendingCount: number; reason?: string } => {
+    if (!order.items || order.items.length === 0) {
+      return { isDelivered: false, pendingCount: 0, reason: 'La Orden no tiene equipos registrados' };
+    }
+
+    // If order was already marked as delivered or billed
+    if (order.status === 'Entregada al Cliente' || order.status === 'Facturada') {
+      return { isDelivered: true, pendingCount: 0 };
+    }
+
+    const normSO = normalizeClean(order.salesOrderNumber?.replace(/^ov:\s*/i, ''));
+    const normContract = normalizeClean(order.contractNumber?.replace(/^n°?o?hboc/i, 'hboc'));
+
+    // Prioritize direct matched contract first
+    const matchedContracts = (contracts || []).filter((c) => {
+      if (order.ocContractId && c.id === order.ocContractId) return true;
+      if (order.id && c.salesOrderId === order.id) return true;
+      if (order.tenderClientId && (c.tenderClientId === order.tenderClientId || c.id === order.tenderClientId)) return true;
+      if (order.contractId && (c.id === order.contractId || c.tenderClientId === order.contractId)) return true;
+      if (normSO && normSO.length >= 3 && !['ov', 'sinov', 'na', 'n/a'].includes(normSO)) {
+        const cSO = normalizeClean(c.salesOrderNumber?.replace(/^ov:\s*/i, ''));
+        if (cSO === normSO || cSO.includes(normSO) || normSO.includes(cSO)) return true;
+      }
+      if (normContract && normContract.length >= 4 && !['nohboc', 'hboc', 'na', 'n/a'].includes(normContract)) {
+        const cContract = normalizeClean(c.contractNumber?.replace(/^n°?o?hboc/i, 'hboc'));
+        if (cContract === normContract || cContract.includes(normContract) || normContract.includes(cContract)) return true;
+      }
+      if (order.clientName && c.clientName) {
+        const normClient = normalizeClean(order.clientName);
+        const cNorm = normalizeClean(c.clientName);
+        if (normClient.length >= 4 && (cNorm === normClient || cNorm.includes(normClient) || normClient.includes(cNorm))) return true;
+      }
+      return false;
+    });
+
+    const isDeliveredStatus = (st?: string) => {
+      if (!st) return false;
+      const s = normalizeClean(st);
+      return (
+        s.includes('entregad') ||
+        s.includes('instalad') ||
+        s.includes('despachad') ||
+        s.includes('bodega') ||
+        s.includes('cerrad') ||
+        s.includes('concluid') ||
+        s.includes('pagad') ||
+        s.includes('facturad')
+      );
+    };
+
+    const contractItems = matchedContracts.flatMap((c) => c.items || []);
+
+    let pending = 0;
+    for (let i = 0; i < order.items.length; i++) {
+      const item = order.items[i];
+      const normItemName = normalizeClean(item.name);
+      const normItemCode = normalizeClean(item.code);
+
+      let matchedCItem = contractItems.find(
+        (cIt) =>
+          (cIt.equipmentId && item.equipmentId && cIt.equipmentId === item.equipmentId) ||
+          (cIt.code && item.code && normalizeClean(cIt.code) === normItemCode) ||
+          (cIt.name && item.name && (
+            normalizeClean(cIt.name) === normItemName ||
+            normalizeClean(cIt.name).includes(normItemName) ||
+            normItemName.includes(normalizeClean(cIt.name))
+          ))
+      );
+
+      // Single item or index fallback if counts match
+      if (!matchedCItem && (contractItems.length === 1 || contractItems.length === order.items.length)) {
+        matchedCItem = contractItems[i] || contractItems[0];
+      }
+
+      const status = matchedCItem?.status || item.equipmentStatus;
+      const isDelivered = isDeliveredStatus(status);
+
+      if (!isDelivered) {
+        pending++;
+      }
+    }
+
+    if (contractItems.length === 0 && matchedContracts.length === 0) {
+      // Check if order items themselves were already delivered
+      const allDirectlyDelivered = order.items.every(
+        (it) => isDeliveredStatus(it.equipmentStatus)
+      );
+      if (allDirectlyDelivered) {
+        return { isDelivered: true, pendingCount: 0 };
+      }
+      return {
+        isDelivered: false,
+        pendingCount: order.items.length,
+        reason: 'Los equipos aún no cuentan con registro de entrega en Seguimiento de OC',
+      };
+    }
+
+    if (pending > 0) {
+      return {
+        isDelivered: false,
+        pendingCount: pending,
+        reason: `Faltan ${pending} de ${order.items.length} equipos por marcar como entregados en Seguimiento de OC`,
+      };
+    }
+
+    return { isDelivered: true, pendingCount: 0 };
+  };
+
   const handleUpdateOrderStatus = (orderId: string, newStatus: SalesOrderStatus) => {
+    if (newStatus === 'Facturada') {
+      const targetOrd = salesOrders.find((o) => o.id === orderId);
+      if (targetOrd) {
+        const { isDelivered, reason } = isOrderEquipmentDeliveredInOC(targetOrd);
+        if (!isDelivered) {
+          alert(`⛔ BLOQUEO DE FACTURACIÓN:\n\nNo se puede cambiar el estado a "Facturada" porque aún no se han entregado los equipos en Seguimiento de OC.\n\nDetalle: ${reason || 'Pendiente de entrega'}.\n\nPor favor marque los equipos como entregados en Seguimiento de OC primero.`);
+          return;
+        }
+
+        // Auto-archive linked Tender & Contract
+        const targetTenderId = targetOrd.tenderClientId || targetOrd.contractId;
+        const matchedTender = (tenderClients || []).find((t) => {
+          if (targetTenderId && t.id === targetTenderId) return true;
+          if (targetOrd.contractNumber && t.header?.processNumber && normalizeClean(t.header.processNumber).includes(normalizeClean(targetOrd.contractNumber))) return true;
+          if (targetOrd.salesOrderNumber && t.header?.processNumber && normalizeClean(t.header.processNumber).includes(normalizeClean(targetOrd.salesOrderNumber))) return true;
+          if (targetOrd.clientName && t.clientName && (
+            normalizeClean(t.clientName) === normalizeClean(targetOrd.clientName) ||
+            normalizeClean(t.clientName).includes(normalizeClean(targetOrd.clientName)) ||
+            normalizeClean(targetOrd.clientName).includes(normalizeClean(t.clientName))
+          )) return true;
+          return false;
+        });
+
+        if (matchedTender && onUpdateTenderClient) {
+          onUpdateTenderClient(matchedTender.id, { status: 'Cumplido / Archivado' });
+        } else if (targetTenderId && onUpdateTenderClient) {
+          onUpdateTenderClient(targetTenderId, { status: 'Cumplido / Archivado' });
+        }
+        if (onUpdateContracts && contracts && contracts.length > 0) {
+          const normSO = normalizeClean(targetOrd.salesOrderNumber);
+          const normClient = normalizeClean(targetOrd.clientName);
+          const updatedContracts = contracts.map((c) => {
+            const isMatch =
+              (targetOrd.ocContractId && c.id === targetOrd.ocContractId) ||
+              c.salesOrderId === targetOrd.id ||
+              (targetTenderId && (c.tenderClientId === targetTenderId || c.id === targetTenderId)) ||
+              (normSO && c.salesOrderNumber && normalizeClean(c.salesOrderNumber) === normSO) ||
+              (normClient && c.clientName && normalizeClean(c.clientName) === normClient);
+            if (isMatch) {
+              return { ...c, globalStatus: 'Cerrado / Concluido' as any, lastUpdatedAt: new Date().toISOString() };
+            }
+            return c;
+          });
+          onUpdateContracts(updatedContracts);
+        }
+      }
+    }
     const updated = salesOrders.map((o) => (o.id === orderId ? { ...o, status: newStatus, updatedAt: new Date().toISOString() } : o));
     onUpdateSalesOrders(updated);
   };
 
-  const handleSaveInvoice = (savedInvoice: SalesInvoiceRecord, updatedSalesOrder?: SalesOrderRecord) => {
-    const existingIndex = salesInvoices.findIndex((i) => i.id === savedInvoice.id);
+  const handleSaveInvoice = async (savedInvoice: SalesInvoiceRecord, updatedSalesOrder?: SalesOrderRecord) => {
+    unmarkSalesInvoiceAsDeleted(savedInvoice.id, savedInvoice.invoiceNumber, savedInvoice.salesOrderId);
+
     let updatedInvoices: SalesInvoiceRecord[];
-    if (existingIndex >= 0) {
-      updatedInvoices = [...salesInvoices];
-      updatedInvoices[existingIndex] = savedInvoice;
+    if (savedInvoice.salesOrderId) {
+      // Retain only 1 invoice per sales order when attaching/updating
+      const otherInvoices = salesInvoices.filter(
+        (i) => i.salesOrderId !== savedInvoice.salesOrderId && i.id !== savedInvoice.id && i.invoiceNumber !== savedInvoice.invoiceNumber
+      );
+      updatedInvoices = [savedInvoice, ...otherInvoices];
     } else {
-      updatedInvoices = [savedInvoice, ...salesInvoices];
+      const existingIndex = salesInvoices.findIndex((i) => i.id === savedInvoice.id || (savedInvoice.invoiceNumber && i.invoiceNumber === savedInvoice.invoiceNumber));
+      if (existingIndex >= 0) {
+        updatedInvoices = [...salesInvoices];
+        updatedInvoices[existingIndex] = savedInvoice;
+      } else {
+        updatedInvoices = [savedInvoice, ...salesInvoices];
+      }
     }
     onUpdateSalesInvoices(updatedInvoices);
 
+    try {
+      await saveSingleSalesInvoiceToFirestore(savedInvoice);
+    } catch (e) {
+      console.error('Error saving invoice to Firestore:', e);
+    }
+
     if (updatedSalesOrder) {
-      handleSaveOrder(updatedSalesOrder);
+      await handleSaveOrder(updatedSalesOrder);
+
+      // Auto-archive linked Tender & Contract when an invoice is attached and order is billed!
+      const targetTenderId = updatedSalesOrder.tenderClientId || updatedSalesOrder.contractId;
+      const matchedTender = (tenderClients || []).find((t) => {
+        if (targetTenderId && t.id === targetTenderId) return true;
+        if (updatedSalesOrder.contractNumber && t.header?.processNumber && normalizeClean(t.header.processNumber).includes(normalizeClean(updatedSalesOrder.contractNumber))) return true;
+        if (updatedSalesOrder.salesOrderNumber && t.header?.processNumber && normalizeClean(t.header.processNumber).includes(normalizeClean(updatedSalesOrder.salesOrderNumber))) return true;
+        if (updatedSalesOrder.clientName && t.clientName && (
+          normalizeClean(t.clientName) === normalizeClean(updatedSalesOrder.clientName) ||
+          normalizeClean(t.clientName).includes(normalizeClean(updatedSalesOrder.clientName)) ||
+          normalizeClean(updatedSalesOrder.clientName).includes(normalizeClean(t.clientName))
+        )) return true;
+        return false;
+      });
+
+      if (matchedTender && onUpdateTenderClient) {
+        onUpdateTenderClient(matchedTender.id, { status: 'Cumplido / Archivado' });
+      } else if (targetTenderId && onUpdateTenderClient) {
+        onUpdateTenderClient(targetTenderId, { status: 'Cumplido / Archivado' });
+      }
+
+      if (onUpdateContracts && contracts && contracts.length > 0) {
+        const normSO = normalizeClean(updatedSalesOrder.salesOrderNumber);
+        const normClient = normalizeClean(updatedSalesOrder.clientName);
+
+        const updatedContracts = contracts.map((c) => {
+          const isMatch =
+            (updatedSalesOrder.ocContractId && c.id === updatedSalesOrder.ocContractId) ||
+            c.salesOrderId === updatedSalesOrder.id ||
+            (targetTenderId && (c.tenderClientId === targetTenderId || c.id === targetTenderId)) ||
+            (normSO && c.salesOrderNumber && normalizeClean(c.salesOrderNumber) === normSO) ||
+            (normClient && c.clientName && normalizeClean(c.clientName) === normClient);
+
+          if (isMatch) {
+            return {
+              ...c,
+              globalStatus: 'Cerrado / Concluido' as any,
+              items: (c.items || []).map((it) => ({
+                ...it,
+                status: it.status || 'Entregado e Instalado',
+              })),
+              lastUpdatedAt: new Date().toISOString(),
+            };
+          }
+          return c;
+        });
+        onUpdateContracts(updatedContracts);
+      }
     }
   };
 
-  const handleDeleteInvoice = (invoiceId: string) => {
+  const handleDeleteInvoice = async (invoiceId: string) => {
     const invoiceToDelete = salesInvoices.find((i) => i.id === invoiceId);
+    markSalesInvoiceAsDeleted(invoiceId, invoiceToDelete?.invoiceNumber, invoiceToDelete?.salesOrderId);
     const updated = salesInvoices.filter((i) => i.id !== invoiceId);
 
-    // Eliminar únicamente esta factura de Firestore.
-    // La colección completa ya no se vuelve a guardar.
     onUpdateSalesInvoices(updated);
-    deleteSalesInvoiceFromFirestore(invoiceId).catch(console.error);
+    try {
+      await deleteSalesInvoiceFromFirestore(invoiceId, invoiceToDelete?.invoiceNumber, invoiceToDelete?.salesOrderId);
+    } catch (e) {
+      console.error('Error deleting sales invoice from Firestore:', e);
+    }
 
     // If invoice was linked to an OV, recalculate order's invoice state
     if (invoiceToDelete?.salesOrderId) {
@@ -507,52 +1129,9 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           status: isFullyInvoiced ? 'Facturada' : so.status === 'Facturada' ? 'Entregada al Cliente' : so.status,
           updatedAt: new Date().toISOString(),
         };
-        handleSaveOrder(updatedSO);
+        await handleSaveOrder(updatedSO);
       }
     }
-  };
-
-  // Helper to compute invoicing breakdown for any sales order
-  const getOrderInvoicingData = (order: SalesOrderRecord) => {
-    const orderInvoices = salesInvoices.filter(
-      (inv) =>
-        inv.salesOrderId === order.id ||
-        (order.invoiceId && inv.id === order.invoiceId) ||
-        (order.invoiceIds && order.invoiceIds.includes(inv.id)) ||
-        (order.salesOrderNumber && inv.salesOrderNumber === order.salesOrderNumber) ||
-        (order.invoiceNumber &&
-          inv.invoiceNumber &&
-          order.invoiceNumber
-            .split(',')
-            .map((s) => s.trim().toUpperCase())
-            .includes(inv.invoiceNumber.trim().toUpperCase()))
-    );
-
-    const totalInvoicedCOP =
-      orderInvoices.length > 0
-        ? orderInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmountCOP) || 0), 0)
-        : order.totalInvoicedCOP || (order.invoicedStatus === 'Facturada Total' ? order.totalValueCOP : 0);
-
-    const totalOrderCOP = Number(order.totalValueCOP) || 0;
-    const isFullyInvoiced =
-      (totalOrderCOP > 0 && totalInvoicedCOP >= totalOrderCOP) || order.invoicedStatus === 'Facturada Total';
-    const remainingToInvoiceCOP = Math.max(0, totalOrderCOP - totalInvoicedCOP);
-    const invoiceCount = orderInvoices.length;
-    const invoiceNumbers =
-      Array.from(new Set(orderInvoices.map((i) => i.invoiceNumber).filter(Boolean))).join(', ') || order.invoiceNumber;
-    const percentInvoiced =
-      totalOrderCOP > 0 ? Math.min(100, Math.round((totalInvoicedCOP / totalOrderCOP) * 100)) : 0;
-
-    return {
-      orderInvoices,
-      totalInvoicedCOP,
-      totalOrderCOP,
-      isFullyInvoiced,
-      remainingToInvoiceCOP,
-      invoiceCount,
-      invoiceNumbers,
-      percentInvoiced,
-    };
   };
 
   // Helper for status badge
@@ -566,8 +1145,10 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
         return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
       case 'Entregada al Cliente':
         return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+      case 'Listo para Facturar':
+        return 'bg-purple-500/25 text-purple-300 border-purple-500/40 font-bold';
       case 'Facturada':
-        return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 font-bold';
       case 'Cancelada':
         return 'bg-rose-500/20 text-rose-300 border-rose-500/30';
       default:
@@ -704,7 +1285,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
             }`}
           >
             <PackageCheck className="w-4 h-4" />
-            Órdenes de Venta (OV) ({salesOrders.length})
+            Órdenes de Venta (OV) ({deduplicatedSalesOrders.length})
           </button>
 
           <button
@@ -736,6 +1317,58 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
       {/* SUBTAB 1: Órdenes de Venta (OV) */}
       {activeSubTab === 'orders' && (
         <div className="space-y-4">
+          {/* Lifecycle Filter: Activas vs Culminadas / Archivadas */}
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-900 border border-slate-800">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setOrderLifecycleFilter('active')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  orderLifecycleFilter === 'active'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <PackageCheck className="w-3.5 h-3.5" />
+                <span>OVs Activas / En Proceso ({activeOrdersCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOrderLifecycleFilter('archived')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  orderLifecycleFilter === 'archived'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Culminadas / Archivadas (100% Facturadas) ({archivedOrdersCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOrderLifecycleFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  orderLifecycleFilter === 'all'
+                    ? 'bg-slate-700 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Todas las OVs ({deduplicatedSalesOrders.length})</span>
+              </button>
+            </div>
+
+            <span className="text-[11px] text-slate-400 italic">
+              {orderLifecycleFilter === 'active'
+                ? 'Las OVs facturadas con soporte se archivan automáticamente'
+                : orderLifecycleFilter === 'archived'
+                ? 'Histórico de OVs culminadas al 100% con facturas adjuntas'
+                : 'Mostrando todo el registro comercial'}
+            </span>
+          </div>
+
           {/* Search & Filter bar */}
           <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
             <div className="relative flex-1 min-w-[240px]">
@@ -757,7 +1390,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                 onChange={(e) => setOrderOriginFilter(e.target.value as any)}
                 className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-400"
               >
-                <option value="all">Todos los Orígenes ({salesOrders.length})</option>
+                <option value="all">Todos los Orígenes ({deduplicatedSalesOrders.length})</option>
                 <option value="tender">🏛️ Licitación Adjudicada</option>
                 <option value="quote">📄 Desde Cotización</option>
                 <option value="direct">🛒 Venta Directa</option>
@@ -778,12 +1411,37 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                 <option value="Cancelada">Cancelada</option>
               </select>
 
-              {/* View Mode Toggle: Grid vs List */}
+              {/* View Mode Toggle: Clients (Grouped Accordion) vs List (Table) vs Grid */}
               <div className="flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700">
                 <button
                   type="button"
+                  onClick={() => setOrdersViewMode('clients')}
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    ordersViewMode === 'clients'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Vista Agrupada por Cliente con Acordeón Plegable"
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>Por Cliente (Plegable)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrdersViewMode('list')}
+                  className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                    ordersViewMode === 'list'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Vista en Lista / Tabla Plana (Excel)"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
                   onClick={() => setOrdersViewMode('grid')}
-                  className={`p-1.5 rounded-md transition-colors ${
+                  className={`p-1.5 rounded-md transition-colors cursor-pointer ${
                     ordersViewMode === 'grid'
                       ? 'bg-amber-500 text-slate-950 shadow-xs'
                       : 'text-slate-400 hover:text-white'
@@ -791,18 +1449,6 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                   title="Vista en Cuadrícula"
                 >
                   <LayoutGrid className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrdersViewMode('list')}
-                  className={`p-1.5 rounded-md transition-colors ${
-                    ordersViewMode === 'list'
-                      ? 'bg-amber-500 text-slate-950 shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                  title="Vista en Lista / Tabla"
-                >
-                  <List className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -814,14 +1460,456 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
               <PackageCheck className="w-12 h-12 text-slate-500 mx-auto mb-2 opacity-50" />
               <h3 className="text-sm font-bold text-white mb-1">No hay Órdenes de Venta que coincidan</h3>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Las OVs de licitaciones adjudicadas y cotizaciones se generan automáticamente aquí, o puedes crear una OV de venta directa usando el botón superior "Nueva Orden de Venta".
+                {orderLifecycleFilter === 'archived'
+                  ? 'No hay Órdenes de Venta archivadas todavía. Cuando una OV esté facturada con factura adjunta, se guardará aquí automáticamente.'
+                  : 'Las OVs de licitaciones adjudicadas y cotizaciones se generan automáticamente aquí, o puedes crear una OV de venta directa usando el botón superior "Nueva Orden de Venta".'}
               </p>
+            </div>
+          ) : ordersViewMode === 'clients' ? (
+            /* CLIENT ACCORDION VIEW (Grouped by Customer with Collapsible Card) */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                <span>
+                  Mostrando <strong className="text-white">{groupedClientsOrders.length}</strong> {groupedClientsOrders.length === 1 ? 'cliente' : 'clientes'} con <strong className="text-amber-400">{filteredOrders.length}</strong> {filteredOrders.length === 1 ? 'Orden de Venta' : 'Órdenes de Venta'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={expandAllClients}
+                    className="hover:text-amber-300 transition text-[11px] font-bold cursor-pointer"
+                  >
+                    Desplegar Todos
+                  </button>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={() => collapseAllClients(groupedClientsOrders.map((g) => g.clientKey))}
+                    className="hover:text-amber-300 transition text-[11px] font-bold cursor-pointer"
+                  >
+                    Plegar Todos
+                  </button>
+                </div>
+              </div>
+
+              {groupedClientsOrders.map((clientGroup) => {
+                const isCollapsed = collapsedClientKeys.has(clientGroup.clientKey);
+
+                return (
+                  <div
+                    key={clientGroup.clientKey}
+                    className="bg-[#0f172a] border border-slate-700/80 rounded-2xl shadow-xl overflow-hidden transition-all hover:border-amber-500/40"
+                  >
+                    {/* CLIENT ACCORDION HEADER (Cuadro grande del cliente) */}
+                    <div
+                      onClick={() => toggleClientCollapse(clientGroup.clientKey)}
+                      className="p-3.5 sm:p-4 bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 cursor-pointer hover:bg-slate-800/50 transition-colors select-none"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <button
+                          type="button"
+                          className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                          title={isCollapsed ? 'Desplegar OVs del cliente' : 'Plegar OVs del cliente'}
+                        >
+                          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`} />
+                        </button>
+
+                        <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-base sm:text-lg font-black text-white truncate hover:text-amber-300 transition">
+                              {clientGroup.clientName}
+                            </h3>
+                            {clientGroup.clientNit && (
+                              <span className="text-[11px] text-slate-300 font-mono bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                                NIT: {clientGroup.clientNit}
+                              </span>
+                            )}
+                            {clientGroup.clientCity && (
+                              <span className="text-[11px] text-slate-300 font-medium flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                                <MapPin className="w-3 h-3 text-rose-400" />
+                                {clientGroup.clientCity}
+                              </span>
+                            )}
+                          </div>
+                          {clientGroup.clientContactPerson && (
+                            <p className="text-[11px] text-slate-400 truncate">
+                              Contacto: <strong className="text-slate-300">{clientGroup.clientContactPerson}</strong> {clientGroup.clientContactPhone ? `(${clientGroup.clientContactPhone})` : ''}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Header KPIs on Client Card */}
+                      <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
+                        <span className="px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-300 text-xs font-bold">
+                          {clientGroup.orders.length} {clientGroup.orders.length === 1 ? 'Orden de Venta' : 'Órdenes de Venta'} ({clientGroup.totalItems} eq.)
+                        </span>
+
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-xs font-bold">
+                          Total: {formatCOP(clientGroup.totalCOP)}
+                        </span>
+
+                        {clientGroup.isFullyInvoiced ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-black">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            Facturado 100%
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold">
+                            Facturado: {formatCOP(clientGroup.totalInvoicedCOP)}
+                          </span>
+                        )}
+
+                        <span className="text-slate-400 text-xs font-semibold hover:text-white transition flex items-center gap-1">
+                          {isCollapsed ? 'Desplegar' : 'Plegar'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* CLIENT ACCORDION BODY (Contenido de las OVs del cliente) */}
+                    {!isCollapsed && (
+                      <div className="p-3 sm:p-4 space-y-3 bg-slate-950/40">
+                        <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/90 shadow-inner">
+                          <table className="w-full text-left text-xs text-slate-300">
+                            <thead className="bg-slate-950/90 text-[11px] font-bold text-slate-300 border-b border-slate-800">
+                              <tr>
+                                <th className="py-2.5 px-3 min-w-[140px]">N° OV / Origen</th>
+                                <th className="py-2.5 px-3 min-w-[220px]">Equipos & N° OC / Estado Logístico</th>
+                                <th className="py-2.5 px-3 min-w-[130px] text-right">Monto Total COP</th>
+                                <th className="py-2.5 px-3 min-w-[150px]">Estado OV</th>
+                                <th className="py-2.5 px-3 min-w-[130px]">Seguimiento OC</th>
+                                <th className="py-2.5 px-3 min-w-[170px]">Facturación & Soporte</th>
+                                <th className="py-2.5 px-3 text-right min-w-[110px]">Acciones</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800">
+                              {clientGroup.orders.map((order) => {
+                                const { isDelivered, reason } = isOrderEquipmentDeliveredInOC(order);
+                                const canInvoice = order.status === 'Listo para Facturar' || order.status === 'Entregada al Cliente' || order.status === 'Facturada' || isDelivered;
+                                const originInfo = getOrderOriginInfo(order);
+                                const OriginIcon = originInfo.icon;
+                                const invData = getOrderInvoicingData(order);
+
+                                return (
+                                  <tr key={order.id} className="hover:bg-slate-800/40 transition-colors">
+                                    {/* N° OV & Origen */}
+                                    <td className="py-3 px-3">
+                                      {editingOVNumberId === order.id ? (
+                                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                          <input
+                                            type="text"
+                                            autoFocus
+                                            value={editingOVNumberValue}
+                                            onChange={(e) => setEditingOVNumberValue(e.target.value)}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') handleSaveOVNumber(order.id, e);
+                                              if (e.key === 'Escape') handleCancelEditOVNumber();
+                                            }}
+                                            placeholder="N° OV..."
+                                            className="px-2 py-0.5 bg-slate-950 border-2 border-amber-400 rounded text-xs font-mono font-bold text-amber-300 outline-none w-28"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={(e) => handleSaveOVNumber(order.id, e)}
+                                            className="p-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition cursor-pointer"
+                                            title="Guardar"
+                                          >
+                                            <Check className="w-3 h-3" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => handleCancelEditOVNumber(e)}
+                                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                                            title="Cancelar"
+                                          >
+                                            <X className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-1.5 group/ov">
+                                          <span className="font-mono font-bold text-amber-400 text-sm">
+                                            {order.salesOrderNumber || (
+                                              <span className="text-slate-500 font-normal italic text-xs">[Sin N° OV]</span>
+                                            )}
+                                          </span>
+                                          {!isReadOnly && (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => handleStartEditOVNumber(order, e)}
+                                              className="opacity-70 group-hover/ov:opacity-100 p-0.5 text-slate-400 hover:text-amber-300 hover:bg-slate-800 rounded transition cursor-pointer"
+                                              title="Editar N° de OV"
+                                            >
+                                              <Edit2 className="w-3 h-3" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+                                      <span className={`inline-flex items-center gap-1 text-[9.5px] font-bold px-2 py-0.5 rounded border mt-1 ${originInfo.badgeClass}`}>
+                                        <OriginIcon className="w-3 h-3" />
+                                        {originInfo.label}
+                                      </span>
+                                      <span className="text-[10px] text-slate-400 block mt-0.5 truncate max-w-[160px]">
+                                        {originInfo.detail}
+                                      </span>
+                                    </td>
+
+                                    {/* Equipos, OC, Status */}
+                                    <td className="py-3 px-3">
+                                      <span className="font-semibold text-slate-200 block text-xs">
+                                        {order.items?.length || 0} equipos ({order.items?.reduce((acc, it) => acc + (it.quantityToDispatch || 1), 0)} unidades)
+                                      </span>
+                                      <div className="space-y-1 mt-1 max-w-sm">
+                                        {order.items?.map((it, itIdx) => {
+                                          const statusMeta = resolveItemStatusAndBadge(order, it);
+                                          const hasOC = Boolean(statusMeta.ocNumber);
+                                          return (
+                                            <div key={it.id || itIdx} className="text-[10px] p-1.5 rounded bg-slate-950/70 border border-slate-800 space-y-0.5">
+                                              <div className="flex items-center justify-between text-slate-300">
+                                                <span className="truncate font-bold text-white">{it.name}</span>
+                                                <span className="font-mono text-emerald-400 font-bold shrink-0 ml-1">x{it.quantityToDispatch}</span>
+                                              </div>
+                                              <div className="flex items-center gap-1 flex-wrap text-[9px]">
+                                                {hasOC ? (
+                                                  <>
+                                                    <span className="px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-mono font-bold">
+                                                      OC: {statusMeta.ocNumber}
+                                                    </span>
+                                                    {statusMeta.status && (
+                                                      <span className={`px-1.5 py-0.2 rounded border ${statusMeta.badgeClass}`}>
+                                                        {statusMeta.status}
+                                                      </span>
+                                                    )}
+                                                  </>
+                                                ) : (
+                                                  <span className="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
+                                                    Pendiente de OC
+                                                  </span>
+                                                )}
+                                                {it.assignedSerialNumbers && it.assignedSerialNumbers.length > 0 && (
+                                                  <span className="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono" title={it.assignedSerialNumbers.join(', ')}>
+                                                    S/N: {it.assignedSerialNumbers.join(', ')}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </td>
+
+                                    {/* Monto Total */}
+                                    <td className="py-3 px-3 font-mono font-bold text-emerald-400 text-right text-xs">
+                                      {formatCOP(order.totalValueCOP)}
+                                    </td>
+
+                                    {/* Estado OV Selector */}
+                                    <td className="py-3 px-3">
+                                      <select
+                                        value={order.status}
+                                        disabled={isReadOnly}
+                                        onChange={(e) => {
+                                          const newSt = e.target.value as SalesOrderStatus;
+                                          handleUpdateOrderStatus(order.id, newSt);
+                                        }}
+                                        className={`text-[10.5px] font-bold px-2 py-1 rounded-lg border bg-slate-900 focus:outline-none cursor-pointer ${getStatusBadge(order.status)}`}
+                                        title="Cambiar estado de la OV"
+                                      >
+                                        <option value="Borrador">Borrador</option>
+                                        <option value="En Proceso">En Proceso</option>
+                                        <option value="Equipos en Bodega">Equipos en Bodega</option>
+                                        <option value="Entregada al Cliente">Entregada al Cliente</option>
+                                        <option value="Listo para Facturar">Listo para Facturar</option>
+                                        {order.status === 'Facturada' && (
+                                          <option value="Facturada">Facturada</option>
+                                        )}
+                                        <option value="Cancelada">Cancelada</option>
+                                      </select>
+                                    </td>
+
+                                    {/* Seguimiento OC */}
+                                    <td className="py-3 px-3">
+                                      {order.hasLinkedOC ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => onNavigateToTab?.('seguimiento_oc')}
+                                          className="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold cursor-pointer transition"
+                                          title="Ver en Seguimiento de OC"
+                                        >
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> OC Activa
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => onGenerateOCTracking?.(order)}
+                                          className="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 font-bold border border-sky-500/30 cursor-pointer"
+                                        >
+                                          <ShoppingCart className="w-3 h-3 text-sky-400" /> Ver OC
+                                        </button>
+                                      )}
+                                    </td>
+
+                                    {/* Facturación & Soporte */}
+                                    <td className="py-3 px-3">
+                                      {(() => {
+                                        if (order.status === 'Cancelada') {
+                                          return <span className="text-[10px] text-slate-500">Cancelada</span>;
+                                        }
+                                        if (invData.isFullyInvoiced) {
+                                          const invoiceFile = order.attachedInvoiceFile || invData.orderInvoices.find(i => i.attachedInvoiceFile)?.attachedInvoiceFile;
+                                          return (
+                                            <div className="flex flex-col gap-1">
+                                              <span
+                                                className="inline-flex items-center gap-1 text-[10.5px] text-emerald-300 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded"
+                                                title={`Facturación Completa (100%): ${invData.invoiceNumbers}`}
+                                              >
+                                                <ReceiptText className="w-3.5 h-3.5 text-emerald-400" /> {invData.invoiceNumbers || 'Facturada Total'}
+                                              </span>
+                                              <span className="text-[9.5px] text-emerald-400 font-bold">
+                                                ✓ 100% Facturado ({formatCOP(invData.totalInvoicedCOP)})
+                                              </span>
+                                              {invoiceFile && (
+                                                <a
+                                                  href={invoiceFile.dataUrl}
+                                                  download={invoiceFile.name}
+                                                  className="inline-flex items-center gap-1 text-[9.5px] px-1.5 py-0.5 rounded bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 font-bold transition cursor-pointer"
+                                                  title={`Descargar: ${invoiceFile.name}`}
+                                                >
+                                                  <Paperclip className="w-3 h-3 text-sky-400" />
+                                                  <span className="max-w-[110px] truncate">{invoiceFile.name}</span>
+                                                  <Download className="w-2.5 h-2.5 ml-0.5" />
+                                                </a>
+                                              )}
+                                            </div>
+                                          );
+                                        }
+                                        const isInvoiceEnabled = canInvoice || isDelivered;
+                                        if (invData.invoiceCount > 0) {
+                                          return (
+                                            <div className="flex flex-col gap-1 items-start">
+                                              <span
+                                                className="inline-flex items-center gap-1 text-[10px] text-purple-300 font-bold bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded"
+                                                title={`Facturas registradas: ${invData.invoiceNumbers}`}
+                                              >
+                                                <ReceiptText className="w-3 h-3 text-purple-400" /> {invData.invoiceNumbers} ({formatCOP(invData.totalInvoicedCOP)})
+                                              </span>
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  if (!isInvoiceEnabled) {
+                                                    alert(`⛔ BLOQUEO:\n\nPara facturar, cambie el estado de la OV a "Listo para Facturar" o registre la entrega de los equipos en Seguimiento de OC.`);
+                                                    return;
+                                                  }
+                                                  setTargetSalesOrderForInvoice(order);
+                                                  setEditingInvoice(null);
+                                                  setIsAttachInvoiceModalOpen(true);
+                                                }}
+                                                className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-lg font-bold transition shadow-xs cursor-pointer ${
+                                                  isInvoiceEnabled
+                                                    ? 'bg-purple-600 hover:bg-purple-500 text-white'
+                                                    : 'bg-slate-800 text-slate-400 border border-slate-700 opacity-60'
+                                                }`}
+                                                title={`Saldo pendiente por facturar: ${formatCOP(invData.remainingToInvoiceCOP)}. Haz clic para registrar otra factura.`}
+                                              >
+                                                <ReceiptText className="w-3 h-3" /> Facturar ({formatCOP(invData.remainingToInvoiceCOP)})
+                                              </button>
+                                            </div>
+                                          );
+                                        }
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              if (!isInvoiceEnabled) {
+                                                alert(`⛔ BLOQUEO:\n\nPara facturar, cambie el estado de la OV a "Listo para Facturar" o registre la entrega de los equipos en Seguimiento de OC.`);
+                                                return;
+                                              }
+                                              setTargetSalesOrderForInvoice(order);
+                                              setEditingInvoice(null);
+                                              setIsAttachInvoiceModalOpen(true);
+                                            }}
+                                            className={`inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded-lg font-bold transition-all shadow-xs cursor-pointer ${
+                                              isInvoiceEnabled
+                                                ? 'bg-purple-600 hover:bg-purple-500 text-white'
+                                                : 'bg-slate-800 text-slate-400 border border-slate-700 opacity-60'
+                                            }`}
+                                            title={isInvoiceEnabled ? 'Registrar factura a esta OV' : 'Requiere estado "Listo para Facturar" o entrega en Seguimiento de OC'}
+                                          >
+                                            <ReceiptText className="w-3 h-3" />
+                                            {isInvoiceEnabled ? 'Facturar' : 'Facturar 🔒'}
+                                          </button>
+                                        );
+                                      })()}
+                                    </td>
+
+                                    {/* Acciones */}
+                                    <td className="py-3 px-3 text-right">
+                                      <div className="flex items-center justify-end gap-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setPrintingOrder(order);
+                                            setIsPrintModalOpen(true);
+                                          }}
+                                          className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition-colors cursor-pointer"
+                                          title="Imprimir OV"
+                                        >
+                                          <Printer className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingOrder(order);
+                                            setQuoteToConvert(null);
+                                            setTenderToConvert(null);
+                                            setIsNewOrderModalOpen(true);
+                                          }}
+                                          className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                                          title="Editar OV"
+                                        >
+                                          <Edit2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteOrder(order.id)}
+                                          className="p-1 rounded text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                          title="Eliminar OV"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setViewingOrder(order);
+                                            setIsDetailsModalOpen(true);
+                                          }}
+                                          className="p-1 rounded text-slate-400 hover:text-sky-300 hover:bg-slate-800 transition-colors cursor-pointer"
+                                          title="Gestionar OV"
+                                        >
+                                          <ExternalLink className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : ordersViewMode === 'grid' ? (
             /* Orders Cards Grid */
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredOrders.map((order) => {
-                const canInvoice = order.status === 'Entregada al Cliente' || order.status === 'Facturada';
+                const { isDelivered } = isOrderEquipmentDeliveredInOC(order);
+                const canInvoice = order.status === 'Listo para Facturar' || order.status === 'Entregada al Cliente' || order.status === 'Facturada' || isDelivered;
                 const originInfo = getOrderOriginInfo(order);
                 const OriginIcon = originInfo.icon;
 
@@ -842,11 +1930,58 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                         </span>
                       </div>
 
-                      {/* OV Number and Reference */}
+                      {/* OV Number and Reference with Inline Editing */}
                       <div className="mb-3">
-                        <span className="text-base font-black text-amber-400 font-mono tracking-tight block">
-                          {order.salesOrderNumber}
-                        </span>
+                        {editingOVNumberId === order.id ? (
+                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editingOVNumberValue}
+                              onChange={(e) => setEditingOVNumberValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveOVNumber(order.id, e);
+                                if (e.key === 'Escape') handleCancelEditOVNumber();
+                              }}
+                              placeholder="N° OV manual..."
+                              className="px-2 py-1 bg-slate-950 border-2 border-amber-400 rounded-lg text-xs font-mono font-bold text-amber-300 outline-none w-36"
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => handleSaveOVNumber(order.id, e)}
+                              className="p-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition cursor-pointer"
+                              title="Guardar N° OV"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleCancelEditOVNumber(e)}
+                              className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                              title="Cancelar"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 group/ov">
+                            <span className="text-base font-black text-amber-400 font-mono tracking-tight block">
+                              {order.salesOrderNumber || (
+                                <span className="text-slate-500 font-normal italic text-xs">[Sin N° de OV Asignado]</span>
+                              )}
+                            </span>
+                            {!isReadOnly && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleStartEditOVNumber(order, e)}
+                                className="opacity-70 group-hover/ov:opacity-100 p-1 text-slate-400 hover:text-amber-300 hover:bg-slate-800/80 rounded transition cursor-pointer"
+                                title="Asignar o editar N° de OV manualmente"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                         <span className="text-[11px] text-slate-300 font-medium flex items-center gap-1 mt-0.5">
                           {originInfo.detail}
                         </span>
@@ -866,16 +2001,48 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                         </div>
                       </div>
 
-                      {/* Equipment summary preview */}
+                      {/* Equipment summary preview with Serials, Status and OC */}
                       <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 mb-3 space-y-1.5">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                           Equipos ({order.items?.length || 0})
                         </span>
-                        <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                           {order.items?.map((it, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-xs text-slate-300">
-                              <span className="truncate pr-2">• {it.name}</span>
-                              <span className="text-[11px] font-bold text-slate-400 shrink-0">x{it.quantityToDispatch}</span>
+                            <div key={idx} className="p-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs space-y-1">
+                              <div className="flex items-center justify-between text-slate-200">
+                                <span className="truncate pr-1 font-medium">• {it.name}</span>
+                                <span className="text-[11px] font-bold text-emerald-400 shrink-0">x{it.quantityToDispatch}</span>
+                              </div>
+                              <div className="flex items-center gap-1 flex-wrap text-[9.5px]">
+                                {(() => {
+                                  const statusMeta = resolveItemStatusAndBadge(order, it);
+                                  return (
+                                    <>
+                                      {(it.linkedSupplierOCNumber || it.supplierOCRef) ? (
+                                        <>
+                                          <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-mono font-bold">
+                                            OC: {it.linkedSupplierOCNumber || it.supplierOCRef}
+                                          </span>
+                                          {statusMeta.status !== 'Pendiente de OC' && (
+                                            <span className={`px-1.5 py-0.5 rounded border ${statusMeta.badgeClass}`}>
+                                              {statusMeta.status}
+                                            </span>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
+                                          Pendiente de OC
+                                        </span>
+                                      )}
+                                      {it.assignedSerialNumbers && it.assignedSerialNumbers.length > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono font-bold" title={it.assignedSerialNumbers.join(', ')}>
+                                          S/N: {it.assignedSerialNumbers.join(', ')}
+                                        </span>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1128,16 +2295,64 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {filteredOrders.map((order) => {
-                      const canInvoice = order.status === 'Entregada al Cliente' || order.status === 'Facturada';
+                      const { isDelivered } = isOrderEquipmentDeliveredInOC(order);
+                      const canInvoice = order.status === 'Listo para Facturar' || order.status === 'Entregada al Cliente' || order.status === 'Facturada' || isDelivered;
                       const originInfo = getOrderOriginInfo(order);
                       const OriginIcon = originInfo.icon;
 
                       return (
                         <tr key={order.id} className="hover:bg-slate-800/40 transition-colors">
                           <td className="py-3 px-4">
-                            <span className="font-mono font-bold text-amber-400 block text-sm">
-                              {order.salesOrderNumber}
-                            </span>
+                            {editingOVNumberId === order.id ? (
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={editingOVNumberValue}
+                                  onChange={(e) => setEditingOVNumberValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveOVNumber(order.id, e);
+                                    if (e.key === 'Escape') handleCancelEditOVNumber();
+                                  }}
+                                  placeholder="N° OV manual..."
+                                  className="px-2 py-0.5 bg-slate-950 border-2 border-amber-400 rounded text-xs font-mono font-bold text-amber-300 outline-none w-32"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleSaveOVNumber(order.id, e)}
+                                  className="p-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition cursor-pointer"
+                                  title="Guardar N° OV"
+                                >
+                                  <Check className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleCancelEditOVNumber(e)}
+                                  className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                                  title="Cancelar"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 group/ov">
+                                <span className="font-mono font-bold text-amber-400 text-sm">
+                                  {order.salesOrderNumber || (
+                                    <span className="text-slate-500 font-normal italic text-xs">[Sin N° OV]</span>
+                                  )}
+                                </span>
+                                {!isReadOnly && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleStartEditOVNumber(order, e)}
+                                    className="opacity-70 group-hover/ov:opacity-100 p-0.5 text-slate-400 hover:text-amber-300 hover:bg-slate-800 rounded transition cursor-pointer"
+                                    title="Asignar o editar N° de OV manualmente"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
                             <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border mt-1 ${originInfo.badgeClass}`}>
                               <OriginIcon className="w-3 h-3" />
                               {originInfo.label}
@@ -1151,10 +2366,57 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                             <span className="text-[11px] text-slate-400">{order.clientCity || 'Colombia'}</span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className="font-semibold text-slate-200">{order.items?.length || 0} equipos</span>
-                            <span className="text-[10px] text-slate-400 block">
+                            <span className="font-semibold text-slate-200 block">{order.items?.length || 0} equipos</span>
+                            <span className="text-[10px] text-slate-400 block mb-1">
                               {order.items?.reduce((acc, it) => acc + (it.quantityToDispatch || 1), 0)} unidades
                             </span>
+                            {/* Detailed equipment status, supplier OC & serials preview */}
+                            <div className="space-y-1 mt-1 max-w-xs">
+                              {order.items?.slice(0, 3).map((it, itIdx) => (
+                                <div key={it.id || itIdx} className="text-[10.5px] p-1 rounded bg-slate-950/60 border border-slate-800 space-y-0.5">
+                                  <div className="flex items-center justify-between text-slate-300">
+                                    <span className="truncate font-medium">{it.name}</span>
+                                    <span className="font-mono text-emerald-400 font-bold shrink-0 ml-1">x{it.quantityToDispatch}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 flex-wrap text-[9.5px]">
+                                    {(() => {
+                                      const statusMeta = resolveItemStatusAndBadge(order, it);
+                                      const hasOC = Boolean(statusMeta.ocNumber);
+                                      return (
+                                        <>
+                                          {hasOC ? (
+                                            <>
+                                              <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-mono font-bold">
+                                                OC: {statusMeta.ocNumber}
+                                              </span>
+                                              {statusMeta.status && statusMeta.status !== 'Pendiente de OC' && (
+                                                <span className={`px-1.5 py-0.5 rounded border ${statusMeta.badgeClass}`}>
+                                                  {statusMeta.status}
+                                                </span>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
+                                              Pendiente de OC
+                                            </span>
+                                          )}
+                                          {it.assignedSerialNumbers && it.assignedSerialNumbers.length > 0 && (
+                                            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono" title={it.assignedSerialNumbers.join(', ')}>
+                                              S/N: {it.assignedSerialNumbers.join(', ')}
+                                            </span>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+                              ))}
+                              {order.items && order.items.length > 3 && (
+                                <span className="text-[9.5px] text-slate-400 block">
+                                  +{order.items.length - 3} equipos más...
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4 font-mono font-bold text-emerald-400">
                             {formatCOP(order.totalValueCOP)}
@@ -1165,11 +2427,6 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                               onChange={(e) => {
                                 const newSt = e.target.value as SalesOrderStatus;
                                 handleUpdateOrderStatus(order.id, newSt);
-                                if (newSt === 'Facturada' && !order.invoiceNumber) {
-                                  setTargetSalesOrderForInvoice(order);
-                                  setEditingInvoice(null);
-                                  setIsAttachInvoiceModalOpen(true);
-                                }
                               }}
                               className={`text-[11px] font-bold px-2 py-1 rounded-lg border bg-slate-900 focus:outline-none cursor-pointer ${getStatusBadge(order.status)}`}
                               title="Cambiar estado de la OV"
@@ -1178,7 +2435,10 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                               <option value="En Proceso">En Proceso</option>
                               <option value="Equipos en Bodega">Equipos en Bodega</option>
                               <option value="Entregada al Cliente">Entregada al Cliente</option>
-                              <option value="Facturada">Facturada</option>
+                              <option value="Listo para Facturar">Listo para Facturar</option>
+                              {order.status === 'Facturada' && (
+                                <option value="Facturada">Facturada</option>
+                              )}
                               <option value="Cancelada">Cancelada</option>
                             </select>
                           </td>
@@ -1223,6 +2483,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                                   </div>
                                 );
                               }
+                              const isInvoiceEnabled = canInvoice || isDelivered;
                               if (invData.invoiceCount > 0) {
                                 return (
                                   <div className="flex flex-col gap-1 items-start">
@@ -1235,11 +2496,19 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                                     <button
                                       type="button"
                                       onClick={() => {
+                                        if (!isInvoiceEnabled) {
+                                          alert(`⛔ BLOQUEO:\n\nPara facturar, cambie el estado de la OV a "Listo para Facturar" o registre la entrega de los equipos en Seguimiento de OC.`);
+                                          return;
+                                        }
                                         setTargetSalesOrderForInvoice(order);
                                         setEditingInvoice(null);
                                         setIsAttachInvoiceModalOpen(true);
                                       }}
-                                      className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold cursor-pointer transition shadow-xs"
+                                      className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-lg font-bold transition shadow-xs cursor-pointer ${
+                                        isInvoiceEnabled
+                                          ? 'bg-purple-600 hover:bg-purple-500 text-white'
+                                          : 'bg-slate-800 text-slate-400 border border-slate-700 opacity-60'
+                                      }`}
                                       title={`Saldo pendiente por facturar: ${formatCOP(invData.remainingToInvoiceCOP)}. Haz clic para registrar otra factura.`}
                                     >
                                       <ReceiptText className="w-3 h-3" /> Facturar ({formatCOP(invData.remainingToInvoiceCOP)})
@@ -1251,14 +2520,23 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    if (!isInvoiceEnabled) {
+                                      alert(`⛔ BLOQUEO:\n\nPara facturar, cambie el estado de la OV a "Listo para Facturar" o registre la entrega de los equipos en Seguimiento de OC.`);
+                                      return;
+                                    }
                                     setTargetSalesOrderForInvoice(order);
                                     setEditingInvoice(null);
                                     setIsAttachInvoiceModalOpen(true);
                                   }}
-                                  className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold cursor-pointer transition shadow-xs"
-                                  title="Registrar factura(s) a esta Orden de Venta"
+                                  className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg font-bold transition shadow-xs cursor-pointer ${
+                                    isInvoiceEnabled
+                                      ? 'bg-purple-600 hover:bg-purple-500 text-white'
+                                      : 'bg-slate-800 text-slate-400 border border-slate-700 opacity-60'
+                                  }`}
+                                  title={isInvoiceEnabled ? 'Registrar factura(s) a esta Orden de Venta' : 'Requiere estado "Listo para Facturar" o entrega en Seguimiento de OC'}
                                 >
-                                  <ReceiptText className="w-3 h-3" /> Facturar
+                                  <ReceiptText className="w-3 h-3" />
+                                  {isInvoiceEnabled ? 'Facturar' : 'Facturar 🔒'}
                                 </button>
                               );
                             })()}
@@ -1681,6 +2959,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
         onGenerateOC={(ord) => onGenerateOCTracking?.(ord)}
         onNavigateToOC={() => onNavigateToTab?.('seguimiento_oc')}
         currentUser={currentUser}
+        contracts={contracts}
       />
 
       <SalesOrderPrintModal

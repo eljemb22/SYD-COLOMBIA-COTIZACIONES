@@ -2,7 +2,7 @@ const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
 // URL oficial conectada a la base de datos en la nube
-const APP_URL = 'https://ais-pre-3743rnyg5nmderuxaxabkw-795278050657.us-east1.run.app';
+const APP_URL = process.env.APP_URL || 'https://ais-pre-jabmz4qaeginepmblbriqe-423163017030.us-east5.run.app';
 
 function createWindow() {
   const win = new BrowserWindow({

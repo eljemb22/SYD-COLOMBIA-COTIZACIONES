@@ -12,6 +12,8 @@ import {
   RotateCcw,
   X,
   FileSpreadsheet,
+  FileText,
+  Lock,
 } from 'lucide-react';
 import {
   OCTrackingItem,
@@ -19,12 +21,14 @@ import {
   OCPaymentTerms,
   OCPaymentStatus,
   AuthUser,
+  SupplierInvoiceAttachment,
 } from '../../../types';
 import {
   PAYMENT_TERMS_OPTIONS,
   PAYMENT_STATUS_OPTIONS,
   OC_STATUS_OPTIONS,
 } from '../../../utils/ocTrackingStorage';
+import { isValidOCNumber } from '../../../utils/formatters';
 import {
   ExcelColumnConfig,
   ExcelColumnHeader,
@@ -43,6 +47,7 @@ interface MasterTableViewProps {
   flatItems: FlatItemRow[];
   onOpenEditItem: (contractId: string, item: OCTrackingItem) => void;
   onOpenSerialsModal?: (contractId: string, item: OCTrackingItem) => void;
+  onOpenSupplierInvoices?: (contractId: string, supplier: string, ocNumber: string, invoices: SupplierInvoiceAttachment[]) => void;
   onOpenHistory: (contractName: string, item: OCTrackingItem) => void;
   onQuickChangeItemStatus: (contractId: string, itemId: string, newStatus: OCStatus) => void;
   onQuickChangeItemPaymentTerms: (contractId: string, itemId: string, terms: OCPaymentTerms) => void;
@@ -124,6 +129,7 @@ export const MasterTableView: React.FC<MasterTableViewProps> = ({
   flatItems,
   onOpenEditItem,
   onOpenSerialsModal,
+  onOpenSupplierInvoices,
   onOpenHistory,
   onQuickChangeItemStatus,
   onQuickChangeItemPaymentTerms,
@@ -377,44 +383,77 @@ export const MasterTableView: React.FC<MasterTableViewProps> = ({
                       ${item.totalCostCOP?.toLocaleString('es-CO')}
                     </td>
                     <td className="py-2.5 px-3">
-                      <select
-                        disabled={isReadOnly}
-                        value={item.paymentTerms || 'Crédito 30 días'}
-                        onChange={(e) =>
-                          onQuickChangeItemPaymentTerms(
-                            contractId,
-                            item.id,
-                            e.target.value as OCPaymentTerms
-                          )
-                        }
-                        className={`text-[10px] font-bold px-2 py-1 rounded-lg border outline-none ${isReadOnly ? 'cursor-default opacity-85' : 'cursor-pointer'} w-full ${getPaymentTermsBadgeClass(
-                          item.paymentTerms
-                        )}`}
-                      >
-                        {PAYMENT_TERMS_OPTIONS.map((p) => (
-                          <option key={p.terms} value={p.terms} className="bg-[#192b45] text-white">
-                            {p.label}
-                          </option>
-                        ))}
-                      </select>
+                      {(() => {
+                        const hasOC = Boolean(isValidOCNumber(item.ocNumber));
+                        return (
+                          <select
+                            disabled={isReadOnly || !hasOC}
+                            value={item.paymentTerms || 'Crédito 30 días'}
+                            onChange={(e) => {
+                              if (!hasOC) return;
+                              onQuickChangeItemPaymentTerms(
+                                contractId,
+                                item.id,
+                                e.target.value as OCPaymentTerms
+                              );
+                            }}
+                            className={`text-[10px] font-bold px-2 py-1 rounded-lg border outline-none w-full ${
+                              !hasOC
+                                ? 'opacity-40 bg-slate-800 text-slate-400 cursor-not-allowed border-slate-700'
+                                : isReadOnly
+                                ? 'cursor-default opacity-85'
+                                : 'cursor-pointer'
+                            } ${hasOC ? getPaymentTermsBadgeClass(item.paymentTerms) : ''}`}
+                            title={!hasOC ? 'Bloqueado: Ingrese N° OC primero' : 'Forma de pago'}
+                          >
+                            {PAYMENT_TERMS_OPTIONS.map((p) => (
+                              <option key={p.terms} value={p.terms} className="bg-[#192b45] text-white">
+                                {p.label}
+                              </option>
+                            ))}
+                          </select>
+                        );
+                      })()}
                     </td>
                     <td className="py-2.5 px-3">
-                      <select
-                        disabled={isReadOnly}
-                        value={item.status}
-                        onChange={(e) =>
-                          onQuickChangeItemStatus(contractId, item.id, e.target.value as OCStatus)
-                        }
-                        className={`text-[10px] font-bold px-2 py-1 rounded-lg border outline-none ${isReadOnly ? 'cursor-default opacity-85' : 'cursor-pointer'} w-full ${getOCStatusBadgeClass(
-                          item.status
-                        )}`}
-                      >
-                        {OC_STATUS_OPTIONS.map((opt) => (
-                          <option key={opt.status} value={opt.status} className="bg-[#192b45] text-white">
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
+                      {(() => {
+                        const hasOC = Boolean(isValidOCNumber(item.ocNumber));
+                        return (
+                          <div className="space-y-0.5">
+                            <select
+                              disabled={isReadOnly || !hasOC}
+                              value={item.status}
+                              onChange={(e) => {
+                                if (!hasOC) {
+                                  alert('⛔ ACCIÓN BLOQUEADA:\n\nDebe colocar el número consecutivo de la OC primero para poder manipular el estado del equipo.\n\nSin número de OC no se puede saber ni hacer seguimiento a este estado.');
+                                  return;
+                                }
+                                onQuickChangeItemStatus(contractId, item.id, e.target.value as OCStatus);
+                              }}
+                              className={`text-[10px] font-bold px-2 py-1 rounded-lg border outline-none w-full ${
+                                !hasOC
+                                  ? 'opacity-40 bg-slate-800 text-slate-400 cursor-not-allowed border-slate-700'
+                                  : isReadOnly
+                                  ? 'cursor-default opacity-85'
+                                  : 'cursor-pointer'
+                              } ${hasOC ? getOCStatusBadgeClass(item.status) : ''}`}
+                              title={!hasOC ? 'Bloqueado: Debe colocar el número de la OC primero' : 'Cambiar estado del equipo'}
+                            >
+                              {OC_STATUS_OPTIONS.map((opt) => (
+                                <option key={opt.status} value={opt.status} className="bg-[#192b45] text-white">
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                            {!hasOC && (
+                              <div className="text-[8.5px] font-black text-amber-300 flex items-center gap-0.5">
+                                <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                                <span>N° OC requerido</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="py-2.5 px-3 text-center">
                       {isAlert ? (
@@ -446,6 +485,27 @@ export const MasterTableView: React.FC<MasterTableViewProps> = ({
                             title="Seriales, Declaración DIAN y Dossier Hospitalario"
                           >
                             <Tag className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {onOpenSupplierInvoices && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenSupplierInvoices(
+                                contractId,
+                                item.supplier || '',
+                                item.ocNumber || '',
+                                item.supplierInvoices || []
+                              )
+                            }
+                            className={`p-1.5 rounded-lg border transition cursor-pointer ${
+                              item.supplierInvoices && item.supplierInvoices.length > 0
+                                ? 'bg-indigo-950/70 hover:bg-indigo-900 text-indigo-300 border-indigo-500/50'
+                                : 'bg-[#1b2d46] hover:bg-indigo-950/50 text-slate-300 hover:text-indigo-200 border-slate-700/60'
+                            }`}
+                            title={`Facturas del Proveedor (${item.supplierInvoices?.length || 0})`}
+                          >
+                            <FileText className="w-3.5 h-3.5 text-indigo-400" />
                           </button>
                         )}
                         <button

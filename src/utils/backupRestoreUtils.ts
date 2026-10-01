@@ -20,6 +20,8 @@ import { CURRENT_APP_VERSION } from './versionCheck';
 import { directBatchRestoreToFirestore } from '../services/realtimeSync';
 import { FULL_ADMIN_PERMISSIONS, DEFAULT_VIEWER_PERMISSIONS } from '../data/authData';
 import { unifyAllDuplicateSuppliers } from './supplierDeduplication';
+import { isContractDeleted, isSalesOrderDeleted, isSalesInvoiceDeleted } from './tombstones';
+import { deduplicateTenderProjects } from './tenderDeduplication';
 
 export interface AppBackupMetadata {
   version: string;
@@ -1601,7 +1603,19 @@ export function mergeQuotes(existing: SavedQuote[], incoming: SavedQuote[]): Sav
     if (match) {
       const idx = result.findIndex((r) => r === match);
       if (idx !== -1) {
-        result[idx] = { ...match, ...newQuote, id: match.id || newQuote.id };
+        const matchTime = new Date(match.updatedAt || match.savedAt || 0).getTime();
+        const incomingTime = new Date(newQuote.updatedAt || newQuote.savedAt || 0).getTime();
+        const matchHasItems = (match.items || []).length > 0;
+        const incomingHasItems = (newQuote.items || []).length > 0;
+
+        if (incomingTime >= matchTime || (!matchHasItems && incomingHasItems)) {
+          result[idx] = { ...match, ...newQuote, id: match.id || newQuote.id };
+        } else if (matchHasItems && !incomingHasItems) {
+          // Preserve match items so an incomplete incoming sync never erases items
+          result[idx] = { ...newQuote, ...match, id: match.id || newQuote.id };
+        } else {
+          result[idx] = { ...match, ...newQuote, id: match.id || newQuote.id };
+        }
       }
     } else {
       result.push(newQuote);
@@ -1615,54 +1629,137 @@ export function mergeQuotes(existing: SavedQuote[], incoming: SavedQuote[]): Sav
 }
 
 export function mergeTenders(existing: TenderClientProject[], incoming: TenderClientProject[]): TenderClientProject[] {
-  if (!incoming || incoming.length === 0) return existing || [];
-  if (!existing || existing.length === 0) return incoming;
-
-  const map = new Map<string, TenderClientProject>();
-  existing.forEach((t) => {
-    if (t.id) map.set(String(t.id).toLowerCase(), t);
-    const key = t.header?.contractObject || t.clientName;
-    if (key) map.set(`proj:${String(key).toLowerCase().trim()}`, t);
-  });
-
-  const result: TenderClientProject[] = [...existing];
-  incoming.forEach((newTender) => {
-    const byId = newTender.id ? map.get(String(newTender.id).toLowerCase()) : null;
-    const key = newTender.header?.contractObject || newTender.clientName;
-    const byProj = key ? map.get(`proj:${String(key).toLowerCase().trim()}`) : null;
-    const match = byId || byProj;
-
-    if (match) {
-      const idx = result.findIndex((r) => r === match);
-      if (idx !== -1) result[idx] = { ...match, ...newTender, id: match.id || newTender.id };
-    } else {
-      result.push(newTender);
-      if (newTender.id) map.set(String(newTender.id).toLowerCase(), newTender);
-      if (key) map.set(`proj:${String(key).toLowerCase().trim()}`, newTender);
-    }
-  });
-  return result;
+  const combined = [...(existing || []), ...(incoming || [])];
+  return deduplicateTenderProjects(combined);
 }
 
 export function mergeOCContracts(existing: OCTrackingContract[], incoming: OCTrackingContract[]): OCTrackingContract[] {
-  if (!incoming || incoming.length === 0) return existing || [];
-  if (!existing || existing.length === 0) return incoming;
+  const filteredExisting = (existing || []).filter((c) => c && c.id && !isContractDeleted(c.id));
+  const filteredIncoming = (incoming || []).filter((c) => c && c.id && !isContractDeleted(c.id));
+
+  if (!filteredIncoming || filteredIncoming.length === 0) return filteredExisting;
+  if (!filteredExisting || filteredExisting.length === 0) return filteredIncoming;
 
   const map = new Map<string, OCTrackingContract>();
-  existing.forEach((oc) => {
+  filteredExisting.forEach((oc) => {
     if (oc.id) map.set(String(oc.id).toLowerCase(), oc);
     if (oc.contractNumber) map.set(`oc:${String(oc.contractNumber).toLowerCase().trim()}`, oc);
   });
 
-  const result: OCTrackingContract[] = [...existing];
-  incoming.forEach((newOC) => {
+  const result: OCTrackingContract[] = [...filteredExisting];
+  filteredIncoming.forEach((newOC) => {
     const byId = newOC.id ? map.get(String(newOC.id).toLowerCase()) : null;
     const byNum = newOC.contractNumber ? map.get(`oc:${String(newOC.contractNumber).toLowerCase().trim()}`) : null;
     const match = byId || byNum;
 
     if (match) {
       const idx = result.findIndex((r) => r === match);
-      if (idx !== -1) result[idx] = { ...match, ...newOC, id: match.id || newOC.id };
+      if (idx !== -1) {
+        // Smart item-level merge: Never wipe out serial numbers or assigned OC numbers!
+        const matchItems = match.items || [];
+        const newItems = newOC.items || [];
+
+        const mergedItems = matchItems.map((mItem) => {
+          const matchingNew = newItems.find(
+            (n) =>
+              (n.id && mItem.id && n.id === mItem.id) ||
+              (n.code && mItem.code && n.code.trim().toLowerCase() === mItem.code.trim().toLowerCase() &&
+               n.supplier && mItem.supplier && n.supplier.trim().toLowerCase() === mItem.supplier.trim().toLowerCase())
+          );
+
+          if (!matchingNew) return mItem;
+
+          // Preserve serials: If one has serials and the other doesn't, keep serials. If both, merge.
+          let resolvedSerials = mItem.serialNumbers || [];
+          if ((!resolvedSerials || resolvedSerials.length === 0) && matchingNew.serialNumbers && matchingNew.serialNumbers.length > 0) {
+            resolvedSerials = matchingNew.serialNumbers;
+          } else if (resolvedSerials && resolvedSerials.length > 0 && matchingNew.serialNumbers && matchingNew.serialNumbers.length > 0) {
+            const seenSerials = new Set<string>();
+            const combined: typeof resolvedSerials = [];
+            [...resolvedSerials, ...matchingNew.serialNumbers].forEach((s) => {
+              const key = (s.serialNumber || s.inventoryPlate || '').trim();
+              if (key && !seenSerials.has(key)) {
+                seenSerials.add(key);
+                combined.push(s);
+              }
+            });
+            resolvedSerials = combined.length > 0 ? combined : resolvedSerials;
+          }
+
+          // Preserve assigned OC number: Don't revert assigned number to empty or 'Sin N° OC'
+          let resolvedOCNumber = mItem.ocNumber || '';
+          if ((!resolvedOCNumber || resolvedOCNumber === 'Sin N° OC') && matchingNew.ocNumber && matchingNew.ocNumber !== 'Sin N° OC') {
+            resolvedOCNumber = matchingNew.ocNumber;
+          }
+
+          // Preserve status: If one is more advanced (e.g. En Tránsito / Despachada or Entregado), keep it
+          let resolvedStatus = mItem.status || matchingNew.status;
+          if (mItem.status === 'En Tránsito / Despachada' || mItem.status === 'Entregado en Clínica' || mItem.status === 'Instalado / Recibido') {
+            resolvedStatus = mItem.status;
+          } else if (matchingNew.status === 'En Tránsito / Despachada' || matchingNew.status === 'Entregado en Clínica' || matchingNew.status === 'Instalado / Recibido') {
+            resolvedStatus = matchingNew.status;
+          }
+
+          // Merge item-level supplier invoices
+          const mInvs = mItem.supplierInvoices || [];
+          const nInvs = matchingNew.supplierInvoices || [];
+          const seenInv = new Set<string>();
+          const combinedInvs = [...mInvs, ...nInvs].filter((inv) => {
+            const key = `${inv.invoiceNumber || ''}_${inv.fileName || ''}`;
+            if (key && !seenInv.has(key)) {
+              seenInv.add(key);
+              return true;
+            }
+            return false;
+          });
+
+          return {
+            ...matchingNew,
+            ...mItem,
+            ocNumber: resolvedOCNumber || mItem.ocNumber || matchingNew.ocNumber,
+            status: resolvedStatus,
+            serialNumbers: resolvedSerials,
+            supplierInvoices: combinedInvs.length > 0 ? combinedInvs : undefined,
+          };
+        });
+
+        // Add any newly added items in newOC that weren't in match
+        newItems.forEach((nItem) => {
+          const already = mergedItems.some(
+            (m) =>
+              (m.id && nItem.id && m.id === nItem.id) ||
+              (m.code && nItem.code && m.code.trim().toLowerCase() === nItem.code.trim().toLowerCase() &&
+               m.supplier && nItem.supplier && m.supplier.trim().toLowerCase() === nItem.supplier.trim().toLowerCase())
+          );
+          if (!already) {
+            mergedItems.push(nItem);
+          }
+        });
+
+        // Merge contract-level supplier invoices
+        const mContractInvs = match.supplierInvoices || [];
+        const nContractInvs = newOC.supplierInvoices || [];
+        const seenContractInv = new Set<string>();
+        const mergedContractInvs = [...mContractInvs, ...nContractInvs].filter((inv) => {
+          const key = `${inv.invoiceNumber || ''}_${inv.fileName || ''}`;
+          if (key && !seenContractInv.has(key)) {
+            seenContractInv.add(key);
+            return true;
+          }
+          return false;
+        });
+
+        result[idx] = {
+          ...match,
+          ...newOC,
+          id: match.id || newOC.id,
+          contractNumber: match.contractNumber || newOC.contractNumber,
+          salesOrderNumber: match.salesOrderNumber || newOC.salesOrderNumber,
+          items: mergedItems,
+          supplierInvoices: mergedContractInvs,
+          lastUpdatedAt: new Date().toISOString(),
+        };
+      }
     } else {
       result.push(newOC);
       if (newOC.id) map.set(String(newOC.id).toLowerCase(), newOC);
@@ -1752,28 +1849,40 @@ export function mergeUsers(existing: StoredUserAccount[], incoming: StoredUserAc
 }
 
 export function mergeSalesOrders(existing: SalesOrderRecord[], incoming: SalesOrderRecord[]): SalesOrderRecord[] {
-  if (!incoming || incoming.length === 0) return existing || [];
-  if (!existing || existing.length === 0) return incoming;
+  const filteredExisting = (existing || []).filter(
+    (o) => o && o.id && !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId)
+  );
+  const filteredIncoming = (incoming || []).filter(
+    (o) => o && o.id && !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId)
+  );
+
+  if (!filteredIncoming || filteredIncoming.length === 0) return filteredExisting;
+  if (!filteredExisting || filteredExisting.length === 0) return filteredIncoming;
 
   const map = new Map<string, SalesOrderRecord>();
-  existing.forEach((o) => {
+  filteredExisting.forEach((o) => {
     if (o.id) map.set(String(o.id).toLowerCase(), o);
-    if (o.salesOrderNumber) map.set(`so:${String(o.salesOrderNumber).toLowerCase().trim()}`, o);
   });
 
-  const result: SalesOrderRecord[] = [...existing];
-  incoming.forEach((newOrder) => {
-    const byId = newOrder.id ? map.get(String(newOrder.id).toLowerCase()) : null;
-    const byNum = newOrder.salesOrderNumber ? map.get(`so:${String(newOrder.salesOrderNumber).toLowerCase().trim()}`) : null;
-    const match = byId || byNum;
+  const result: SalesOrderRecord[] = [...filteredExisting];
+  filteredIncoming.forEach((newOrder) => {
+    if (!newOrder || !newOrder.id || isSalesOrderDeleted(newOrder.id, newOrder.salesOrderNumber, newOrder.tenderClientId, newOrder.contractId)) {
+      return;
+    }
 
+    const match = map.get(String(newOrder.id).toLowerCase());
     if (match) {
-      const idx = result.findIndex((r) => r === match);
-      if (idx !== -1) result[idx] = { ...match, ...newOrder, id: match.id || newOrder.id };
+      const idx = result.findIndex((r) => r.id === match.id);
+      if (idx !== -1) {
+        result[idx] = {
+          ...match,
+          ...newOrder,
+          updatedAt: new Date().toISOString(),
+        };
+      }
     } else {
       result.push(newOrder);
-      if (newOrder.id) map.set(String(newOrder.id).toLowerCase(), newOrder);
-      if (newOrder.salesOrderNumber) map.set(`so:${String(newOrder.salesOrderNumber).toLowerCase().trim()}`, newOrder);
+      map.set(String(newOrder.id).toLowerCase(), newOrder);
     }
   });
 
@@ -1782,17 +1891,22 @@ export function mergeSalesOrders(existing: SalesOrderRecord[], incoming: SalesOr
 }
 
 export function mergeSalesInvoices(existing: SalesInvoiceRecord[], incoming: SalesInvoiceRecord[]): SalesInvoiceRecord[] {
-  if (!incoming || incoming.length === 0) return existing || [];
-  if (!existing || existing.length === 0) return incoming;
+  const filteredExisting = (existing || []).filter((inv) => inv && inv.id && !isSalesInvoiceDeleted(inv.id, inv.invoiceNumber));
+  const filteredIncoming = (incoming || []).filter((inv) => inv && inv.id && !isSalesInvoiceDeleted(inv.id, inv.invoiceNumber));
+
+  if (!filteredIncoming || filteredIncoming.length === 0) return filteredExisting;
+  if (!filteredExisting || filteredExisting.length === 0) return filteredIncoming;
 
   const map = new Map<string, SalesInvoiceRecord>();
-  existing.forEach((inv) => {
+  filteredExisting.forEach((inv) => {
     if (inv.id) map.set(String(inv.id).toLowerCase(), inv);
     if (inv.invoiceNumber) map.set(`inv:${String(inv.invoiceNumber).toLowerCase().trim()}`, inv);
   });
 
-  const result: SalesInvoiceRecord[] = [...existing];
-  incoming.forEach((newInv) => {
+  const result: SalesInvoiceRecord[] = [...filteredExisting];
+  filteredIncoming.forEach((newInv) => {
+    if (isSalesInvoiceDeleted(newInv.id, newInv.invoiceNumber)) return;
+
     const byId = newInv.id ? map.get(String(newInv.id).toLowerCase()) : null;
     const byNum = newInv.invoiceNumber ? map.get(`inv:${String(newInv.invoiceNumber).toLowerCase().trim()}`) : null;
     const match = byId || byNum;

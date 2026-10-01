@@ -180,7 +180,7 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
     setAttachedInvoiceFile(undefined);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!invoiceNumber.trim()) {
@@ -220,33 +220,18 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    // If an OV is linked, update it with all invoice info and recompute invoicing status
+    // If an OV is linked, update it with this invoice info
     let updatedSO: SalesOrderRecord | undefined = undefined;
     if (matchedSO) {
-      const allOtherInvoices = existingInvoices.filter(
-        (inv) =>
-          (inv.salesOrderId === matchedSO.id ||
-            (matchedSO.salesOrderNumber && inv.salesOrderNumber === matchedSO.salesOrderNumber)) &&
-          inv.id !== finalInvoice.id
-      );
-
-      const allInvoicesForOrder = [...allOtherInvoices, finalInvoice];
-      const newTotalInvoicedSum = allInvoicesForOrder.reduce((sum, inv) => sum + (Number(inv.totalAmountCOP) || 0), 0);
-      const isFullyInvoicedNow = matchedSO.totalValueCOP > 0 && newTotalInvoicedSum >= matchedSO.totalValueCOP;
-
-      const allInvoiceNumbers = Array.from(
-        new Set(allInvoicesForOrder.map((i) => i.invoiceNumber).filter(Boolean))
-      ).join(', ');
-
-      const allInvoiceIds = allInvoicesForOrder.map((i) => i.id);
+      const isFullyInvoicedNow = matchedSO.totalValueCOP > 0 ? totalAmountCOP >= matchedSO.totalValueCOP : true;
 
       updatedSO = {
         ...matchedSO,
-        invoiceNumber: allInvoiceNumbers,
+        invoiceNumber: finalInvoice.invoiceNumber,
         invoiceId: finalInvoice.id,
-        invoiceIds: allInvoiceIds,
+        invoiceIds: [finalInvoice.id],
         invoiceDate: finalInvoice.issueDate,
-        totalInvoicedCOP: newTotalInvoicedSum,
+        totalInvoicedCOP: totalAmountCOP,
         attachedInvoiceFile: finalInvoice.attachedInvoiceFile || matchedSO.attachedInvoiceFile,
         invoicedStatus: isFullyInvoicedNow ? 'Facturada Total' : 'Facturada Parcial',
         status: isFullyInvoicedNow && matchedSO.status !== 'Cancelada' ? 'Facturada' : matchedSO.status,
@@ -254,8 +239,13 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       };
     }
 
-    onSave(finalInvoice, updatedSO);
-    onClose();
+    try {
+      await onSave(finalInvoice, updatedSO);
+      onClose();
+    } catch (err) {
+      console.error('Error in onSave invoice:', err);
+      onClose();
+    }
   };
 
   if (!isOpen) return null;

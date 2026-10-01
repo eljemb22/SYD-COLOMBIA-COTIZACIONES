@@ -46,6 +46,8 @@ interface QuotesViewProps {
   onConvertToSalesOrder?: (quote: SavedQuote | { header: QuoteHeader; items: QuoteItem[] }) => void;
   onConvertToTender?: (quote: SavedQuote | { header: QuoteHeader; items: QuoteItem[] }) => void;
   currentUser?: AuthUser | null;
+  editingQuoteId?: string | null;
+  onCancelEditQuote?: () => void;
 }
 
 export const QuotesView: React.FC<QuotesViewProps> = ({
@@ -72,6 +74,8 @@ export const QuotesView: React.FC<QuotesViewProps> = ({
   onConvertToSalesOrder,
   onConvertToTender,
   currentUser,
+  editingQuoteId,
+  onCancelEditQuote,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'editor' | 'historial'>(initialSubTab);
 
@@ -193,6 +197,8 @@ export const QuotesView: React.FC<QuotesViewProps> = ({
           onConvertToSalesOrder={onConvertToSalesOrder}
           onConvertToTender={onConvertToTender}
           currentUser={currentUser}
+          editingQuoteId={editingQuoteId}
+          onCancelEditQuote={onCancelEditQuote}
         />
       ) : (
         <QuotesHistoryView

@@ -51,11 +51,11 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   const total = subtotal + iva;
   const totalWords = numberToSpanishWords(total);
 
-  const effectiveLetterheadUrl = customLetterheadUrl && customLetterheadUrl !== 'none'
+  const effectiveLetterheadUrl = customLetterheadUrl && customLetterheadUrl !== 'none' && customLetterheadUrl.length > 20
     ? customLetterheadUrl
-    : getOfficialSyDLetterheadDataUrl() || OFFICIAL_SYD_LETTERHEAD_SVG_PATH;
+    : null;
 
-  const padTop = marginSettings?.subirBajar ?? 154;
+  const padTop = marginSettings?.subirBajar ?? (effectiveLetterheadUrl ? 154 : 50);
   const padSide = marginSettings?.izqDer ?? 78;
 
   const handlePrint = () => {
@@ -133,11 +133,13 @@ export const PrintModal: React.FC<PrintModalProps> = ({
         <div className="space-y-8">
           {/* ==================== HOJA 1: PRESENTACIÓN ==================== */}
           <div className="bg-white text-slate-900 rounded-sm shadow-xl font-sans relative overflow-hidden min-h-[1050px] flex flex-col justify-between print:shadow-none print:m-0 print:break-after-page">
-            <img
-              src={effectiveLetterheadUrl}
-              alt="Membrete Oficial SyD Colombia"
-              className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
-            />
+            {effectiveLetterheadUrl ? (
+              <img
+                src={effectiveLetterheadUrl}
+                alt="Membrete Oficial SyD Colombia"
+                className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
+              />
+            ) : null}
             <div
               className="relative z-10 space-y-6 text-[12.5px] leading-relaxed text-slate-800 flex-1 flex flex-col justify-between"
               style={{
@@ -196,11 +198,13 @@ export const PrintModal: React.FC<PrintModalProps> = ({
 
           {/* ==================== HOJA 2: TABLA DE EQUIPOS ==================== */}
           <div className="bg-white text-slate-900 rounded-sm shadow-xl font-sans relative overflow-hidden min-h-[1050px] flex flex-col justify-between print:shadow-none print:m-0 print:break-after-page">
-            <img
-              src={effectiveLetterheadUrl}
-              alt="Membrete Oficial SyD Colombia"
-              className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
-            />
+            {effectiveLetterheadUrl ? (
+              <img
+                src={effectiveLetterheadUrl}
+                alt="Membrete Oficial SyD Colombia"
+                className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
+              />
+            ) : null}
             <div
               className="relative z-10 space-y-5 flex-1 flex flex-col justify-between"
               style={{
@@ -278,16 +282,16 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                             <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
                               {item.quantity}
                             </td>
-                            <td className="p-2 text-right font-normal text-slate-900 border-r border-black">
+                            <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
                               {formatCOP(item.unitSalePrice)}
                             </td>
-                            <td className="p-2 text-right font-normal text-slate-900 border-r border-black">
+                            <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
                               {formatCOP(itemSubtotal)}
                             </td>
-                            <td className="p-2 text-right font-normal text-slate-900 border-r border-black">
+                            <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
                               {itemIva > 0 ? formatCOP(itemIva) : '$ -'}
                             </td>
-                            <td className="p-2 text-right font-normal text-slate-900">
+                            <td className="p-2 text-center font-normal text-slate-900">
                               {formatCOP(itemTotal)}
                             </td>
                           </tr>
@@ -300,13 +304,13 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                       <td colSpan={6} className="p-2.5 text-right font-bold uppercase text-[11px] border-r border-black">
                         Totales
                       </td>
-                      <td className="p-2.5 text-right font-bold border-r border-black">
+                      <td className="p-2.5 text-center font-bold text-slate-950 border-r border-black">
                         {formatCOP(subtotal)}
                       </td>
-                      <td className="p-2.5 text-right font-bold text-slate-900 border-r border-black">
+                      <td className="p-2.5 text-center font-bold text-slate-950 border-r border-black">
                         {iva > 0 ? formatCOP(iva) : '$ -'}
                       </td>
-                      <td className="p-2.5 text-right font-bold text-slate-950 text-xs">
+                      <td className="p-2.5 text-center font-bold text-slate-950">
                         {formatCOP(total)}
                       </td>
                     </tr>
@@ -335,11 +339,13 @@ export const PrintModal: React.FC<PrintModalProps> = ({
 
           {/* ==================== HOJA 3: CONDICIONES Y FIRMAS ==================== */}
           <div className="bg-white text-slate-900 rounded-sm shadow-xl font-sans relative overflow-hidden min-h-[1050px] flex flex-col justify-between print:shadow-none print:m-0">
-            <img
-              src={effectiveLetterheadUrl}
-              alt="Membrete Oficial SyD Colombia"
-              className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
-            />
+            {effectiveLetterheadUrl ? (
+              <img
+                src={effectiveLetterheadUrl}
+                alt="Membrete Oficial SyD Colombia"
+                className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
+              />
+            ) : null}
             <div
               className="relative z-10 space-y-4 text-slate-900 leading-relaxed text-[12.5px] flex-1 flex flex-col justify-between"
               style={{

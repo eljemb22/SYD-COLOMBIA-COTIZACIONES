@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { markAppUpdateAsSeen, CURRENT_APP_VERSION } from '../utils/versionCheck';
+import { markAppUpdateAsSeen, CURRENT_APP_VERSION, isVersionNewer } from '../utils/versionCheck';
 
 interface ServerVersionResponse {
   bootTime: number;
@@ -27,11 +27,6 @@ export function useAutoReloadOnServerUpdate() {
   const initialFirestoreSignalRef = useRef<number | null>(null);
   const serverWasOfflineRef = useRef<boolean>(false);
   const mountTimeRef = useRef<number>(Date.now());
-
-  // Initialize current version in storage on mount
-  useEffect(() => {
-    markAppUpdateAsSeen(CURRENT_APP_VERSION);
-  }, []);
 
   const triggerAppReload = (reason: string, targetVer?: string) => {
     if (isReloadingRef.current) return;
@@ -121,12 +116,17 @@ export function useAutoReloadOnServerUpdate() {
 
           if (initialFirestoreSignalRef.current === null) {
             initialFirestoreSignalRef.current = signalTimestamp;
+            // If data has a newer version than current running client, notify immediately
+            if (data?.version && isVersionNewer(data.version, CURRENT_APP_VERSION)) {
+              window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { reason: data?.reason, version: data?.version } }));
+            }
             return;
           }
 
-          if (signalTimestamp > initialFirestoreSignalRef.current) {
+          if (signalTimestamp > (initialFirestoreSignalRef.current || 0)) {
             initialFirestoreSignalRef.current = signalTimestamp;
-            triggerAppReload(data?.reason || 'Nueva versión publicada en tiempo real');
+            // Notify system of update rather than abruptly forcing reload
+            window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { reason: data?.reason, version: data?.version } }));
           }
         },
         (err) => {
@@ -176,17 +176,20 @@ export function useAutoReloadOnServerUpdate() {
         if (initialBootTimeRef.current === null) {
           initialBootTimeRef.current = data.bootTime;
           initialVersionRef.current = data.version;
+          if (data.version && isVersionNewer(data.version, CURRENT_APP_VERSION)) {
+            window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { version: data.version } }));
+          }
           return;
         }
 
-        // Server booted with a new build or version (only trigger if current session has been running for at least 15s)
+        // Detect if server is running a newer semver or updated build
         if (
-          (initialBootTimeRef.current !== null && data.bootTime !== initialBootTimeRef.current) ||
-          (data.version && initialVersionRef.current && data.version !== initialVersionRef.current)
+          data.version &&
+          isVersionNewer(data.version, CURRENT_APP_VERSION)
         ) {
-          if (isMounted) {
-            triggerAppReload('Nuevo despliegue o actualización del servidor detectada');
-          }
+          console.log('[AutoReload] New version detected on server:', data.version);
+          // Notify system to show update badge in header so user can update smoothly without losing work
+          window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { version: data.version } }));
         } else {
           serverWasOfflineRef.current = false;
         }

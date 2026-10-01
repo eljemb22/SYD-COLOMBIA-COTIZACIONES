@@ -70,7 +70,28 @@ export const DOCUMENT_TYPES: {
     label: '⚡ Guía Rápida',
     icon: Zap,
     color: 'text-yellow-300 border-yellow-500/30 bg-yellow-500/10',
-    desc: 'Instrucciones resumidas de uso en 1-2 páginas',
+    desc: 'Instrucciones resumidas de uso y manejo en 1-2 páginas',
+  },
+  {
+    type: 'Protocolo de Limpieza',
+    label: '🧼 Protocolo de Limpieza',
+    icon: ShieldCheck,
+    color: 'text-teal-400 border-teal-500/30 bg-teal-500/10',
+    desc: 'Protocolo de limpieza, desinfección y esterilización',
+  },
+  {
+    type: 'Certificado de Calibración',
+    label: '⚙️ Certificado Calibración',
+    icon: Wrench,
+    color: 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10',
+    desc: 'Seguridad eléctrica, metrología y calibración biomédica',
+  },
+  {
+    type: 'Carta de Representación',
+    label: '📜 Carta Representación',
+    icon: Award,
+    color: 'text-rose-400 border-rose-500/30 bg-rose-500/10',
+    desc: 'Distribución autorizada, soporte o garantía de fábrica',
   },
   {
     type: 'Certificado Calidad',
@@ -80,11 +101,11 @@ export const DOCUMENT_TYPES: {
     desc: 'Certificaciones ISO 13485, CE 0123 o FDA',
   },
   {
-    type: 'Otro Anexo',
+    type: 'Otro Documento',
     label: '📁 Otro / Personalizado',
     icon: File,
-    color: 'text-slate-300 border-slate-500/30 bg-slate-500/10',
-    desc: 'Protocolos de validación, actas o documentos especiales',
+    color: 'text-purple-300 border-purple-500/40 bg-purple-500/10',
+    desc: 'Escriba o clasifique libremente cualquier otro documento técnico',
   },
 ];
 
@@ -135,8 +156,8 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
         setSelectedType(targetType);
         setCustomTypeName('');
       } else {
-        setSelectedType('Otro Anexo');
-        setCustomTypeName(targetType);
+        setSelectedType('Otro Documento');
+        setCustomTypeName(targetType === 'Otro' ? '' : targetType);
       }
 
       const eq = equipments.find((e) => e.id === selectedEqId);
@@ -161,10 +182,16 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
           setTitle(`Manual de Servicio Técnico - ${eq.brand} ${eq.model}`);
         } else if (targetType === 'Guía Rápida') {
           setTitle(`Guía Rápida de Manejo - ${eq.brand} ${eq.model}`);
+        } else if (targetType === 'Protocolo de Limpieza') {
+          setTitle(`Protocolo de Limpieza y Desinfección - ${eq.brand} ${eq.model}`);
+        } else if (targetType === 'Certificado de Calibración') {
+          setTitle(`Certificado de Calibración y Metrología - ${eq.brand} ${eq.model}`);
+        } else if (targetType === 'Carta de Representación') {
+          setTitle(`Carta de Representación y Garantía - ${eq.brand} ${eq.model}`);
         } else if (targetType === 'Certificado Calidad') {
           setTitle(`Certificado de Calidad ISO/CE - ${eq.brand} ${eq.model}`);
         } else {
-          setTitle(`Documento Anexo - ${eq.brand} ${eq.model}`);
+          setTitle(`Documento Técnico (${targetType || 'Personalizado'}) - ${eq.brand} ${eq.model}`);
         }
       } else {
         setTitle('');
@@ -329,8 +356,13 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
       return;
     }
 
+    const isCustomType =
+      selectedType === 'Otro Documento' ||
+      selectedType === 'Otro Anexo' ||
+      selectedType === 'Otro';
+
     const effectiveDocType =
-      selectedType === 'Otro Anexo' && customTypeName.trim()
+      isCustomType && customTypeName.trim()
         ? customTypeName.trim()
         : selectedType;
 
@@ -522,19 +554,67 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
               })}
             </div>
 
-            {/* Custom Type Input if 'Otro Anexo' is selected */}
-            {selectedType === 'Otro Anexo' && (
-              <div className="pt-2 animate-fadeIn">
-                <label className="text-slate-300 font-bold block mb-1">
-                  Nombre de la Categoría Personalizada *
-                </label>
+            {/* Custom Type Input if 'Otro Documento' or 'Otro Anexo' is selected */}
+            {(selectedType === 'Otro Documento' || selectedType === 'Otro Anexo' || selectedType === 'Otro') && (
+              <div className="pt-2.5 p-3 rounded-xl bg-[#111c2e] border border-purple-500/40 space-y-2.5 animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <label className="text-purple-300 font-bold text-xs flex items-center gap-1.5">
+                    <span>Clasificación / Tipo de Documento Personalizado *</span>
+                  </label>
+                  <span className="text-[10px] text-slate-400">
+                    Escriba o seleccione una sugerencia rápida
+                  </span>
+                </div>
+
+                {/* Quick Suggestion Chips */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    'Protocolo de Limpieza',
+                    'Guía Rápida',
+                    'Certificado de Calibración',
+                    'Carta de Representación',
+                    'Certificado de Garantía',
+                    'Reporte de Tecnovigilancia',
+                    'Ficha de Accesorios',
+                    'Hoja de Vida',
+                    'Acta de Entrega',
+                    'Pruebas de Seguridad Eléctrica',
+                  ].map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => {
+                        setCustomTypeName(sug);
+                        const eq = equipments.find((e) => e.id === equipmentId);
+                        if (eq) {
+                          setTitle(`${sug} - ${eq.brand} ${eq.model}`);
+                        }
+                      }}
+                      className={`px-2 py-0.5 rounded text-[10.5px] font-bold transition cursor-pointer border ${
+                        customTypeName === sug
+                          ? 'bg-purple-500 text-slate-950 border-purple-400 font-black shadow-xs'
+                          : 'bg-[#15253d] text-slate-300 hover:text-white border-[#334d6e] hover:border-purple-400/50'
+                      }`}
+                    >
+                      + {sug}
+                    </button>
+                  ))}
+                </div>
+
                 <input
                   type="text"
                   required
                   value={customTypeName}
-                  onChange={(e) => setCustomTypeName(e.target.value)}
-                  placeholder="Ej: Protocolo de Mantenimiento, Ficha de Accesorios, Acta de Entrega..."
-                  className="w-full bg-[#15253d] border border-[#38bdf8] rounded-xl p-2.5 text-white font-medium focus:border-cyan-400 outline-none"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCustomTypeName(val);
+                    const eq = equipments.find((eqItem) => eqItem.id === equipmentId);
+                    if (eq && val.trim()) {
+                      setTitle(`${val.trim()} - ${eq.brand} ${eq.model}`);
+                    }
+                  }}
+                  placeholder="Escriba aquí la clasificación manual (ej: Protocolo de Limpieza y Esterilización, Carta de Exclusividad...)"
+                  className="w-full bg-[#15253d] border border-purple-400/60 rounded-xl px-3 py-2 text-xs text-white font-medium focus:border-purple-400 outline-none placeholder-slate-500"
                 />
               </div>
             )}

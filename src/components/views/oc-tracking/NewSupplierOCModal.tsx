@@ -83,9 +83,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
   const [supplier, setSupplier] = useState('');
   const [supplierNit, setSupplierNit] = useState('');
   const [supplierContact, setSupplierContact] = useState('');
-  const [ocNumber, setOcNumber] = useState(
-    `OC-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`
-  );
+  const [ocNumber, setOcNumber] = useState('');
   const [paymentTerms, setPaymentTerms] = useState<OCPaymentTerms | string>('Crédito 30 días');
   const [paymentStatus, setPaymentStatus] = useState<OCPaymentStatus | string>('Pendiente');
   const [status, setStatus] = useState<OCStatus | string>('Emitida / Enviada al Proveedor');
@@ -654,17 +652,19 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-bold mb-0.5 text-[11px]">N° Orden de Compra (OC) *:</label>
+                  <label className="block text-slate-300 font-bold mb-0.5 text-[11px]">
+                    N° Orden de Compra (OC Asignada por la Empresa) *:
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ej: OC-2026-0089"
+                    placeholder="Digitar N° Consecutivo de OC (ej: OC-1045)..."
                     value={ocNumber}
                     onChange={(e) => setOcNumber(e.target.value)}
                     className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-sky-300 font-mono font-bold outline-none focus:border-[#38bdf8] text-xs"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
-                    Identificador de compra formal para trazabilidad y recepción.
+                    Número consecutivo asignado en el sistema interno de la empresa.
                   </p>
                 </div>
               </div>

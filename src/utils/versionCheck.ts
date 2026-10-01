@@ -10,10 +10,113 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '2.7.0';
-export const CURRENT_RELEASE_DATE = '2026-09-22';
+export const CURRENT_APP_VERSION = '2.10.1';
+export const CURRENT_RELEASE_DATE = '2026-10-01';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.10.2',
+    releaseDate: '2026-10-01',
+    title: 'Corrección de Renderizado y Mapeo Seguro en Pestaña 7 (Documentación)',
+    summary:
+      'Resolución definitiva del renderizado en la subpestaña de Contratos & OCs Directas en Documentación: compatibilidad total con modo unificado (mode="all"), selector rápido de subfiltro (Todos / Licitaciones / OCs Directas), mapeo defensivo con validaciones opcionales para evitar pantallas en blanco y vinculación automática fluida desde el catálogo maestro.',
+    highlights: [
+      '🏛️ Visualización Inmediata en Documentación: Renderizado completo de las tarjetas de contratos de licitaciones y órdenes de compra directas con sus respectivos equipos biomédicos.',
+      '🛡️ Mapeo Defensivo & Tolerancia a Nulos: Verificaciones opcionales en cada propiedad y lista de equipos para máxima resiliencia ante cualquier estructura de datos en la nube.',
+      '🔍 Selector de Subfiltro & Búsqueda Limpia: Filtrado instantáneo entre todos los contratos o segmentado por licitaciones u OCs directas sin descartar registros por error.',
+      '🏷️ SemVer Estricto: Incremento de parche a v2.10.2 preservando estabilidad en todos los demás módulos.',
+    ],
+    isImportant: true,
+  },
+  {
+    version: '2.10.1',
+    releaseDate: '2026-10-01',
+    title: 'Estabilización del Sistema de Versiones & Ciclo Completo de Datos CRUD',
+    summary:
+      'Corrección definitiva del banner de actualización con almacenamiento persistente de versión instalada, regla estricta de visibilidad solo si la versión remota es mayor (remoteVersion > installedVersion), y equilibrio total en las operaciones de Crear, Cargar y Eliminar en Licitaciones y Órdenes de Compra.',
+    highlights: [
+      '🚀 Fin del Bucle de Actualización: Al hacer clic en "Instalar" o cerrar ("X"), se guarda inmediatamente installed_version impidiendo que el cartel reaparezca para la misma versión.',
+      '🎯 Renderizado Condicional Estricto: El banner azul solo aparece si la versión de la nube es estrictamente superior a la instalada en el dispositivo.',
+      '📦 Ciclo CRUD 100% Funcional: Creación, lectura y borrado simultáneos y permanentes en Licitaciones y Seguimiento de OCs.',
+      '🏷️ SemVer Estricto: Incremento de parche para correcciones menores y ajustes de estabilidad.',
+    ],
+    isImportant: true,
+  },
+  {
+    version: '2.10.0',
+    releaseDate: '2026-10-01',
+    title: 'Persistencia Blindada & Sincronización en Tiempo Real Multi-Dispositivo (Web & .EXE)',
+    summary:
+      'Corrección de raíz de la sincronización y persistencia multi-dispositivo entre la Web y la aplicación instalada en Windows (.EXE): Firestore como única fuente de verdad sin sobreescrituras por caché local, escuchadores en tiempo real (onSnapshot) activos, borrado físico definitivo con deleteDoc sin datos residuales y confirmación asíncrona blindada ante cierres o reinicios.',
+    highlights: [
+      '☁️ Fuente Única de Verdad en Firestore: La base de datos central en la nube gobierna todos los datos (cotizaciones, licitaciones, OCs, órdenes de venta, facturas y catálogo) sin interferencia de cachés locales.',
+      '⚡ Sincronización Inmediata Web & .EXE: Escuchadores en tiempo real (onSnapshot) activos y sincronizados. Todo cambio o eliminación se refleja al instante en todos los dispositivos.',
+      '🗑️ Borrado Físico y Definitivo: Eliminación inmediata con deleteDoc en Firestore y purga en servidor para cero datos residuales o apariciones fantasma.',
+      '🛡️ Persistencia Garantizada ante Cierres o Reinicios: Las operaciones esperan confirmación en la nube antes de cerrar ventanas, garantizando que al reabrir el sistema todo esté tal como se dejó.',
+      '🔔 Notificación Directa & Centro de Actualizaciones: Aviso integrado en la campana de notificaciones y panel con estado "Al día" permanente una vez aceptada la versión.',
+    ],
+    isImportant: true,
+  },
+  {
+    version: '2.8.0',
+    releaseDate: '2026-10-01',
+    title: 'Documentación Unificada, Clasificación Manual Libre & Sincronización Automática del Centro de Actualizaciones',
+    summary:
+      'Actualización mayor del módulo de Documentación y Centro de Actualizaciones: unificación de pestañas de contratos, catálogo central con autogeneración de fichas, nuevos botones de Guía Rápida, Protocolo de Limpieza y botón permanente "+ Otro Documento" para clasificación manual libre, junto con la regla automática de control de versiones y actualizaciones en línea.',
+    highlights: [
+      '🏛️ Pestaña Unificada de Contratos & OCs Directas: Consolidación de expedientes técnicos, licitaciones y órdenes de compra con filtros segmentados en una sola vista.',
+      '📚 Base Maestra y Catálogo General Automatizado: Cuadro automático inmediato con ranuras para fichas y documentos para todo equipo nuevo creado en el catálogo.',
+      '🏷️ Seriales y Hojas de Vida Integrados: Gestión directa de placas, actas de entrega, remisiones y metrología dentro de cada equipo.',
+      '⚡ Nuevos Documentos Biomédicos: Botones directos para Ficha Técnica, Registro INVIMA, Manual, Guía Rápida y Protocolo de Limpieza / Desinfección.',
+      '📁 Botón Permanente "+ Otro Documento": Permite subir anexos adicionales ilimitados con clasificación manual abierta y chips de sugerencias rápidas.',
+      '🔔 Depuración de Alertas Falsas: Eliminación de alerta de inactividad 72h y silenciado permanente de notificaciones de Google Drive ya creadas o descartadas.',
+      '🔄 Conexión Automática del Centro de Actualizaciones: Detección estricta de nueva versión v2.8.0, banner de instalación en línea y confirmación en estado "Al día".',
+    ],
+    isImportant: true,
+  },
+  {
+    version: '2.7.3',
+    releaseDate: '2026-09-28',
+    title: 'Sincronización Total Multi-Dispositivo, Persistencia en Nube & PWA Conectada',
+    summary:
+      'Actualización mayor de sincronización en tiempo real y persistencia: integración total entre la aplicación instalada (PWA), todas las URLs y navegadores, garantizando que órdenes de venta, licitaciones, contratos y catálogo aparezcan instantáneamente en todos los dispositivos.',
+    highlights: [
+      '🔄 Sincronización Inmediata PWA & Web: Conexión continua y carga automática de los datos más recientes al abrir la aplicación instalada.',
+      '📦 Órdenes de Venta & Licitaciones Conectadas: Reflejo bidireccional en la nube de OVs manuales, equipos asociados y estados comerciales en tiempo real.',
+      '🛡️ Respaldo Blindado del Servidor: Recuperación instantánea del estado global ante aperturas en dispositivos o ventanas nuevas.',
+      '⚡ Actualización en Línea en 1 Clic: Notificación y auto-recarga limpia sin pérdida de información.',
+    ],
+    isImportant: true,
+  },
+  {
+    version: '2.7.2',
+    releaseDate: '2026-09-26',
+    title: 'Centro de Actualizaciones Depurado, Diseño Cómodo de Botones & Limpieza de Interfaz',
+    summary:
+      'Actualización visual del Centro de Actualizaciones con eliminación del botón innecesario de reinstalación, reorganización espaciosa de botones sin cortes en pantalla y estado limpio de sincronización.',
+    highlights: [
+      '🧹 Interfaz Simplificada: Eliminación completa del botón redundante de reinstalación.',
+      '🎯 Botones Reorganizados: Distribución amplia y proporcionada sin cortes de texto en pantallas o ventanas reducidas.',
+      '✅ Estado Nítido: Insignia visual destacada "Ya está actualizado" cuando el sistema se encuentra en la versión más reciente.',
+      '⚡ Actualizaciones Automáticas: Detección instantánea y barra de carga animada (0% - 100%) cuando se publique una nueva versión.',
+    ],
+    isImportant: true,
+  },
+  {
+    version: '2.7.1',
+    releaseDate: '2026-09-26',
+    title: 'Actualización en Línea con 1 Clic, Persistencia Blindada & Sincronización en Tiempo Real',
+    summary:
+      'Nueva versión con sistema interactivo de actualización en línea con 1 solo clic en la aplicación, persistencia definitiva e inmutable de equipos médicos, eliminación segura de cotizaciones y estandarización visual de tablas comerciales.',
+    highlights: [
+      '⚡ Actualización en Línea en 1 Clic: Banner interactivo y botón directo para instalar actualizaciones al instante sin necesidad de descargar nuevos instaladores .exe.',
+      '🛡️ Persistencia Inmutable de Equipos: Corrección total de guardado en el catálogo sin riesgo de sobreescritura accidental al crear o editar equipos biomédicos.',
+      '🧹 Eliminación Definitiva de Cotizaciones Fantasma: Protocolo de descarte seguro que evita que cotizaciones borradas reaparezcan desde copias de respaldo.',
+      '📊 Tablas Comerciales Centradas: Centrado uniforme y estandarización tipográfica de valores numéricos (COP) en propuestas y cotizaciones.',
+      '🔄 Compatibilidad Mejorada con Windows (.exe) y PWA: Atajos rápidos de recarga en línea (F5 / Ctrl+Shift+R) y auto-detección de cambios en la nube.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.7.0',
     releaseDate: '2026-09-22',
@@ -124,28 +227,79 @@ let activeRemoteVersion: string | null = null;
 let activeRemoteRelease: AppRelease | null = null;
 let hasSyncedManifest = false;
 
+export function isDesktopExeEnvironment(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return (
+    ua.includes('electron') ||
+    Boolean((window as any).electron) ||
+    Boolean((window as any).process?.versions?.electron) ||
+    window.location.protocol === 'file:' ||
+    (window as any).__TAURI__ !== undefined
+  );
+}
+
+export function isWindowsPlatform(): boolean {
+  if (typeof window === 'undefined') return false;
+  return navigator.userAgent.toLowerCase().includes('windows');
+}
+
+export function getPlatformInfo(): {
+  isDesktopExe: boolean;
+  isWindows: boolean;
+  platformLabel: string;
+  installModeLabel: string;
+  deviceType: 'desktop_exe' | 'windows_web' | 'web_browser';
+} {
+  const isExe = isDesktopExeEnvironment();
+  const isWin = isWindowsPlatform();
+  let platformLabel = 'Versión Web (Navegador en Línea)';
+  let installModeLabel = 'Recargar y Aplicar en 1 Clic';
+  let deviceType: 'desktop_exe' | 'windows_web' | 'web_browser' = 'web_browser';
+
+  if (isExe) {
+    platformLabel = 'Aplicación de Escritorio Windows (.EXE)';
+    installModeLabel = 'Actualizar Sistema en Línea / Descargar .EXE';
+    deviceType = 'desktop_exe';
+  } else if (isWin) {
+    platformLabel = 'Versión Web en Windows (Navegador / PWA)';
+    installModeLabel = 'Actualizar y Recargar en 1 Clic';
+    deviceType = 'windows_web';
+  }
+
+  return {
+    isDesktopExe: isExe,
+    isWindows: isWin,
+    platformLabel,
+    installModeLabel,
+    deviceType,
+  };
+}
+
 /**
  * Checks if there is a genuinely newer remote version available that the user has not yet installed or seen.
+ * STRICT RULE: Only return true if remoteVersion > installedVersion AND remoteVersion > CURRENT_APP_VERSION.
  */
 export function hasUnseenAppUpdates(): boolean {
   try {
-    if (!activeRemoteVersion) {
-      return false;
+    const installed =
+      localStorage.getItem('installed_version') ||
+      localStorage.getItem('syd_app_version_installed') ||
+      CURRENT_APP_VERSION;
+
+    if (activeRemoteVersion) {
+      if (
+        isVersionNewer(activeRemoteVersion, installed) &&
+        isVersionNewer(activeRemoteVersion, CURRENT_APP_VERSION)
+      ) {
+        const lastSeen = localStorage.getItem(LAST_SEEN_VERSION_KEY);
+        if (lastSeen !== activeRemoteVersion) {
+          return true;
+        }
+      }
     }
 
-    // Only prompt if remote version is strictly newer than the currently running client code
-    const isNewer = isVersionNewer(activeRemoteVersion, CURRENT_APP_VERSION);
-    if (!isNewer) {
-      return false;
-    }
-
-    const lastSeen = localStorage.getItem(LAST_SEEN_VERSION_KEY);
-    // If the user already installed or dismissed this specific remote version, do not prompt
-    if (lastSeen === activeRemoteVersion) {
-      return false;
-    }
-
-    return true;
+    return false;
   } catch {
     return false;
   }
@@ -165,11 +319,25 @@ export function getActiveReleaseInfo(): AppRelease {
 export function markAppUpdateAsSeen(versionToMark?: string): void {
   try {
     const version = versionToMark || activeRemoteVersion || CURRENT_APP_VERSION;
+    localStorage.setItem('installed_version', version);
+    localStorage.setItem('syd_app_version_installed', version);
     localStorage.setItem(LAST_SEEN_VERSION_KEY, version);
     localStorage.setItem(LAST_INSTALLED_BUILD_KEY, `${version}_${Date.now()}`);
-    localStorage.setItem('syd_app_version_installed', CURRENT_APP_VERSION);
     localStorage.setItem(CHANGES_COUNT_KEY, '0');
-    window.dispatchEvent(new CustomEvent('syd-update-status-changed'));
+
+    // Permanently dismiss the alert item for this version so it leaves the alert engine immediately
+    try {
+      const rawDismissed = localStorage.getItem('syd_dismissed_alert_ids_v2');
+      const list: string[] = rawDismissed ? JSON.parse(rawDismissed) : [];
+      const alertId = `alert-app-update-${version}`;
+      if (!list.includes(alertId)) {
+        list.push(alertId);
+        localStorage.setItem('syd_dismissed_alert_ids_v2', JSON.stringify(list));
+      }
+    } catch (_) {}
+
+    window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { version } }));
+    window.dispatchEvent(new CustomEvent('syd-alerts-updated'));
   } catch (e) {
     console.error('Error marking update as seen', e);
   }
@@ -350,15 +518,19 @@ export async function checkForAppUpdatesOnline(): Promise<{
     console.warn('Cloud version check error, using local manifest:', e);
   }
 
-  const isStrictlyNewer = isVersionNewer(latest, current);
+  const installed =
+    localStorage.getItem('installed_version') ||
+    localStorage.getItem('syd_app_version_installed') ||
+    current;
+  const isRemoteNewer = isVersionNewer(latest, installed) && isVersionNewer(latest, current);
   const lastSeen = localStorage.getItem(LAST_SEEN_VERSION_KEY);
-  const updateAvailable = isStrictlyNewer && lastSeen !== latest;
+  const updateAvailable = isRemoteNewer && lastSeen !== latest;
 
   return {
     updateAvailable,
     currentVersion: current,
     latestVersion: latest,
-    releaseInfo: release,
+    releaseInfo: isRemoteNewer ? release : APP_RELEASES_HISTORY[0],
     lastChecked: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
   };
 }

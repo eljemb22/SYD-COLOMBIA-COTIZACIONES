@@ -69,6 +69,8 @@ interface SalesViewProps {
   onConvertToSalesOrder?: (quote: SavedQuote | { header: QuoteHeader; items: QuoteItem[] }) => void;
   onConvertToTender?: (quote: SavedQuote | { header: QuoteHeader; items: QuoteItem[] }) => void;
   currentUser?: AuthUser | null;
+  editingQuoteId?: string | null;
+  onCancelEditQuote?: () => void;
 }
 
 export const SalesView: React.FC<SalesViewProps> = ({
@@ -91,6 +93,8 @@ export const SalesView: React.FC<SalesViewProps> = ({
   onConvertToSalesOrder,
   onConvertToTender,
   currentUser,
+  editingQuoteId,
+  onCancelEditQuote,
 }) => {
   const isReadOnly = currentUser?.role === 'viewer' && !currentUser?.permissions?.canEditSales;
   const [isClientDirectoryOpen, setIsClientDirectoryOpen] = useState(false);
@@ -98,8 +102,14 @@ export const SalesView: React.FC<SalesViewProps> = ({
     return savedQuotesProp && savedQuotesProp.length > 0 ? savedQuotesProp : getSavedQuotes();
   }, [savedQuotesProp]);
 
-  // Margin / Calibration State (Exact defaults: 154px Top, 78px Lateral)
-  const [localSubirBajar, setLocalSubirBajar] = useState<number>(marginSettingsProp?.subirBajar ?? 154);
+  // Margin / Calibration State (Defaults: 50px Top when blank without letterhead, 78px Lateral)
+  const [localSubirBajar, setLocalSubirBajar] = useState<number>(() => {
+    if (marginSettingsProp?.subirBajar !== undefined) {
+      return marginSettingsProp.subirBajar;
+    }
+    // Clean blank sheet defaults to 50px top padding
+    return 50;
+  });
   const [localIzqDer, setLocalIzqDer] = useState<number>(marginSettingsProp?.izqDer ?? 78);
   const [localTableScale, setLocalTableScale] = useState<number>(marginSettingsProp?.tableScale ?? 85);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
@@ -128,33 +138,36 @@ export const SalesView: React.FC<SalesViewProps> = ({
     onUpdateMarginSettings?.({ subirBajar, izqDer, tableScale: nextVal });
   };
 
-  // Unified Letterhead State (defaults to official SyD letterhead covering whole sheet)
+  // Unified Letterhead State (defaults to NULL: clean white sheet without letterhead)
   const [localLetterheadUrl, setLocalLetterheadUrl] = useState<string | null>(() => {
     if (customLetterheadUrlProp !== undefined && customLetterheadUrlProp !== null) {
+      if (customLetterheadUrlProp === 'none') return null;
       return customLetterheadUrlProp;
     }
     try {
       const savedManual = localStorage.getItem('syd_custom_manual_letterhead');
-      if (savedManual && savedManual.length > 20 && savedManual !== 'none') return savedManual;
+      if (savedManual && savedManual.length > 20 && savedManual !== 'none' && !savedManual.includes('OFICIAL SYD COLOMBIA')) {
+        return savedManual;
+      }
       const saved = localStorage.getItem('syd_active_letterhead_url');
-      if (saved === 'none') return 'none';
-      if (saved && saved.length > 20) {
+      if (saved && saved.length > 20 && saved !== 'none' && !saved.includes('OFICIAL SYD COLOMBIA')) {
         return saved;
       }
     } catch {}
-    return getOfficialSyDLetterheadDataUrl() || OFFICIAL_SYD_LETTERHEAD_SVG_PATH;
+    // Default to BLANK (no letterhead) - user must place it manually
+    return null;
   });
   const customLetterheadUrl = customLetterheadUrlProp !== undefined ? customLetterheadUrlProp : localLetterheadUrl;
 
-  // The effective letterhead URL: defaults to official SyD Colombia letterhead covering the whole sheet
+  // The effective letterhead URL: NULL by default (hoja en blanco), only shows if manually placed
   const effectiveLetterhead = useMemo(() => {
-    if (customLetterheadUrl === 'none') {
+    if (!customLetterheadUrl || customLetterheadUrl === 'none' || customLetterheadUrl.trim() === '') {
       return null;
     }
-    if (customLetterheadUrl && customLetterheadUrl.length > 20) {
+    if (customLetterheadUrl.length > 20) {
       return customLetterheadUrl;
     }
-    return getOfficialSyDLetterheadDataUrl() || OFFICIAL_SYD_LETTERHEAD_SVG_PATH;
+    return null;
   }, [customLetterheadUrl]);
 
   const setCustomLetterheadUrl = (url: string | null) => {
@@ -163,10 +176,18 @@ export const SalesView: React.FC<SalesViewProps> = ({
       if (url) {
         localStorage.setItem('syd_custom_manual_letterhead', url);
         localStorage.setItem('syd_active_letterhead_url', url);
+        // If placing a letterhead and margin is low, calibrate up to standard 154px
+        if (subirBajar <= 80) {
+          setSubirBajar(154);
+        }
       } else {
         localStorage.setItem('syd_active_letterhead_url', 'none');
         localStorage.removeItem('syd_custom_manual_letterhead');
         localStorage.removeItem('syd_permanent_default_letterhead');
+        // If removing letterhead, calibrate down to standard clean 50px
+        if (subirBajar >= 130) {
+          setSubirBajar(50);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -176,7 +197,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
 
   const handleRemoveLetterhead = () => {
     setCustomLetterheadUrl(null);
-    setSaveSuccessMsg('Membrete removido. La cotización se presentará limpia sin membrete.');
+    setSaveSuccessMsg('Membrete removido. La cotización está en blanco limpia sin membrete.');
     setTimeout(() => setSaveSuccessMsg(null), 3500);
   };
 
@@ -260,8 +281,8 @@ export const SalesView: React.FC<SalesViewProps> = ({
     setShowClientDropdown(false);
   };
 
-  // Handle Save and Create New Quote with strict validations
-  const handleSaveCurrentQuote = () => {
+  // Validate quote before saving
+  const validateQuoteBeforeSave = (): boolean => {
     const cleanClient = (quoteHeader.clientName || '').trim();
     const isBlankClient =
       !cleanClient ||
@@ -270,14 +291,14 @@ export const SalesView: React.FC<SalesViewProps> = ({
 
     if (isBlankClient) {
       setClientNameError(true);
-      setValidationErrorMessage('⚠️ Para guardar y crear una nueva cotización, primero debe ingresar el Nombre de la Institución o Cliente.');
+      setValidationErrorMessage('⚠️ Para guardar la cotización, primero debe ingresar el Nombre de la Institución o Cliente.');
       const clientInput = document.getElementById('quote-client-name-input');
       if (clientInput) {
         clientInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         clientInput.focus();
       }
       setTimeout(() => setValidationErrorMessage(null), 6000);
-      return;
+      return false;
     }
 
     const validItems = (quoteItems || []).filter(
@@ -295,12 +316,18 @@ export const SalesView: React.FC<SalesViewProps> = ({
         tableElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       setTimeout(() => setValidationErrorMessage(null), 6000);
-      return;
+      return false;
     }
 
     setClientNameError(false);
     setTableEmptyError(false);
     setValidationErrorMessage(null);
+    return true;
+  };
+
+  // Handle Save and Create New Quote: Saves current quote AND generates a fresh new quote
+  const handleSaveCurrentQuote = () => {
+    if (!validateQuoteBeforeSave()) return;
 
     if (onSaveQuote) {
       const savedNum = quoteHeader.quoteNumber;
@@ -310,7 +337,6 @@ export const SalesView: React.FC<SalesViewProps> = ({
         tableScale,
       });
 
-      // Refresh stored clients list
       setStoredClients(getStoredClients());
 
       confetti({
@@ -319,12 +345,66 @@ export const SalesView: React.FC<SalesViewProps> = ({
         origin: { y: 0.7 },
       });
 
-      // Trigger creation of the new blank quote with the next consecutive
+      // Automatically generate clean new quote as requested by user
       if (onCreateNewQuote) {
         onCreateNewQuote();
       }
 
-      setSaveSuccessMsg(`¡Cotización N° ${savedNum} guardada exitosamente en la base de datos! Se ha generado la nueva cotización.`);
+      setSaveSuccessMsg(`¡Cotización N° ${savedNum} guardada exitosamente! Se ha preparado una nueva cotización en blanco.`);
+      setTimeout(() => {
+        setSaveSuccessMsg(null);
+      }, 5000);
+    }
+  };
+
+  // Handle Save Only Changes: Updates existing quote in place without clearing the screen
+  const handleSaveOnlyChanges = () => {
+    if (!validateQuoteBeforeSave()) return;
+
+    if (onSaveQuote) {
+      const savedNum = quoteHeader.quoteNumber;
+      onSaveQuote(customLetterheadUrl, {
+        subirBajar,
+        izqDer,
+        tableScale,
+      });
+
+      setStoredClients(getStoredClients());
+
+      confetti({
+        particleCount: 40,
+        spread: 60,
+        origin: { y: 0.7 },
+      });
+
+      setSaveSuccessMsg(`¡Cambios de la Cotización N° ${savedNum} guardados exitosamente en la base de datos!`);
+      setTimeout(() => {
+        setSaveSuccessMsg(null);
+      }, 5000);
+    }
+  };
+
+  // Handle Save Draft without resetting
+  const handleSaveDraftOnly = () => {
+    if (!validateQuoteBeforeSave()) return;
+
+    if (onSaveQuote) {
+      const savedNum = quoteHeader.quoteNumber;
+      onSaveQuote(customLetterheadUrl, {
+        subirBajar,
+        izqDer,
+        tableScale,
+      });
+
+      setStoredClients(getStoredClients());
+
+      confetti({
+        particleCount: 30,
+        spread: 50,
+        origin: { y: 0.7 },
+      });
+
+      setSaveSuccessMsg(`¡Cotización N° ${savedNum} guardada en base de datos! Puede continuar editándola.`);
       setTimeout(() => {
         setSaveSuccessMsg(null);
       }, 5000);
@@ -362,7 +442,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
     await exportQuoteToWord(quoteHeader, quoteItems, {
       headerMarginTop: subirBajar,
       sidePadding: izqDer,
-      companyLetterheadUrl: customLetterheadUrl || undefined,
+      companyLetterheadUrl: effectiveLetterhead || undefined,
     });
     confetti({
       particleCount: 50,
@@ -478,9 +558,9 @@ export const SalesView: React.FC<SalesViewProps> = ({
     return () => window.removeEventListener('paste', handleGlobalPaste);
   }, [setCustomLetterheadUrl]);
 
-  // Dynamic style calculations based on tableScale
-  const fontSize = Math.max(9.5, ((tableScale / 100) * 12)).toFixed(1);
-  const headerFontSize = Math.max(9, ((tableScale / 100) * 11)).toFixed(1);
+  // Dynamic style calculations based on tableScale (uniform font size across headers, items and prices)
+  const fontSize = Math.max(9.5, ((tableScale / 100) * 11.5)).toFixed(1);
+  const headerFontSize = fontSize;
   const subTextFontSize = Math.max(8, ((tableScale / 100) * 9.5)).toFixed(1);
   const cellPaddingY = tableScale < 75 ? '4px' : tableScale < 90 ? '6px' : '8px';
   const cellPaddingX = tableScale < 75 ? '5px' : tableScale < 90 ? '7px' : '10px';
@@ -522,19 +602,78 @@ export const SalesView: React.FC<SalesViewProps> = ({
           </div>
         )}
 
+        {/* Banner for Quote Editing Mode */}
+        {editingQuoteId && !isReadOnly && (
+          <div className="mb-4 p-3 bg-amber-500/15 border border-amber-500/40 rounded-xl text-amber-200 text-xs font-semibold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-base">✏️</span>
+              <span>
+                <strong>Modo Modificación Activo:</strong> Editando la Cotización N° <span className="font-mono font-black text-amber-300 underline">{quoteHeader.quoteNumber}</span>. Al guardar cambios se actualizará esta cotización en la base de datos.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (onCancelEditQuote) onCancelEditQuote();
+                else if (onCreateNewQuote) onCreateNewQuote();
+              }}
+              className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 hover:text-white rounded-lg text-[11px] font-bold border border-amber-500/40 transition cursor-pointer shrink-0"
+              title="Salir de la edición de esta cotización y comenzar una nueva cotización en blanco"
+            >
+              Cancelar Edición / Nueva Cotización
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-[#334d6e]">
           {/* GRUPO 1: GESTIÓN DE COTIZACIÓN Y CLIENTES */}
           <div className="flex items-center gap-2 flex-wrap">
             {!isReadOnly && (
-              <button
-                id="btn-save-quote-db"
-                onClick={handleSaveCurrentQuote}
-                title="Guardar esta cotización en la base de datos y preparar una nueva cotización en blanco"
-                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>Guardar y nueva</span>
-              </button>
+              editingQuoteId ? (
+                <>
+                  <button
+                    id="btn-save-changes-quote"
+                    onClick={handleSaveOnlyChanges}
+                    title="Guardar los cambios efectuados a esta cotización en la base de datos"
+                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>Guardar Cambios</span>
+                  </button>
+
+                  <button
+                    id="btn-save-changes-and-new-quote"
+                    onClick={handleSaveCurrentQuote}
+                    title="Guardar cambios a esta cotización y preparar inmediatamente una nueva cotización en blanco"
+                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Guardar Cambios y Nueva Cotización</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    id="btn-save-quote-db"
+                    onClick={handleSaveCurrentQuote}
+                    title="Guardar esta cotización en la base de datos y preparar una nueva cotización en blanco"
+                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>Guardar y nueva</span>
+                  </button>
+
+                  <button
+                    id="btn-save-draft-quote"
+                    onClick={handleSaveDraftOnly}
+                    title="Guardar esta cotización sin limpiar los datos de la pantalla"
+                    className="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Guardar Borrador</span>
+                  </button>
+                </>
+              )
             )}
 
             <button
@@ -548,24 +687,24 @@ export const SalesView: React.FC<SalesViewProps> = ({
             </button>
           </div>
 
-          {/* GRUPO 2: MEMBRETE OFICIAL SYD */}
+          {/* GRUPO 2: MEMBRETE Y HOJA EN BLANCO */}
           {!isReadOnly && (
             <div className="flex items-center gap-2 flex-wrap">
               {effectiveLetterhead ? (
                 <>
-                  <div className="inline-flex items-center gap-1.5 bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-[11px] font-bold px-2.5 py-1.5 rounded-lg shadow-2xs">
-                    <Check className="w-3.5 h-3.5 text-cyan-400 stroke-[2.5]" />
-                    <span>Membrete Oficial SYD Activo</span>
+                  <div className="inline-flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold px-2.5 py-1.5 rounded-lg shadow-2xs">
+                    <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" />
+                    <span>Membrete Manual Activo</span>
                   </div>
                   <button
                     id="btn-remove-letterhead"
                     type="button"
                     onClick={handleRemoveLetterhead}
-                    title="Quitar el membrete actual de la cotización y dejar la hoja blanca"
-                    className="inline-flex items-center gap-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-[11px] font-semibold px-2 py-1.5 rounded-lg transition cursor-pointer"
+                    title="Quitar el membrete actual de la cotización y dejar la hoja blanca limpia"
+                    className="inline-flex items-center gap-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                    <span>Quitar</span>
+                    <span>Quitar (Dejar en Blanco)</span>
                   </button>
                   <button
                     id="btn-upload-letterhead"
@@ -579,19 +718,36 @@ export const SalesView: React.FC<SalesViewProps> = ({
                   </button>
                 </>
               ) : (
-                <button
-                  id="btn-restore-letterhead"
-                  type="button"
-                  onClick={() => {
-                    const official = getOfficialSyDLetterheadDataUrl() || OFFICIAL_SYD_LETTERHEAD_SVG_PATH;
-                    setCustomLetterheadUrl(official);
-                  }}
-                  title="Activar el membrete oficial corporativo de SyD Colombia cubriendo toda la hoja"
-                  className="inline-flex items-center gap-1.5 bg-[#15253d] hover:bg-[#1f375b] text-sky-300 hover:text-white border border-[#38bdf8]/50 text-[11.5px] font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer shadow-xs active:scale-95"
-                >
-                  <Upload className="w-3.5 h-3.5 text-[#38bdf8]" />
-                  <span>Activar Membrete Oficial</span>
-                </button>
+                <>
+                  <div className="inline-flex items-center gap-1.5 bg-slate-800/80 border border-slate-700 text-slate-300 text-[11px] font-medium px-2.5 py-1.5 rounded-lg">
+                    <FileText className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Sin Membrete (Hoja en Blanco)</span>
+                  </div>
+                  <button
+                    id="btn-upload-manual-letterhead"
+                    type="button"
+                    onClick={() => letterheadFileInputRef.current?.click()}
+                    title="Cargar manualmente una imagen de membrete desde su equipo (PNG, JPG, SVG) o pegarla con Ctrl + V"
+                    className="inline-flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Colocar Membrete Manual (Ctrl+V)</span>
+                  </button>
+                  <button
+                    id="btn-restore-letterhead"
+                    type="button"
+                    onClick={() => {
+                      const official = getOfficialSyDLetterheadDataUrl() || OFFICIAL_SYD_LETTERHEAD_SVG_PATH;
+                      setCustomLetterheadUrl(official);
+                      setSaveSuccessMsg('Membrete oficial SYD colocado en la cotización.');
+                      setTimeout(() => setSaveSuccessMsg(null), 3500);
+                    }}
+                    title="Cargar el membrete oficial corporativo prediseñado de SYD Colombia"
+                    className="inline-flex items-center gap-1 bg-[#15253d] hover:bg-[#1f375b] text-slate-300 hover:text-white border border-slate-600/60 text-[11px] font-medium px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                  >
+                    <span>Cargar Membrete Oficial</span>
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -1191,21 +1347,13 @@ export const SalesView: React.FC<SalesViewProps> = ({
                             const itemTotal = itemSubtotal + itemIva;
                             const itemNumber = pageChunk.startIndex + idx + 1;
 
-                            // Helper function to size prices dynamically so long digits never overflow cells
+                            // Formatter for values: perfectly centered with uniform font size matching table scale
                             const formatNumberCell = (val: number) => {
                               const str = formatCOP(val);
-                              let size = Number(fontSize);
-                              if (str.length >= 17) {
-                                size = Math.min(size, 8);
-                              } else if (str.length >= 14) {
-                                size = Math.min(size, 8.8);
-                              } else if (str.length >= 11) {
-                                size = Math.min(size, 9.4);
-                              }
                               return (
                                 <span
-                                  className="inline-block w-full text-right tabular-nums whitespace-nowrap truncate"
-                                  style={{ fontSize: `${size}px`, letterSpacing: '-0.2px' }}
+                                  className="inline-block w-full text-center tabular-nums whitespace-nowrap truncate"
+                                  style={{ fontSize: `${fontSize}px` }}
                                   title={str}
                                 >
                                   {str}
@@ -1219,7 +1367,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                                 className="border-b border-black hover:bg-slate-50/70 transition"
                               >
                                 <td
-                                  style={{ padding: `${cellPaddingY} 2px` }}
+                                  style={{ padding: `${cellPaddingY} 2px`, fontSize: `${fontSize}px` }}
                                   className="text-center align-middle text-black border-r border-black font-normal"
                                 >
                                   {itemNumber}
@@ -1252,7 +1400,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                                     style={{
                                       wordBreak: 'break-word',
                                       overflowWrap: 'anywhere',
-                                      fontSize: item.brand && item.brand.length > 12 ? `${Math.max(8, Number(fontSize) - 1.2)}px` : undefined,
+                                      fontSize: `${fontSize}px`,
                                     }}
                                   >
                                     {item.brand.toUpperCase()}
@@ -1267,39 +1415,39 @@ export const SalesView: React.FC<SalesViewProps> = ({
                                     style={{
                                       wordBreak: 'break-word',
                                       overflowWrap: 'anywhere',
-                                      fontSize: item.model && item.model.length > 12 ? `${Math.max(8, Number(fontSize) - 1.2)}px` : undefined,
+                                      fontSize: `${fontSize}px`,
                                     }}
                                   >
                                     {item.model.toUpperCase()}
                                   </div>
                                 </td>
                                 <td
-                                  style={{ padding: `${cellPaddingY} 2px` }}
+                                  style={{ padding: `${cellPaddingY} 2px`, fontSize: `${fontSize}px` }}
                                   className="text-center align-middle text-black border-r border-black whitespace-nowrap font-normal overflow-hidden"
                                 >
                                   {item.quantity}
                                 </td>
                                 <td
                                   style={{ padding: `${cellPaddingY} 2px` }}
-                                  className="text-right align-middle text-black border-r border-black font-normal overflow-hidden"
+                                  className="text-center align-middle text-black border-r border-black font-normal overflow-hidden"
                                 >
                                   {formatNumberCell(item.unitSalePrice)}
                                 </td>
                                 <td
                                   style={{ padding: `${cellPaddingY} 2px` }}
-                                  className="text-right align-middle text-black border-r border-black font-normal overflow-hidden"
+                                  className="text-center align-middle text-black border-r border-black font-normal overflow-hidden"
                                 >
                                   {formatNumberCell(itemSubtotal)}
                                 </td>
                                 <td
                                   style={{ padding: `${cellPaddingY} 2px` }}
-                                  className="text-right align-middle text-black border-r border-black font-normal overflow-hidden"
+                                  className="text-center align-middle text-black border-r border-black font-normal overflow-hidden"
                                 >
                                   {formatNumberCell(itemIva)}
                                 </td>
                                 <td
                                   style={{ padding: `${cellPaddingY} 2px` }}
-                                  className="text-right align-middle text-black font-normal overflow-hidden"
+                                  className="text-center align-middle text-black font-normal overflow-hidden"
                                 >
                                   {formatNumberCell(itemTotal)}
                                 </td>
@@ -1320,66 +1468,39 @@ export const SalesView: React.FC<SalesViewProps> = ({
                             </td>
                             <td
                               style={{ padding: `${cellPaddingY} 2px` }}
-                              className="text-right align-middle font-bold text-black border-r border-black overflow-hidden"
+                              className="text-center align-middle font-bold text-black border-r border-black overflow-hidden"
                             >
-                              {(() => {
-                                const str = formatCOP(subtotal);
-                                let size = Number(fontSize);
-                                if (str.length >= 17) size = Math.min(size, 8.2);
-                                else if (str.length >= 14) size = Math.min(size, 9);
-                                else if (str.length >= 11) size = Math.min(size, 9.6);
-                                return (
-                                  <span
-                                    className="inline-block w-full text-right font-bold tabular-nums whitespace-nowrap truncate"
-                                    style={{ fontSize: `${size}px`, letterSpacing: '-0.2px' }}
-                                    title={str}
-                                  >
-                                    {str}
-                                  </span>
-                                );
-                              })()}
+                              <span
+                                className="inline-block w-full text-center font-bold tabular-nums whitespace-nowrap truncate"
+                                style={{ fontSize: `${fontSize}px` }}
+                                title={formatCOP(subtotal)}
+                              >
+                                {formatCOP(subtotal)}
+                              </span>
                             </td>
                             <td
                               style={{ padding: `${cellPaddingY} 2px` }}
-                              className="text-right align-middle font-bold text-black border-r border-black overflow-hidden"
+                              className="text-center align-middle font-bold text-black border-r border-black overflow-hidden"
                             >
-                              {(() => {
-                                const str = formatCOP(iva);
-                                let size = Number(fontSize);
-                                if (str.length >= 17) size = Math.min(size, 8.2);
-                                else if (str.length >= 14) size = Math.min(size, 9);
-                                else if (str.length >= 11) size = Math.min(size, 9.6);
-                                return (
-                                  <span
-                                    className="inline-block w-full text-right font-bold tabular-nums whitespace-nowrap truncate"
-                                    style={{ fontSize: `${size}px`, letterSpacing: '-0.2px' }}
-                                    title={str}
-                                  >
-                                    {str}
-                                  </span>
-                                );
-                              })()}
+                              <span
+                                className="inline-block w-full text-center font-bold tabular-nums whitespace-nowrap truncate"
+                                style={{ fontSize: `${fontSize}px` }}
+                                title={formatCOP(iva)}
+                              >
+                                {formatCOP(iva)}
+                              </span>
                             </td>
                             <td
                               style={{ padding: `${cellPaddingY} 2px` }}
-                              className="text-right align-middle font-bold text-black overflow-hidden"
+                              className="text-center align-middle font-bold text-black overflow-hidden"
                             >
-                              {(() => {
-                                const str = formatCOP(total);
-                                let size = Number(fontSize);
-                                if (str.length >= 17) size = Math.min(size, 8.2);
-                                else if (str.length >= 14) size = Math.min(size, 9);
-                                else if (str.length >= 11) size = Math.min(size, 9.6);
-                                return (
-                                  <span
-                                    className="inline-block w-full text-right font-bold tabular-nums whitespace-nowrap truncate"
-                                    style={{ fontSize: `${size}px`, letterSpacing: '-0.2px' }}
-                                    title={str}
-                                  >
-                                    {str}
-                                  </span>
-                                );
-                              })()}
+                              <span
+                                className="inline-block w-full text-center font-bold tabular-nums whitespace-nowrap truncate"
+                                style={{ fontSize: `${fontSize}px` }}
+                                title={formatCOP(total)}
+                              >
+                                {formatCOP(total)}
+                              </span>
                             </td>
                           </tr>
                         </tfoot>

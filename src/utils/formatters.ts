@@ -112,3 +112,39 @@ export function numberToSpanishWords(num: number | string): string {
 
   return (words.trim() + ' PESOS COLOMBIANOS').toUpperCase();
 }
+
+export function isValidOCNumber(ocNumber?: string | null): boolean {
+  if (!ocNumber) return false;
+  const cleaned = String(ocNumber).trim().toUpperCase();
+  if (
+    !cleaned ||
+    cleaned === 'S/N' ||
+    cleaned === 'SIN OC' ||
+    cleaned === 'SIN N° OC' ||
+    cleaned === 'SIN NO OC' ||
+    cleaned === 'SIN N°' ||
+    cleaned === 'PENDIENTE' ||
+    cleaned === 'POR ASIGNAR' ||
+    cleaned === 'N/A' ||
+    cleaned === 'NULL' ||
+    cleaned === 'UNDEFINED' ||
+    cleaned === '-'
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Normalizes text by removing accents (tildes), punctuation, and casing
+ * for robust cross-view matching between tenders, quotes, OVs, and OCs.
+ */
+export function normalizeClean(str?: string | null): string {
+  if (!str) return '';
+  return String(str)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+

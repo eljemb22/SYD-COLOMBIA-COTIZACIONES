@@ -18,8 +18,8 @@ import {
   ShoppingCart,
   Plus,
 } from 'lucide-react';
-import { SalesOrderRecord, SalesInvoiceRecord, SalesOrderStatus, AuthUser } from '../../../types';
-import { formatCOP } from '../../../utils/formatters';
+import { SalesOrderRecord, SalesInvoiceRecord, SalesOrderStatus, AuthUser, OCTrackingContract } from '../../../types';
+import { formatCOP, isValidOCNumber } from '../../../utils/formatters';
 
 interface SalesOrderDetailsModalProps {
   isOpen: boolean;
@@ -34,6 +34,7 @@ interface SalesOrderDetailsModalProps {
   onGenerateOC?: (order: SalesOrderRecord) => void;
   onNavigateToOC?: () => void;
   currentUser?: AuthUser | null;
+  contracts?: OCTrackingContract[];
 }
 
 export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
@@ -49,6 +50,7 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
   onGenerateOC,
   onNavigateToOC,
   currentUser,
+  contracts = [],
 }) => {
   if (!isOpen || !order) return null;
 
@@ -62,8 +64,10 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
         return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
       case 'Entregada al Cliente':
         return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+      case 'Listo para Facturar':
+        return 'bg-purple-500/25 text-purple-300 border-purple-500/40 font-bold';
       case 'Facturada':
-        return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 font-bold';
       case 'Cancelada':
         return 'bg-rose-500/20 text-rose-300 border-rose-500/30';
       default:
@@ -204,20 +208,62 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
               </div>
               <div className="pt-2 border-t border-slate-700/60 mt-2">
                 <span className="text-[11px] text-slate-400 block mb-1">Cambiar Estado Rápido:</span>
-                <select
-                  value={order.status}
-                  onChange={(e) => onUpdateStatus(order.id, e.target.value as SalesOrderStatus)}
-                  className={`w-full text-xs font-bold px-2.5 py-1 rounded-lg border bg-slate-900 focus:outline-none cursor-pointer ${getStatusBadge(
-                    order.status
-                  )}`}
-                >
-                  <option value="Borrador">Borrador</option>
-                  <option value="En Proceso">En Proceso</option>
-                  <option value="Equipos en Bodega">Equipos en Bodega</option>
-                  <option value="Entregada al Cliente">Entregada al Cliente</option>
-                  <option value="Facturada">Facturada</option>
-                  <option value="Cancelada">Cancelada</option>
-                </select>
+                {(() => {
+                  const isAllEquipmentDelivered = (() => {
+                    if (!order.items || order.items.length === 0) return false;
+                    if (order.status === 'Entregada al Cliente' || order.status === 'Facturada') return true;
+                    const matchedContracts = (contracts || []).filter(
+                      (c) =>
+                        (order.ocContractId && c.id === order.ocContractId) ||
+                        (order.id && c.salesOrderId === order.id) ||
+                        (order.salesOrderNumber && order.salesOrderNumber !== 'PENDIENTE' && c.salesOrderNumber === order.salesOrderNumber) ||
+                        (order.contractId && (c.tenderClientId === order.contractId || c.id === order.contractId)) ||
+                        (order.tenderClientId && (c.tenderClientId === order.tenderClientId || c.id === order.tenderClientId)) ||
+                        (order.contractNumber && c.contractNumber && order.contractNumber.trim().toLowerCase() === c.contractNumber.trim().toLowerCase()) ||
+                        (order.clientName && c.clientName && order.clientName.trim().toLowerCase() === c.clientName.trim().toLowerCase())
+                    );
+                    const contractItems = matchedContracts.flatMap((c) => c.items || []);
+                    if (contractItems.length === 0 && matchedContracts.length === 0) return false;
+                    return order.items.every((it) => {
+                      const cIt = contractItems.find(
+                        (ci) =>
+                          (ci.equipmentId && it.equipmentId && ci.equipmentId === it.equipmentId) ||
+                          (ci.code && it.code && ci.code.trim().toLowerCase() === it.code.trim().toLowerCase()) ||
+                          (ci.name && it.name && ci.name.trim().toLowerCase() === it.name.trim().toLowerCase()) ||
+                          (ci.model && it.model && ci.model.trim().toLowerCase() === it.model.trim().toLowerCase())
+                      );
+                      const st = cIt?.status || it.equipmentStatus;
+                      return (
+                        st === 'Entregado e Instalado' ||
+                        st === 'Cerrado / Concluido' ||
+                        st === 'Entregado al Cliente' ||
+                        st === 'Despachado al Cliente' ||
+                        st === 'Equipos en Bodega SYD' ||
+                        st === 'Equipos en Bodega'
+                      );
+                    });
+                  })();
+
+                  return (
+                    <select
+                      value={order.status}
+                      onChange={(e) => onUpdateStatus(order.id, e.target.value as SalesOrderStatus)}
+                      className={`w-full text-xs font-bold px-2.5 py-1 rounded-lg border bg-slate-900 focus:outline-none cursor-pointer ${getStatusBadge(
+                        order.status
+                      )}`}
+                    >
+                      <option value="Borrador">Borrador</option>
+                      <option value="En Proceso">En Proceso</option>
+                      <option value="Equipos en Bodega">Equipos en Bodega</option>
+                      <option value="Entregada al Cliente">Entregada al Cliente</option>
+                      <option value="Listo para Facturar">Listo para Facturar</option>
+                      {order.status === 'Facturada' && (
+                        <option value="Facturada">Facturada</option>
+                      )}
+                      <option value="Cancelada">Cancelada</option>
+                    </select>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -235,27 +281,98 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
                     <th className="py-2.5 px-3">Descripción</th>
                     <th className="py-2.5 px-3">Marca / Modelo</th>
                     <th className="py-2.5 px-3 text-center">Cant.</th>
+                    <th className="py-2.5 px-3">OC Proveedor</th>
+                    <th className="py-2.5 px-3">Estado del Equipo</th>
+                    <th className="py-2.5 px-3">Seriales Asignados</th>
                     <th className="py-2.5 px-3 text-right">Precio Unit.</th>
                     <th className="py-2.5 px-3 text-right">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
-                  {order.items?.map((item, idx) => (
-                    <tr key={item.id || idx} className="hover:bg-slate-800/30">
-                      <td className="py-2.5 px-3 font-mono text-amber-400 font-bold">{item.code || '-'}</td>
-                      <td className="py-2.5 px-3 font-medium text-white">{item.name}</td>
-                      <td className="py-2.5 px-3 text-slate-400">
-                        {item.brand} {item.model ? `/ ${item.model}` : ''}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-bold text-slate-200">
-                        {item.quantityToDispatch || 1}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono">{formatCOP(item.unitSalePriceCOP || 0)}</td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">
-                        {formatCOP(item.totalSalePriceCOP || 0)}
-                      </td>
-                    </tr>
-                  ))}
+                  {order.items?.map((item, idx) => {
+                    let liveStatus = item.equipmentStatus || 'Pendiente de OC';
+                    let liveOC = (isValidOCNumber(item.linkedSupplierOCNumber) ? item.linkedSupplierOCNumber : null) ||
+                                 (isValidOCNumber(item.supplierOCRef) ? item.supplierOCRef : null);
+                    if (contracts && contracts.length > 0) {
+                      const candidateContracts = contracts.filter((c) => {
+                        if (order.ocContractId && c.id === order.ocContractId) return true;
+                        if (order.id && c.salesOrderId === order.id) return true;
+                        if (order.salesOrderNumber && order.salesOrderNumber !== 'PENDIENTE' && c.salesOrderNumber === order.salesOrderNumber) return true;
+                        if (order.contractId && (c.tenderClientId === order.contractId || c.id === order.contractId)) return true;
+                        if (order.tenderClientId && (c.tenderClientId === order.tenderClientId || c.id === order.tenderClientId)) return true;
+                        if (order.contractNumber && c.contractNumber && order.contractNumber.trim().toLowerCase() === c.contractNumber.trim().toLowerCase()) return true;
+                        if (order.clientName && c.clientName && order.clientName.trim().toLowerCase() === c.clientName.trim().toLowerCase()) return true;
+                        return false;
+                      });
+                      for (const mc of candidateContracts) {
+                        const cIt = (mc.items || []).find(
+                          (ci) =>
+                            (ci.equipmentId && item.equipmentId && ci.equipmentId === item.equipmentId) ||
+                            (ci.code && item.code && ci.code.trim().toLowerCase() === item.code.trim().toLowerCase()) ||
+                            (ci.name && item.name && ci.name.trim().toLowerCase() === item.name.trim().toLowerCase()) ||
+                            (ci.model && item.model && ci.model.trim().toLowerCase() === item.model.trim().toLowerCase())
+                        );
+                        if (cIt) {
+                          if (cIt.status) liveStatus = cIt.status;
+                          if (isValidOCNumber(cIt.ocNumber)) liveOC = cIt.ocNumber;
+                          break;
+                        }
+                      }
+                    }
+
+                    return (
+                      <tr key={item.id || idx} className="hover:bg-slate-800/30">
+                        <td className="py-2.5 px-3 font-mono text-amber-400 font-bold">{item.code || '-'}</td>
+                        <td className="py-2.5 px-3 font-medium text-white">{item.name}</td>
+                        <td className="py-2.5 px-3 text-slate-400">
+                          {item.brand} {item.model ? `/ ${item.model}` : ''}
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-bold text-slate-200">
+                          {item.quantityToDispatch || 1}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-sky-300">
+                          {liveOC ? (
+                            <span className="px-2 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 font-bold text-[11px]">
+                              {liveOC}
+                            </span>
+                          ) : (
+                            <span className="text-amber-400/80 font-medium text-[11px]">Pendiente de OC</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                            liveStatus === 'Entregado e Instalado' || liveStatus === 'Cerrado / Concluido' || liveStatus === 'Entregado al Cliente'
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : liveStatus === 'Equipos en Bodega' || liveStatus === 'Equipos en Bodega SYD'
+                              ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                              : 'bg-purple-500/15 text-purple-300 border border-purple-500/30 font-medium'
+                          }`}>
+                            {liveStatus}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          {item.assignedSerialNumbers && item.assignedSerialNumbers.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {item.assignedSerialNumbers.map((s, sIdx) => (
+                                <span
+                                  key={sIdx}
+                                  className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono text-[10.5px] font-bold"
+                                >
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-500 italic text-[11px]">Sin seriales</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono">{formatCOP(item.unitSalePriceCOP || 0)}</td>
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">
+                          {formatCOP(item.totalSalePriceCOP || 0)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

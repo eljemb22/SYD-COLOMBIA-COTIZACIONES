@@ -10,15 +10,28 @@ import {
   AuthUser,
   ItemSerialNumberRecord,
   TechnicalDocument,
+  SupplierInvoiceAttachment,
+  SalesOrderRecord,
 } from '../../types';
 import {
   getStoredOCTrackingContracts,
   saveStoredOCTrackingContracts,
   syncAwardedTendersToOCTracking,
+  deduplicateOCTrackingContracts,
   COMMON_SUPPLIERS,
   exportOCTrackingToExcel,
 } from '../../utils/ocTrackingStorage';
-import { deleteOCTrackingContractFromFirestore } from '../../services/realtimeSync';
+import { getStoredSalesOrders } from '../../utils/salesOrdersStorage';
+import {
+  deleteOCTrackingContractFromFirestore,
+  saveOCTrackingContractsToFirestore,
+  saveSingleOCTrackingContractToFirestore,
+} from '../../services/realtimeSync';
+import {
+  markContractAsDeleted,
+  unmarkContractAsDeleted,
+  isContractDeleted,
+} from '../../utils/tombstones';
 
 import { OCTrackingHeader } from './oc-tracking/OCTrackingHeader';
 import { ContractHierarchyView } from './oc-tracking/ContractHierarchyView';
@@ -31,6 +44,7 @@ import { AddItemsToOCModal } from './oc-tracking/AddItemsToOCModal';
 import { OCHistoryModal } from './oc-tracking/OCHistoryModal';
 import { ManageSuppliersModal } from './oc-tracking/ManageSuppliersModal';
 import { ItemSerialsDossierModal } from './oc-tracking/ItemSerialsDossierModal';
+import { SupplierInvoicesModal } from './oc-tracking/SupplierInvoicesModal';
 import { Trash2 } from 'lucide-react';
 
 interface OCTrackingViewProps {
@@ -93,6 +107,13 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
   const [historyModalItem, setHistoryModalItem] = useState<{
     contractName: string;
     item: OCTrackingItem;
+  } | null>(null);
+  const [supplierInvoicesModalTarget, setSupplierInvoicesModalTarget] = useState<{
+    contractId: string;
+    contractName?: string;
+    supplier: string;
+    ocNumber: string;
+    invoices: SupplierInvoiceAttachment[];
   } | null>(null);
 
   // In-app delete confirm state (works reliably inside sandboxed iframes)
@@ -167,17 +188,22 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
     }, 4000);
   };
 
+  // Ensure all contracts are strictly consolidated by client/order into a single card
+  const deduplicatedContracts = useMemo(() => {
+    return deduplicateOCTrackingContracts(contracts);
+  }, [contracts]);
+
   // Distinct suppliers collected across all contracts
   const distinctSuppliers = useMemo(() => {
     const set = new Set<string>();
-    contracts.forEach((c) => {
+    deduplicatedContracts.forEach((c) => {
       if (c.supplier) set.add(c.supplier);
       c.items.forEach((it) => {
         if (it.supplier) set.add(it.supplier);
       });
     });
     return Array.from(set).sort();
-  }, [contracts]);
+  }, [deduplicatedContracts]);
 
   // Compute KPIs
   const kpis = useMemo(() => {
@@ -193,7 +219,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
     // Track OCs and their individual statuses
     const ocStatusMap = new Map<string, { hasPending: boolean; hasCompleted: boolean; totalCost: number }>();
 
-    contracts.forEach((c) => {
+    deduplicatedContracts.forEach((c) => {
       c.items.forEach((it) => {
         const qty = it.quantity || 1;
         const cost = it.totalCostCOP || (it.costPriceCOP * qty);
@@ -261,20 +287,20 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
       completedOCs,
       completedItems,
       completedTotalCostCOP,
-      totalContracts: contracts.length,
-      totalOCs: ocStatusMap.size || contracts.length,
+      totalContracts: deduplicatedContracts.length,
+      totalOCs: ocStatusMap.size || deduplicatedContracts.length,
       totalItems,
       totalCostCOP,
       totalCreditOrders,
       totalAlerts,
     };
-  }, [contracts]);
+  }, [deduplicatedContracts]);
 
   // Filtered Contracts (Hierarchical)
   const filteredContracts = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
 
-    return contracts
+    return deduplicatedContracts
       .map((contract) => {
         const matchesContractText =
           !term ||
@@ -526,6 +552,118 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
     showToast(`✓ Estado del pago actualizado a "${status}"`);
   };
 
+  const handleUpdateOCNumberForSupplier = (
+    contractId: string,
+    supplier: string,
+    oldOCNumber: string,
+    newOCNumber: string
+  ) => {
+    const cleanNew = newOCNumber.trim();
+    if (!cleanNew) return;
+
+    const updated = contracts.map((c) => {
+      if (c.id !== contractId) return c;
+      const updatedItems = c.items.map((it) => {
+        if (
+          it.supplier === supplier &&
+          (it.ocNumber === oldOCNumber || !it.ocNumber || it.ocNumber === 'Sin N° OC')
+        ) {
+          return {
+            ...it,
+            ocNumber: cleanNew,
+            lastUpdatedAt: new Date().toISOString(),
+            history: [
+              ...(it.history || []),
+              {
+                id: `log-oc-${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                previousStatus: it.status,
+                newStatus: it.status,
+                user: currentUser ? currentUser.name : 'Usuario SYD',
+                note: `N° de Orden de Compra asignado manualmente a "${cleanNew}".`,
+              },
+            ],
+          };
+        }
+        return it;
+      });
+
+      return {
+        ...c,
+        items: updatedItems,
+        lastUpdatedAt: new Date().toISOString(),
+      };
+    });
+
+    onUpdateContracts(updated);
+    saveStoredOCTrackingContracts(updated);
+    saveOCTrackingContractsToFirestore(updated).catch(() => {});
+    showToast(`✓ N° de Orden de Compra asignado a "${cleanNew}" exitosamente.`);
+  };
+
+  // Assign or update manual Sales Order (OV) number
+  const handleUpdateSalesOrderNumberForContract = (contractId: string, newOV: string) => {
+    const cleanOV = newOV.trim().toUpperCase();
+    if (!cleanOV) return;
+
+    const updated = contracts.map((c) => {
+      if (c.id !== contractId) return c;
+      return {
+        ...c,
+        salesOrderNumber: cleanOV,
+        lastUpdatedAt: new Date().toISOString(),
+      };
+    });
+
+    onUpdateContracts(updated);
+    saveStoredOCTrackingContracts(updated);
+    saveOCTrackingContractsToFirestore(updated).catch(() => {});
+    showToast(`✓ Número de Orden de Venta actualizado a "${cleanOV}".`);
+  };
+
+  // Save supplier invoices attachments
+  const handleSaveSupplierInvoices = (
+    contractId: string,
+    supplier: string,
+    ocNumber: string,
+    invoices: SupplierInvoiceAttachment[]
+  ) => {
+    const updated = contracts.map((c) => {
+      if (c.id !== contractId) return c;
+
+      const updatedItems = c.items.map((it) => {
+        const matchSupplier = it.supplier?.trim().toLowerCase() === supplier.trim().toLowerCase();
+        const matchOC = !ocNumber || ocNumber === 'Sin N° OC' || it.ocNumber === ocNumber;
+        if (matchSupplier && matchOC) {
+          return {
+            ...it,
+            supplierInvoices: invoices,
+            lastUpdatedAt: new Date().toISOString(),
+          };
+        }
+        return it;
+      });
+
+      // Also persist at contract level with notes matching
+      const otherInvoices = (c.supplierInvoices || []).filter(
+        (inv) => !(inv.notes?.includes(ocNumber) || inv.notes?.includes(supplier))
+      );
+      const contractInvoices = [...otherInvoices, ...invoices];
+
+      return {
+        ...c,
+        items: updatedItems,
+        supplierInvoices: contractInvoices,
+        lastUpdatedAt: new Date().toISOString(),
+      };
+    });
+
+    onUpdateContracts(updated);
+    saveStoredOCTrackingContracts(updated);
+    saveOCTrackingContractsToFirestore(updated).catch(() => {});
+    showToast(`✓ Facturas del proveedor ${supplier} guardadas correctamente.`);
+  };
+
   // Save changes from EditOCHeaderModal
   const handleSaveOCHeader = (
     contractId: string,
@@ -560,6 +698,10 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
 
     onUpdateContracts(updated);
     saveStoredOCTrackingContracts(updated);
+    const target = updated.find((c) => c.id === contractId);
+    if (target) {
+      saveSingleOCTrackingContractToFirestore(target).catch(() => {});
+    }
     setEditingOCHeaderState(null);
     showToast('✓ Datos de la Orden de Compra y Proveedor actualizados con éxito');
   };
@@ -611,6 +753,10 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
 
     onUpdateContracts(updated);
     saveStoredOCTrackingContracts(updated);
+    const target = updated.find((c) => c.id === contractId);
+    if (target) {
+      saveSingleOCTrackingContractToFirestore(target).catch(() => {});
+    }
 
     // Auto-update base cost in Pestaña 3 (Catalog) without requiring user button
     if (onUpdateEquipmentBaseCost && updates.costPriceCOP !== undefined && updates.costPriceCOP > 0) {
@@ -629,15 +775,24 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
   // Delete handlers
   const handleRequestDeleteContract = (contract: OCTrackingContract) => {
     setDeleteConfirmState({
-      title: `¿Eliminar Contrato ${contract.contractNumber}?`,
-      subtitle: `Se eliminarán todas las OCs de proveedores y los ${contract.items.length} equipos asociados a ${contract.clientName}.`,
-      onConfirm: () => {
+      title: `¿Eliminar Contrato ${contract.contractNumber || contract.clientName}?`,
+      subtitle: `Se eliminarán todas las OCs de proveedores y los ${contract.items?.length || 0} equipos asociados a ${contract.clientName}.`,
+      onConfirm: async () => {
         const updated = contracts.filter((c) => c.id !== contract.id);
         onUpdateContracts(updated);
         saveStoredOCTrackingContracts(updated);
-        deleteOCTrackingContractFromFirestore(contract.id).catch(() => {});
+        try {
+          await deleteOCTrackingContractFromFirestore(
+            contract.id,
+            contract.contractNumber,
+            contract.salesOrderNumber,
+            contract.tenderClientId
+          );
+        } catch (e) {
+          console.error('Error deleting contract from Firestore:', e);
+        }
         setDeleteConfirmState(null);
-        showToast(`✓ Contrato ${contract.contractNumber} eliminado`);
+        showToast(`✓ Contrato ${contract.contractNumber || contract.clientName} eliminado permanentemente`);
       },
     });
   };
@@ -650,21 +805,52 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
     setDeleteConfirmState({
       title: `¿Eliminar OC ${ocNumber} de ${supplier}?`,
       subtitle: 'Se removerán los equipos asociados a esta Orden de Compra.',
-      onConfirm: () => {
-        const updated = contracts.map((c) => {
-          if (c.id !== contractId) return c;
-          const remainingItems = c.items.filter(
-            (it) => !(it.supplier === supplier && it.ocNumber === ocNumber)
-          );
-          return {
-            ...c,
-            items: remainingItems,
-            totalCostCOP: remainingItems.reduce((s, it) => s + it.totalCostCOP, 0),
-            lastUpdatedAt: new Date().toISOString(),
-          };
-        });
-        onUpdateContracts(updated);
-        saveStoredOCTrackingContracts(updated);
+      onConfirm: async () => {
+        const targetContract = contracts.find((c) => c.id === contractId);
+        const remainingItems = (targetContract?.items || []).filter(
+          (it) => !(it.supplier === supplier && it.ocNumber === ocNumber)
+        );
+
+        let updated: OCTrackingContract[];
+        if (remainingItems.length === 0) {
+          // If no items remain in this contract, remove the contract entirely
+          updated = contracts.filter((c) => c.id !== contractId);
+          onUpdateContracts(updated);
+          saveStoredOCTrackingContracts(updated);
+          try {
+            await deleteOCTrackingContractFromFirestore(
+              contractId,
+              targetContract?.contractNumber,
+              targetContract?.salesOrderNumber,
+              targetContract?.tenderClientId
+            );
+          } catch (e) {
+            console.error('Error deleting empty contract from Firestore:', e);
+          }
+        } else {
+          updated = contracts.map((c) => {
+            if (c.id !== contractId) return c;
+            return {
+              ...c,
+              items: remainingItems,
+              totalCostCOP: remainingItems.reduce(
+                (s, it) => s + (it.totalCostCOP || ((it.costPriceCOP || 0) * (it.quantity || 1))),
+                0
+              ),
+              lastUpdatedAt: new Date().toISOString(),
+            };
+          });
+          onUpdateContracts(updated);
+          saveStoredOCTrackingContracts(updated);
+          const target = updated.find((c) => c.id === contractId);
+          if (target) {
+            try {
+              await saveSingleOCTrackingContractToFirestore(target);
+            } catch (e) {
+              console.error('Error updating contract in Firestore:', e);
+            }
+          }
+        }
         setDeleteConfirmState(null);
         showToast(`✓ Orden de Compra ${ocNumber} eliminada`);
       },
@@ -675,19 +861,49 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
     setDeleteConfirmState({
       title: `¿Eliminar ${item.name}?`,
       subtitle: `Se removerá de la OC ${item.ocNumber} (${item.supplier}).`,
-      onConfirm: () => {
-        const updated = contracts.map((c) => {
-          if (c.id !== contractId) return c;
-          const remainingItems = c.items.filter((it) => it.id !== item.id);
-          return {
-            ...c,
-            items: remainingItems,
-            totalCostCOP: remainingItems.reduce((s, it) => s + it.totalCostCOP, 0),
-            lastUpdatedAt: new Date().toISOString(),
-          };
-        });
-        onUpdateContracts(updated);
-        saveStoredOCTrackingContracts(updated);
+      onConfirm: async () => {
+        const targetContract = contracts.find((c) => c.id === contractId);
+        const remainingItems = (targetContract?.items || []).filter((it) => it.id !== item.id);
+
+        let updated: OCTrackingContract[];
+        if (remainingItems.length === 0) {
+          updated = contracts.filter((c) => c.id !== contractId);
+          onUpdateContracts(updated);
+          saveStoredOCTrackingContracts(updated);
+          try {
+            await deleteOCTrackingContractFromFirestore(
+              contractId,
+              targetContract?.contractNumber,
+              targetContract?.salesOrderNumber,
+              targetContract?.tenderClientId
+            );
+          } catch (e) {
+            console.error('Error deleting empty contract from Firestore:', e);
+          }
+        } else {
+          updated = contracts.map((c) => {
+            if (c.id !== contractId) return c;
+            return {
+              ...c,
+              items: remainingItems,
+              totalCostCOP: remainingItems.reduce(
+                (s, it) => s + (it.totalCostCOP || ((it.costPriceCOP || 0) * (it.quantity || 1))),
+                0
+              ),
+              lastUpdatedAt: new Date().toISOString(),
+            };
+          });
+          onUpdateContracts(updated);
+          saveStoredOCTrackingContracts(updated);
+          const target = updated.find((c) => c.id === contractId);
+          if (target) {
+            try {
+              await saveSingleOCTrackingContractToFirestore(target);
+            } catch (e) {
+              console.error('Error updating contract in Firestore:', e);
+            }
+          }
+        }
         setDeleteConfirmState(null);
         showToast(`✓ Equipo ${item.name} eliminado de la OC`);
       },
@@ -757,6 +973,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
       {viewMode === 'hierarchy' && (
         <ContractHierarchyView
           contracts={filteredContracts}
+          salesOrders={getStoredSalesOrders()}
           collapsedContractIds={collapsedContractIds}
           onToggleContractCollapse={handleToggleContractCollapse}
           onOpenAddSupplierOCModal={(contract) => {
@@ -776,6 +993,9 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
           onRequestDeleteContract={handleRequestDeleteContract}
           onRequestDeleteItem={handleRequestDeleteItem}
           onRequestDeleteSupplierOC={handleRequestDeleteSupplierOC}
+          onUpdateOCNumber={handleUpdateOCNumberForSupplier}
+          onUpdateSalesOrderNumber={handleUpdateSalesOrderNumberForContract}
+          onSaveSupplierInvoices={handleSaveSupplierInvoices}
           onNavigateToTab={onNavigateToTab}
           currentUser={currentUser}
         />
@@ -799,6 +1019,8 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
           onQuickChangeItemStatus={handleQuickChangeItemStatus}
           onQuickChangeItemPaymentTerms={handleQuickChangeItemPaymentTerms}
           onRequestDeleteItem={handleRequestDeleteItem}
+          onUpdateOCNumber={handleUpdateOCNumberForSupplier}
+          onSaveSupplierInvoices={handleSaveSupplierInvoices}
           currentUser={currentUser}
         />
       )}
@@ -813,6 +1035,16 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
             if (found) {
               setSerialsModalState({ contract: found, item });
             }
+          }}
+          onOpenSupplierInvoices={(contractId, supplier, ocNumber, invoices) => {
+            const found = contracts.find((c) => c.id === contractId);
+            setSupplierInvoicesModalTarget({
+              contractId,
+              contractName: found?.contractNumber || found?.clientName,
+              supplier,
+              ocNumber,
+              invoices,
+            });
           }}
           onOpenHistory={(contractName, item) => setHistoryModalItem({ contractName, item })}
           onQuickChangeItemStatus={handleQuickChangeItemStatus}
@@ -851,6 +1083,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
 
             onUpdateContracts(updated);
             saveStoredOCTrackingContracts(updated);
+            saveOCTrackingContractsToFirestore(updated).catch(() => {});
             setSerialsModalState(null);
             showToast(`✓ Seriales y expediente hospitalario guardados correctamente`);
           }}
@@ -869,7 +1102,13 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
             setIsNewOCModalOpen(false);
             setTargetContractForNewOC(null);
           }}
-          onSave={(newOrUpdatedContract) => {
+          onSave={async (newOrUpdatedContract) => {
+            unmarkContractAsDeleted(
+              newOrUpdatedContract.id,
+              newOrUpdatedContract.contractNumber,
+              newOrUpdatedContract.salesOrderNumber,
+              newOrUpdatedContract.tenderClientId
+            );
             let updated: OCTrackingContract[];
             const exists = contracts.some((c) => c.id === newOrUpdatedContract.id);
             if (exists) {
@@ -882,6 +1121,11 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
 
             onUpdateContracts(updated);
             saveStoredOCTrackingContracts(updated);
+            try {
+              await saveSingleOCTrackingContractToFirestore(newOrUpdatedContract);
+            } catch (e) {
+              console.error('Error saving OC contract to Firestore:', e);
+            }
 
             // Auto-update base cost in Pestaña 3 (Catalog)
             if (onUpdateEquipmentBaseCost && newOrUpdatedContract.items) {
@@ -924,7 +1168,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
           equipments={equipments}
           currentUser={currentUser}
           onClose={() => setAddItemsToOCState(null)}
-          onSave={(newItems) => {
+          onSave={async (newItems) => {
             const updated = contracts.map((c) => {
               if (c.id !== addItemsToOCState.contractId) return c;
               const merged = [...c.items, ...newItems];
@@ -937,6 +1181,14 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
             });
             onUpdateContracts(updated);
             saveStoredOCTrackingContracts(updated);
+            const target = updated.find((c) => c.id === addItemsToOCState.contractId);
+            if (target) {
+              try {
+                await saveSingleOCTrackingContractToFirestore(target);
+              } catch (e) {
+                console.error('Error saving items to OC contract in Firestore:', e);
+              }
+            }
 
             // Auto-update base cost in Pestaña 3 (Catalog)
             if (onUpdateEquipmentBaseCost && newItems) {
@@ -989,6 +1241,28 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
             onUpdateContracts(updated);
             saveStoredOCTrackingContracts(updated);
             showToast(`✓ Datos del proveedor y contratos sincronizados con éxito`);
+          }}
+        />
+      )}
+
+      {/* MODAL: SUPPLIER INVOICES ATTACHMENT */}
+      {supplierInvoicesModalTarget && (
+        <SupplierInvoicesModal
+          isOpen={true}
+          onClose={() => setSupplierInvoicesModalTarget(null)}
+          supplier={supplierInvoicesModalTarget.supplier}
+          ocNumber={supplierInvoicesModalTarget.ocNumber}
+          contractNumber={supplierInvoicesModalTarget.contractName}
+          invoices={supplierInvoicesModalTarget.invoices}
+          isReadOnly={isReadOnly}
+          onSaveInvoices={(updatedInvoices) => {
+            handleSaveSupplierInvoices(
+              supplierInvoicesModalTarget.contractId,
+              supplierInvoicesModalTarget.supplier,
+              supplierInvoicesModalTarget.ocNumber,
+              updatedInvoices
+            );
+            setSupplierInvoicesModalTarget(null);
           }}
         />
       )}

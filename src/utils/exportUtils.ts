@@ -146,6 +146,11 @@ export const exportQuoteToWord = async (
     total: 1170,     // 12.0%
   };
 
+  // Standard table font constants for absolute uniformity
+  const TABLE_FONT = 'Calibri';
+  const TABLE_FONT_SIZE = 18; // 9pt uniform size across all headers, cells, and totals in the table
+  const TABLE_COLOR = '000000';
+
   // Build Table Header (Page 2) matching exact preview layout and colors
   const tableHeaderRow = new TableRow({
     tableHeader: true,
@@ -161,7 +166,7 @@ export const exportQuoteToWord = async (
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: 'Item', bold: true, size: 17, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: 'Item', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -175,7 +180,7 @@ export const exportQuoteToWord = async (
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: 'Descripción', bold: true, size: 17, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: 'Descripción', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -189,7 +194,7 @@ export const exportQuoteToWord = async (
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: 'Marca', bold: true, size: 17, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: 'Marca', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -203,7 +208,7 @@ export const exportQuoteToWord = async (
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: 'Modelo', bold: true, size: 17, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: 'Modelo', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -217,7 +222,7 @@ export const exportQuoteToWord = async (
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: 'Cant.', bold: true, size: 17, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: 'Cant.', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -231,7 +236,7 @@ export const exportQuoteToWord = async (
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: 'Precio', bold: true, size: 17, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: 'Precio', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -245,7 +250,7 @@ export const exportQuoteToWord = async (
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: 'Subtotal', bold: true, size: 17, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: 'Subtotal', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -259,7 +264,7 @@ export const exportQuoteToWord = async (
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: 'Iva', bold: true, size: 17, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: 'Iva', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -273,14 +278,14 @@ export const exportQuoteToWord = async (
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: 'Total', bold: true, size: 17, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: 'Total', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
     ],
   });
 
-  // Build Table Body Rows with clean single-line currency format
+  // Build Table Body Rows with uniform font, uniform size, and centered values
   const tableItemRows = items.map((item, index) => {
     const itemSubtotal = item.totalSalePrice;
     const itemTaxRate = item.taxExempt ? 0 : (item.taxRate !== undefined ? item.taxRate : (header.taxRate ?? 0.19));
@@ -290,8 +295,8 @@ export const exportQuoteToWord = async (
     const descriptionParagraphs: Paragraph[] = [
       new Paragraph({
         alignment: AlignmentType.LEFT,
-        spacing: { before: 20, after: item.accessories && item.accessories.length > 0 ? 20 : 20, line: 240 },
-        children: [new TextRun({ text: item.name.toUpperCase(), size: 16.5, font: 'Calibri', color: '000000' })],
+        spacing: { before: 20, after: item.accessories && item.accessories.length > 0 ? 10 : 20, line: 240 },
+        children: [new TextRun({ text: item.name.toUpperCase(), size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
       }),
     ];
 
@@ -301,14 +306,14 @@ export const exportQuoteToWord = async (
           alignment: AlignmentType.LEFT,
           spacing: { before: 0, after: 20, line: 220 },
           children: [
-            new TextRun({ text: 'ACCESORIOS: ', bold: true, size: 13.5, font: 'Calibri', color: '475569' }),
+            new TextRun({ text: 'ACCESORIOS: ', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: '334155' }),
             new TextRun({
               text: item.accessories
                 .map((a) => `${a.name.toUpperCase()}${a.quantity > 1 ? ` (X${a.quantity})` : ''}`)
                 .join(', '),
-              size: 13.5,
-              font: 'Calibri',
-              color: '475569',
+              size: TABLE_FONT_SIZE,
+              font: TABLE_FONT,
+              color: '334155',
             }),
           ],
         })
@@ -327,7 +332,7 @@ export const exportQuoteToWord = async (
             new Paragraph({
               alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
-              children: [new TextRun({ text: `${index + 1}`, size: 16.5, font: 'Calibri', color: '000000' })],
+              children: [new TextRun({ text: `${index + 1}`, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
             }),
           ],
         }),
@@ -350,9 +355,9 @@ export const exportQuoteToWord = async (
               children: [
                 new TextRun({
                   text: item.brand.toUpperCase(),
-                  size: item.brand && item.brand.length > 12 ? 14 : 16.5,
-                  font: 'Calibri',
-                  color: '000000',
+                  size: TABLE_FONT_SIZE,
+                  font: TABLE_FONT,
+                  color: TABLE_COLOR,
                 }),
               ],
             }),
@@ -370,9 +375,9 @@ export const exportQuoteToWord = async (
               children: [
                 new TextRun({
                   text: item.model.toUpperCase(),
-                  size: item.model && item.model.length > 12 ? 14 : 16.5,
-                  font: 'Calibri',
-                  color: '000000',
+                  size: TABLE_FONT_SIZE,
+                  font: TABLE_FONT,
+                  color: TABLE_COLOR,
                 }),
               ],
             }),
@@ -387,7 +392,7 @@ export const exportQuoteToWord = async (
             new Paragraph({
               alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
-              children: [new TextRun({ text: `${item.quantity}`, size: 16.5, font: 'Calibri', color: '000000' })],
+              children: [new TextRun({ text: `${item.quantity}`, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
             }),
           ],
         }),
@@ -398,9 +403,9 @@ export const exportQuoteToWord = async (
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
-              alignment: AlignmentType.RIGHT,
+              alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
-              children: [new TextRun({ text: `$\u00A0${formatNumber(item.unitSalePrice)}`, size: 15.5, font: 'Calibri', color: '000000' })],
+              children: [new TextRun({ text: `$\u00A0${formatNumber(item.unitSalePrice)}`, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
             }),
           ],
         }),
@@ -411,9 +416,9 @@ export const exportQuoteToWord = async (
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
-              alignment: AlignmentType.RIGHT,
+              alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
-              children: [new TextRun({ text: `$\u00A0${formatNumber(itemSubtotal)}`, size: 15.5, font: 'Calibri', color: '000000' })],
+              children: [new TextRun({ text: `$\u00A0${formatNumber(itemSubtotal)}`, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
             }),
           ],
         }),
@@ -424,9 +429,9 @@ export const exportQuoteToWord = async (
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
-              alignment: AlignmentType.RIGHT,
+              alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
-              children: [new TextRun({ text: itemIva > 0 ? `$\u00A0${formatNumber(itemIva)}` : '$ -', size: 15.5, font: 'Calibri', color: '000000' })],
+              children: [new TextRun({ text: itemIva > 0 ? `$\u00A0${formatNumber(itemIva)}` : '$ -', size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
             }),
           ],
         }),
@@ -437,9 +442,9 @@ export const exportQuoteToWord = async (
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
-              alignment: AlignmentType.RIGHT,
+              alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
-              children: [new TextRun({ text: `$\u00A0${formatNumber(itemTotal)}`, size: 15.5, font: 'Calibri', color: '000000' })],
+              children: [new TextRun({ text: `$\u00A0${formatNumber(itemTotal)}`, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
             }),
           ],
         }),
@@ -447,7 +452,7 @@ export const exportQuoteToWord = async (
     });
   });
 
-  // Build Totales Row (Merged first 5 columns: Item, Desc, Brand, Model, Qty)
+  // Build Totales Row with uniform font, uniform size, and centered values
   const mergedTotalsWidth = colWidths.item + colWidths.desc + colWidths.brand + colWidths.model + colWidths.qty; // 5,200 DXA
   const totalsRow = new TableRow({
     cantSplit: true,
@@ -463,7 +468,7 @@ export const exportQuoteToWord = async (
           new Paragraph({
             alignment: AlignmentType.RIGHT,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: 'Totales', bold: true, size: 16.5, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: 'Totales', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -475,9 +480,9 @@ export const exportQuoteToWord = async (
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
-            alignment: AlignmentType.RIGHT,
+            alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: '', size: 16.5, font: 'Calibri' })],
+            children: [new TextRun({ text: '', size: TABLE_FONT_SIZE, font: TABLE_FONT })],
           }),
         ],
       }),
@@ -489,9 +494,9 @@ export const exportQuoteToWord = async (
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
-            alignment: AlignmentType.RIGHT,
+            alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: `$\u00A0${formatNumber(subtotal)}`, bold: true, size: 16.5, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: `$\u00A0${formatNumber(subtotal)}`, bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -503,9 +508,9 @@ export const exportQuoteToWord = async (
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
-            alignment: AlignmentType.RIGHT,
+            alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: iva > 0 ? `$\u00A0${formatNumber(iva)}` : '$ -', bold: true, size: 16.5, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: iva > 0 ? `$\u00A0${formatNumber(iva)}` : '$ -', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -517,9 +522,9 @@ export const exportQuoteToWord = async (
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
-            alignment: AlignmentType.RIGHT,
+            alignment: AlignmentType.CENTER,
             spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: `$\u00A0${formatNumber(total)}`, bold: true, size: 16.5, font: 'Calibri', color: '000000' })],
+            children: [new TextRun({ text: `$\u00A0${formatNumber(total)}`, bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
       }),
@@ -594,8 +599,26 @@ export const exportQuoteToWord = async (
       })
     : undefined;
 
+  // Standard body text constants for absolute uniformity
+  const DOC_BODY_FONT = 'Calibri';
+  const DOC_BODY_SIZE = 22; // 11pt standard body size across all paragraphs, conditions, and notes
+
   // Build the complete modern DOCX document
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: DOC_BODY_FONT,
+            size: DOC_BODY_SIZE,
+            color: '000000',
+          },
+          paragraph: {
+            spacing: { line: 276 },
+          },
+        },
+      },
+    },
     sections: [
       {
         properties: {
@@ -635,8 +658,8 @@ export const exportQuoteToWord = async (
                   }
                   return rawDate;
                 })(),
-                font: 'Calibri',
-                size: 22,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '1E293B',
               }),
             ],
@@ -646,8 +669,8 @@ export const exportQuoteToWord = async (
             children: [
               new TextRun({
                 text: 'Señor(es):',
-                font: 'Calibri',
-                size: 22,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '334155',
               }),
             ],
@@ -658,8 +681,8 @@ export const exportQuoteToWord = async (
               new TextRun({
                 text: (header.clientName || 'CLIENTE NO ESPECIFICADO').toUpperCase(),
                 bold: true,
-                font: 'Calibri',
-                size: 23,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -669,8 +692,8 @@ export const exportQuoteToWord = async (
             children: [
               new TextRun({
                 text: header.city || '',
-                font: 'Calibri',
-                size: 21,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '334155',
               }),
             ],
@@ -682,8 +705,8 @@ export const exportQuoteToWord = async (
               new TextRun({
                 text: 'Asunto: Cotización Comercial',
                 bold: true,
-                font: 'Calibri',
-                size: 22,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -695,8 +718,8 @@ export const exportQuoteToWord = async (
               new TextRun({
                 text: header.quoteNumber || '',
                 bold: true,
-                font: 'Calibri',
-                size: 22,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -707,8 +730,8 @@ export const exportQuoteToWord = async (
               new TextRun({
                 text: 'Cordial Saludo:',
                 bold: true,
-                font: 'Calibri',
-                size: 22,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -720,14 +743,14 @@ export const exportQuoteToWord = async (
               new TextRun({
                 text: 'SUMINISTROS Y DOTACIONES COLOMBIA S.A. ',
                 bold: true,
-                font: 'Calibri',
-                size: 21.5,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
               new TextRun({
                 text: 'presentamos a su consideración la propuesta para la adquisición de equipos, insumos y material médico, cuya descripción y demás condiciones de venta están incorporadas a la presente cotización.',
-                font: 'Calibri',
-                size: 21.5,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -739,14 +762,14 @@ export const exportQuoteToWord = async (
               new TextRun({
                 text: 'SYD COLOMBIA S.A. ',
                 bold: true,
-                font: 'Calibri',
-                size: 21.5,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
               new TextRun({
                 text: 'distribuye en el país a algunas de las más importantes empresas fabricantes de medicamentos, insumos y dispositivos médicos del mundo, situación que avala su seriedad y profesionalismo en este campo.',
-                font: 'Calibri',
-                size: 21.5,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -757,8 +780,8 @@ export const exportQuoteToWord = async (
             children: [
               new TextRun({
                 text: 'Contamos con personal calificado para brindarle una asesoría integral en todas las etapas de su adquisición, de manera que usted pueda satisfacer sus necesidades. Disponemos además de personal técnico, cuyos conocimientos incluyen una excelente preparación teórica y experiencia en el campo, lo que nos permite brindar una oportuna atención a todos nuestros clientes.',
-                font: 'Calibri',
-                size: 21.5,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -769,8 +792,8 @@ export const exportQuoteToWord = async (
             children: [
               new TextRun({
                 text: 'En caso de optar por nuestra propuesta, podrá estar seguro de que tendrá todo el respaldo que da nuestra amplia trayectoria a nivel nacional, bajo un marco de honestidad, calidad y profesionalismo. La expedición de la orden de compra mediante la cual se acepta la presente oferta mercantil supone el conocimiento y aceptación expresa de las condiciones contempladas en ella.',
-                font: 'Calibri',
-                size: 21.5,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -789,15 +812,15 @@ export const exportQuoteToWord = async (
               new TextRun({
                 text: `VALOR TOTAL EN LETRAS (CON IVA ${Math.round((header.taxRate ?? 0.19) * 100)}%): `,
                 bold: true,
-                font: 'Calibri',
-                size: 19,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
               new TextRun({
                 text: totalWords.toUpperCase(),
                 bold: true,
-                font: 'Calibri',
-                size: 19,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -811,8 +834,8 @@ export const exportQuoteToWord = async (
               new TextRun({
                 text: 'CONDICIONES COMERCIALES',
                 bold: true,
-                font: 'Calibri',
-                size: 23,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -820,19 +843,19 @@ export const exportQuoteToWord = async (
           new Paragraph({
             spacing: { after: 180, line: 276 },
             children: [
-              new TextRun({ text: 'Forma de pago: ', bold: true, font: 'Calibri', size: 21, color: '000000' }),
-              new TextRun({ text: header.paymentTerms || '50% Anticipo y 50% Contra-entrega.', font: 'Calibri', size: 21, color: '000000' }),
+              new TextRun({ text: 'Forma de pago: ', bold: true, font: DOC_BODY_FONT, size: DOC_BODY_SIZE, color: '000000' }),
+              new TextRun({ text: header.paymentTerms || '50% Anticipo y 50% Contra-entrega.', font: DOC_BODY_FONT, size: DOC_BODY_SIZE, color: '000000' }),
             ],
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFIED,
             spacing: { after: 180, line: 276 },
             children: [
-              new TextRun({ text: 'Tiempo de entrega estimado: ', bold: true, font: 'Calibri', size: 21, color: '000000' }),
+              new TextRun({ text: 'Tiempo de entrega estimado: ', bold: true, font: DOC_BODY_FONT, size: DOC_BODY_SIZE, color: '000000' }),
               new TextRun({
                 text: `${header.deliveryTime || '90D'}. El tiempo de entrega será confirmado al momento de suscribir el contrato o recibir el anticipo, teniendo en cuenta la disponibilidad de fábrica de los equipos contados a partir de la aceptación de la propuesta en mención. El tiempo de entrega será prorrogable por mutuo acuerdo entre las partes, o en caso de que se presente alguna eventualidad en la entrega por parte del fabricante.`,
-                font: 'Calibri',
-                size: 21,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -840,11 +863,11 @@ export const exportQuoteToWord = async (
           new Paragraph({
             spacing: { after: 180, line: 276 },
             children: [
-              new TextRun({ text: 'Capacitación: ', bold: true, font: 'Calibri', size: 21, color: '000000' }),
+              new TextRun({ text: 'Capacitación: ', bold: true, font: DOC_BODY_FONT, size: DOC_BODY_SIZE, color: '000000' }),
               new TextRun({
                 text: header.trainingTerms || 'Un (1) día en la ubicación del equipo. Las fechas de las visitas serán acordadas entre las partes.',
-                font: 'Calibri',
-                size: 21,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -853,11 +876,11 @@ export const exportQuoteToWord = async (
             alignment: AlignmentType.JUSTIFIED,
             spacing: { after: 180, line: 276 },
             children: [
-              new TextRun({ text: 'Mantenimiento: ', bold: true, font: 'Calibri', size: 21, color: '000000' }),
+              new TextRun({ text: 'Mantenimiento: ', bold: true, font: DOC_BODY_FONT, size: DOC_BODY_SIZE, color: '000000' }),
               new TextRun({
                 text: header.maintenanceTerms || 'SYD COLOMBIA S.A. realizara un (1) mantenimiento preventivo por parte del Servicio Técnico de Nuestra Empresa por parte de un personal altamente calificado y entrenado, en apoyo de la marca para instalar y dar mantenimiento a esta clase de equipos.',
-                font: 'Calibri',
-                size: 21,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -865,11 +888,11 @@ export const exportQuoteToWord = async (
           new Paragraph({
             spacing: { after: 140, line: 276 },
             children: [
-              new TextRun({ text: 'Garantía: ', bold: true, font: 'Calibri', size: 21, color: '000000' }),
+              new TextRun({ text: 'Garantía: ', bold: true, font: DOC_BODY_FONT, size: DOC_BODY_SIZE, color: '000000' }),
               new TextRun({
                 text: header.warrantyTerms || 'Doce (12) meses contados a partir de la fecha de instalación del equipo.',
-                font: 'Calibri',
-                size: 21,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -879,8 +902,8 @@ export const exportQuoteToWord = async (
             children: [
               new TextRun({
                 text: 'Quedan exceptuados de esta garantía los siguientes casos:',
-                font: 'Calibri',
-                size: 21,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -891,8 +914,8 @@ export const exportQuoteToWord = async (
             children: [
               new TextRun({
                 text: 'Daños generados por la incorrecta operación, manipulación o cuidado de los sistemas.',
-                font: 'Calibri',
-                size: 20.5,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -903,8 +926,8 @@ export const exportQuoteToWord = async (
             children: [
               new TextRun({
                 text: 'Mal uso o abuso.',
-                font: 'Calibri',
-                size: 20.5,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -915,8 +938,8 @@ export const exportQuoteToWord = async (
             children: [
               new TextRun({
                 text: 'Omisión al seguir las instrucciones de operación del equipo.',
-                font: 'Calibri',
-                size: 20.5,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -927,8 +950,8 @@ export const exportQuoteToWord = async (
             children: [
               new TextRun({
                 text: 'Las anormalidades de energía eléctrica, instalación eléctrica inadecuada.',
-                font: 'Calibri',
-                size: 20.5,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -936,11 +959,11 @@ export const exportQuoteToWord = async (
           new Paragraph({
             spacing: { after: 180, line: 276 },
             children: [
-              new TextRun({ text: 'Transporte: ', bold: true, font: 'Calibri', size: 21, color: '000000' }),
+              new TextRun({ text: 'Transporte: ', bold: true, font: DOC_BODY_FONT, size: DOC_BODY_SIZE, color: '000000' }),
               new TextRun({
                 text: 'SYD COLOMBIA asume los gastos del envío de los equipos adquiridos adjudicados en la oferta',
-                font: 'Calibri',
-                size: 21,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -948,11 +971,11 @@ export const exportQuoteToWord = async (
           new Paragraph({
             spacing: { after: 200, line: 276 },
             children: [
-              new TextRun({ text: 'Validez De La Oferta: ', bold: true, font: 'Calibri', size: 21, color: '000000' }),
+              new TextRun({ text: 'Validez De La Oferta: ', bold: true, font: DOC_BODY_FONT, size: DOC_BODY_SIZE, color: '000000' }),
               new TextRun({
                 text: `Treinta ${header.validityDays || 30} días calendario a partir de la fecha de entrega de la oferta`,
-                font: 'Calibri',
-                size: 21,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -961,7 +984,7 @@ export const exportQuoteToWord = async (
             keepNext: true,
             spacing: { after: 60 },
             children: [
-              new TextRun({ text: 'Atentamente,', font: 'Calibri', size: 21, color: '000000' }),
+              new TextRun({ text: 'Atentamente,', font: DOC_BODY_FONT, size: DOC_BODY_SIZE, color: '000000' }),
             ],
           }),
 
@@ -1001,8 +1024,8 @@ export const exportQuoteToWord = async (
               new TextRun({
                 text: 'SUMINISTROS Y DOTACIONES COLOMBIA S.A.',
                 bold: true,
-                font: 'Calibri',
-                size: 22,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '000000',
               }),
             ],
@@ -1011,8 +1034,8 @@ export const exportQuoteToWord = async (
             children: [
               new TextRun({
                 text: 'Dpto. Mercadeo y Ventas',
-                font: 'Calibri',
-                size: 21,
+                font: DOC_BODY_FONT,
+                size: DOC_BODY_SIZE,
                 color: '334155',
               }),
             ],
@@ -1071,15 +1094,15 @@ export const exportTenderToWord = (header: any, items: any[], clientInfo?: any) 
       <meta charset="utf-8">
       <title>Especificaciones Técnicas - ${processNum}</title>
       <style>
-        body { font-family: 'Calibri', 'Segoe UI', sans-serif; font-size: 11pt; color: #1e293b; line-height: 1.4; }
-        h1 { font-size: 15pt; color: #0f2744; text-align: center; margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
-        h2 { font-size: 12pt; color: #1e3a8a; text-align: center; margin-top: 0; margin-bottom: 15px; font-weight: normal; }
-        .header-box { border: 1px solid #cbd5e1; background-color: #f8fafc; padding: 12px; margin-bottom: 20px; border-radius: 4px; font-size: 10pt; }
-        .equipment-header { background-color: #0f2744; color: white; padding: 8px 12px; font-weight: bold; font-size: 11pt; margin-top: 18px; margin-bottom: 6px; border-radius: 3px; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 16px; font-size: 10pt; }
-        th { background-color: #1e3a8a; color: white; padding: 8px 10px; border: 1px solid #1e3a8a; text-align: left; }
-        td { padding: 6px 10px; border: 1px solid #cbd5e1; vertical-align: top; }
-        .footer { font-size: 9pt; color: #64748b; text-align: center; margin-top: 30px; border-top: 1px solid #cbd5e1; padding-top: 10px; }
+        body { font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1e293b; line-height: 1.45; }
+        h1 { font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; font-size: 14pt; color: #0f2744; text-align: center; margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
+        h2 { font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1e3a8a; text-align: center; margin-top: 0; margin-bottom: 15px; font-weight: normal; }
+        .header-box { border: 1px solid #cbd5e1; background-color: #f8fafc; padding: 12px; margin-bottom: 20px; border-radius: 4px; font-size: 10pt; font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; }
+        .equipment-header { background-color: #0f2744; color: white; padding: 8px 12px; font-weight: bold; font-size: 11pt; margin-top: 18px; margin-bottom: 6px; border-radius: 3px; font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 16px; font-size: 10pt; font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; }
+        th { background-color: #1e3a8a; color: white; padding: 8px 10px; border: 1px solid #1e3a8a; text-align: left; font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; font-size: 10pt; }
+        td { padding: 6px 10px; border: 1px solid #cbd5e1; vertical-align: middle; font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; font-size: 10pt; }
+        .footer { font-size: 9.5pt; color: #64748b; text-align: center; margin-top: 30px; border-top: 1px solid #cbd5e1; padding-top: 10px; font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; }
       </style>
     </head>
     <body>

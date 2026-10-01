@@ -24,6 +24,7 @@ import {
   ShoppingCart,
   ReceiptText,
   CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import {
   OCTrackingContract,
@@ -32,12 +33,16 @@ import {
   OCPaymentTerms,
   OCPaymentStatus,
   AuthUser,
+  SupplierInvoiceAttachment,
+  SalesOrderRecord,
 } from '../../../types';
 import {
   PAYMENT_TERMS_OPTIONS,
   PAYMENT_STATUS_OPTIONS,
   OC_STATUS_OPTIONS,
 } from '../../../utils/ocTrackingStorage';
+import { isValidOCNumber } from '../../../utils/formatters';
+import { SupplierInvoicesModal } from './SupplierInvoicesModal';
 
 export interface SupplierOCGroup {
   supplier: string;
@@ -69,8 +74,12 @@ interface ContractHierarchyViewProps {
   onRequestDeleteContract: (contract: OCTrackingContract) => void;
   onRequestDeleteItem: (contractId: string, item: OCTrackingItem) => void;
   onRequestDeleteSupplierOC: (contractId: string, supplier: string, ocNumber: string) => void;
+  onUpdateOCNumber?: (contractId: string, supplier: string, oldOCNumber: string, newOCNumber: string) => void;
+  onUpdateSalesOrderNumber?: (contractId: string, newOVNumber: string) => void;
+  onSaveSupplierInvoices?: (contractId: string, supplier: string, ocNumber: string, invoices: SupplierInvoiceAttachment[]) => void;
   onNavigateToTab?: (tab: string) => void;
   currentUser?: AuthUser | null;
+  salesOrders?: SalesOrderRecord[];
 }
 
 export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
@@ -88,9 +97,35 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
   onRequestDeleteContract,
   onRequestDeleteItem,
   onRequestDeleteSupplierOC,
+  onUpdateOCNumber,
+  onUpdateSalesOrderNumber,
+  onSaveSupplierInvoices,
   currentUser,
+  salesOrders = [],
 }) => {
   const isReadOnly = currentUser?.role === 'viewer' && !currentUser?.permissions?.canManageOCTracking;
+
+  // State for manual OC number modal
+  const [editingOCModal, setEditingOCModal] = useState<{
+    contractId: string;
+    supplier: string;
+    oldOC: string;
+    newOC: string;
+  } | null>(null);
+
+  // State for manual OV (Sales Order) number modal
+  const [editingSalesOrderModal, setEditingSalesOrderModal] = useState<{
+    contractId: string;
+    currentOV: string;
+  } | null>(null);
+
+  // State for Supplier Invoices attachment modal
+  const [supplierInvoicesTarget, setSupplierInvoicesTarget] = useState<{
+    contract: OCTrackingContract;
+    supplier: string;
+    ocNumber: string;
+    invoices: SupplierInvoiceAttachment[];
+  } | null>(null);
 
   // Local state for collapsed supplier OC groups
   const [collapsedSupplierKeys, setCollapsedSupplierKeys] = useState<Set<string>>(() => {
@@ -164,34 +199,42 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
   };
 
   const getSourceBadge = (contract: OCTrackingContract) => {
-    if (contract.salesOrderNumber || contract.id.includes('ov') || contract.sourceType === 'orden_venta') {
+    const rawContractNum = contract.contractNumber || '';
+    const cleanContractNum = rawContractNum.replace(/^ov:\s*/i, '').trim();
+
+    // Identify Client OC or Tender Process number
+    const isTender =
+      contract.sourceType === 'licitacion_adjudicada' ||
+      Boolean(contract.tenderClientId) ||
+      cleanContractNum.toLowerCase().startsWith('nohb') ||
+      cleanContractNum.toLowerCase().startsWith('lic') ||
+      cleanContractNum.toLowerCase().startsWith('contrato');
+
+    const clientOCorProcess =
+      cleanContractNum && !cleanContractNum.startsWith('ov-')
+        ? cleanContractNum
+        : contract.tenderClientId || (contract.quoteNumber ? `Cotiz: ${contract.quoteNumber}` : '');
+
+    if (isTender) {
       return (
-        <span className="inline-flex items-center gap-1.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[11px] font-black px-2.5 py-0.5 rounded-lg shadow-xs">
-          <ShoppingCart className="w-3.5 h-3.5 text-indigo-400" />
-          <span>ORDEN DE VENTA ({contract.salesOrderNumber || contract.contractNumber})</span>
+        <span className="inline-flex items-center gap-1.5 bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[11px] font-black px-2.5 py-0.5 rounded-lg shadow-xs">
+          <Tag className="w-3.5 h-3.5 text-purple-400" />
+          <span>LICITACIÓN / OC CLIENTE ({clientOCorProcess || 'Adjudicada'})</span>
         </span>
       );
     }
-    if (contract.sourceType === 'licitacion_adjudicada' || contract.tenderClientId) {
-      return (
-        <span className="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-black px-2.5 py-0.5 rounded-lg shadow-xs">
-          <Tag className="w-3.5 h-3.5 text-emerald-400" />
-          <span>LICITACIÓN ADJUDICADA ({contract.contractNumber})</span>
-        </span>
-      );
-    }
-    if (contract.sourceType === 'cotizacion_aprobada') {
+    if (contract.sourceType === 'cotizacion_aprobada' || contract.quoteNumber) {
       return (
         <span className="inline-flex items-center gap-1.5 bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[11px] font-black px-2.5 py-0.5 rounded-lg shadow-xs">
           <FileText className="w-3.5 h-3.5 text-sky-400" />
-          <span>COTIZACIÓN APROBADA ({contract.quoteNumber || contract.contractNumber})</span>
+          <span>OC CLIENTE ({clientOCorProcess || contract.quoteNumber || 'Cotización Aprobada'})</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[11px] font-black px-2.5 py-0.5 rounded-lg shadow-xs">
-        <Layers className="w-3.5 h-3.5 text-purple-400" />
-        <span>CONTRATO / PEDIDO ({contract.contractNumber})</span>
+      <span className="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-black px-2.5 py-0.5 rounded-lg shadow-xs">
+        <ShoppingCart className="w-3.5 h-3.5 text-emerald-400" />
+        <span>OC CLIENTE ({clientOCorProcess || 'Directa'})</span>
       </span>
     );
   };
@@ -265,9 +308,25 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                     <span className="text-slate-300 font-semibold">
                       {isSalesOrder ? 'Orden de Venta:' : 'Proceso / Licitación:'}
                     </span>
-                    <span className="font-mono text-sky-300 font-bold">
-                      {contract.contractNumber || contract.salesOrderNumber || 'N/A'}
+                    <span className="font-mono text-sky-300 font-bold bg-sky-950/60 px-2 py-0.5 rounded border border-sky-500/40">
+                      {contract.salesOrderNumber || contract.contractNumber || 'Sin N° de OV'}
                     </span>
+                    {!isReadOnly && onUpdateSalesOrderNumber && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingSalesOrderModal({
+                            contractId: contract.id,
+                            currentOV: contract.salesOrderNumber || (isSalesOrder ? contract.contractNumber : '') || '',
+                          })
+                        }
+                        className="p-1 rounded text-amber-400 hover:text-white hover:bg-amber-900/40 transition cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+                        title="Modificar manualmente el número consecutivo de Orden de Venta (OV)"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>N° OV Manual</span>
+                      </button>
+                    )}
                     {contract.contactPerson && (
                       <span>• Contacto: {contract.contactPerson} {contract.contactPhone ? `(${contract.contactPhone})` : ''}</span>
                     )}
@@ -383,9 +442,53 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                                 >
                                   {group.supplier}
                                 </h4>
-                                <span className="font-mono text-[11px] font-bold text-sky-300 bg-sky-950/90 px-2 py-0.5 rounded border border-sky-500/50">
-                                  {group.ocNumber}
-                                </span>
+                                {isValidOCNumber(group.ocNumber) ? (
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-mono text-[11px] font-bold text-sky-300 bg-sky-950/90 px-2 py-0.5 rounded border border-sky-500/50">
+                                      {group.ocNumber}
+                                    </span>
+                                    {!isReadOnly && onUpdateOCNumber && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setEditingOCModal({
+                                            contractId: contract.id,
+                                            supplier: group.supplier,
+                                            oldOC: group.ocNumber,
+                                            newOC: group.ocNumber,
+                                          })
+                                        }
+                                        className="p-1 rounded text-sky-400 hover:text-white hover:bg-sky-900/50 transition cursor-pointer"
+                                        title="Modificar número consecutivo de OC asignado por la empresa"
+                                      >
+                                        <Edit3 className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  !isReadOnly && onUpdateOCNumber ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setEditingOCModal({
+                                          contractId: contract.id,
+                                          supplier: group.supplier,
+                                          oldOC: '',
+                                          newOC: '',
+                                        })
+                                      }
+                                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10.5px] font-bold transition cursor-pointer"
+                                      title="Asignar el número de Orden de Compra (OC) consecutivo de la empresa"
+                                    >
+                                      <Plus className="w-3 h-3 stroke-[2.5]" />
+                                      <span>Añadir OC</span>
+                                    </button>
+                                  ) : (
+                                    <span className="font-mono text-[10.5px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                                      Sin N° OC
+                                    </span>
+                                  )
+                                )}
                                 {allDelivered ? (
                                   <span className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9.5px] font-black px-2 py-0.5 rounded-full">
                                     <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
@@ -450,6 +553,44 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                                 {group.status}
                               </span>
                             </div>
+
+                            {/* Facturas del Proveedor (Anexos de facturas emitidas por el fabricante / proveedor) */}
+                            {(() => {
+                              const groupInvoices: SupplierInvoiceAttachment[] = group.items.flatMap((it) => it.supplierInvoices || []).reduce((acc: SupplierInvoiceAttachment[], inv) => {
+                                if (!acc.some((existing) => existing.id === inv.id || (existing.invoiceNumber === inv.invoiceNumber && existing.fileName === inv.fileName))) {
+                                  acc.push(inv);
+                                }
+                                return acc;
+                              }, (contract.supplierInvoices || []).filter((inv) => {
+                                if (!inv) return false;
+                                const matchNotes = inv.notes && (inv.notes.includes(group.ocNumber) || inv.notes.toLowerCase().includes(group.supplier.toLowerCase()));
+                                const matchProps = (inv.ocNumber && inv.ocNumber === group.ocNumber) || (inv.supplier && inv.supplier.toLowerCase() === group.supplier.toLowerCase());
+                                return matchNotes || matchProps;
+                              }));
+
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSupplierInvoicesTarget({
+                                      contract,
+                                      supplier: group.supplier,
+                                      ocNumber: group.ocNumber,
+                                      invoices: groupInvoices,
+                                    })
+                                  }
+                                  className={`inline-flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-0.5 rounded-full border transition cursor-pointer ${
+                                    groupInvoices.length > 0
+                                      ? 'bg-indigo-500/25 hover:bg-indigo-500/40 text-indigo-300 border-indigo-500/50 shadow-xs'
+                                      : 'bg-slate-800 hover:bg-indigo-950/60 text-slate-300 hover:text-indigo-200 border-slate-700'
+                                  }`}
+                                  title="Ver y anexar facturas del proveedor para esta Orden de Compra"
+                                >
+                                  <FileText className="w-3 h-3 text-indigo-400" />
+                                  <span>Facturas Proveedor ({groupInvoices.length})</span>
+                                </button>
+                              );
+                            })()}
 
                             {/* Subtotal of this OC */}
                             <div className="text-[11px] font-black text-emerald-400 px-2.5 py-1 bg-[#101b2b] rounded-lg border border-[#334d6e] font-mono">
@@ -604,50 +745,104 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
 
                                       {/* Status Selector */}
                                       <td className="py-2 px-2.5">
-                                        <select
-                                          disabled={isReadOnly}
-                                          value={item.status}
-                                          onChange={(e) =>
-                                            onQuickChangeItemStatus(
-                                              contract.id,
-                                              item.id,
-                                              e.target.value as OCStatus
-                                            )
-                                          }
-                                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded border outline-none ${isReadOnly ? 'cursor-default opacity-85' : 'cursor-pointer'} w-full ${getOCStatusBadgeClass(
-                                            item.status
-                                          )}`}
-                                        >
-                                          {OC_STATUS_OPTIONS.map((opt) => (
-                                            <option key={opt.status} value={opt.status} className="bg-[#192b45] text-white">
-                                              {opt.label}
-                                            </option>
-                                          ))}
-                                        </select>
+                                        {(() => {
+                                          const hasOCNumber = Boolean(
+                                            isValidOCNumber(group.ocNumber) ||
+                                            isValidOCNumber(item.ocNumber)
+                                          );
+
+                                          return (
+                                            <div className="space-y-0.5">
+                                              <select
+                                                disabled={isReadOnly || !hasOCNumber}
+                                                value={item.status}
+                                                onChange={(e) => {
+                                                  if (!hasOCNumber) {
+                                                    alert('Debe colocar el número de la OC primero para poder manipular el estado del equipo.');
+                                                    return;
+                                                  }
+                                                  onQuickChangeItemStatus(
+                                                    contract.id,
+                                                    item.id,
+                                                    e.target.value as OCStatus
+                                                  );
+                                                }}
+                                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded border outline-none w-full ${
+                                                  !hasOCNumber
+                                                    ? 'opacity-40 bg-slate-800 text-slate-400 cursor-not-allowed border-slate-700'
+                                                    : isReadOnly
+                                                    ? 'cursor-default opacity-85'
+                                                    : 'cursor-pointer'
+                                                } ${hasOCNumber ? getOCStatusBadgeClass(item.status) : ''}`}
+                                                title={!hasOCNumber ? 'Bloqueado: Debe colocar el número de la OC primero' : 'Cambiar estado del equipo'}
+                                              >
+                                                {OC_STATUS_OPTIONS.map((opt) => (
+                                                  <option key={opt.status} value={opt.status} className="bg-[#192b45] text-white">
+                                                    {opt.label}
+                                                  </option>
+                                                ))}
+                                              </select>
+                                              {!hasOCNumber && (
+                                                <div
+                                                  onClick={() => {
+                                                    if (!isReadOnly && onUpdateOCNumber) {
+                                                      setEditingOCModal({
+                                                        contractId: contract.id,
+                                                        supplier: group.supplier,
+                                                        oldOC: '',
+                                                        newOC: '',
+                                                      });
+                                                    }
+                                                  }}
+                                                  className="text-[8.5px] font-black text-amber-300 flex items-center gap-0.5 cursor-pointer hover:underline"
+                                                  title="Clic para ingresar el número de OC"
+                                                >
+                                                  <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                                                  <span>Asignar N° OC primero</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })()}
                                       </td>
 
                                       {/* Payment Terms Selector */}
                                       <td className="py-2 px-2.5">
-                                        <select
-                                          disabled={isReadOnly}
-                                          value={item.paymentTerms || 'Crédito 30 días'}
-                                          onChange={(e) =>
-                                            onQuickChangeItemPaymentTerms(
-                                              contract.id,
-                                              item.id,
-                                              e.target.value as OCPaymentTerms
-                                            )
-                                          }
-                                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded border outline-none ${isReadOnly ? 'cursor-default opacity-85' : 'cursor-pointer'} w-full ${getPaymentTermsBadgeClass(
-                                            item.paymentTerms
-                                          )}`}
-                                        >
-                                          {PAYMENT_TERMS_OPTIONS.map((p) => (
-                                            <option key={p.terms} value={p.terms} className="bg-[#192b45] text-white">
-                                              {p.label}
-                                            </option>
-                                          ))}
-                                        </select>
+                                        {(() => {
+                                          const hasOCNumber = Boolean(
+                                            isValidOCNumber(group.ocNumber) ||
+                                            isValidOCNumber(item.ocNumber)
+                                          );
+
+                                          return (
+                                            <select
+                                              disabled={isReadOnly || !hasOCNumber}
+                                              value={item.paymentTerms || 'Crédito 30 días'}
+                                              onChange={(e) => {
+                                                if (!hasOCNumber) return;
+                                                onQuickChangeItemPaymentTerms(
+                                                  contract.id,
+                                                  item.id,
+                                                  e.target.value as OCPaymentTerms
+                                                );
+                                              }}
+                                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded border outline-none w-full ${
+                                                !hasOCNumber
+                                                  ? 'opacity-40 bg-slate-800 text-slate-400 cursor-not-allowed border-slate-700'
+                                                  : isReadOnly
+                                                  ? 'cursor-default opacity-85'
+                                                  : 'cursor-pointer'
+                                              } ${hasOCNumber ? getPaymentTermsBadgeClass(item.paymentTerms) : ''}`}
+                                              title={!hasOCNumber ? 'Bloqueado: Debe colocar el número de la OC primero' : 'Forma de pago'}
+                                            >
+                                              {PAYMENT_TERMS_OPTIONS.map((p) => (
+                                                <option key={p.terms} value={p.terms} className="bg-[#192b45] text-white">
+                                                  {p.label}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          );
+                                        })()}
                                       </td>
 
                                       {/* 48h Alert & Last Update */}
@@ -692,6 +887,24 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                                           <button
                                             type="button"
                                             onClick={() =>
+                                              setSupplierInvoicesTarget({
+                                                contract,
+                                                supplier: group.supplier,
+                                                ocNumber: group.ocNumber,
+                                                invoices: (item.supplierInvoices && item.supplierInvoices.length > 0)
+                                                  ? item.supplierInvoices
+                                                  : (contract.supplierInvoices || []).filter((inv) => inv && (inv.ocNumber === group.ocNumber || inv.supplier?.toLowerCase() === group.supplier.toLowerCase())),
+                                              })
+                                            }
+                                            className="p-1 rounded bg-[#1b2d46] hover:bg-[#253f63] text-indigo-300 hover:text-white transition cursor-pointer"
+                                            title="Ver o anexar facturas del proveedor"
+                                          >
+                                            <FileText className="w-3 h-3 text-indigo-400" />
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() =>
                                               onOpenHistory(
                                                 `${contract.contractNumber} - ${item.supplier}`,
                                                 item
@@ -731,6 +944,194 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
           </div>
         );
       })}
+
+      {/* MODAL: ASIGNAR / MODIFICAR N° DE OC MANUAL */}
+      {editingOCModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-[#132235] border border-sky-500/50 rounded-2xl shadow-2xl p-6 text-slate-100 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#253952]">
+              <div className="flex items-center gap-2">
+                <Tag className="w-5 h-5 text-amber-400" />
+                <h3 className="text-sm font-black text-white">
+                  {editingOCModal.oldOC ? 'Modificar N° de OC' : 'Añadir N° de OC Manual'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingOCModal(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-slate-300">
+                Proveedor: <strong className="text-white">{editingOCModal.supplier}</strong>
+              </p>
+              <div>
+                <label className="block text-xs font-bold text-amber-300 mb-1.5">
+                  Número de Orden de Compra (OC de la Empresa) *:
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="ej: OC-1045 o Consecutivo Interno"
+                  value={editingOCModal.newOC}
+                  onChange={(e) =>
+                    setEditingOCModal((prev) => (prev ? { ...prev, newOC: e.target.value } : null))
+                  }
+                  className="w-full bg-[#0b1420] border-2 border-amber-500/60 rounded-xl px-3 py-2 text-sm font-mono font-bold text-amber-300 outline-none focus:border-amber-400"
+                />
+                <p className="text-[10.5px] text-slate-400 mt-1">
+                  Ingrese el número consecutivo oficial que le asigna el sistema interno de la empresa.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#253952]">
+              <button
+                type="button"
+                onClick={() => setEditingOCModal(null)}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!editingOCModal.newOC.trim()) return;
+                  onUpdateOCNumber?.(
+                    editingOCModal.contractId,
+                    editingOCModal.supplier,
+                    editingOCModal.oldOC,
+                    editingOCModal.newOC.trim()
+                  );
+                  setEditingOCModal(null);
+                }}
+                disabled={!editingOCModal.newOC.trim()}
+                className="px-4 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md transition cursor-pointer disabled:opacity-50"
+              >
+                Guardar N° de OC
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: MANUAL SALES ORDER (OV) NUMBER ASSIGNMENT */}
+      {editingSalesOrderModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-[#101b2b] border border-amber-500/50 rounded-2xl w-full max-w-md p-4 sm:p-5 shadow-2xl space-y-4 animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-[#253952] pb-2">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-amber-400" />
+                <span>Asignar N° de Orden de Venta (OV) Manual</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingSalesOrderModal(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-slate-300">
+                Selecciona una Orden de Venta (OV) existente o asigna manualmente su número consecutivo oficial.
+              </p>
+              {salesOrders.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-amber-300 mb-1">
+                    Seleccionar Orden de Venta (OV) Registrada:
+                  </label>
+                  <select
+                    onChange={(e) => {
+                      const so = salesOrders.find((s) => s.id === e.target.value);
+                      if (so && so.salesOrderNumber) {
+                        setEditingSalesOrderModal((prev) => prev ? { ...prev, currentOV: so.salesOrderNumber } : null);
+                      }
+                    }}
+                    className="w-full bg-[#0b1420] border border-amber-500/40 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none mb-2 cursor-pointer"
+                  >
+                    <option value="">-- Seleccionar OV existente --</option>
+                    {salesOrders.map((so) => (
+                      <option key={so.id} value={so.id}>
+                        {so.salesOrderNumber} — {so.clientName} (${so.totalValueCOP?.toLocaleString('es-CO')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-bold text-amber-300 mb-1.5">
+                  Número Consecutivo de Orden de Venta (OV) *:
+                </label>
+                <input
+                  type="text"
+                  placeholder="ej: OV-2026-001"
+                  value={editingSalesOrderModal.currentOV}
+                  onChange={(e) =>
+                    setEditingSalesOrderModal((prev) =>
+                      prev ? { ...prev, currentOV: e.target.value } : null
+                    )
+                  }
+                  className="w-full bg-[#0b1420] border-2 border-amber-500/60 rounded-xl px-3 py-2 text-sm font-mono font-bold text-amber-300 outline-none focus:border-amber-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#253952]">
+              <button
+                type="button"
+                onClick={() => setEditingSalesOrderModal(null)}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!editingSalesOrderModal.currentOV.trim()) return;
+                  onUpdateSalesOrderNumber?.(
+                    editingSalesOrderModal.contractId,
+                    editingSalesOrderModal.currentOV.trim().toUpperCase()
+                  );
+                  setEditingSalesOrderModal(null);
+                }}
+                disabled={!editingSalesOrderModal.currentOV.trim()}
+                className="px-4 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md transition cursor-pointer disabled:opacity-50"
+              >
+                Guardar N° de OV
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SUPPLIER INVOICES ATTACHMENT */}
+      {supplierInvoicesTarget && (
+        <SupplierInvoicesModal
+          isOpen={true}
+          onClose={() => setSupplierInvoicesTarget(null)}
+          supplier={supplierInvoicesTarget.supplier}
+          ocNumber={supplierInvoicesTarget.ocNumber}
+          clientName={supplierInvoicesTarget.contract.clientName}
+          contractNumber={supplierInvoicesTarget.contract.contractNumber || supplierInvoicesTarget.contract.salesOrderNumber}
+          invoices={supplierInvoicesTarget.invoices}
+          isReadOnly={isReadOnly}
+          onSaveInvoices={(updatedInvoices) => {
+            onSaveSupplierInvoices?.(
+              supplierInvoicesTarget.contract.id,
+              supplierInvoicesTarget.supplier,
+              supplierInvoicesTarget.ocNumber,
+              updatedInvoices
+            );
+            setSupplierInvoicesTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 };

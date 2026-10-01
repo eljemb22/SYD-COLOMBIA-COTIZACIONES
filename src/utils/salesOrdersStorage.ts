@@ -11,6 +11,7 @@ import {
   TenderItem,
   TechnicalRequirement,
 } from '../types';
+import { isSalesOrderDeleted, isSalesInvoiceDeleted } from './tombstones';
 const SALES_ORDERS_STORAGE_KEY = 'syd_sales_orders_v1';
 const SALES_INVOICES_STORAGE_KEY = 'syd_sales_invoices_v1';
 
@@ -18,21 +19,84 @@ export const INITIAL_SEED_SALES_ORDERS: SalesOrderRecord[] = [];
 
 export const INITIAL_SEED_SALES_INVOICES: SalesInvoiceRecord[] = [];
 
+/**
+ * Helper to normalize strings for robust equivalence matching
+ */
+const cleanNorm = (str?: string): string => {
+  if (!str) return '';
+  return str
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/^ov:\s*/i, '')
+    .replace(/[^a-z0-9]/g, '');
+};
+
+const isProcessNumberCode = (num?: string): boolean => {
+  if (!num) return false;
+  const clean = cleanNorm(num);
+  return (
+    clean.startsWith('hboc') ||
+    clean.startsWith('nohb') ||
+    clean.startsWith('lic') ||
+    clean.startsWith('contrato') ||
+    clean.startsWith('cotiz')
+  );
+};
+
+/**
+ * Strictly deduplicates sales orders, keeping the latest single record for each unique ID or manual salesOrderNumber.
+ */
+export function deduplicateSalesOrders(orders: SalesOrderRecord[]): SalesOrderRecord[] {
+  if (!Array.isArray(orders)) return [];
+
+  const seenKeys = new Set<string>();
+  const result: SalesOrderRecord[] = [];
+
+  // Sort descending by updatedAt/createdAt so the latest record is prioritized
+  const sorted = [...orders].sort(
+    (a, b) => new Date(b?.updatedAt || b?.createdAt || 0).getTime() - new Date(a?.updatedAt || a?.createdAt || 0).getTime()
+  );
+
+  for (const o of sorted) {
+    if (!o || !o.id || isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId)) {
+      continue;
+    }
+
+    const cleanNum = cleanNorm(o.salesOrderNumber);
+    const key = (cleanNum && !['ov', 'sinov'].includes(cleanNum) && !isProcessNumberCode(o.salesOrderNumber))
+      ? `num-${cleanNum}`
+      : `id-${o.id}`;
+
+    if (seenKeys.has(key)) {
+      continue;
+    }
+    seenKeys.add(key);
+    result.push(o);
+  }
+
+  return result;
+}
+
 export function getStoredSalesOrders(): SalesOrderRecord[] {
   try {
     const raw = localStorage.getItem(SALES_ORDERS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // Filter out any legacy mock demo seeds (OV-2026-001 / OV-2026-002 / ov-seed)
         const filtered = parsed.filter(
           (o: any) =>
             o &&
+            o.id &&
             !o.id?.startsWith('ov-seed-') &&
-            o.salesOrderNumber !== 'OV-2026-001' &&
-            o.salesOrderNumber !== 'OV-2026-002'
+            !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId)
         );
-        return filtered;
+        const deduped = deduplicateSalesOrders(filtered);
+        if (deduped.length !== parsed.length) {
+          localStorage.setItem(SALES_ORDERS_STORAGE_KEY, JSON.stringify(deduped));
+        }
+        return deduped;
       }
     }
   } catch (e) {
@@ -43,9 +107,24 @@ export function getStoredSalesOrders(): SalesOrderRecord[] {
 
 export function saveStoredSalesOrders(orders: SalesOrderRecord[]): void {
   try {
-    localStorage.setItem(SALES_ORDERS_STORAGE_KEY, JSON.stringify(orders));
+    const filtered = (orders || []).filter(
+      (o) => o && o.id && !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId)
+    );
+    const deduped = deduplicateSalesOrders(filtered);
+    try {
+      localStorage.setItem(SALES_ORDERS_STORAGE_KEY, JSON.stringify(deduped));
+    } catch (quotaErr) {
+      // If localStorage is full, save a lean copy without massive base64 file payloads
+      const leanOrders = deduped.map((o) => ({
+        ...o,
+        attachedInvoiceFile: o.attachedInvoiceFile
+          ? { ...o.attachedInvoiceFile, dataUrl: undefined }
+          : undefined,
+      }));
+      localStorage.setItem(SALES_ORDERS_STORAGE_KEY, JSON.stringify(leanOrders));
+    }
   } catch (e) {
-    console.error('Error saving sales orders to localStorage:', e);
+    console.warn('Error saving sales orders to localStorage:', e);
   }
 }
 
@@ -55,12 +134,16 @@ export function getStoredSalesInvoices(): SalesInvoiceRecord[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // Filter out any legacy mock demo seeds (FE-1045 / inv-seed)
+        const seenIds = new Set<string>();
         const filtered = parsed.filter(
           (inv: any) =>
             inv &&
+            inv.id &&
+            !seenIds.has(inv.id) &&
+            (seenIds.add(inv.id), true) &&
             !inv.id?.startsWith('inv-seed-') &&
-            inv.invoiceNumber !== 'FE-1045'
+            inv.invoiceNumber !== 'FE-1045' &&
+            !isSalesInvoiceDeleted(inv.id, inv.invoiceNumber)
         );
         return filtered;
       }
@@ -73,9 +156,23 @@ export function getStoredSalesInvoices(): SalesInvoiceRecord[] {
 
 export function saveStoredSalesInvoices(invoices: SalesInvoiceRecord[]): void {
   try {
-    localStorage.setItem(SALES_INVOICES_STORAGE_KEY, JSON.stringify(invoices));
+    const filtered = (invoices || []).filter(
+      (inv) => inv && inv.id && !isSalesInvoiceDeleted(inv.id, inv.invoiceNumber)
+    );
+    try {
+      localStorage.setItem(SALES_INVOICES_STORAGE_KEY, JSON.stringify(filtered));
+    } catch (quotaErr) {
+      // If localStorage is full, save a lean copy without massive base64 file payloads
+      const leanInvoices = filtered.map((inv) => ({
+        ...inv,
+        attachedInvoiceFile: inv.attachedInvoiceFile
+          ? { ...inv.attachedInvoiceFile, dataUrl: undefined }
+          : undefined,
+      }));
+      localStorage.setItem(SALES_INVOICES_STORAGE_KEY, JSON.stringify(leanInvoices));
+    }
   } catch (e) {
-    console.error('Error saving sales invoices to localStorage:', e);
+    console.warn('Error saving sales invoices to localStorage:', e);
   }
 }
 
@@ -160,7 +257,7 @@ export function createOCTrackingContractFromSalesOrder(
       costPriceCOP: costPriceCOP,
       totalCostCOP: costPriceCOP * qty,
       supplier: supplierName,
-      ocNumber: item.supplierOCRef || `OC-${new Date().getFullYear()}-${supplierName.toUpperCase().replace(/\s+/g, '')}-01`,
+      ocNumber: item.supplierOCRef || '',
       status: 'Borrador / Solicitud',
       paymentStatus: 'Pendiente',
       createdAt: now,
@@ -193,6 +290,7 @@ export function createOCTrackingContractFromSalesOrder(
     salesOrderNumber: salesOrder.salesOrderNumber,
     quoteId: salesOrder.quoteId,
     quoteNumber: salesOrder.quoteNumber,
+    tenderClientId: salesOrder.tenderClientId || salesOrder.contractId,
     sourceType: salesOrder.contractId ? 'licitacion_adjudicada' : 'cotizacion_aprobada',
     contractNumber: `OV: ${salesOrder.salesOrderNumber}${salesOrder.quoteNumber ? ` (${salesOrder.quoteNumber})` : salesOrder.contractNumber ? ` (${salesOrder.contractNumber})` : ''}`,
     clientName: salesOrder.clientName,
@@ -338,7 +436,8 @@ export function createSalesOrderFromTenderProject(
   tender: TenderClientProject,
   existingOrders: SalesOrderRecord[] = []
 ): SalesOrderRecord {
-  const nextNum = generateNextSalesOrderNumber(existingOrders);
+  // Respect user preference: Do NOT auto-generate a consecutive number, let the user assign it manually
+  const manualOrClientNum = tender.header?.clientOrderNumber || (tender.header?.isDirectClientOC ? tender.header.processNumber : '') || '';
   const now = new Date().toISOString();
   const linkedQNum = tender.linkedQuoteNumber || tender.header?.linkedQuoteNumber;
   const linkedQId = tender.linkedQuoteId || tender.header?.linkedQuoteId;
@@ -373,7 +472,7 @@ export function createSalesOrderFromTenderProject(
 
   return {
     id: `ov-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-    salesOrderNumber: nextNum,
+    salesOrderNumber: manualOrClientNum || '',
     quoteId: linkedQId,
     quoteNumber: linkedQNum,
     contractId: tender.id,
@@ -395,5 +494,75 @@ export function createSalesOrderFromTenderProject(
     createdAt: now,
     updatedAt: now,
     notes: `Orden de Venta generada automáticamente a partir del Proceso Licitatorio Adjudicado ${tender.header.processNumber || tender.clientName}.${linkedQNum ? ` (Cotización: ${linkedQNum})` : ''}`,
+  };
+}
+
+/**
+ * Creates a SalesOrderRecord from an existing OCTrackingContract in Ventana 5.
+ * Guarantees that any OC contract tracking entry is immediately visible as an OV in Ventana 6!
+ */
+export function createSalesOrderFromOCTrackingContract(
+  contract: OCTrackingContract,
+  existingOrders: SalesOrderRecord[] = []
+): SalesOrderRecord {
+  const now = new Date().toISOString();
+  const rawOvNum = contract.salesOrderNumber || '';
+  let cleanOvNum = rawOvNum.replace(/^OV:\s*/i, '').trim();
+
+  if (!cleanOvNum || ['ov', 'sinov', 'na', 'n/a'].includes(cleanNorm(cleanOvNum))) {
+    cleanOvNum = generateNextSalesOrderNumber(existingOrders.length > 0 ? existingOrders : getStoredSalesOrders());
+  }
+
+  const items = (contract.items || []).map((it, idx) => {
+    const qty = Number(it.quantity) || 1;
+    const cost = Number(it.costPriceCOP) || 0;
+    const salePrice = Math.round(cost > 0 ? cost * 1.35 : 10000000);
+    const eqStatus = it.status === 'Entregado e Instalado' ? 'Entregado al Cliente' : (it.status ? it.status : 'Pendiente de OC');
+    return {
+      id: `ov-item-${contract.id}-${idx}`,
+      equipmentId: it.equipmentId,
+      code: it.code || `EQ-${idx + 1}`,
+      name: it.name,
+      brand: it.brand || '',
+      model: it.model || '',
+      quotedQuantity: qty,
+      quantityToDispatch: qty,
+      unitSalePriceCOP: salePrice,
+      totalSalePriceCOP: salePrice * qty,
+      equipmentStatus: eqStatus as any,
+      supplierOCRef: it.ocNumber || '',
+      linkedSupplierOCNumber: it.ocNumber || '',
+      assignedSerialNumbers: (it.serialNumbers || []).map((s) => s.serialNumber).filter(Boolean),
+      notes: it.notes || '',
+    };
+  });
+
+  const totalSale = items.reduce((acc, it) => acc + (it.totalSalePriceCOP || 0), 0);
+
+  return {
+    id: contract.salesOrderId || `ov-from-contract-${contract.id}`,
+    salesOrderNumber: cleanOvNum,
+    quoteId: contract.quoteId,
+    quoteNumber: contract.quoteNumber,
+    contractId: contract.tenderClientId || contract.id,
+    contractNumber: contract.contractNumber || '',
+    tenderClientId: contract.tenderClientId,
+    clientName: contract.clientName,
+    clientNit: contract.nit || '',
+    clientCity: contract.city || 'Cartagena, Bolivar',
+    clientContactPerson: contract.contactPerson || '',
+    clientContactPhone: contract.contactPhone || '',
+    clientContactEmail: contract.contactEmail || '',
+    orderDate: contract.createdAt ? contract.createdAt.split('T')[0] : now.split('T')[0],
+    deliveryDate: '',
+    status: 'En Proceso',
+    items,
+    totalValueCOP: contract.totalBudgetCOP && contract.totalBudgetCOP > 0 ? contract.totalBudgetCOP : (totalSale > 0 ? totalSale : 0),
+    invoicedStatus: 'No Facturada',
+    hasLinkedOC: true,
+    ocContractId: contract.id,
+    createdAt: contract.createdAt || now,
+    updatedAt: contract.lastUpdatedAt || now,
+    notes: `Orden de Venta enlazada con Seguimiento de OC (${contract.clientName}).`,
   };
 }

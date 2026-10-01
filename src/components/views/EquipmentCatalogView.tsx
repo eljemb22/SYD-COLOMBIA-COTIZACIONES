@@ -53,7 +53,7 @@ interface EquipmentCatalogViewProps {
   onNavigateToTenders?: () => void;
   onOpenNewEquipmentModal: () => void;
   onEditEquipment: (equipment: MedicalEquipment) => void;
-  onDeleteEquipment?: (id: string) => void;
+  onDeleteEquipment?: (id: string, code?: string) => void;
   onClearAllEquipments?: () => void | Promise<void>;
   onBatchImportEquipments?: (
     updatedCatalog: MedicalEquipment[],
@@ -310,7 +310,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
 
   const confirmDelete = () => {
     if (equipmentToDelete && onDeleteEquipment) {
-      onDeleteEquipment(equipmentToDelete.id);
+      onDeleteEquipment(equipmentToDelete.id, equipmentToDelete.code);
       setEquipmentToDelete(null);
     }
   };

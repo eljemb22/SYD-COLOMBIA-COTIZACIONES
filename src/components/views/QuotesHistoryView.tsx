@@ -70,7 +70,7 @@ const SAVED_QUOTE_COLUMNS: ExcelColumnConfig<SavedQuote>[] = [
     type: 'number',
     accessor: (row) => row.total || 0,
     formatter: (val) => formatCOP(Number(val) || 0),
-    align: 'right',
+    align: 'center',
   },
   {
     id: 'status',
@@ -178,17 +178,21 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
   const baseQuotes = useMemo(() => {
     return savedQuotes
       .filter((q) => {
+        if (!q) return false;
+        const s = (searchTerm || '').trim().toLowerCase();
         const matchesSearch =
-          !searchTerm ||
-          q.quoteNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          q.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          q.nit.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          q.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          q.items.some(
-            (it) =>
-              it.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              it.model.toLowerCase().includes(searchTerm.toLowerCase())
-          );
+          !s ||
+          (q.quoteNumber || '').toLowerCase().includes(s) ||
+          (q.clientName || '').toLowerCase().includes(s) ||
+          (q.nit || '').toLowerCase().includes(s) ||
+          (q.contactPerson || '').toLowerCase().includes(s) ||
+          (Array.isArray(q.items) &&
+            q.items.some(
+              (it) =>
+                (it?.name || '').toLowerCase().includes(s) ||
+                (it?.model || '').toLowerCase().includes(s) ||
+                (it?.brand || '').toLowerCase().includes(s)
+            ));
 
         const matchesStatus = selectedStatus === 'all' || q.status === selectedStatus;
         return matchesSearch && matchesStatus;
@@ -196,10 +200,9 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
       .sort((a, b) => {
         if (sortOrder === 'highest') return (b.total || 0) - (a.total || 0);
         if (sortOrder === 'lowest') return (a.total || 0) - (b.total || 0);
-        return (
-          new Date(b.updatedAt || b.savedAt).getTime() -
-          new Date(a.updatedAt || a.savedAt).getTime()
-        );
+        const bTime = new Date(b.updatedAt || b.savedAt || 0).getTime() || 0;
+        const aTime = new Date(a.updatedAt || a.savedAt || 0).getTime() || 0;
+        return bTime - aTime;
       });
   }, [savedQuotes, searchTerm, selectedStatus, sortOrder]);
 
@@ -515,11 +518,11 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
                       </td>
 
                       {/* Total */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <div className="font-mono font-black text-sm text-emerald-400">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <div className="font-mono font-bold text-xs text-emerald-400">
                           {formatCOP(quote.total)}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono">
+                        <div className="text-xs text-slate-400 font-mono">
                           Subtotal: {formatCOP(quote.subtotal)}
                         </div>
                       </td>

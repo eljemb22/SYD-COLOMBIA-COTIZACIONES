@@ -23,6 +23,7 @@ import {
   unifySingleDuplicateGroup,
   evaluateSupplierPairSimilarity,
 } from './supplierDeduplication';
+import { isContractDeleted } from './tombstones';
 
 export {
   getSupplierCanonicalKey,
@@ -472,6 +473,156 @@ export const OC_STATUS_OPTIONS: { status: OCStatus; label: string; badgeColor: s
 // Starts empty as requested - user will enter real contracts or sync awarded tenders
 const INITIAL_DEMO_OC_CONTRACTS: OCTrackingContract[] = [];
 
+export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]): OCTrackingContract[] {
+  if (!Array.isArray(contracts)) return [];
+
+  const map = new Map<string, OCTrackingContract>();
+
+  contracts.forEach((c) => {
+    if (!c || !c.id || isContractDeleted(c.id)) return;
+
+    // Extract normalized identifiers
+    const normClient = c.clientName 
+      ? c.clientName.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+      : '';
+    const normNit = c.nit
+      ? c.nit.trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+      : '';
+    const normSO = c.salesOrderNumber
+      ? c.salesOrderNumber.trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+      : '';
+    const normContractNum = c.contractNumber
+      ? c.contractNumber.trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+      : '';
+    const normQuote = c.quoteNumber
+      ? c.quoteNumber.trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+      : (c.quoteId || '');
+
+    // Key selection:
+    // Retain 1 single contract card per client as requested
+    let key = '';
+    if (normClient && normClient.length >= 4 && !normClient.includes('clientenuevo') && !normClient.includes('sincliente')) {
+      key = `client-${normClient}`;
+    } else if (normNit && normNit.length >= 5) {
+      key = `nit-${normNit}`;
+    } else if (c.tenderClientId) {
+      key = `tender-${c.tenderClientId}`;
+    } else if (c.salesOrderId) {
+      key = `soid-${c.salesOrderId}`;
+    } else if (normSO && normSO.length >= 3 && !['ov', 'sinov', 'na', 'n/a'].includes(normSO)) {
+      key = `so-${normSO}`;
+    } else if (normContractNum && normContractNum.length >= 3 && !['nohboc', 'hboc', 'na', 'n/a'].includes(normContractNum)) {
+      key = `contract-${normContractNum}`;
+    } else if (normQuote && normQuote.length >= 3 && !['cot', 'sincot'].includes(normQuote)) {
+      key = `quote-${normQuote}`;
+    } else if (c.id) {
+      key = `id-${c.id}`;
+    } else {
+      key = `id-${Math.random()}`;
+    }
+
+    if (!map.has(key)) {
+      map.set(key, {
+        ...c,
+        items: [...(c.items || [])],
+      });
+    } else {
+      const existing = map.get(key)!;
+
+      // Consolidate identifiers
+      if (!existing.salesOrderId && c.salesOrderId) existing.salesOrderId = c.salesOrderId;
+      if (!existing.salesOrderNumber && c.salesOrderNumber) existing.salesOrderNumber = c.salesOrderNumber;
+      if (c.salesOrderNumber && existing.salesOrderNumber && !existing.salesOrderNumber.includes(c.salesOrderNumber)) {
+        existing.salesOrderNumber = existing.salesOrderNumber || c.salesOrderNumber;
+      }
+      if (!existing.quoteId && c.quoteId) existing.quoteId = c.quoteId;
+      if (!existing.quoteNumber && c.quoteNumber) existing.quoteNumber = c.quoteNumber;
+      if (!existing.tenderClientId && c.tenderClientId) existing.tenderClientId = c.tenderClientId;
+      if (!existing.contractNumber && c.contractNumber) existing.contractNumber = c.contractNumber;
+      if (!existing.clientName && c.clientName) existing.clientName = c.clientName;
+      if (!existing.nit && c.nit) existing.nit = c.nit;
+      if (!existing.city && c.city) existing.city = c.city;
+      if (!existing.contactPerson && c.contactPerson) existing.contactPerson = c.contactPerson;
+      if (!existing.contactPhone && c.contactPhone) existing.contactPhone = c.contactPhone;
+      if (!existing.contactEmail && c.contactEmail) existing.contactEmail = c.contactEmail;
+
+      // Merge items without duplication (by id, code, or name+brand)
+      if (c.items && c.items.length > 0) {
+        if (!existing.items) existing.items = [];
+        c.items.forEach((newItem) => {
+          const itemCode = (newItem.code || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+          const itemName = (newItem.name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+          const itemBrand = (newItem.brand || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+          const duplicateIdx = existing.items.findIndex((existingItem) => {
+            if (existingItem.id === newItem.id) return true;
+            if (itemCode && (existingItem.code || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '') === itemCode) {
+              return true;
+            }
+            if (
+              itemName &&
+              (existingItem.name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') === itemName &&
+              (!itemBrand || (existingItem.brand || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '') === itemBrand)
+            ) {
+              return true;
+            }
+            return false;
+          });
+
+          if (duplicateIdx === -1) {
+            existing.items.push({ ...newItem });
+          } else {
+            const existingItem = existing.items[duplicateIdx];
+            if (newItem.serialNumbers && newItem.serialNumbers.length > (existingItem.serialNumbers?.length || 0)) {
+              existingItem.serialNumbers = newItem.serialNumbers;
+            }
+            if (!existingItem.ocNumber && newItem.ocNumber) {
+              existingItem.ocNumber = newItem.ocNumber;
+            }
+            if (!existingItem.supplier && newItem.supplier) {
+              existingItem.supplier = newItem.supplier;
+            }
+            if (!existingItem.status || existingItem.status === 'Pendiente de OC' || existingItem.status === 'Pendiente') {
+              if (newItem.status && newItem.status !== 'Pendiente de OC' && newItem.status !== 'Pendiente') {
+                existingItem.status = newItem.status;
+              }
+            }
+          }
+        });
+      }
+
+      // Merge purchaseOrders
+      if (c.purchaseOrders && c.purchaseOrders.length > 0) {
+        if (!existing.purchaseOrders) existing.purchaseOrders = [];
+        c.purchaseOrders.forEach((po) => {
+          if (!existing.purchaseOrders!.some((ePo) => ePo.id === po.id || (ePo.ocNumber && po.ocNumber && ePo.ocNumber.trim().toLowerCase() === po.ocNumber.trim().toLowerCase()))) {
+            existing.purchaseOrders!.push(po);
+          }
+        });
+      }
+
+      // Merge supplierInvoices
+      if (c.supplierInvoices && c.supplierInvoices.length > 0) {
+        if (!existing.supplierInvoices) existing.supplierInvoices = [];
+        c.supplierInvoices.forEach((inv) => {
+          if (!existing.supplierInvoices!.some((eInv) => eInv.id === inv.id || (eInv.invoiceNumber && inv.invoiceNumber && eInv.invoiceNumber.trim().toLowerCase() === inv.invoiceNumber.trim().toLowerCase()))) {
+            existing.supplierInvoices!.push(inv);
+          }
+        });
+      }
+
+      // Recalculate totals
+      const totalCost = (existing.items || []).reduce((sum, it) => sum + (it.totalCostCOP || ((it.costPriceCOP || 0) * (it.quantity || 1))), 0);
+      existing.totalCostCOP = totalCost;
+      if (c.totalBudgetCOP && c.totalBudgetCOP > (existing.totalBudgetCOP || 0)) {
+        existing.totalBudgetCOP = c.totalBudgetCOP;
+      }
+    }
+  });
+
+  return Array.from(map.values());
+}
+
 export const getStoredOCTrackingContracts = (): OCTrackingContract[] => {
   try {
     // Clear legacy demo keys if present
@@ -486,10 +637,11 @@ export const getStoredOCTrackingContracts = (): OCTrackingContract[] => {
     const parsed: OCTrackingContract[] = JSON.parse(raw);
     // Remove any leftover demo items
     const clean = parsed.filter((c) => !c.id.includes('demo'));
-    if (clean.length !== parsed.length) {
-      localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(clean));
+    const deduped = deduplicateOCTrackingContracts(clean);
+    if (deduped.length !== parsed.length) {
+      localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(deduped));
     }
-    return clean;
+    return deduped;
   } catch (error) {
     console.error('Error reading OC tracking storage:', error);
     return INITIAL_DEMO_OC_CONTRACTS;
@@ -498,9 +650,8 @@ export const getStoredOCTrackingContracts = (): OCTrackingContract[] => {
 
 export const saveStoredOCTrackingContracts = (contracts: OCTrackingContract[]): void => {
   try {
-    // localStorage is only a local cache.
-    // Firestore synchronization is handled explicitly by realtimeSync.ts callers.
-    localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(contracts));
+    const deduped = deduplicateOCTrackingContracts(contracts);
+    localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(deduped));
   } catch (error) {
     console.error('Error saving OC tracking storage:', error);
   }
@@ -655,7 +806,7 @@ export const syncAwardedTendersToOCTracking = (
         tenderClientId: client.id,
         sourceType: 'licitacion_adjudicada',
         contractNumber: client.header.processNumber || primaryExisting?.contractNumber || `LP-${client.id.slice(-6)}`,
-        ocNumber: primaryExisting?.ocNumber || `OC-${new Date().getFullYear()}-${processCode}`,
+        ocNumber: primaryExisting?.ocNumber || '',
         supplier: primaryExisting?.supplier || 'Proveedores de Licitación',
         clientName: client.clientName,
         nit: client.nit || client.header.nit || primaryExisting?.nit || 'Sin NIT',
@@ -670,7 +821,7 @@ export const syncAwardedTendersToOCTracking = (
         paymentTerms: primaryExisting?.paymentTerms || 'Crédito 30 días',
         paymentStatus: primaryExisting?.paymentStatus || 'Pendiente',
         createdAt: primaryExisting?.createdAt || now,
-        lastUpdatedAt: now,
+        lastUpdatedAt: primaryExisting?.lastUpdatedAt || now,
         notes: `Licitación adjudicada: ${client.header.processNumber || client.clientName}. Registre los equipos médicos a adquirir.`,
         items: existingItemsPool,
       };
@@ -684,8 +835,6 @@ export const syncAwardedTendersToOCTracking = (
     rawItems.forEach((tItem, idx) => {
       const matchedEq = equipments.find((eq) => eq.id === tItem.equipmentId || eq.code === tItem.code);
       const supplierName = resolveSupplierName(matchedEq, tItem.brand);
-      const cleanSupplierCode = supplierName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase();
-      const generatedOCNumber = `OC-${new Date().getFullYear()}-${processCode}-${cleanSupplierCode || 'GEN'}`;
       const costPrice = matchedEq?.baseCostCOP || (tItem.offeredUnitPrice ? Math.round(tItem.offeredUnitPrice * 0.7) : 5000000);
       const quantity = tItem.quantity || 1;
 
@@ -693,6 +842,11 @@ export const syncAwardedTendersToOCTracking = (
       const matchedExisting = existingItemsPool.find(
         (it) => it.id === `oc-item-sync-${client.id}-${tItem.id}` || it.id === tItem.id || (it.equipmentId && it.equipmentId === tItem.equipmentId)
       );
+
+      // Preserve existing manual OC number if set by user, otherwise leave empty so user can assign it manually
+      const manualOrExistingOC = (matchedExisting?.ocNumber && matchedExisting.ocNumber !== 'Sin N° OC')
+        ? matchedExisting.ocNumber
+        : '';
 
       if (matchedExisting) {
         mergedItems.push({
@@ -704,7 +858,7 @@ export const syncAwardedTendersToOCTracking = (
           costPriceCOP: matchedExisting.costPriceCOP || costPrice,
           totalCostCOP: (matchedExisting.costPriceCOP || costPrice) * quantity,
           supplier: matchedExisting.supplier || supplierName,
-          ocNumber: matchedExisting.ocNumber || generatedOCNumber,
+          ocNumber: manualOrExistingOC,
         });
       } else {
         const newItem: OCTrackingItem = {
@@ -718,7 +872,7 @@ export const syncAwardedTendersToOCTracking = (
           costPriceCOP: costPrice,
           totalCostCOP: costPrice * quantity,
           supplier: supplierName,
-          ocNumber: generatedOCNumber,
+          ocNumber: manualOrExistingOC,
           status: 'Emitida / Enviada al Proveedor',
           paymentTerms: 'Crédito 30 días',
           paymentStatus: 'Pendiente',
@@ -731,7 +885,7 @@ export const syncAwardedTendersToOCTracking = (
               timestamp: now,
               newStatus: 'Emitida / Enviada al Proveedor',
               user: 'Sistema SYD (Sincronización Automática)',
-              note: `Licitación adjudicada. OC vinculada automáticamente para ${supplierName}.`,
+              note: `Licitación adjudicada para ${supplierName}. Pendiente asignar N° de OC manual de la empresa.`,
             },
           ],
         };
@@ -754,7 +908,7 @@ export const syncAwardedTendersToOCTracking = (
       tenderClientId: client.id,
       sourceType: 'licitacion_adjudicada',
       contractNumber: client.header.processNumber || primaryExisting?.contractNumber || `LP-${client.id.slice(-6)}`,
-      ocNumber: primaryExisting?.ocNumber || `OC-${new Date().getFullYear()}-${processCode}`,
+      ocNumber: primaryExisting?.ocNumber || '',
       supplier: primaryExisting?.supplier || 'Múltiples Proveedores / Licitación',
       clientName: client.clientName,
       nit: client.nit || client.header.nit || primaryExisting?.nit || 'Sin NIT',
@@ -769,7 +923,7 @@ export const syncAwardedTendersToOCTracking = (
       paymentTerms: primaryExisting?.paymentTerms || 'Crédito 30 días',
       paymentStatus: primaryExisting?.paymentStatus || 'Pendiente',
       createdAt: primaryExisting?.createdAt || now,
-      lastUpdatedAt: now,
+      lastUpdatedAt: primaryExisting?.lastUpdatedAt || now,
       notes: `Licitación adjudicada: ${client.header.processNumber || client.clientName}`,
       items: mergedItems,
     };
@@ -778,6 +932,10 @@ export const syncAwardedTendersToOCTracking = (
   }
 
   const finalContracts = [...syncedTenderContracts, ...nonTenderContracts];
+
+  if (JSON.stringify(currentContracts) === JSON.stringify(finalContracts)) {
+    return { updatedContracts: currentContracts, importedCount: 0 };
+  }
 
   if (importedCount > 0 || currentContracts.length !== finalContracts.length) {
     saveStoredOCTrackingContracts(finalContracts);

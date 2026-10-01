@@ -21,6 +21,8 @@ import {
   ChevronDown,
   ChevronUp,
   UserPlus,
+  ShoppingCart,
+  PackageCheck,
 } from 'lucide-react';
 import { TenderClientProject, SavedQuote } from '../../types';
 import { cleanNumericString, formatExactCOP, formatCOP } from '../../utils/formatters';
@@ -43,9 +45,12 @@ interface TenderClientModalProps {
     closingDate?: string;
     executionTerm?: string;
     linkedQuote?: SavedQuote | null;
+    isDirectClientOC?: boolean;
+    clientOrderNumber?: string;
   }) => void;
   editingClient?: TenderClientProject | null;
   savedQuotes?: SavedQuote[];
+  initialMode?: 'tender' | 'direct_oc';
 }
 
 // Ultra-fast client-side image compression & optimization helper (< 40ms)
@@ -101,19 +106,28 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
   onSave,
   editingClient,
   savedQuotes = [],
+  initialMode,
 }) => {
+  const isInitialDirectOC = Boolean(
+    initialMode === 'direct_oc' ||
+    editingClient?.header?.isDirectClientOC ||
+    editingClient?.header?.processType === 'Orden de Compra Directa del Cliente' ||
+    editingClient?.header?.processType === 'OC Directa'
+  );
+  const [entryMode, setEntryMode] = useState<'tender' | 'direct_oc'>(isInitialDirectOC ? 'direct_oc' : (initialMode || 'tender'));
+
   const [form, setForm] = useState({
     clientName: editingClient?.clientName || '',
     nit: editingClient?.header?.nit || '',
     processNumber: editingClient?.header?.processNumber || '',
     budgetCOP: editingClient?.header?.budgetCOP !== undefined ? editingClient.header.budgetCOP : 0,
     city: editingClient?.header?.city || 'Bogotá D.C.',
-    processType: editingClient?.header?.processType || 'Licitación Pública',
+    processType: editingClient?.header?.processType || (isInitialDirectOC ? 'Orden de Compra Directa del Cliente' : 'Licitación Pública'),
     contractObject:
       editingClient?.header?.contractObject ||
-      'Adquisición, instalación y puesta en marcha de equipos biomédicos hospitalarios.',
+      (isInitialDirectOC ? '' : 'Adquisición, instalación y puesta en marcha de equipos biomédicos hospitalarios.'),
     contactPerson: editingClient?.header?.contactPerson || '',
-    status: editingClient?.status || 'En Preparación',
+    status: editingClient?.status || (isInitialDirectOC ? 'Adjudicada' : 'En Preparación'),
     openingDate: editingClient?.header?.openingDate || new Date().toISOString().split('T')[0],
     closingDate: editingClient?.header?.closingDate || '',
     executionTerm: editingClient?.header?.executionTerm || '',
@@ -155,18 +169,24 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
   // Sync form if editingClient changes
   useEffect(() => {
     if (editingClient) {
+      const isDirect = Boolean(
+        editingClient.header?.isDirectClientOC ||
+        editingClient.header?.processType === 'Orden de Compra Directa del Cliente' ||
+        editingClient.header?.processType === 'OC Directa'
+      );
+      setEntryMode(isDirect ? 'direct_oc' : 'tender');
       setForm({
         clientName: editingClient.clientName || '',
         nit: editingClient.header?.nit || '',
         processNumber: editingClient.header?.processNumber || '',
         budgetCOP: editingClient.header?.budgetCOP !== undefined ? editingClient.header.budgetCOP : 0,
         city: editingClient.header?.city || 'Bogotá D.C.',
-        processType: editingClient.header?.processType || 'Licitación Pública',
+        processType: editingClient.header?.processType || (isDirect ? 'Orden de Compra Directa del Cliente' : 'Licitación Pública'),
         contractObject:
           editingClient.header?.contractObject ||
           'Adquisición, instalación y puesta en marcha de equipos biomédicos hospitalarios.',
         contactPerson: editingClient.header?.contactPerson || '',
-        status: editingClient.status || 'En Preparación',
+        status: editingClient.status || (isDirect ? 'Adjudicada' : 'En Preparación'),
         openingDate: editingClient.header?.openingDate || new Date().toISOString().split('T')[0],
         closingDate: editingClient.header?.closingDate || '',
         executionTerm: editingClient.header?.executionTerm || '',
@@ -175,8 +195,29 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
       setPreviewImage(null);
       setScanSuccessMessage(null);
       setScanErrorMessage(null);
+    } else if (isOpen && !editingClient) {
+      const isDirect = initialMode === 'direct_oc';
+      setEntryMode(isDirect ? 'direct_oc' : 'tender');
+      setForm({
+        clientName: '',
+        nit: '',
+        processNumber: '',
+        budgetCOP: 0,
+        city: 'Bogotá D.C.',
+        processType: isDirect ? 'Orden de Compra Directa del Cliente' : 'Licitación Pública',
+        contractObject: isDirect ? '' : 'Adquisición, instalación y puesta en marcha de equipos biomédicos hospitalarios.',
+        contactPerson: '',
+        status: isDirect ? 'Adjudicada' : 'En Preparación',
+        openingDate: new Date().toISOString().split('T')[0],
+        closingDate: '',
+        executionTerm: '',
+      });
+      setSelectedLinkedQuote(null);
+      setPreviewImage(null);
+      setScanSuccessMessage(null);
+      setScanErrorMessage(null);
     }
-  }, [editingClient]);
+  }, [editingClient, isOpen, initialMode]);
 
   // Handle client selection from autocomplete
   const handleSelectClientRecord = (client: ClientRecord) => {
@@ -353,8 +394,16 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.clientName.trim()) {
+      alert('Por favor ingrese el nombre del Cliente o Entidad');
       return;
     }
+
+    const isDirect = entryMode === 'direct_oc';
+    const finalProcessType = isDirect ? 'Orden de Compra Directa del Cliente' : form.processType;
+    const finalStatus = isDirect ? 'Adjudicada' : form.status;
+    const finalContractObject = isDirect
+      ? (form.contractObject?.trim() || 'Despacho directo de equipos según Orden de Compra del cliente')
+      : form.contractObject;
 
     // Persist new or updated client to client storage / database
     saveOrUpdateClientRecord({
@@ -366,8 +415,13 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
 
     onSave({
       ...form,
+      processType: finalProcessType,
+      status: finalStatus,
+      contractObject: finalContractObject,
       budgetCOP: Number(form.budgetCOP) || 0,
       linkedQuote: selectedLinkedQuote,
+      isDirectClientOC: isDirect,
+      clientOrderNumber: isDirect ? form.processNumber : undefined,
     });
     onClose();
   };
@@ -383,15 +437,32 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
       <div className="bg-[#192b45] border border-purple-400/60 rounded-2xl max-w-4xl w-full shadow-2xl animate-scaleUp max-h-[90vh] flex flex-col overflow-hidden my-auto">
         <div className="px-4 py-3 border-b border-[#334d6e] flex items-center justify-between gap-3 bg-[#15253d] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
-              <Building2 className="w-5 h-5" />
+            <div className={`p-2 rounded-xl shrink-0 border ${
+              entryMode === 'direct_oc'
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                : 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+            }`}>
+              {entryMode === 'direct_oc' ? <ShoppingCart className="w-5 h-5 text-amber-400" /> : <Building2 className="w-5 h-5" />}
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-black text-white truncate">
-                {editingClient ? 'Editar Cliente / Licitación' : 'Registrar Nuevo Cliente / Licitación'}
+              <h3 className="text-sm sm:text-base font-black text-white truncate flex items-center gap-2">
+                <span>
+                  {entryMode === 'direct_oc'
+                    ? (editingClient ? 'Editar Orden de Compra Directa del Cliente' : 'Registrar Orden de Compra Directa del Cliente (OC Directa)')
+                    : (editingClient ? 'Editar Cliente / Licitación' : 'Registrar Nuevo Cliente / Licitación')}
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                  entryMode === 'direct_oc'
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                }`}>
+                  {entryMode === 'direct_oc' ? 'OC Directa' : 'Licitación / Proceso'}
+                </span>
               </h3>
               <p className="text-[11px] text-slate-300 truncate">
-                Datos del contrato, entidad contratante, valor total y enlace a cotizaciones
+                {entryMode === 'direct_oc'
+                  ? 'Despacho directo sin trámites licitatorios: ingresa lista para generar OV y seguimiento de compras'
+                  : 'Datos del proceso licitatorio, entidad contratante, valor total y pliego de condiciones'}
               </p>
             </div>
           </div>
@@ -407,6 +478,49 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
 
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs scrollbar-thin bg-[#15253d]">
+            {/* TYPE OF REGISTRATION SELECTOR TABS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-[#0c1626] p-1.5 rounded-xl border border-[#2b4468]">
+              <button
+                type="button"
+                onClick={() => {
+                  setEntryMode('tender');
+                  setForm((prev) => ({
+                    ...prev,
+                    processType: prev.processType === 'Orden de Compra Directa del Cliente' ? 'Licitación Pública' : prev.processType,
+                    status: prev.status === 'Adjudicada' && !editingClient ? 'En Preparación' : prev.status,
+                  }));
+                }}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  entryMode === 'tender'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-[#15253d]'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span>1. Licitación / Proceso Contractual</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEntryMode('direct_oc');
+                  setForm((prev) => ({
+                    ...prev,
+                    processType: 'Orden de Compra Directa del Cliente',
+                    status: 'Adjudicada',
+                    contractObject: prev.contractObject || 'Despacho directo de equipos según Orden de Compra del cliente',
+                  }));
+                }}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  entryMode === 'direct_oc'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-[#15253d]'
+                }`}
+              >
+                <ShoppingCart className="w-4 h-4 text-white" />
+                <span>2. Orden de Compra Directa del Cliente (OC Directa)</span>
+              </button>
+            </div>
             {/* OPTION 1: LINK WITH A SAVED QUOTE */}
             {!editingClient && savedQuotes.length > 0 && (
               <div className="bg-[#0f1a2d] border border-cyan-500/40 rounded-xl p-3 space-y-2.5 shadow-sm">
@@ -715,13 +829,23 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-300 font-bold mb-1">N° de Proceso / Convocatoria / Contrato</label>
+                <label className={`block font-bold mb-1 ${entryMode === 'direct_oc' ? 'text-amber-300 flex items-center justify-between' : 'text-slate-300'}`}>
+                  <span>{entryMode === 'direct_oc' ? 'Número de Orden de Compra (OC) del Cliente *' : 'N° de Proceso / Convocatoria / Contrato'}</span>
+                  {entryMode === 'direct_oc' && (
+                    <span className="text-[10px] text-amber-400/90 font-normal">OC Directa</span>
+                  )}
+                </label>
                 <input
                   type="text"
-                  placeholder="Ej: LP-2026-045"
+                  required
+                  placeholder={entryMode === 'direct_oc' ? 'Ej: OC-CLIENTE-2026-089 o N° de Orden del Cliente...' : 'Ej: LP-2026-045'}
                   value={form.processNumber}
                   onChange={(e) => setForm({ ...form, processNumber: e.target.value })}
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2 text-purple-300 font-bold font-mono outline-none focus:border-purple-400"
+                  className={`w-full bg-[#111c2e] border rounded-xl p-2 font-bold font-mono outline-none ${
+                    entryMode === 'direct_oc'
+                      ? 'border-amber-500/50 text-amber-300 focus:border-amber-400 placeholder:text-slate-500 placeholder:font-normal'
+                      : 'border-[#334d6e] text-purple-300 focus:border-purple-400'
+                  }`}
                 />
               </div>
 
@@ -730,7 +854,7 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-emerald-300 font-bold flex items-center gap-1.5 text-xs">
                     <DollarSign className="w-4 h-4 text-emerald-400" />
-                    <span>Valor Total del Contrato o Presupuesto Oficial ($ COP) *</span>
+                    <span>{entryMode === 'direct_oc' ? 'Valor Total de la Orden de Compra ($ COP) *' : 'Valor Total del Contrato o Presupuesto Oficial ($ COP) *'}</span>
                   </label>
                   {cleanNumericString(form.budgetCOP) !== '' && cleanNumericString(form.budgetCOP) !== '0' && (
                     <span className="text-xs font-black text-emerald-300 font-mono">
@@ -794,46 +918,73 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
                 <label className="block text-slate-300 font-bold mb-1">Modalidad del Proceso</label>
                 <select
                   value={form.processType}
-                  onChange={(e) => setForm({ ...form, processType: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const isDirect =
+                      val === 'Orden de Compra Directa del Cliente' ||
+                      val === 'OC Directa' ||
+                      val === 'Orden de Compra del Cliente (OC Directa)';
+                    setForm({
+                      ...form,
+                      processType: val,
+                      status: isDirect ? 'Adjudicada' : form.status === 'Adjudicada' && !editingClient ? 'En Preparación' : form.status,
+                      contractObject: isDirect ? '' : form.contractObject,
+                    });
+                    setEntryMode(isDirect ? 'direct_oc' : 'tender');
+                  }}
                   className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2 text-white outline-none focus:border-purple-400 cursor-pointer"
                 >
+                  <option value="Orden de Compra Directa del Cliente">Orden de Compra del Cliente (OC Directa)</option>
+                  <option value="Contratación Directa">Contratación Directa</option>
                   <option value="Licitación Pública">Licitación Pública</option>
                   <option value="Selección Abreviada">Selección Abreviada</option>
                   <option value="Convocatoria Privada">Convocatoria Privada</option>
-                  <option value="Contratación Directa">Contratación Directa</option>
                   <option value="Subasta Inversa Electrónica">Subasta Inversa Electrónica</option>
                 </select>
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="block text-slate-300 font-bold mb-1">Objeto del Contrato / Pliego</label>
-                <textarea
-                  rows={2}
-                  placeholder="Ej: Adquisición, instalación y puesta en marcha de equipos biomédicos..."
-                  value={form.contractObject}
-                  onChange={(e) => setForm({ ...form, contractObject: e.target.value })}
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white outline-none focus:border-purple-400 text-xs resize-none"
-                />
-              </div>
+              {/* Objeto del Contrato: Se oculta en OC Directa porque esto no tiene objeto contractual */}
+              {entryMode !== 'direct_oc' && (
+                <div className="sm:col-span-2">
+                  <label className="block text-slate-300 font-bold mb-1">Objeto del Contrato / Pliego</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Ej: Adquisición, instalación y puesta en marcha de equipos biomédicos..."
+                    value={form.contractObject}
+                    onChange={(e) => setForm({ ...form, contractObject: e.target.value })}
+                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white outline-none focus:border-purple-400 text-xs resize-none"
+                  />
+                </div>
+              )}
 
               <div className="sm:col-span-2 bg-[#101b2c] p-2.5 rounded-xl border border-[#233a59]">
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-slate-200 font-bold flex items-center gap-1.5">
-                    <span>⏱️ Tiempo / Plazo de Ejecución del Contrato</span>
-                    {form.status === 'Adjudicada' && (
+                    <span>
+                      {entryMode === 'direct_oc'
+                        ? '⏱️ Tiempo de Entrega (Definido en la Cotización) *'
+                        : '⏱️ Tiempo / Plazo de Ejecución del Contrato'}
+                    </span>
+                    {entryMode === 'direct_oc' ? (
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/40 font-bold">
+                        Definido según cotización
+                      </span>
+                    ) : form.status === 'Adjudicada' ? (
                       <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40 font-bold">
                         ⭐ Vital para Contratos Adjudicados
                       </span>
-                    )}
+                    ) : null}
                   </label>
-                  <span className="text-[10.5px] text-slate-400">Días, meses o fecha límite</span>
+                  <span className="text-[10.5px] text-slate-400">
+                    {entryMode === 'direct_oc' ? 'Ej: Inmediata, 3 a 5 días hábiles' : 'Días, meses o fecha límite'}
+                  </span>
                 </div>
                 <input
                   type="text"
-                  placeholder="Ej: 30 días calendario, 60 días hábiles, 6 meses, 1 año..."
+                  placeholder={entryMode === 'direct_oc' ? 'Ej: Inmediata, 3 a 5 días hábiles, según cotización...' : 'Ej: 30 días calendario, 60 días hábiles, 6 meses, 1 año...'}
                   value={form.executionTerm}
                   onChange={(e) => setForm({ ...form, executionTerm: e.target.value })}
-                  className="w-full bg-[#0a1322] border border-[#334d6e] focus:border-purple-400 rounded-lg p-2 text-white font-medium outline-none text-xs"
+                  className="w-full bg-[#0a1322] border border-[#334d6e] focus:border-amber-400 rounded-lg p-2 text-white font-medium outline-none text-xs"
                 />
               </div>
 
@@ -848,25 +999,41 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-300 font-bold mb-1">Estado del Proyecto</label>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value as any })}
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2 text-white font-bold outline-none focus:border-purple-400 cursor-pointer"
-                >
-                  <option value="En Preparación">En Preparación</option>
-                  <option value="Presentada">Presentada</option>
-                  <option value="Adjudicada">⭐ Adjudicada (Sincroniza con Seguimiento de OC)</option>
-                  <option value="Desierta">Desierta</option>
-                  <option value="Cerrada">Cerrada</option>
-                </select>
-                {form.status === 'Adjudicada' && (
-                  <p className="text-[10.5px] text-emerald-300 mt-1 flex items-center gap-1 font-medium">
-                    <span>✓ Se creará automáticamente la Orden de Compra en el módulo de Seguimiento de OC.</span>
-                  </p>
-                )}
-              </div>
+              {/* Estado del Proyecto: En OC Directa no hay trámites de licitación, pasa directo a Despacho y OV */}
+              {entryMode === 'direct_oc' ? (
+                <div className="sm:col-span-2 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-white text-xs block">
+                      Estado: Aprobada para Despacho Directo y Orden de Venta (OV)
+                    </span>
+                    <span className="text-[11px] text-emerald-200">
+                      Al tratarse de una Orden de Compra directa del cliente no requiere fases de licitación: ingresa inmediatamente lista para despachar, asignar OV y seguimiento de compras.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Estado del Proyecto</label>
+                  <select
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value as any })}
+                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2 text-white font-bold outline-none focus:border-purple-400 cursor-pointer"
+                  >
+                    <option value="En Preparación">En Preparación</option>
+                    <option value="Presentada">Presentada</option>
+                    <option value="Adjudicada">⭐ Adjudicada (Sincroniza con Seguimiento de OC)</option>
+                    <option value="Desierta">Desierta</option>
+                    <option value="Cerrada">Cerrada</option>
+                    <option value="Cumplido / Archivado">🏆 Contrato Cumplido / Archivado (100% Entregado)</option>
+                  </select>
+                  {form.status === 'Adjudicada' && (
+                    <p className="text-[10.5px] text-emerald-300 mt-1 flex items-center gap-1 font-medium">
+                      <span>✓ Se creará automáticamente la Orden de Compra en el módulo de Seguimiento de OC.</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -880,10 +1047,18 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-lg active:scale-95"
+              className={`inline-flex items-center gap-1.5 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-lg active:scale-95 ${
+                entryMode === 'direct_oc'
+                  ? 'bg-amber-400 hover:bg-amber-300'
+                  : 'bg-[#38bdf8] hover:bg-[#0284c7]'
+              }`}
             >
               <Save className="w-4 h-4" />
-              <span>{editingClient ? 'Guardar Cambios' : 'Crear Cliente / Licitación'}</span>
+              <span>
+                {entryMode === 'direct_oc'
+                  ? (editingClient ? 'Guardar Cambios de OC Directa' : 'Registrar OC Directa del Cliente')
+                  : (editingClient ? 'Guardar Cambios' : 'Crear Cliente / Licitación')}
+              </span>
             </button>
           </div>
         </form>

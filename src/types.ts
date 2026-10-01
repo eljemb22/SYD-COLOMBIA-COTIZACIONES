@@ -249,6 +249,8 @@ export interface TenderHeader {
   contactEmail?: string;
   contactPhone?: string;
   executionTerm?: string; // Tiempo o Plazo de Ejecución del Contrato (ej: "30 días calendario", "6 meses")
+  isDirectClientOC?: boolean; // True si es Orden de Compra Directa del cliente
+  clientOrderNumber?: string; // N° de OC del cliente si es directa
   linkedQuoteId?: string;
   linkedQuoteNumber?: string;
   linkedQuoteTotal?: number;
@@ -261,7 +263,7 @@ export interface TenderClientProject {
   nit: string;
   header: TenderHeader;
   items: TenderItem[];
-  status: 'En Preparación' | 'Presentada' | 'Adjudicada' | 'Desierta' | 'Cerrada';
+  status: 'En Preparación' | 'Presentada' | 'Adjudicada' | 'Desierta' | 'Cerrada' | 'Cumplido / Archivado';
   linkedQuoteId?: string;
   linkedQuoteNumber?: string;
   linkedQuoteTotal?: number;
@@ -347,6 +349,7 @@ export type SalesOrderStatus =
   | 'En Proceso'
   | 'Equipos en Bodega'
   | 'Entregada al Cliente'
+  | 'Listo para Facturar'
   | 'Facturada'
   | 'Cancelada';
 
@@ -370,8 +373,10 @@ export interface SalesOrderItem {
   totalSalePriceCOP: number;
   equipmentStatus?: SalesOrderEquipmentStatus | string;
   assignedSerialNumbers?: string[];
+  serialNumbers?: ItemSerialNumberRecord[];
   inventoryPlates?: string[];
   supplierOCRef?: string;
+  linkedSupplierOCNumber?: string;
   notes?: string;
 }
 
@@ -598,6 +603,23 @@ export interface OCTrackingItem {
   notes: string;
   history: OCStatusLogEntry[];
   serialNumbers?: ItemSerialNumberRecord[]; // Seriales físicos y documentación individual
+  supplierInvoices?: SupplierInvoiceAttachment[]; // Facturas del proveedor anexadas
+}
+
+export interface SupplierInvoiceAttachment {
+  id: string;
+  invoiceNumber: string;
+  issueDate?: string;
+  amountCOP?: number;
+  fileName: string;
+  fileData?: string; // base64 / data URL
+  fileType?: string;
+  fileSize?: number;
+  notes?: string;
+  supplier?: string;
+  ocNumber?: string;
+  uploadedAt: string;
+  uploadedBy?: string;
 }
 
 export type OCLogisticsStatus = OCStatus | string;
@@ -640,6 +662,7 @@ export interface SupplierPurchaseOrder {
   notes?: string;
   createdAt: string;
   lastUpdatedAt: string;
+  supplierInvoices?: SupplierInvoiceAttachment[];
   items: OCTrackingItem[];   // Equipos médicos solicitados a este proveedor
 }
 
@@ -667,6 +690,7 @@ export interface OCTrackingContract {
   totalCostCOP: number;
   items: OCTrackingItem[];   // Todos los equipos del contrato agrupados por OC/proveedor
   purchaseOrders?: SupplierPurchaseOrder[]; // OCs estructuradas por proveedor
+  supplierInvoices?: SupplierInvoiceAttachment[]; // Facturas de proveedores
   globalStatus: OCStatus | string;
   paymentTerms?: OCPaymentTerms | string;
   paymentStatus?: OCPaymentStatus | string;

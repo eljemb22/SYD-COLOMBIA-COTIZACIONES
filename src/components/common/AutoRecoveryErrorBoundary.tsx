@@ -151,14 +151,17 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
     }, 800);
   };
 
-  public executeImmediateRecovery = () => {
+  public executeImmediateRecovery = (isManual: boolean = false) => {
     this.clearAllTimers();
     this.performDataSelfRepair();
 
-    // Clear consecutive crash counter upon user or timer recovery
-    try {
-      sessionStorage.removeItem('syd_consecutive_crash_count');
-    } catch (_) {}
+    // Only clear consecutive crash counter upon explicit user manual action
+    if (isManual) {
+      try {
+        sessionStorage.removeItem('syd_consecutive_crash_count');
+      } catch (_) {}
+      this.recoveryAttempts = 0;
+    }
 
     // Reset error boundary state so React remounts the children with a fresh clean key
     this.setState((prev) => ({
@@ -222,7 +225,7 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
         localStorage.setItem(key, JSON.stringify(INITIAL_EQUIPMENTS));
         break;
       case 'syd_tender_clients_v2':
-        localStorage.setItem(key, JSON.stringify(INITIAL_TENDER_CLIENTS));
+        localStorage.setItem(key, JSON.stringify([]));
         break;
       case 'syd_technical_documents_v3':
         localStorage.setItem(key, JSON.stringify(INITIAL_DOCUMENTS));
@@ -369,7 +372,7 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={this.executeImmediateRecovery}
+                onClick={() => this.executeImmediateRecovery(true)}
                 className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-sky-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />

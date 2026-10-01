@@ -16,6 +16,9 @@ import {
   SlidersHorizontal,
   ChevronDown,
   ChevronUp,
+  Moon,
+  Clock,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   ThemeSettings,
@@ -39,6 +42,11 @@ import {
   applyThemeToDOM,
   saveStoredThemeSettings,
 } from '../../utils/themeStorage';
+import {
+  STORAGE_KEY_STANDBY_TIMEOUT,
+  DEFAULT_STANDBY_TIMEOUT_MINUTES,
+  STANDBY_TIMEOUT_OPTIONS,
+} from '../../hooks/useIdleStandby';
 
 interface CustomizationModalProps {
   isOpen: boolean;
@@ -48,6 +56,8 @@ interface CustomizationModalProps {
   currentUser?: AuthUser | null;
   onUpdateCurrentUserPhoto?: (photoUrl: string) => void;
   onUserUpdated?: (user: AuthUser) => void;
+  standbyTimeoutMinutes?: number;
+  onStandbyTimeoutChange?: (minutes: number) => void;
 }
 
 export const CustomizationModal: React.FC<CustomizationModalProps> = ({
@@ -58,11 +68,48 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
   currentUser,
   onUpdateCurrentUserPhoto,
   onUserUpdated,
+  standbyTimeoutMinutes,
+  onStandbyTimeoutChange,
 }) => {
   const [theme, setTheme] = useState<ThemeSettings>(currentTheme);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState<boolean>(false);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Standby inactivity timeout local state synced with localStorage and props
+  const [idleMinutes, setIdleMinutes] = useState<number>(() => {
+    if (typeof standbyTimeoutMinutes === 'number') {
+      return standbyTimeoutMinutes;
+    }
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_STANDBY_TIMEOUT);
+      if (stored !== null) {
+        const parsed = parseInt(stored, 10);
+        return isNaN(parsed) ? DEFAULT_STANDBY_TIMEOUT_MINUTES : parsed;
+      }
+    } catch {}
+    return DEFAULT_STANDBY_TIMEOUT_MINUTES;
+  });
+
+  // Sync when prop changes
+  useEffect(() => {
+    if (typeof standbyTimeoutMinutes === 'number') {
+      setIdleMinutes(standbyTimeoutMinutes);
+    }
+  }, [standbyTimeoutMinutes]);
+
+  const handleIdleMinutesChange = (newMinutes: number) => {
+    setIdleMinutes(newMinutes);
+    try {
+      localStorage.setItem(STORAGE_KEY_STANDBY_TIMEOUT, String(newMinutes));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('syd_standby_timeout_updated', { detail: newMinutes }));
+      }
+    } catch {}
+    if (onStandbyTimeoutChange) {
+      onStandbyTimeoutChange(newMinutes);
+    }
+  };
 
   // Keep local theme state in sync when opened or changed
   useEffect(() => {
@@ -447,6 +494,69 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 3: Modo Suspensión & Standby por Inactividad */}
+          <div
+            className={`p-4 rounded-xl border space-y-3.5 ${
+              isLightMode ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-[#334d6e]/80'
+            }`}
+          >
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-slate-700/30">
+              <div className="flex items-center gap-2">
+                <Moon className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-100">
+                  Modo Suspensión / Standby por Inactividad
+                </h3>
+              </div>
+              <span className="text-xs text-amber-400/90 font-medium flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Protege la pantalla sin cerrar sesión ni perder datos</span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-center">
+              {/* Left description */}
+              <div className="md:col-span-7 space-y-1.5">
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Si no utilizas el sistema durante este período, la pantalla entrará en reposo mostrando el reloj y estado de tu sesión protegida. Podrás volver instantáneamente pulsando <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-white text-[11px]">Enter</kbd> o haciendo clic.
+                </p>
+                <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>Tiempo actual configurado: <strong className="text-sky-300 font-bold">{idleMinutes === 0 ? 'Desactivado' : `${idleMinutes} minutos`}</strong></span>
+                </div>
+              </div>
+
+              {/* Right selector */}
+              <div className="md:col-span-5 flex flex-col gap-1.5">
+                <label
+                  htmlFor="select-standby-timeout"
+                  className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5"
+                >
+                  <Clock className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Tiempo de inactividad antes de suspender:</span>
+                </label>
+                <select
+                  id="select-standby-timeout"
+                  value={idleMinutes}
+                  onChange={(e) => handleIdleMinutesChange(parseInt(e.target.value, 10))}
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold border transition cursor-pointer outline-none focus:ring-2 focus:ring-sky-500/50 ${
+                    isLightMode
+                      ? 'bg-slate-100 border-slate-300 text-slate-900 focus:bg-white'
+                      : 'bg-[#15253d] border-[#334d6e] text-white hover:bg-[#1a2f4c]'
+                  }`}
+                >
+                  {STANDBY_TIMEOUT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-slate-400">
+                  Guarda automáticamente en <code className="text-sky-400">localStorage</code> y surte efecto de inmediato.
+                </span>
               </div>
             </div>
           </div>

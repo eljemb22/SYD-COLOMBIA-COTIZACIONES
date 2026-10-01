@@ -29,6 +29,8 @@ import {
   Link2,
   Link2Off,
   RotateCcw,
+  ShoppingCart,
+  CheckCircle2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -39,6 +41,9 @@ import {
   AuthUser,
   TenderHeader,
   SavedQuote,
+  OCTrackingContract,
+  SalesOrderRecord,
+  SalesInvoiceRecord,
 } from '../../types';
 import { downloadTenderEquipmentTemplate } from '../../utils/excelImportUtils';
 import { createTenderProjectFromQuote } from '../../utils/salesOrdersStorage';
@@ -166,6 +171,9 @@ interface TendersViewProps {
   onNavigateToOCTracking?: () => void;
   onSyncTenderItemToCatalog?: (item: TenderItem, createNewDuplicate?: boolean) => void;
   onBatchSyncTenderItemsToCatalog?: (items: TenderItem[]) => void;
+  contracts?: OCTrackingContract[];
+  salesOrders?: SalesOrderRecord[];
+  salesInvoices?: SalesInvoiceRecord[];
 }
 
 export const TendersView: React.FC<TendersViewProps> = ({
@@ -189,11 +197,17 @@ export const TendersView: React.FC<TendersViewProps> = ({
   onNavigateToOCTracking,
   onSyncTenderItemToCatalog,
   onBatchSyncTenderItemsToCatalog,
+  contracts = [],
+  salesOrders = [],
+  salesInvoices = [],
 }) => {
   const handleCreateClientFn = onCreateTenderClient || onCreateClient;
   // Client selection state
   const [internalActiveClientId, setInternalActiveClientId] = useState<string | null>(null);
   const activeClientId = controlledActiveClientId !== undefined ? controlledActiveClientId : internalActiveClientId;
+
+  // Tender window filter: 'activas' (default) vs 'terminadas' (cumplidas/archivadas)
+  const [tenderStatusFilter, setTenderStatusFilter] = useState<'activas' | 'terminadas'>('activas');
 
   // View layout: 'workspace' (split panel) or 'list' (full width master table)
   const [tendersViewLayout, setTendersViewLayout] = useState<'workspace' | 'list'>('workspace');
@@ -212,6 +226,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
   const [catalogSearchQuery, setCatalogSearchQuery] = useState('');
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [clientModalMode, setClientModalMode] = useState<'tender' | 'direct_oc'>('tender');
   const [isLinkQuoteModalOpen, setIsLinkQuoteModalOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState<TenderClientProject | null>(null);
   const [clientToDelete, setClientToDelete] = useState<TenderClientProject | null>(null);
@@ -264,7 +279,46 @@ export const TendersView: React.FC<TendersViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [clientToDelete, isCatalogModalOpen, isClientModalOpen, isLinkQuoteModalOpen, isExcelImportModalOpen, isManualItemModalOpen]);
 
-  const activeClient = tenderClients.find((c) => c.id === activeClientId) || tenderClients[0] || null;
+  // Computed counts for Active vs Terminated tenders
+  const activeCount = useMemo(
+    () => tenderClients.filter((c) => c.status !== 'Cumplido / Archivado').length,
+    [tenderClients]
+  );
+  const completedCount = useMemo(
+    () => tenderClients.filter((c) => c.status === 'Cumplido / Archivado').length,
+    [tenderClients]
+  );
+
+  // Base clients from search query filtered by active vs terminadas window
+  const baseClients = useMemo(() => {
+    return tenderClients.filter((c) => {
+      const isCompleted = c.status === 'Cumplido / Archivado';
+      // Keep currently viewed client visible so transitioning to Cumplido / Archivado doesn't flicker or vanish abruptly
+      if (activeClientId && c.id === activeClientId) return true;
+      if (tenderStatusFilter === 'activas' && isCompleted) return false;
+      if (tenderStatusFilter === 'terminadas' && !isCompleted) return false;
+
+      if (clientSearchQuery.trim()) {
+        const q = clientSearchQuery.toLowerCase().trim();
+        const matchesMain =
+          c.clientName.toLowerCase().includes(q) ||
+          (c.header.processNumber && c.header.processNumber.toLowerCase().includes(q)) ||
+          (c.header.city && c.header.city.toLowerCase().includes(q)) ||
+          (c.header.executionTerm && c.header.executionTerm.toLowerCase().includes(q)) ||
+          (c.header.nit && c.header.nit.toLowerCase().includes(q));
+        if (!matchesMain) return false;
+      }
+      return true;
+    });
+  }, [tenderClients, tenderStatusFilter, clientSearchQuery, activeClientId]);
+
+  const activeClient = useMemo(() => {
+    if (activeClientId) {
+      const found = baseClients.find((c) => c.id === activeClientId);
+      if (found) return found;
+    }
+    return baseClients[0] || null;
+  }, [baseClients, activeClientId]);
 
   const handleSelectClient = (clientId: string) => {
     if (onSelectClient) onSelectClient(clientId);
@@ -274,6 +328,19 @@ export const TendersView: React.FC<TendersViewProps> = ({
 
   // Create Tender from Saved Quote
   const handleCreateTenderFromQuote = (quote: SavedQuote) => {
+    const existing = tenderClients.find(
+      (t) =>
+        (quote.id && (t.linkedQuoteId === quote.id || t.header?.linkedQuoteId === quote.id)) ||
+        (quote.quoteNumber && (t.linkedQuoteNumber === quote.quoteNumber || t.header?.linkedQuoteNumber === quote.quoteNumber))
+    );
+
+    if (existing) {
+      if (onSelectClient) onSelectClient(existing.id);
+      else setInternalActiveClientId(existing.id);
+      showToast(`✓ Proceso ya existente seleccionado para la cotización ${quote.quoteNumber}`);
+      return;
+    }
+
     const newTender = createTenderProjectFromQuote(quote, tenderClients, equipments);
     if (onBatchCreateClients) {
       onBatchCreateClients([newTender]);
@@ -441,16 +508,61 @@ export const TendersView: React.FC<TendersViewProps> = ({
           openingDate: data.openingDate,
           closingDate: data.closingDate,
           executionTerm: data.executionTerm,
+          isDirectClientOC: Boolean(data.isDirectClientOC),
+          clientOrderNumber: data.clientOrderNumber || (data.isDirectClientOC ? data.processNumber : undefined),
         },
       });
-      showToast('✓ Datos de la licitación actualizados');
+      showToast(data.isDirectClientOC ? '✓ Orden de Compra directa del cliente actualizada' : '✓ Datos de la licitación actualizados');
     } else {
       if (data.linkedQuote) {
+        const qNum = data.linkedQuote.quoteNumber;
+        const qId = data.linkedQuote.id;
+        const procNum = data.processNumber;
+
+        const existingTender = tenderClients.find(
+          (t) =>
+            (procNum && t.header?.processNumber && t.header.processNumber.trim().toLowerCase() === procNum.trim().toLowerCase()) ||
+            (qId && (t.linkedQuoteId === qId || t.header?.linkedQuoteId === qId)) ||
+            (qNum && (t.linkedQuoteNumber === qNum || t.header?.linkedQuoteNumber === qNum))
+        );
+
+        if (existingTender) {
+          const tenderFromQuote = createTenderProjectFromQuote(data.linkedQuote, tenderClients, equipments);
+          onUpdateClient(existingTender.id, {
+            clientName: data.clientName,
+            status: data.status || (data.isDirectClientOC ? 'Adjudicada' : existingTender.status),
+            items: tenderFromQuote.items.length > 0 ? tenderFromQuote.items : existingTender.items,
+            header: {
+              ...existingTender.header,
+              ...tenderFromQuote.header,
+              clientName: data.clientName,
+              nit: data.nit || existingTender.header.nit,
+              processNumber: data.processNumber || existingTender.header.processNumber,
+              budgetCOP: data.budgetCOP !== undefined && data.budgetCOP > 0 ? Number(data.budgetCOP) : existingTender.header.budgetCOP,
+              city: data.city || existingTender.header.city,
+              processType: data.processType || existingTender.header.processType,
+              contractObject: data.contractObject || existingTender.header.contractObject,
+              contactPerson: data.contactPerson || existingTender.header.contactPerson,
+              executionTerm: data.executionTerm || existingTender.header.executionTerm,
+              isDirectClientOC: Boolean(data.isDirectClientOC),
+              clientOrderNumber: data.clientOrderNumber || (data.isDirectClientOC ? data.processNumber : undefined),
+            },
+          });
+          if (onSelectClient) {
+            onSelectClient(existingTender.id);
+          } else {
+            setInternalActiveClientId(existingTender.id);
+          }
+          confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+          showToast(`✓ Proceso existente actualizado y vinculado a la cotización ${data.linkedQuote.quoteNumber}`);
+          return;
+        }
+
         const tenderFromQuote = createTenderProjectFromQuote(data.linkedQuote, tenderClients, equipments);
         const newProject: TenderClientProject = {
           ...tenderFromQuote,
           clientName: data.clientName,
-          status: data.status || 'En Preparación',
+          status: data.status || (data.isDirectClientOC ? 'Adjudicada' : 'En Preparación'),
           header: {
             ...tenderFromQuote.header,
             clientName: data.clientName,
@@ -464,6 +576,8 @@ export const TendersView: React.FC<TendersViewProps> = ({
             openingDate: data.openingDate || tenderFromQuote.header.openingDate,
             closingDate: data.closingDate || tenderFromQuote.header.closingDate,
             executionTerm: data.executionTerm || tenderFromQuote.header.executionTerm,
+            isDirectClientOC: Boolean(data.isDirectClientOC),
+            clientOrderNumber: data.clientOrderNumber || (data.isDirectClientOC ? data.processNumber : undefined),
           },
         };
         if (onBatchCreateClients) {
@@ -485,36 +599,23 @@ export const TendersView: React.FC<TendersViewProps> = ({
           setInternalActiveClientId(newProject.id);
         }
         confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
-        showToast(`✓ Nueva licitación creada y enlazada a la cotización ${data.linkedQuote.quoteNumber} con ${newProject.items?.length || 0} equipos`);
+        showToast(
+          data.isDirectClientOC
+            ? `✓ Orden de Compra directa de cliente registrada y vinculada a la cotización ${data.linkedQuote.quoteNumber}`
+            : `✓ Nueva licitación creada y enlazada a la cotización ${data.linkedQuote.quoteNumber} con ${newProject.items?.length || 0} equipos`
+        );
       } else {
         if (handleCreateClientFn) {
           handleCreateClientFn(data);
         }
         confetti({ particleCount: 30, spread: 50, origin: { y: 0.7 } });
-        showToast('✓ Nueva licitación registrada exitosamente');
+        showToast(data.isDirectClientOC ? '✓ Orden de Compra Directa del cliente registrada exitosamente' : '✓ Nueva licitación registrada exitosamente');
       }
     }
     setClientToEdit(null);
   };
 
   const isReadOnly = currentUser?.role === 'viewer' && !currentUser?.permissions?.canEditTenders;
-
-  // Base clients from search query
-  const baseClients = useMemo(() => {
-    return tenderClients.filter((c) => {
-      if (clientSearchQuery.trim()) {
-        const q = clientSearchQuery.toLowerCase().trim();
-        const matchesMain =
-          c.clientName.toLowerCase().includes(q) ||
-          (c.header.processNumber && c.header.processNumber.toLowerCase().includes(q)) ||
-          (c.header.city && c.header.city.toLowerCase().includes(q)) ||
-          (c.header.executionTerm && c.header.executionTerm.toLowerCase().includes(q)) ||
-          (c.header.nit && c.header.nit.toLowerCase().includes(q));
-        if (!matchesMain) return false;
-      }
-      return true;
-    });
-  }, [tenderClients, clientSearchQuery]);
 
   // Excel table filters hook
   const {
@@ -558,6 +659,42 @@ export const TendersView: React.FC<TendersViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Active vs Terminated Filter Switcher */}
+          <div className="flex items-center bg-[#15253d] p-1 rounded-xl border border-[#334d6e]">
+            <button
+              type="button"
+              onClick={() => {
+                setTenderStatusFilter('activas');
+                const firstActive = tenderClients.find((c) => c.status !== 'Cumplido / Archivado');
+                if (firstActive) handleSelectClient(firstActive.id);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                tenderStatusFilter === 'activas'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Activas ({activeCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTenderStatusFilter('terminadas');
+                const firstTerm = tenderClients.find((c) => c.status === 'Cumplido / Archivado');
+                if (firstTerm) handleSelectClient(firstTerm.id);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                tenderStatusFilter === 'terminadas'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Terminadas ({completedCount})</span>
+            </button>
+          </div>
+
           {/* View Mode Toggle: Workspace vs List */}
           <div className="flex items-center bg-[#15253d] p-1 rounded-xl border border-[#334d6e]">
             <button
@@ -614,17 +751,23 @@ export const TendersView: React.FC<TendersViewProps> = ({
 
               <button
                 type="button"
-                onClick={() => setIsExcelImportModalOpen(true)}
-                className="inline-flex items-center gap-1.5 bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 hover:text-emerald-200 font-bold text-xs px-3 py-1.5 rounded-xl transition cursor-pointer border border-emerald-500/40 hover:border-emerald-400 active:scale-95 shadow-xs"
+                onClick={() => {
+                  setClientToEdit(null);
+                  setClientModalMode('direct_oc');
+                  setIsClientModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer shadow-md active:scale-95"
+                title="Registrar Orden de Compra directa enviada por el cliente (despacho directo sin licitación)"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Importar Excel</span>
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span>+ OC Directa Cliente</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
                   setClientToEdit(null);
+                  setClientModalMode('tender');
                   setIsClientModalOpen(true);
                 }}
                 className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-md active:scale-95"
@@ -710,9 +853,11 @@ export const TendersView: React.FC<TendersViewProps> = ({
                     return (
                       <tr key={client.id} className="hover:bg-[#192b45] transition-colors">
                         <td className="py-3 px-4 font-mono font-bold text-amber-300">
-                          {client.header.processNumber || 'PROCESO-LIC'}
+                          {client.header.clientOrderNumber || client.header.processNumber || 'PROCESO-LIC'}
                           <span className="text-[10px] text-slate-400 block font-normal">
-                            {client.header.processType || 'Licitación Pública'}
+                            {client.header.isDirectClientOC || client.header.processType === 'Orden de Compra Directa del Cliente'
+                              ? '📦 OC Directa del Cliente'
+                              : (client.header.processType || 'Licitación Pública')}
                           </span>
                         </td>
                         <td className="py-3 px-4 font-bold text-white max-w-[220px] truncate">
@@ -862,7 +1007,11 @@ export const TendersView: React.FC<TendersViewProps> = ({
                           <span className="font-mono text-[9.5px] text-purple-300 font-bold bg-[#15253d] px-1.5 py-0.2 rounded border border-purple-500/30 truncate max-w-[110px]">
                             {client.header.processNumber || 'Sin proceso'}
                           </span>
-                          {isAwarded ? (
+                          {client.header?.isDirectClientOC || client.header?.processType === 'Orden de Compra Directa del Cliente' ? (
+                            <span className="text-[9px] font-black bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/40">
+                              📦 OC Directa
+                            </span>
+                          ) : isAwarded ? (
                             <span className="text-[9px] font-black bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40">
                               ⭐ Adjudicada
                             </span>
@@ -978,8 +1127,6 @@ export const TendersView: React.FC<TendersViewProps> = ({
                   onUpdateTenderItem={onUpdateTenderItem}
                   onDeleteTenderItem={onDeleteTenderItem}
                   onOpenExcelImportModal={() => setIsExcelImportModalOpen(true)}
-                  onOpenCatalogModal={() => setIsCatalogModalOpen(true)}
-                  onOpenManualItemModal={() => setIsManualItemModalOpen(true)}
                   onOpenEditClientModal={() => {
                     setClientToEdit(activeClient);
                     setIsClientModalOpen(true);
@@ -991,6 +1138,9 @@ export const TendersView: React.FC<TendersViewProps> = ({
                   }}
                   onNavigateToOCTracking={onNavigateToOCTracking}
                   isReadOnly={isReadOnly}
+                  contracts={contracts}
+                  salesOrders={salesOrders}
+                  salesInvoices={salesInvoices}
                 />
               )}
 
@@ -1215,6 +1365,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
         onSave={handleSaveClientModal}
         editingClient={clientToEdit}
         savedQuotes={savedQuotes}
+        initialMode={clientModalMode}
       />
 
       {/* MODAL: DELETE CLIENT CONFIRMATION */}
@@ -1245,10 +1396,11 @@ export const TendersView: React.FC<TendersViewProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  onDeleteClient(clientToDelete.id);
+                onClick={async () => {
+                  const idToDelete = clientToDelete.id;
                   setClientToDelete(null);
-                  showToast('✓ Licitación eliminada');
+                  await onDeleteClient(idToDelete);
+                  showToast('✓ Licitación eliminada permanentemente');
                 }}
                 className="inline-flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-lg active:scale-95"
               >

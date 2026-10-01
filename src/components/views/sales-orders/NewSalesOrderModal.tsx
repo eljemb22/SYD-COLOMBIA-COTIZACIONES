@@ -36,6 +36,7 @@ import {
 import { generateNextSalesOrderNumber } from '../../../utils/salesOrdersStorage';
 import { formatCOP } from '../../../utils/formatters';
 import { getStoredClients, ClientRecord } from '../../../utils/clientStorage';
+import { isSalesOrderDeleted } from '../../../utils/tombstones';
 
 interface NewSalesOrderModalProps {
   isOpen: boolean;
@@ -62,15 +63,16 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
   existingOrders,
   savedQuotes,
   tenderClients = [],
-  contracts,
+  contracts = [],
   equipments,
   currentUser,
 }) => {
-  const [originType, setOriginType] = useState<'quote' | 'tender' | 'manual'>('quote');
+  const [originType, setOriginType] = useState<'quote' | 'tender' | 'oc_tracking' | 'manual'>('quote');
   const [salesOrderNumber, setSalesOrderNumber] = useState('');
   const [selectedQuoteId, setSelectedQuoteId] = useState('');
   const [quoteNumber, setQuoteNumber] = useState('');
   const [selectedTenderClientId, setSelectedTenderClientId] = useState('');
+  const [selectedContractId, setSelectedContractId] = useState('');
   const [contractId, setContractId] = useState<string | undefined>(undefined);
   const [contractNumber, setContractNumber] = useState<string | undefined>(undefined);
   const [clientName, setClientName] = useState('');
@@ -83,7 +85,6 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
   const [deliveryDate, setDeliveryDate] = useState('');
   const [status, setStatus] = useState<SalesOrderStatus>('En Proceso');
   const [notes, setNotes] = useState('');
-  const [askToGenerateOC, setAskToGenerateOC] = useState(true);
 
   // Client Autocomplete State
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
@@ -191,6 +192,70 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
   const [manualItemQty, setManualItemQty] = useState(1);
   const [manualItemUnitPrice, setManualItemUnitPrice] = useState(0);
 
+  // Helper to determine item keys that already belong to another active OV for this origin
+  const cleanNorm = (str?: string) =>
+    (str || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+
+  const getAlreadyAssignedItemKeys = (
+    tenderId?: string,
+    processNum?: string,
+    contractId?: string,
+    quoteId?: string,
+    quoteNum?: string,
+    client?: string
+  ): Set<string> => {
+    const assignedKeys = new Set<string>();
+    const normClient = cleanNorm(client);
+    const normProcess = cleanNorm(processNum);
+    const normQuote = cleanNorm(quoteNum);
+
+    (existingOrders || []).forEach((ov) => {
+      if (!ov || ov.id === orderToEdit?.id || ov.status === 'Cancelada' || isSalesOrderDeleted(ov.id)) return;
+
+      const ovProcess = cleanNorm(ov.contractNumber);
+      const ovQuote = cleanNorm(ov.quoteNumber);
+
+      const matchesTender = Boolean(tenderId && (ov.tenderClientId === tenderId || ov.contractId === tenderId));
+      const matchesProcess = Boolean(normProcess && ovProcess && normProcess === ovProcess);
+      const matchesContract = Boolean(contractId && (ov.ocContractId === contractId || ov.contractId === contractId));
+      const matchesQuote = Boolean(quoteId && ov.quoteId === quoteId);
+      const matchesQuoteNum = Boolean(normQuote && ovQuote && normQuote === ovQuote);
+
+      if (matchesTender || matchesProcess || matchesContract || matchesQuote || matchesQuoteNum) {
+        (ov.items || []).forEach((it) => {
+          if (it.equipmentId) assignedKeys.add(`eq-${it.equipmentId}`);
+          if (it.code) {
+            assignedKeys.add(`code-${it.code.trim().toLowerCase()}`);
+            assignedKeys.add(`code-${cleanNorm(it.code)}`);
+          }
+          if (it.name) {
+            assignedKeys.add(`name-${it.name.trim().toLowerCase()}`);
+            assignedKeys.add(`name-${cleanNorm(it.name)}`);
+          }
+        });
+      }
+    });
+    return assignedKeys;
+  };
+
+  const isItemAssigned = (it: { equipmentId?: string; code?: string; name?: string }, assignedKeys: Set<string>) => {
+    if (it.equipmentId && assignedKeys.has(`eq-${it.equipmentId}`)) return true;
+    if (it.code) {
+      if (assignedKeys.has(`code-${it.code.trim().toLowerCase()}`)) return true;
+      if (assignedKeys.has(`code-${cleanNorm(it.code)}`)) return true;
+    }
+    if (it.name) {
+      if (assignedKeys.has(`name-${it.name.trim().toLowerCase()}`)) return true;
+      if (assignedKeys.has(`name-${cleanNorm(it.name)}`)) return true;
+    }
+    return false;
+  };
+
   // Initialize or reset form
   useEffect(() => {
     if (!isOpen) return;
@@ -213,7 +278,6 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       setDeliveryDate(orderToEdit.deliveryDate || orderToEdit.estimatedArrivalDate || '');
       setStatus(orderToEdit.status || 'En Proceso');
       setNotes(orderToEdit.notes || '');
-      setAskToGenerateOC(!orderToEdit.hasLinkedOC);
 
       const mapped: ItemDraftState[] = (orderToEdit.items || []).map((it) => ({
         ...it,
@@ -223,9 +287,8 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       setItemDrafts(mapped);
     } else if (initialTenderToConvert) {
       // Converting directly from a Tender / Contract!
-      const nextNum = generateNextSalesOrderNumber(existingOrders);
       setOriginType('tender');
-      setSalesOrderNumber(nextNum);
+      setSalesOrderNumber('');
       setSelectedTenderClientId(initialTenderToConvert.id);
       setContractId(initialTenderToConvert.id);
       setContractNumber(initialTenderToConvert.header.processNumber || initialTenderToConvert.header.processType || 'Contrato Licitación');
@@ -241,9 +304,20 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       setDeliveryDate(initialTenderToConvert.header.executionTerm || '');
       setStatus('En Proceso');
       setNotes(`Orden de Venta generada a partir del Contrato de Licitación ${initialTenderToConvert.header.processNumber || initialTenderToConvert.clientName}.`);
-      setAskToGenerateOC(true);
 
-      const mapped: ItemDraftState[] = (initialTenderToConvert.items || []).map((tItem, idx) => {
+      const assignedKeys = getAlreadyAssignedItemKeys(
+        initialTenderToConvert.id,
+        initialTenderToConvert.header.processNumber,
+        undefined,
+        undefined,
+        undefined,
+        initialTenderToConvert.clientName
+      );
+
+      const unassignedItems = (initialTenderToConvert.items || []).filter((tItem) => !isItemAssigned(tItem, assignedKeys));
+      const itemsToMap = unassignedItems.length > 0 ? unassignedItems : (initialTenderToConvert.items || []);
+
+      const mapped: ItemDraftState[] = itemsToMap.map((tItem, idx) => {
         const qty = Number(tItem.quantity) || 1;
         const unitPrice = Number(tItem.offeredUnitPrice) || 0;
         return {
@@ -266,9 +340,8 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       setItemDrafts(mapped);
     } else if (initialQuoteToConvert) {
       // Converting directly from a Quote!
-      const nextNum = generateNextSalesOrderNumber(existingOrders);
       setOriginType('quote');
-      setSalesOrderNumber(nextNum);
+      setSalesOrderNumber('');
       setSelectedQuoteId(initialQuoteToConvert.id);
       setQuoteNumber(initialQuoteToConvert.quoteNumber || '');
       setSelectedTenderClientId('');
@@ -284,9 +357,20 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       setDeliveryDate('');
       setStatus('En Proceso');
       setNotes(`Orden de Venta generada a partir de la Cotización ${initialQuoteToConvert.quoteNumber}.`);
-      setAskToGenerateOC(true);
 
-      const mapped: ItemDraftState[] = (initialQuoteToConvert.items || []).map((qItem, idx) => {
+      const assignedKeys = getAlreadyAssignedItemKeys(
+        undefined,
+        undefined,
+        undefined,
+        initialQuoteToConvert.id,
+        initialQuoteToConvert.quoteNumber,
+        initialQuoteToConvert.clientName
+      );
+
+      const unassignedItems = (initialQuoteToConvert.items || []).filter((qItem) => !isItemAssigned(qItem, assignedKeys));
+      const itemsToMap = unassignedItems;
+
+      const mapped: ItemDraftState[] = itemsToMap.map((qItem, idx) => {
         const qty = Number(qItem.quantity) || 1;
         const unitPrice = Number(qItem.unitSalePrice) || 0;
         return {
@@ -309,9 +393,8 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       setItemDrafts(mapped);
     } else {
       // Brand new empty order
-      const nextNum = generateNextSalesOrderNumber(existingOrders);
-      setOriginType('quote');
-      setSalesOrderNumber(nextNum);
+      setOriginType('manual');
+      setSalesOrderNumber('');
       setSelectedQuoteId('');
       setQuoteNumber('');
       setSelectedTenderClientId('');
@@ -319,7 +402,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       setContractNumber(undefined);
       setClientName('');
       setClientNit('');
-      setClientCity('Barranquilla');
+      setClientCity('');
       setClientContactPerson('');
       setClientContactPhone('');
       setClientContactEmail('');
@@ -327,7 +410,6 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       setDeliveryDate('');
       setStatus('En Proceso');
       setNotes('');
-      setAskToGenerateOC(true);
       setItemDrafts([]);
     }
   }, [isOpen, orderToEdit, initialQuoteToConvert, initialTenderToConvert, existingOrders]);
@@ -342,7 +424,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
     const matchedQuote = savedQuotes.find((q) => q.id === quoteId);
     if (matchedQuote) {
       // Check if linked to a non-adjudicated tender
-      const linkedTender = tenderClients.find(
+      const linkedTender = (tenderClients || []).find(
         (t) =>
           t.linkedQuoteId === matchedQuote.id ||
           t.header?.linkedQuoteId === matchedQuote.id ||
@@ -370,7 +452,19 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       setClientContactPhone(matchedQuote.contactPhone || '');
       setClientContactEmail(matchedQuote.contactEmail || '');
 
-      const mapped: ItemDraftState[] = (matchedQuote.items || []).map((qItem, idx) => {
+      const assignedKeys = getAlreadyAssignedItemKeys(
+        linkedTender?.id,
+        linkedTender?.header.processNumber,
+        undefined,
+        matchedQuote.id,
+        matchedQuote.quoteNumber,
+        matchedQuote.clientName
+      );
+
+      const unassignedItems = (matchedQuote.items || []).filter((qItem) => !isItemAssigned(qItem, assignedKeys));
+      const itemsToMap = unassignedItems.length > 0 ? unassignedItems : (matchedQuote.items || []);
+
+      const mapped: ItemDraftState[] = itemsToMap.map((qItem, idx) => {
         const qty = Number(qItem.quantity) || 1;
         const unitPrice = Number(qItem.unitSalePrice) || 0;
         return {
@@ -401,7 +495,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       return;
     }
 
-    const matchedTender = tenderClients.find((t) => t.id === tenderId);
+    const matchedTender = (tenderClients || []).find((t) => t.id === tenderId);
     if (matchedTender) {
       if (matchedTender.status !== 'Adjudicada') {
         alert(
@@ -425,7 +519,19 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
         setDeliveryDate(matchedTender.header.executionTerm);
       }
 
-      const mapped: ItemDraftState[] = (matchedTender.items || []).map((tItem, idx) => {
+      const assignedKeys = getAlreadyAssignedItemKeys(
+        matchedTender.id,
+        matchedTender.header.processNumber,
+        undefined,
+        undefined,
+        undefined,
+        matchedTender.clientName
+      );
+
+      const unassignedItems = (matchedTender.items || []).filter((tItem) => !isItemAssigned(tItem, assignedKeys));
+      const itemsToMap = unassignedItems.length > 0 ? unassignedItems : (matchedTender.items || []);
+
+      const mapped: ItemDraftState[] = itemsToMap.map((tItem, idx) => {
         const qty = Number(tItem.quantity) || 1;
         const unitPrice = Number(tItem.offeredUnitPrice) || 0;
         return {
@@ -443,6 +549,75 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
           assignedSerialNumbers: [],
           isSelected: true,
           notes: tItem.observations || '',
+        };
+      });
+      setItemDrafts(mapped);
+    }
+  };
+
+  // Handle selecting an existing OC Tracking Contract from Ventana 5
+  const handleSelectContract = (contractIdToSelect: string) => {
+    if (!contractIdToSelect) {
+      setSelectedContractId('');
+      return;
+    }
+
+    const matchedContract = contracts.find((c) => c.id === contractIdToSelect);
+    if (matchedContract) {
+      setSelectedContractId(contractIdToSelect);
+      setContractId(matchedContract.id);
+      setContractNumber(matchedContract.contractNumber || matchedContract.salesOrderNumber || 'OC Directa');
+      setSelectedTenderClientId(matchedContract.tenderClientId || '');
+      setSelectedQuoteId(matchedContract.quoteId || '');
+      setQuoteNumber(matchedContract.quoteNumber || '');
+
+      const cleanSO = matchedContract.salesOrderNumber
+        ? matchedContract.salesOrderNumber.replace(/^ov:\s*/i, '').trim()
+        : '';
+      if (cleanSO) {
+        setSalesOrderNumber(cleanSO);
+      }
+
+      setClientName(matchedContract.clientName || '');
+      setClientNit(matchedContract.nit || '');
+      setClientCity(matchedContract.city || 'Barranquilla');
+      setClientContactPerson(matchedContract.contactPerson || '');
+      setClientContactPhone(matchedContract.contactPhone || '');
+      setClientContactEmail(matchedContract.contactEmail || '');
+
+      const assignedKeys = getAlreadyAssignedItemKeys(
+        matchedContract.tenderClientId,
+        matchedContract.contractNumber,
+        matchedContract.id,
+        matchedContract.quoteId,
+        matchedContract.quoteNumber,
+        matchedContract.clientName
+      );
+
+      const unassignedItems = (matchedContract.items || []).filter((cItem) => !isItemAssigned(cItem, assignedKeys));
+      const itemsToMap = unassignedItems;
+
+      const mapped: ItemDraftState[] = itemsToMap.map((cItem, idx) => {
+        const qty = Number(cItem.quantity) || 1;
+        const cost = Number(cItem.costPriceCOP) || 0;
+        const unitPrice = cost > 0 ? Math.round(cost * 1.35) : 10000000;
+        return {
+          id: `item-${Date.now()}-${idx}`,
+          equipmentId: cItem.equipmentId,
+          code: cItem.code || `EQ-${idx + 1}`,
+          name: cItem.name,
+          brand: cItem.brand || '',
+          model: cItem.model || '',
+          quotedQuantity: qty,
+          quantityToDispatch: qty,
+          unitSalePriceCOP: unitPrice,
+          totalSalePriceCOP: unitPrice * qty,
+          equipmentStatus: (cItem.status === 'Entregado e Instalado' ? 'Entregado al Cliente' : 'Pendiente de OC') as any,
+          supplierOCRef: cItem.ocNumber || '',
+          linkedSupplierOCNumber: cItem.ocNumber || '',
+          assignedSerialNumbers: (cItem.serialNumbers || []).map((s) => s.serialNumber),
+          isSelected: true,
+          notes: cItem.notes || '',
         };
       });
       setItemDrafts(mapped);
@@ -500,6 +675,35 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
     );
   };
 
+  // Change manual supplier OC number for an item
+  const handleItemSupplierOCChange = (index: number, ocRef: string) => {
+    setItemDrafts((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              supplierOCRef: ocRef,
+              linkedSupplierOCNumber: ocRef,
+            }
+          : item
+      )
+    );
+  };
+
+  // Change supplier / brand for an item
+  const handleItemBrandSupplierChange = (index: number, brandVal: string) => {
+    setItemDrafts((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              brand: brandVal,
+            }
+          : item
+      )
+    );
+  };
+
   // Remove item
   const handleRemoveItem = (index: number) => {
     setItemDrafts((prev) => prev.filter((_, i) => i !== index));
@@ -540,7 +744,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
   const totalSelectedValueCOP = selectedItems.reduce((acc, it) => acc + (it.totalSalePriceCOP || 0), 0);
 
   // Submit handler
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!salesOrderNumber.trim()) {
@@ -595,8 +799,13 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    onSave(finalOrder, askToGenerateOC && !finalOrder.hasLinkedOC);
-    onClose();
+    try {
+      await onSave(finalOrder);
+      onClose();
+    } catch (err) {
+      console.error('Error in onSave:', err);
+      onClose();
+    }
   };
 
   if (!isOpen) return null;
@@ -654,23 +863,24 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
             </div>
 
             {/* Origin Type Selector */}
-            <div className="grid grid-cols-3 gap-2 p-1 bg-slate-900/80 rounded-xl border border-slate-800">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 bg-slate-900/80 rounded-xl border border-slate-800">
               <button
                 type="button"
                 onClick={() => {
                   setOriginType('quote');
                   setSelectedTenderClientId('');
+                  setSelectedContractId('');
                   setContractId(undefined);
                   setContractNumber(undefined);
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition ${
+                className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition ${
                   originType === 'quote'
                     ? 'bg-[#38bdf8]/20 text-[#38bdf8] border border-[#38bdf8]/40 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>1. Desde Cotización</span>
+                <span>1. Cotización</span>
               </button>
 
               <button
@@ -678,16 +888,35 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                 onClick={() => {
                   setOriginType('tender');
                   setSelectedQuoteId('');
+                  setSelectedContractId('');
                   setQuoteNumber('');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition ${
+                className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition ${
                   originType === 'tender'
                     ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Award className="w-3.5 h-3.5" />
-                <span>2. Desde Licitación / Contrato</span>
+                <span>2. Licitación</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setOriginType('oc_tracking');
+                  setSelectedQuoteId('');
+                  setSelectedTenderClientId('');
+                  setQuoteNumber('');
+                }}
+                className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition ${
+                  originType === 'oc_tracking'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span>3. OC Cliente (Seg. OC)</span>
               </button>
 
               <button
@@ -697,17 +926,18 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                   setSelectedQuoteId('');
                   setQuoteNumber('');
                   setSelectedTenderClientId('');
+                  setSelectedContractId('');
                   setContractId(undefined);
                   setContractNumber(undefined);
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition ${
+                className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition ${
                   originType === 'manual'
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>3. Venta Directa Manual</span>
+                <span>4. Directa Manual</span>
               </button>
             </div>
 
@@ -777,6 +1007,27 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                 </div>
               )}
 
+              {/* Select OC Tracking Contract when originType === oc_tracking */}
+              {originType === 'oc_tracking' && (
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-emerald-300 mb-1.5">
+                    Seleccionar Orden de Compra de Cliente (Ventana 5 - Seguimiento OC)
+                  </label>
+                  <select
+                    value={selectedContractId}
+                    onChange={(e) => handleSelectContract(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-800 border border-emerald-500/50 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-400"
+                  >
+                    <option value="">-- Seleccionar OC de Cliente / Contrato en Seguimiento --</option>
+                    {contracts.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        🛒 {c.salesOrderNumber ? `[OV: ${c.salesOrderNumber}] ` : ''}{c.clientName} — {c.contractNumber || c.sourceType || 'OC'} [{c.items?.length || 0} equipos]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Manual mode info */}
               {originType === 'manual' && (
                 <div className="md:col-span-2 flex items-center p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200">
@@ -786,17 +1037,30 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
 
               {/* OV Number */}
               <div>
-                <label className="block text-xs font-medium text-amber-300 mb-1.5">
-                  Número de Orden de Venta (OV) *
+                <label className="block text-xs font-medium text-amber-300 mb-1.5 flex items-center justify-between">
+                  <span>Número de Orden de Venta (OV) *</span>
+                  <span className="text-[10px] text-amber-400/80 font-normal">Asignación manual de consecutivo de empresa</span>
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={salesOrderNumber}
-                  onChange={(e) => setSalesOrderNumber(e.target.value)}
-                  placeholder="ej: OV-2026-001"
-                  className="w-full px-3 py-2 bg-slate-900 border-2 border-amber-500/50 rounded-lg text-sm font-bold text-amber-300 focus:outline-none focus:border-amber-400"
-                />
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    required
+                    value={salesOrderNumber}
+                    onChange={(e) => setSalesOrderNumber(e.target.value)}
+                    placeholder="Ingrese el N° de OV asignado por su empresa (ej: OV-1052 o 1052)..."
+                    className="flex-1 px-3 py-2 bg-slate-900 border-2 border-amber-500/50 rounded-lg text-sm font-bold text-amber-300 focus:outline-none focus:border-amber-400 placeholder:text-slate-500 placeholder:font-normal"
+                  />
+                  {!salesOrderNumber && (
+                    <button
+                      type="button"
+                      onClick={() => setSalesOrderNumber(generateNextSalesOrderNumber(existingOrders))}
+                      className="px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs border border-slate-700 whitespace-nowrap cursor-pointer"
+                      title="Sugerir consecutivo automático"
+                    >
+                      Sugerir
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -953,7 +1217,10 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                   <option value="En Proceso">En Proceso</option>
                   <option value="Equipos en Bodega">Equipos en Bodega</option>
                   <option value="Entregada al Cliente">Entregada al Cliente</option>
-                  <option value="Facturada">Facturada</option>
+                  <option value="Listo para Facturar">Listo para Facturar</option>
+                  {status === 'Facturada' && (
+                    <option value="Facturada">Facturada</option>
+                  )}
                   <option value="Cancelada">Cancelada</option>
                 </select>
               </div>
@@ -1117,11 +1384,17 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
 
             {/* Items Checklist Table */}
             {itemDrafts.length === 0 ? (
-              <div className="py-8 text-center border-2 border-dashed border-slate-700/70 rounded-xl bg-slate-900/30">
-                <Layers className="w-8 h-8 mx-auto text-slate-500 mb-2 opacity-50" />
-                <p className="text-sm text-slate-400">No hay equipos agregados en esta orden.</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Selecciona una cotización arriba o presiona &quot;Agregar Otro Equipo&quot;.
+              <div className="py-8 text-center border-2 border-dashed border-slate-700/70 rounded-xl bg-slate-900/30 px-4">
+                <Layers className="w-8 h-8 mx-auto text-emerald-400/60 mb-2" />
+                <p className="text-sm font-bold text-white">
+                  {selectedQuoteId || selectedTenderClientId || selectedContractId
+                    ? 'Todos los equipos de este proceso ya tienen una Orden de Venta (OV) asignada'
+                    : 'No hay equipos agregados en esta orden'}
+                </p>
+                <p className="text-xs text-slate-400 mt-1 max-w-lg mx-auto">
+                  {selectedQuoteId || selectedTenderClientId || selectedContractId
+                    ? 'Los equipos previamente contratados ya se encuentran vinculados a otras OVs activas. Si requiere despachar un equipo nuevo o complementario, presione «+ Agregar Equipo Manual» arriba.'
+                    : 'Selecciona una cotización o licitación arriba o presiona «+ Agregar Equipo Manual» para incluir equipos.'}
                 </p>
               </div>
             ) : (
@@ -1175,55 +1448,74 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                           </button>
                         </div>
 
-                        {/* Editable Qty, Price, Status when selected */}
+                        {/* Editable Qty, Price, Status, Supplier & Supplier OC when selected */}
                         {item.isSelected && (
-                          <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-4 gap-3">
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1">
-                                Cantidad a Ordenar / Despachar
-                              </label>
-                              <input
-                                type="number"
-                                min="1"
-                                value={item.quantityToDispatch}
-                                onChange={(e) => handleItemQuantityChange(index, Number(e.target.value) || 1)}
-                                className="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white font-bold text-center"
-                              />
+                          <div className="mt-3 pt-3 border-t border-slate-800/80 space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                              <div>
+                                <label className="block text-[11px] text-slate-400 mb-1">
+                                  Cantidad a Despachar
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={item.quantityToDispatch}
+                                  onChange={(e) => handleItemQuantityChange(index, Number(e.target.value) || 1)}
+                                  className="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white font-bold text-center"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] text-slate-400 mb-1">
+                                  Precio Unitario Venta (COP)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={item.unitSalePriceCOP}
+                                  onChange={(e) => handleItemUnitPriceChange(index, Number(e.target.value) || 0)}
+                                  className="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] text-slate-400 mb-1">Estado del Equipo</label>
+                                <select
+                                  value={item.equipmentStatus || 'Pendiente de OC'}
+                                  onChange={(e) =>
+                                    handleItemStatusChange(index, e.target.value as SalesOrderEquipmentStatus)
+                                  }
+                                  className="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white"
+                                >
+                                  <option value="Pendiente de OC">Pendiente de OC</option>
+                                  <option value="OC Solicitada a Proveedor">OC Solicitada a Proveedor</option>
+                                  <option value="En Bodega SYD">En Bodega SYD</option>
+                                  <option value="Entregado al Cliente">Entregado al Cliente</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] text-slate-400 mb-1">Subtotal Item</label>
+                                <div className="px-2.5 py-1 bg-slate-950/60 rounded text-xs font-bold text-emerald-400 flex items-center justify-end h-[28px]">
+                                  {formatCOP(item.totalSalePriceCOP || 0)}
+                                </div>
+                              </div>
                             </div>
 
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1">
-                                Precio Unitario (COP)
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={item.unitSalePriceCOP}
-                                onChange={(e) => handleItemUnitPriceChange(index, Number(e.target.value) || 0)}
-                                className="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1">Estado del Equipo</label>
-                              <select
-                                value={item.equipmentStatus || 'Pendiente de OC'}
-                                onChange={(e) =>
-                                  handleItemStatusChange(index, e.target.value as SalesOrderEquipmentStatus)
-                                }
-                                className="w-full px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white"
-                              >
-                                <option value="Pendiente de OC">Pendiente de OC</option>
-                                <option value="OC Solicitada a Proveedor">OC Solicitada a Proveedor</option>
-                                <option value="En Bodega SYD">En Bodega SYD</option>
-                                <option value="Entregado al Cliente">Entregado al Cliente</option>
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] text-slate-400 mb-1">Subtotal Item</label>
-                              <div className="px-2.5 py-1 bg-slate-950/60 rounded text-xs font-bold text-emerald-400 flex items-center justify-end h-[28px]">
-                                {formatCOP(item.totalSalePriceCOP || 0)}
+                            {/* Supplier / Brand */}
+                            <div className="pt-2 border-t border-slate-800/40 bg-slate-950/30 p-2.5 rounded-lg border border-slate-800">
+                              <div>
+                                <label className="block text-[10.5px] font-medium text-slate-300 mb-1 flex items-center gap-1">
+                                  <Building2 className="w-3 h-3 text-sky-400" />
+                                  Proveedor / Marca Asignada
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.brand || ''}
+                                  onChange={(e) => handleItemBrandSupplierChange(index, e.target.value)}
+                                  placeholder="ej: TECNICA, Mindray, etc..."
+                                  className="w-full px-2.5 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-slate-200 placeholder:text-slate-600"
+                                />
                               </div>
                             </div>
                           </div>
@@ -1248,8 +1540,8 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
             </div>
           </div>
 
-          {/* Section 4: Notes & Immediate OC Trigger Option */}
-          <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50 space-y-3">
+          {/* Section 4: Notes */}
+          <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1">Notas u Observaciones del Pedido</label>
               <textarea
@@ -1260,25 +1552,6 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-400"
               />
             </div>
-
-            {/* Prompt for immediate OC creation */}
-            <label className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 cursor-pointer hover:bg-amber-500/15 transition-colors">
-              <input
-                type="checkbox"
-                checked={askToGenerateOC}
-                onChange={(e) => setAskToGenerateOC(e.target.checked)}
-                className="mt-0.5 rounded text-amber-500 focus:ring-amber-400"
-              />
-              <div className="text-xs">
-                <span className="font-bold text-amber-300 flex items-center gap-1.5">
-                  <ShoppingCart className="w-3.5 h-3.5" />
-                  Generar inmediatamente las Órdenes de Compra (OC a Proveedores) en Ventana 5
-                </span>
-                <p className="text-[11px] text-slate-300 mt-0.5">
-                  Crea automáticamente este pedido en Seguimiento de OC con los equipos seleccionados, listo para asignar proveedores y emitir las OCs.
-                </p>
-              </div>
-            </label>
           </div>
 
           {/* Actions */}

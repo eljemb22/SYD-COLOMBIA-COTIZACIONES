@@ -7,6 +7,7 @@ import {
   SystemAlertItem,
   AlertSeverity,
 } from '../types';
+import { deduplicateSalesOrders } from './salesOrdersStorage';
 import { CURRENT_APP_VERSION, hasUnseenAppUpdates, APP_RELEASES_HISTORY } from './versionCheck';
 
 /**
@@ -38,15 +39,28 @@ export function computeSystemAlerts(params: {
   const alerts: SystemAlertItem[] = [];
   const now = Date.now();
 
+  // Load permanently dismissed alert IDs
+  let dismissedIds = new Set<string>();
+  try {
+    const rawDismissed = localStorage.getItem('syd_dismissed_alert_ids_v2') || localStorage.getItem('syd_dismissed_alert_ids_v1');
+    if (rawDismissed) {
+      const parsed = JSON.parse(rawDismissed);
+      if (Array.isArray(parsed)) {
+        dismissedIds = new Set(parsed);
+      }
+    }
+  } catch (_) {}
+
   // =========================================================================
   // 0. SYSTEM UPDATE NOTIFICATION (✨ Novedades y Actualizaciones del Software)
   // =========================================================================
   const latestRelease = APP_RELEASES_HISTORY[0];
-  if (hasUnseenAppUpdates() && latestRelease) {
+  const updateAlertId = `alert-app-update-${latestRelease?.version || 'new'}`;
+  if (hasUnseenAppUpdates() && latestRelease && !dismissedIds.has(updateAlertId)) {
     alerts.push({
-      id: `alert-app-update-${latestRelease.version}`,
-      title: `✨ Nueva Versión v${latestRelease.version} Disponible`,
-      message: `${latestRelease.title}: ${latestRelease.summary}`,
+      id: updateAlertId,
+      title: `Nueva actualización disponible: v${latestRelease.version}`,
+      message: `${latestRelease.title} — ${latestRelease.summary}`,
       severity: 'media',
       category: 'actualizacion_sistema',
       sourceModule: 'Actualizaciones (Sistema)',
@@ -59,11 +73,50 @@ export function computeSystemAlerts(params: {
     });
   }
 
+  // Helper to determine if an item has an assigned Purchase Order (OC) to supplier
+  const itemHasAssignedOC = (it: any, contractItems?: any[]): boolean => {
+    if (!it) return false;
+    // 1. Direct item OC ref
+    if (it.supplierOCRef && it.supplierOCRef.trim().length > 0 && it.supplierOCRef !== 'S/N') return true;
+    if (it.linkedSupplierOCNumber && it.linkedSupplierOCNumber.trim().length > 0 && it.linkedSupplierOCNumber !== 'S/N') return true;
+    if (it.ocNumber && it.ocNumber.trim().length > 0 && it.ocNumber !== 'S/N') return true;
+
+    // 2. Status indicating advance
+    if (
+      it.equipmentStatus === 'En Bodega' ||
+      it.equipmentStatus === 'En Tránsito' ||
+      it.equipmentStatus === 'Entregado al Cliente' ||
+      it.equipmentStatus === 'Facturada' ||
+      it.status === 'En Tránsito Internacional' ||
+      it.status === 'En Nacionalización / Aduana' ||
+      it.status === 'En Bodega SYD' ||
+      it.status === 'Entregado e Instalado' ||
+      it.status === 'Cerrado / Concluido'
+    ) {
+      return true;
+    }
+
+    // 3. Match in contract items
+    if (contractItems && contractItems.length > 0) {
+      const matchedCItem = contractItems.find(
+        (cIt) =>
+          (cIt.equipmentId && it.equipmentId && cIt.equipmentId === it.equipmentId) ||
+          (cIt.code && it.code && cIt.code.trim().toLowerCase() === it.code.trim().toLowerCase()) ||
+          (cIt.name && it.name && cIt.name.trim().toLowerCase() === it.name.trim().toLowerCase())
+      );
+      if (matchedCItem && matchedCItem.ocNumber && matchedCItem.ocNumber !== 'S/N') {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   // =========================================================================
-  // 1. CRITICAL ALERTS (🔴 Impacto Operativo Alto / Incumplimiento)
+  // 1. CRITICAL ALERTS (🔴 Impacto Operativo Alto / Incumplimiento >= 3 días)
   // =========================================================================
 
-  // A. Overdue OC Items & >48h Inactivity on Active Orders
+  // A. Overdue OC Items & >72h (3+ days) Inactivity on Active Orders
   ocContracts.forEach((contract) => {
     (contract.items || []).forEach((item) => {
       // Check Payment Overdue
@@ -84,7 +137,7 @@ export function computeSystemAlerts(params: {
         });
       }
 
-      // Check Inactivity > 48 hours for pending/in-progress orders
+      // Check Inactivity > 72 hours (3 days) for pending/in-progress orders
       const lastUpdate = new Date(item.lastUpdatedAt || item.createdAt || contract.lastUpdatedAt || now).getTime();
       const diffHours = (now - lastUpdate) / (1000 * 60 * 60);
 
@@ -94,7 +147,7 @@ export function computeSystemAlerts(params: {
         item.status !== 'Cancelada' &&
         item.status !== 'Borrador / Solicitud';
 
-      if (isActiveStatus && diffHours > 48) {
+      if (isActiveStatus && diffHours >= 72) {
         const days = Math.floor(diffHours / 24);
         alerts.push({
           id: `alert-oc-inactive-${item.id}`,
@@ -114,38 +167,84 @@ export function computeSystemAlerts(params: {
     });
   });
 
-  // B. Awarded Tenders without OC Tracking
+  // B. Awarded Tenders & Client OCs (Warning if < 3 days; Critical ONLY if >= 3 days)
   tenderClients.forEach((client) => {
     if (client.status === 'Adjudicada') {
-      const hasOC = ocContracts.some(
+      const matchingContract = ocContracts.find(
         (c) =>
           c.tenderClientId === client.id ||
-          c.contractNumber === client.header.processNumber ||
-          c.contractNumber === client.clientName ||
-          c.salesOrderNumber === client.header.processNumber ||
-          c.id === `tender-contract-${client.id}`
+          (client.header?.processNumber && c.contractNumber === client.header.processNumber) ||
+          (client.header?.processNumber && c.salesOrderNumber === client.header.processNumber) ||
+          (client.clientName && c.clientName?.trim().toLowerCase() === client.clientName?.trim().toLowerCase())
       );
-      if (!hasOC && (client.items || []).length > 0) {
-        alerts.push({
-          id: `alert-tender-without-oc-${client.id}`,
-          title: `Licitación Adjudicada sin OC Emitida: ${client.clientName}`,
-          message: `El proceso "${client.header.processNumber || client.clientName}" (${client.items?.length || 0} equipos) está adjudicado pero aún no tiene órdenes de compra asignadas en Seguimiento.`,
-          severity: 'critica',
-          category: 'licitacion_sin_oc',
-          sourceModule: 'Licitaciones (Ventana 4)',
-          targetTab: 'licitaciones',
-          entityId: client.id,
-          entityName: client.clientName,
-          actionLabel: 'Abrir Licitación',
-          createdAt: client.updatedAt,
-          details: { clientId: client.id },
-        });
+      const matchingSO = salesOrders.find(
+        (o) =>
+          o.contractId === client.id ||
+          o.tenderClientId === client.id ||
+          (client.header?.processNumber && o.contractNumber === client.header.processNumber) ||
+          (client.header?.processNumber && o.salesOrderNumber === client.header.processNumber) ||
+          (client.clientName && o.clientName?.trim().toLowerCase() === client.clientName?.trim().toLowerCase())
+      );
+
+      const allItems = matchingSO?.items || matchingContract?.items || client.items || [];
+      const pendingItems = allItems.filter((it) => !itemHasAssignedOC(it, matchingContract?.items));
+
+      if (pendingItems.length > 0 && allItems.length > 0) {
+        const createdTime = client.updatedAt || (client.header as any)?.createdAt || (client.header as any)?.date || client.header?.closingDate || now;
+        const createdDate = new Date(createdTime);
+        const diffMs = Math.max(0, now - (isNaN(createdDate.getTime()) ? now : createdDate.getTime()));
+        const daysPassed = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        // When a new tender/OC is added, the user must first generate the OV and then the OC.
+        // If less than 3 days: it's a Warning (media), NOT Critical (critica).
+        // If 3 or more days pass without assigning OC/OV: then it becomes Critical (critica).
+        const isCritical = daysPassed >= 3;
+        const alertSeverity: AlertSeverity = isCritical ? 'critica' : 'media';
+
+        if (pendingItems.length === allItems.length && !matchingContract && !matchingSO?.hasLinkedOC) {
+          alerts.push({
+            id: `alert-tender-without-oc-${client.id}`,
+            title: isCritical
+              ? `🔴 Licitación sin OC Emitida (${daysPassed}d): ${client.clientName}`
+              : `⚠️ Licitación Adjudicada: Pendiente OV/OC (${client.clientName})`,
+            message: isCritical
+              ? `El proceso "${client.header.processNumber || client.clientName}" lleva ${daysPassed} días adjudicado sin emitir Orden de Venta (OV) ni órdenes de compra a proveedores.`
+              : `El proceso "${client.header.processNumber || client.clientName}" (${allItems.length} equipos) fue adjudicado recientemente. Puedes generar la Orden de Venta (OV) en "Órdenes de Venta" y emitir las OCs correspondientes.`,
+            severity: alertSeverity,
+            category: 'licitacion_sin_oc',
+            sourceModule: 'Licitaciones (Ventana 4)',
+            targetTab: 'ordenes_venta',
+            entityId: client.id,
+            entityName: client.clientName,
+            actionLabel: 'Generar Orden de Venta',
+            createdAt: client.updatedAt,
+            details: { clientId: client.id, daysPassed },
+          });
+        } else {
+          alerts.push({
+            id: `alert-tender-partial-oc-${client.id}`,
+            title: isCritical
+              ? `🔴 ${pendingItems.length} de ${allItems.length} Equipos sin OC (${daysPassed}d) - ${client.clientName}`
+              : `⚠️ ${pendingItems.length} de ${allItems.length} Equipos Pendientes de OC (${client.clientName})`,
+            message: `El proceso "${client.header.processNumber || client.clientName}" tiene ${pendingItems.length} equipo(s) sin OC asignada a proveedor (${pendingItems.map((it) => it.name).join(', ')}).`,
+            severity: alertSeverity,
+            category: 'licitacion_sin_oc',
+            sourceModule: 'Seguimiento OC (Ventana 5)',
+            targetTab: 'seguimiento_oc',
+            entityId: client.id,
+            entityName: client.clientName,
+            actionLabel: 'Ver en Seguimiento OC',
+            createdAt: client.updatedAt,
+            details: { clientId: client.id, daysPassed, pendingCount: pendingItems.length },
+          });
+        }
       }
     }
   });
 
   // C. Sales Orders (OV) & OC Linking Status (Informative Notifications)
-  salesOrders.forEach((order) => {
+  const dedupedOrders = deduplicateSalesOrders(salesOrders || []);
+  dedupedOrders.forEach((order) => {
     // Only check active OVs that are not cancelled
     if (order.status !== 'Cancelada') {
       const hasMatchingContract = ocContracts.some(
