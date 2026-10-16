@@ -3,6 +3,20 @@ import { SupplierProfile } from '../types';
 
 export const MASTER_SUPPLIERS_CATALOG: SupplierProfile[] = [
   {
+    id: "supp-master-allers",
+    name: "ALLERS S.A.",
+    nit: "890.300.745-9",
+    contactPerson: "División Médica & Equipos de Diagnóstico",
+    phone: "(602) 685-5000",
+    email: "ventas.equipos@allers.com.co",
+    city: "Cali / Bogotá D.C.",
+    brands: ["SECA", "WELCH ALLYN", "3M", "LITTMANN", "HEINE", "OMRON"],
+    defaultPaymentTerms: "Crédito 30 días",
+    notes: "Distribuidor mayorista autorizado de balanzas y tallímetros SECA, fonendoscopios, tensiómetros y diagnóstico.",
+    createdAt: "2026-08-01",
+    updatedAt: "2026-10-05"
+  },
+  {
     id: "supp-master-tecnica",
     name: "TECNICA",
     nit: "890.900.547-1",

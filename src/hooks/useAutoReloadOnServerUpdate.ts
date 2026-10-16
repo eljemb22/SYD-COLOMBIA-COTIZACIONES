@@ -21,76 +21,21 @@ interface ServerVersionResponse {
 export function useAutoReloadOnServerUpdate() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('');
-  const initialBootTimeRef = useRef<number | null>(null);
-  const initialVersionRef = useRef<string | null>(null);
-  const isReloadingRef = useRef<boolean>(false);
-  const initialFirestoreSignalRef = useRef<number | null>(null);
-  const serverWasOfflineRef = useRef<boolean>(false);
-  const mountTimeRef = useRef<number>(Date.now());
 
   const triggerAppReload = (reason: string, targetVer?: string) => {
-    if (isReloadingRef.current) return;
-
-    // Guard: Prevent reload during the first 10 seconds of app load
-    if (Date.now() - mountTimeRef.current < 10000) {
-      console.log('[AutoReload] Reload ignored during initial boot grace period:', reason);
-      return;
-    }
-
-    isReloadingRef.current = true;
-    console.log('[AutoReload] Triggering reload due to:', reason);
-
-    // Ensure the new version is marked as seen so user is never trapped in a prompt loop
-    markAppUpdateAsSeen(targetVer || initialVersionRef.current || CURRENT_APP_VERSION);
-
-    setIsUpdating(true);
-    setUpdateMessage('🚀 Nueva actualización detectada. Reiniciando y sincronizando la app automáticamente...');
-
-    // Broadcast to other open tabs on this browser
-    try {
-      if ('BroadcastChannel' in window) {
-        const bc = new BroadcastChannel('syd_app_reload_channel');
-        bc.postMessage({ type: 'RELOAD', reason, timestamp: Date.now() });
-        bc.close();
-      }
-    } catch (e) {
-      console.debug(e);
-    }
-
-    // Clear client service caches if available
-    try {
-      if ('caches' in window) {
-        window.caches.keys().then((keys) => {
-          keys.forEach((key) => window.caches.delete(key));
-        });
-      }
-    } catch (e) {
-      console.warn(e);
-    }
-
-    setTimeout(async () => {
-      // Confirm the new server build is alive and answering before refreshing
-      try {
-        const ping = await fetch('/api/version?t=' + Date.now(), {
-          headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' }
-        });
-        if (ping.ok) {
-          window.location.reload();
-          return;
-        }
-      } catch (_) {}
-      setTimeout(() => window.location.reload(), 1000);
-    }, 1000);
+    console.log('[AppUpdate] Update available:', reason, targetVer);
+    markAppUpdateAsSeen(targetVer || CURRENT_APP_VERSION);
+    window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { version: targetVer || CURRENT_APP_VERSION } }));
   };
 
-  // 1. Browser BroadcastChannel Listener for instant tab sync
+  // Browser BroadcastChannel Listener for coordinating update status across tabs
   useEffect(() => {
     try {
       if ('BroadcastChannel' in window) {
         const bc = new BroadcastChannel('syd_app_reload_channel');
         bc.onmessage = (event) => {
           if (event.data?.type === 'RELOAD') {
-            triggerAppReload(event.data?.reason || 'Actualización en otra pestaña');
+            window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { reason: event.data?.reason } }));
           }
         };
         return () => {
@@ -100,7 +45,7 @@ export function useAutoReloadOnServerUpdate() {
     } catch (e) {}
   }, []);
 
-  // 2. Firebase Firestore Real-Time Listener (instant push across all devices/PCs)
+  // Firebase Firestore Real-Time Listener for update notices
   useEffect(() => {
     try {
       if (!db) return;
@@ -110,27 +55,12 @@ export function useAutoReloadOnServerUpdate() {
         (snap) => {
           if (!snap.exists()) return;
           const data = snap.data();
-          const signalTimestamp = Number(data?.timestamp || 0);
-
-          if (!signalTimestamp) return;
-
-          if (initialFirestoreSignalRef.current === null) {
-            initialFirestoreSignalRef.current = signalTimestamp;
-            // If data has a newer version than current running client, notify immediately
-            if (data?.version && isVersionNewer(data.version, CURRENT_APP_VERSION)) {
-              window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { reason: data?.reason, version: data?.version } }));
-            }
-            return;
-          }
-
-          if (signalTimestamp > (initialFirestoreSignalRef.current || 0)) {
-            initialFirestoreSignalRef.current = signalTimestamp;
-            // Notify system of update rather than abruptly forcing reload
+          if (data?.version && isVersionNewer(data.version, CURRENT_APP_VERSION)) {
             window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { reason: data?.reason, version: data?.version } }));
           }
         },
         (err) => {
-          console.debug('Firestore reload listener fallback:', err);
+          console.debug('Firestore update listener notice:', err);
         }
       );
 
@@ -140,82 +70,6 @@ export function useAutoReloadOnServerUpdate() {
     } catch (e) {
       console.warn(e);
     }
-  }, []);
-
-  // 3. Server API polling backup (every 1.5 seconds + on window focus / visibility change)
-  useEffect(() => {
-    let isMounted = true;
-
-    const checkServerVersion = async () => {
-      if (isReloadingRef.current) return;
-      if (typeof document !== 'undefined' && document.hidden) return;
-
-      try {
-        const response = await fetch('/api/version?t=' + Date.now(), {
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            Pragma: 'no-cache',
-            Expires: '0',
-          },
-        });
-
-        if (response.status === 429) {
-          // Rate limited, do not treat as offline or error, wait for next tick
-          return;
-        }
-
-        if (!response.ok) {
-          serverWasOfflineRef.current = true;
-          return;
-        }
-
-        const data: ServerVersionResponse = await response.json();
-        if (!data || !data.bootTime) return;
-
-        // First initial check
-        if (initialBootTimeRef.current === null) {
-          initialBootTimeRef.current = data.bootTime;
-          initialVersionRef.current = data.version;
-          if (data.version && isVersionNewer(data.version, CURRENT_APP_VERSION)) {
-            window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { version: data.version } }));
-          }
-          return;
-        }
-
-        // Detect if server is running a newer semver or updated build
-        if (
-          data.version &&
-          isVersionNewer(data.version, CURRENT_APP_VERSION)
-        ) {
-          console.log('[AutoReload] New version detected on server:', data.version);
-          // Notify system to show update badge in header so user can update smoothly without losing work
-          window.dispatchEvent(new CustomEvent('syd-update-status-changed', { detail: { version: data.version } }));
-        } else {
-          serverWasOfflineRef.current = false;
-        }
-      } catch (err) {
-        // Server is currently compiling or restarting
-        serverWasOfflineRef.current = true;
-      }
-    };
-
-    checkServerVersion();
-    const interval = setInterval(checkServerVersion, 60000);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkServerVersion();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleVisibilityChange);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleVisibilityChange);
-    };
   }, []);
 
   return { isUpdating, updateMessage, triggerAppReload };

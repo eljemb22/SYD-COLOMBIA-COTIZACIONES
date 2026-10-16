@@ -492,14 +492,18 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
         </button>
       </div>
 
-      {/* 3. COMPACT FLOATING ALERTS POPUP (Anchored at bottom-left, avoids blocking app) */}
+      {/* 3. COMPACT FLOATING ALERTS POPUP (Floats at bottom-left, keeps app 100% visible) */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-start p-4 sm:p-6 bg-slate-950/30 backdrop-blur-[2px] animate-fadeIn"
-          onClick={() => setIsOpen(false)}
-        >
+        <>
+          {/* Transparent click-outside overlay - Does NOT dim or blur the background app */}
           <div
-            className="w-full max-w-[390px] sm:max-w-[420px] max-h-[500px] sm:max-h-[540px] bg-[#121e30]/98 backdrop-blur-md rounded-2xl border border-[#334d6e] shadow-2xl flex flex-col overflow-hidden animate-slideUp mb-12"
+            className="fixed inset-0 z-40 bg-transparent cursor-default"
+            onClick={() => setIsOpen(false)}
+            aria-label="Cerrar panel de notificaciones"
+          />
+
+          <div
+            className="fixed bottom-20 left-4 sm:left-6 z-50 w-[calc(100vw-2rem)] max-w-[390px] sm:max-w-[420px] max-h-[500px] sm:max-h-[540px] bg-[#121e30] rounded-2xl border border-[#334d6e] shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden animate-slideUp"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -703,7 +707,7 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );

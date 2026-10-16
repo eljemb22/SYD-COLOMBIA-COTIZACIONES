@@ -458,7 +458,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
       )}
 
       {/* Unified Search, Filter & Action Bar */}
-      <div className="bg-[#1e314b] border border-[#334d6e] rounded-2xl p-3.5 sm:p-4 space-y-3.5 shadow-lg">
+      <div className="bg-[#1e314b]/95 backdrop-blur-md border border-[#334d6e] rounded-2xl p-3.5 sm:p-4 space-y-3.5 shadow-xl sticky top-0 z-20">
         {/* Row 1: Search (Left) + Filters, View Switcher & TRM (Right) */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Search Input */}
@@ -914,11 +914,11 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-[#121f33] text-slate-300 font-bold border-b border-[#334d6e] text-[11px]">
-                  <th className="p-3 min-w-[130px]">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-[#121f33] text-slate-300 font-bold border-b border-[#334d6e] text-[11px] shadow-xs">
+                  <th className="py-2 px-2 min-w-[95px]">
                     <ExcelColumnHeader
                       column={CATALOG_TABLE_COLUMNS[0]}
                       allRows={baseEquipments}
@@ -929,7 +929,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                       onClearColumnFilter={onClearExcelColumnFilter}
                     />
                   </th>
-                  <th className="p-3 min-w-[240px]">
+                  <th className="py-2 px-2 min-w-[180px]">
                     <ExcelColumnHeader
                       column={CATALOG_TABLE_COLUMNS[1]}
                       allRows={baseEquipments}
@@ -940,7 +940,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                       onClearColumnFilter={onClearExcelColumnFilter}
                     />
                   </th>
-                  <th className="p-3 min-w-[170px]">
+                  <th className="py-2 px-2 min-w-[120px]">
                     <ExcelColumnHeader
                       column={CATALOG_TABLE_COLUMNS[2]}
                       allRows={baseEquipments}
@@ -951,7 +951,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                       onClearColumnFilter={onClearExcelColumnFilter}
                     />
                   </th>
-                  <th className="p-3 min-w-[170px]">
+                  <th className="py-2 px-2 min-w-[120px]">
                     <ExcelColumnHeader
                       column={CATALOG_TABLE_COLUMNS[3]}
                       allRows={baseEquipments}
@@ -962,7 +962,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                       onClearColumnFilter={onClearExcelColumnFilter}
                     />
                   </th>
-                  <th className="p-3 min-w-[140px] text-right">
+                  <th className="py-2 px-2 min-w-[100px] text-right">
                     <ExcelColumnHeader
                       column={CATALOG_TABLE_COLUMNS[4]}
                       allRows={baseEquipments}
@@ -973,7 +973,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                       onClearColumnFilter={onClearExcelColumnFilter}
                     />
                   </th>
-                  <th className="p-3 min-w-[140px] text-right">
+                  <th className="py-2 px-2 min-w-[100px] text-right">
                     <ExcelColumnHeader
                       column={CATALOG_TABLE_COLUMNS[5]}
                       allRows={baseEquipments}
@@ -984,7 +984,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                       onClearColumnFilter={onClearExcelColumnFilter}
                     />
                   </th>
-                  <th className="p-3 min-w-[140px]">
+                  <th className="py-2 px-2 min-w-[100px]">
                     <ExcelColumnHeader
                       column={CATALOG_TABLE_COLUMNS[6]}
                       allRows={baseEquipments}
@@ -995,7 +995,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                       onClearColumnFilter={onClearExcelColumnFilter}
                     />
                   </th>
-                  <th className="p-3 min-w-[120px] text-center">
+                  <th className="py-2 px-2 min-w-[80px] text-center">
                     <ExcelColumnHeader
                       column={CATALOG_TABLE_COLUMNS[7]}
                       allRows={baseEquipments}
@@ -1006,7 +1006,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                       onClearColumnFilter={onClearExcelColumnFilter}
                     />
                   </th>
-                  <th className="p-3 text-center w-28">Acciones</th>
+                  <th className="py-2 px-2 text-center w-20 whitespace-nowrap">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#334d6e]/50">

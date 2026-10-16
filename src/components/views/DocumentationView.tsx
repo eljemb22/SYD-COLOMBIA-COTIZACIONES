@@ -17,6 +17,10 @@ import {
   Image as ImageIcon,
   FileText,
   X,
+  Calendar,
+  ClipboardList,
+  HardDrive,
+  RefreshCw,
 } from 'lucide-react';
 import {
   TechnicalDocument,
@@ -24,6 +28,7 @@ import {
   AuthUser,
   OCTrackingContract,
   TenderClientProject,
+  SalesOrderRecord,
 } from '../../types';
 import {
   getStoredOCTrackingContracts,
@@ -32,27 +37,50 @@ import {
 import { QuickTechnicalSheetGenerator } from './documentation/QuickTechnicalSheetGenerator';
 import { ContractsDocumentationTab } from './documentation/ContractsDocumentationTab';
 import { MasterCatalogDocumentationTab } from './documentation/MasterCatalogDocumentationTab';
+import { EquipmentLifeSheetGenerator } from './documentation/EquipmentLifeSheetGenerator';
+import { MaintenanceScheduleManager } from './documentation/MaintenanceScheduleManager';
+import { analyzeCloudUrl, isHttpUrl, extractGoogleDriveId } from '../../utils/cloudLinkUtils';
+import { googleWorkspaceService } from '../../services/googleWorkspaceService';
+import { PdfCanvasViewer } from '../gmail/PdfCanvasViewer';
+
+export type DocumentationViewTab =
+  | 'contracts'
+  | 'catalog_master'
+  | 'technical_sheet'
+  | 'life_sheet'
+  | 'maintenance_schedule';
 
 interface DocumentationViewProps {
   documents: TechnicalDocument[];
   equipments: MedicalEquipment[];
   tenderClients?: TenderClientProject[];
   ocContracts?: OCTrackingContract[];
+  salesOrders?: SalesOrderRecord[];
   onUpdateContracts?: (contracts: OCTrackingContract[]) => void;
-  onOpenNewDocumentModal: (equipmentId?: string, docType?: string) => void;
+  onOpenNewDocumentModal: (
+    equipmentId?: string,
+    docType?: string,
+    equipmentData?: any,
+    contractContext?: any
+  ) => void;
   onSaveDocument?: (newDoc: TechnicalDocument) => void;
   onDeleteDocument: (id: string) => void;
   currentUser?: AuthUser | null;
   onNavigateToOCTracking?: () => void;
+  onNavigateToInvoicing?: () => void;
 }
 
 // Convert base64 dataURI to Blob
-function dataURItoBlob(dataURI: string): Blob | null {
+// Convert base64 dataURI to Blob
+function dataURItoBlob(dataURI: string, targetMime?: string): Blob | null {
   try {
     if (!dataURI.includes(',')) return null;
     const parts = dataURI.split(',');
     const mimeMatch = parts[0].match(/:(.*?);/);
-    const mime = mimeMatch ? mimeMatch[1] : 'application/pdf';
+    let mime = mimeMatch ? mimeMatch[1] : (targetMime || 'application/pdf');
+    if ((mime === 'application/octet-stream' || !mime) && targetMime) {
+      mime = targetMime;
+    }
     const byteString = atob(parts[1]);
     const ab = new ArrayBuffer(byteString.length);
     const ia = new Uint8Array(ab);
@@ -71,12 +99,14 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
   equipments,
   tenderClients = [],
   ocContracts,
+  salesOrders = [],
   onUpdateContracts,
   onOpenNewDocumentModal,
   onSaveDocument,
   onDeleteDocument,
   currentUser,
   onNavigateToOCTracking,
+  onNavigateToInvoicing,
 }) => {
   const isReadOnly = currentUser?.role === 'viewer' && !currentUser?.permissions?.canEditDocuments;
 
@@ -84,18 +114,34 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
   // 1. 'contracts': Contratos & OCs Directas (unificado con seriales y despachos adentro)
   // 2. 'catalog_master': Base Maestra / Catálogo General (almacén central con cuadro automático por cada equipo)
   // 3. 'technical_sheet': Ficha Técnica Rápida Oficial (PDF)
-  const [viewTab, setViewTab] = useState<'contracts' | 'catalog_master' | 'technical_sheet'>('contracts');
+  // 4. 'life_sheet': Hoja de Vida de Equipos Biomédicos (Resolución 3100)
+  // 5. 'maintenance_schedule': Cronograma Anual de Mantenimiento Preventivo & Metrología
+  const [viewTab, setViewTab] = useState<DocumentationViewTab>('contracts');
 
   // Internal contracts sync with fallback to localStorage
   const [contractsInternal, setContractsInternal] = useState<OCTrackingContract[]>(() => {
-    return ocContracts || getStoredOCTrackingContracts();
+    return ocContracts && ocContracts.length > 0 ? ocContracts : getStoredOCTrackingContracts();
   });
 
   useEffect(() => {
-    if (ocContracts) {
+    if (ocContracts && ocContracts.length > 0) {
       setContractsInternal(ocContracts);
     }
   }, [ocContracts]);
+
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      setContractsInternal(getStoredOCTrackingContracts());
+    };
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('syd-oc-tracking-updated', handleStorageUpdate);
+    window.addEventListener('syd-sales-orders-updated', handleStorageUpdate);
+    return () => {
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('syd-oc-tracking-updated', handleStorageUpdate);
+      window.removeEventListener('syd-sales-orders-updated', handleStorageUpdate);
+    };
+  }, []);
 
   const handleUpdateContracts = (newContracts: OCTrackingContract[]) => {
     setContractsInternal(newContracts);
@@ -114,22 +160,169 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
   const [imageZoom, setImageZoom] = useState<number>(1);
   const [imageRotation, setImageRotation] = useState<number>(0);
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
+  const [isLoadingDrivePreview, setIsLoadingDrivePreview] = useState<boolean>(false);
+  const [drivePreviewError, setDrivePreviewError] = useState<string | null>(null);
 
-  // Generate object URL whenever previewDoc changes
+  // Generate object URL and binary Blob whenever previewDoc changes
   useEffect(() => {
-    if (previewDoc?.fileData && previewDoc.fileData.startsWith('data:')) {
-      const blob = dataURItoBlob(previewDoc.fileData);
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        setPreviewBlobUrl(url);
-        return () => {
-          URL.revokeObjectURL(url);
-        };
+    let active = true;
+    let createdUrlToRevoke: string | null = null;
+    setDrivePreviewError(null);
+
+    const resolvePreview = async () => {
+      if (!previewDoc) {
+        setPreviewBlob(null);
+        setPreviewBlobUrl(null);
+        setIsLoadingDrivePreview(false);
+        return;
       }
-    }
-    setPreviewBlobUrl(previewDoc?.fileData || null);
+
+      // Case 1: Local base64 data URI
+      if (previewDoc.fileData && previewDoc.fileData.startsWith('data:')) {
+        const isPdf =
+          previewDoc.fileName?.toLowerCase().endsWith('.pdf') ||
+          getDocFileCategory(previewDoc) === 'pdf';
+        const blob = dataURItoBlob(
+          previewDoc.fileData,
+          isPdf ? 'application/pdf' : undefined
+        );
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          createdUrlToRevoke = url;
+          if (active) {
+            setPreviewBlob(blob);
+            setPreviewBlobUrl(url);
+            setIsLoadingDrivePreview(false);
+          }
+          return;
+        }
+      }
+
+      // Case 2: Blob URL already
+      if (previewDoc.fileData && previewDoc.fileData.startsWith('blob:')) {
+        if (active) {
+          setPreviewBlobUrl(previewDoc.fileData);
+          fetch(previewDoc.fileData)
+            .then((r) => r.blob())
+            .then((b) => {
+              if (active) setPreviewBlob(b);
+            })
+            .catch(() => {});
+          setIsLoadingDrivePreview(false);
+        }
+        return;
+      }
+
+      // Case 3: Google Drive file
+      const rawUrl = previewDoc.fileUrl || previewDoc.fileData || '';
+      const driveId = previewDoc.driveFileId || extractGoogleDriveId(rawUrl);
+
+      if (driveId) {
+        setIsLoadingDrivePreview(true);
+
+        // Check local disk cache on server first (/api/documents/cached/:driveId)
+        try {
+          const cachedRes = await fetch(`/api/documents/cached/${driveId}`);
+          if (cachedRes.ok) {
+            const rawB = await cachedRes.blob();
+            const blob = new Blob([rawB], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            createdUrlToRevoke = url;
+            if (active) {
+              setPreviewBlob(blob);
+              setPreviewBlobUrl(url);
+              setIsLoadingDrivePreview(false);
+            }
+            return;
+          }
+        } catch (_) {}
+
+        // Backend proxy (/api/drive/proxy-file/:driveId)
+        try {
+          const token = googleWorkspaceService.getAccessToken() || '';
+          const proxyRes = await fetch(`/api/drive/proxy-file/${driveId}${token ? `?token=${token}` : ''}`);
+          if (proxyRes.ok) {
+            const rawB = await proxyRes.blob();
+            const blob = new Blob([rawB], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            createdUrlToRevoke = url;
+            if (active) {
+              setPreviewBlob(blob);
+              setPreviewBlobUrl(url);
+              setIsLoadingDrivePreview(false);
+            }
+            return;
+          }
+        } catch (_) {}
+
+        // Attempt: fetch binary blob using active Google Workspace OAuth session
+        try {
+          const rawB = await googleWorkspaceService.fetchDriveFileBlob(driveId);
+          if (rawB && rawB.size > 0) {
+            const blob = new Blob([rawB], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            createdUrlToRevoke = url;
+
+            // Cache on server for next time
+            try {
+              const reader = new FileReader();
+              reader.onload = () => {
+                if (reader.result) {
+                  fetch('/api/documents/cache', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: driveId, base64: reader.result as string }),
+                  }).catch(() => {});
+                }
+              };
+              reader.readAsDataURL(blob);
+            } catch (_) {}
+
+            if (active) {
+              setPreviewBlob(blob);
+              setPreviewBlobUrl(url);
+              setIsLoadingDrivePreview(false);
+            }
+            return;
+          }
+        } catch (fetchErr: any) {
+          console.warn('Could not fetch Drive file directly as blob:', fetchErr);
+        }
+
+        if (active) {
+          setPreviewBlob(null);
+          setPreviewBlobUrl(null);
+          setIsLoadingDrivePreview(false);
+        }
+        return;
+      }
+
+      // Case 4: Other HTTP URL
+      if (isHttpUrl(rawUrl)) {
+        if (active) {
+          setPreviewBlobUrl(rawUrl);
+          setIsLoadingDrivePreview(false);
+        }
+        return;
+      }
+
+      if (active) {
+        setPreviewBlobUrl(previewDoc.fileData || null);
+        setIsLoadingDrivePreview(false);
+      }
+    };
+
+    resolvePreview();
     setImageZoom(1);
     setImageRotation(0);
+
+    return () => {
+      active = false;
+      if (createdUrlToRevoke) {
+        URL.revokeObjectURL(createdUrlToRevoke);
+      }
+    };
   }, [previewDoc]);
 
   // Handle ESC key press to close modals
@@ -180,7 +373,34 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
   };
 
   // Download real file
-  const handleDownloadDoc = (doc: TechnicalDocument) => {
+  const handleDownloadDoc = async (doc: TechnicalDocument) => {
+    const rawUrl = doc.fileUrl || doc.fileData;
+    const driveId = doc.driveFileId || (rawUrl ? extractGoogleDriveId(rawUrl) : null);
+
+    // Try downloading blob if Drive file
+    if (driveId && googleWorkspaceService.getAccessToken()) {
+      try {
+        const blob = await googleWorkspaceService.fetchDriveFileBlob(driveId);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = doc.fileName || `${doc.title}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return;
+      } catch (err) {
+        console.warn('Fallback to standard URL download:', err);
+      }
+    }
+
+    if (rawUrl && isHttpUrl(rawUrl)) {
+      const info = analyzeCloudUrl(rawUrl);
+      window.open(info.downloadUrl || info.previewUrl, '_blank');
+      return;
+    }
+
     if (doc.fileData && doc.fileData.startsWith('data:')) {
       const link = document.createElement('a');
       link.href = doc.fileData;
@@ -214,9 +434,20 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
 
   // Open in full tab / window
   const handleOpenInNewTab = (doc: TechnicalDocument) => {
+    const rawUrl = doc.fileUrl || doc.fileData;
+    const driveId = doc.driveFileId || (rawUrl ? extractGoogleDriveId(rawUrl) : null);
+
+    if (driveId) {
+      window.open(`https://drive.google.com/file/d/${driveId}/view`, '_blank');
+      return;
+    }
+
+    if (rawUrl && isHttpUrl(rawUrl)) {
+      window.open(rawUrl, '_blank');
+      return;
+    }
     if (previewBlobUrl) {
       window.open(previewBlobUrl, '_blank');
-    } else if (doc.fileData) {
       const blob = dataURItoBlob(doc.fileData);
       if (blob) {
         const url = URL.createObjectURL(blob);
@@ -224,6 +455,42 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
       } else {
         window.open(doc.fileData, '_blank');
       }
+    }
+  };
+
+  // Connect and load Google Drive document directly into blob viewer
+  const handleConnectAndLoadDriveFile = async () => {
+    if (!previewDoc) return;
+    const rawUrl = previewDoc.fileUrl || previewDoc.fileData || '';
+    const driveId = previewDoc.driveFileId || extractGoogleDriveId(rawUrl);
+    if (!driveId) return;
+
+    try {
+      setIsLoadingDrivePreview(true);
+      await googleWorkspaceService.connectGoogleWorkspace();
+      const blob = await googleWorkspaceService.fetchDriveFileBlob(driveId);
+      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+      const url = URL.createObjectURL(pdfBlob);
+      setPreviewBlobUrl(url);
+
+      // Cache on server for instant zero-auth preview on next visit
+      try {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (reader.result) {
+            fetch('/api/documents/cache', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: driveId, base64: reader.result as string }),
+            }).catch(() => {});
+          }
+        };
+        reader.readAsDataURL(pdfBlob);
+      } catch (_) {}
+    } catch (err: any) {
+      console.warn('Error connecting and loading Drive file:', err);
+    } finally {
+      setIsLoadingDrivePreview(false);
     }
   };
 
@@ -237,14 +504,38 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
     }
   };
 
-  const totalContractsCount = (tenderClients?.length || 0) + (contractsInternal?.length || 0);
+  const deduplicatedContractsCount = React.useMemo(() => {
+    const listIds = new Set<string>();
+    const procNumbers = new Set<string>();
+    let count = 0;
+
+    (tenderClients || []).forEach((t) => {
+      if (!t) return;
+      count++;
+      listIds.add(t.id);
+      const proc = (t.header?.processNumber || '').trim().toLowerCase();
+      if (proc) procNumbers.add(proc);
+    });
+
+    (contractsInternal || []).forEach((c) => {
+      if (!c) return;
+      if (listIds.has(c.id) || (c.tenderClientId && listIds.has(c.tenderClientId))) return;
+      const cProc = (c.contractNumber || c.ocNumber || '').trim().toLowerCase();
+      if (cProc && procNumbers.has(cProc)) return;
+      count++;
+    });
+
+    return count;
+  }, [tenderClients, contractsInternal]);
+
+  const totalContractsCount = deduplicatedContractsCount;
 
   return (
     <div id="documentation-view-container" className="space-y-3 animate-fadeIn">
       {/* Unified Top Header & Search Controls Bar - Compact & High-Density */}
-      <div className="bg-[#192b45] border border-[#334d6e] rounded-xl p-2.5 shadow-md space-y-2.5">
+      <div className="bg-[#192b45]/95 backdrop-blur-md border border-[#334d6e] rounded-xl p-2.5 shadow-xl space-y-2.5 relative z-10">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
-          {/* Main 3 Unified Tabs: 1. Contratos & OCs Directas | 2. Base Maestra Catálogo | 3. Ficha Técnica PDF */}
+          {/* Main 5 Unified Tabs: 1. Contratos | 2. Base Maestra | 3. Ficha Técnica | 4. Hojas de Vida | 5. Cronograma */}
           <div className="bg-[#15253d] p-1 rounded-xl border border-[#334d6e] flex items-center gap-1 flex-wrap">
             <button
               id="tab-contracts-unified"
@@ -284,6 +575,32 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               <span>✨ Crear Ficha Técnica (PDF)</span>
             </button>
+
+            <button
+              id="tab-equipment-life-sheets"
+              onClick={() => setViewTab('life_sheet')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                viewTab === 'life_sheet'
+                  ? 'bg-purple-500 text-slate-950 shadow-md font-black'
+                  : 'text-purple-300 hover:text-white bg-purple-950/40 border border-purple-500/30'
+              }`}
+            >
+              <ClipboardList className="w-3.5 h-3.5 text-purple-400" />
+              <span>📋 Crear Hojas de Vida</span>
+            </button>
+
+            <button
+              id="tab-maintenance-schedule"
+              onClick={() => setViewTab('maintenance_schedule')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                viewTab === 'maintenance_schedule'
+                  ? 'bg-indigo-400 text-slate-950 shadow-md font-black'
+                  : 'text-indigo-300 hover:text-white bg-indigo-950/40 border border-indigo-500/30'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+              <span>📅 Cronograma de Mantenimiento</span>
+            </button>
           </div>
 
           {/* Quick Context Summary Tag */}
@@ -294,8 +611,8 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
           </div>
         </div>
 
-        {/* Search Bar (Ultra compact) */}
-        {viewTab !== 'technical_sheet' && (
+        {/* Search Bar (Ultra compact - hidden when inside specialized generators) */}
+        {viewTab !== 'technical_sheet' && viewTab !== 'life_sheet' && viewTab !== 'maintenance_schedule' && (
           <div className="pt-1.5 border-t border-[#334d6e]/60">
             <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
@@ -352,6 +669,7 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
           onDownloadDoc={handleDownloadDoc}
           onDeleteDocument={onDeleteDocument}
           onOpenQuickTechSheet={() => setViewTab('technical_sheet')}
+          onOpenLifeSheet={() => setViewTab('life_sheet')}
           searchQuery={searchQuery}
         />
       )}
@@ -368,13 +686,40 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
       )}
 
       {/* ========================================================================= */}
+      {/* 4. GENERADOR OFICIAL DE HOJAS DE VIDA DE EQUIPOS (Resolución 3100)        */}
+      {/* ========================================================================= */}
+      {viewTab === 'life_sheet' && (
+        <EquipmentLifeSheetGenerator
+          equipments={equipments}
+          onSaveToDocuments={onSaveDocument}
+          onNavigateToRepository={() => setViewTab('catalog_master')}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. CRONOGRAMA DE MANTENIMIENTO PREVENTIVO, CORRECTIVO Y CAPACITACIÓN       */}
+      {/* ========================================================================= */}
+      {viewTab === 'maintenance_schedule' && (
+        <MaintenanceScheduleManager
+          equipments={equipments}
+          tenderClients={tenderClients}
+          ocContracts={contractsInternal}
+          salesOrders={salesOrders}
+          onNavigateToInvoicing={onNavigateToInvoicing}
+        />
+      )}
+
+      {/* ========================================================================= */}
       {/* MODAL: DOCUMENT PREVIEW (PDF, IMAGES, WORD)                               */}
       {/* ========================================================================= */}
       {previewDoc && typeof document !== 'undefined' && createPortal(
         <div 
-          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fadeIn"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewDoc(null);
+          }}
+          className="fixed inset-0 z-[100] bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fadeIn"
         >
-          <div className="bg-[#192b45] border border-cyan-500/50 rounded-2xl max-w-5xl w-full p-4 sm:p-6 shadow-2xl animate-scaleUp max-h-[92vh] flex flex-col my-auto">
+          <div className="bg-[#14233c] border border-cyan-500/40 rounded-2xl max-w-5xl w-full p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] animate-scaleUp max-h-[92vh] flex flex-col my-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#334d6e] pb-3 gap-3 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -415,8 +760,8 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
             <div className="py-4 space-y-4 overflow-y-auto flex-1 pr-1">
               {/* PDF VIEWER */}
               {getDocFileCategory(previewDoc) === 'pdf' && (
-                <div className="bg-[#111c2e] rounded-xl border border-[#334d6e] p-2 space-y-2">
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-[#15253d] rounded-lg border border-[#334d6e] text-xs">
+                <div className="bg-[#111c2e] rounded-xl border border-[#334d6e] p-2 sm:p-3 space-y-2.5">
+                  <div className="flex items-center justify-between px-3 py-2 bg-[#15253d] rounded-lg border border-[#334d6e] text-xs flex-wrap gap-2">
                     <span className="font-bold text-slate-300 flex items-center gap-1.5">
                       <FileType className="w-4 h-4 text-rose-400" />
                       <span>Visor Integrado de PDF ({previewDoc.fileName})</span>
@@ -424,38 +769,87 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenInNewTab(previewDoc)}
-                      className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 transition cursor-pointer"
+                      className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 transition cursor-pointer px-2 py-1 hover:bg-[#111c2e] rounded-lg"
+                      title="Abrir a pantalla completa en una nueva pestaña"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Abrir a pantalla completa</span>
+                      <span>Pantalla completa</span>
                     </button>
                   </div>
 
-                  <div className="w-full h-[520px] rounded-lg overflow-hidden bg-slate-900 border border-[#334d6e]">
-                    {previewBlobUrl || previewDoc.fileData ? (
-                      <object
-                        data={previewBlobUrl || previewDoc.fileData}
-                        type="application/pdf"
-                        className="w-full h-full"
-                      >
-                        <iframe
-                          src={previewBlobUrl || previewDoc.fileData}
-                          className="w-full h-full border-none"
-                          title={previewDoc.title}
-                        >
-                          <div className="p-8 text-center text-slate-400 space-y-3">
-                            <p className="font-bold text-white">Visualizador embebido no compatible con este navegador.</p>
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadDoc(previewDoc)}
-                              className="bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs inline-flex items-center gap-1.5"
-                            >
-                              <Download className="w-4 h-4" />
-                              <span>Descargar PDF</span>
-                            </button>
-                          </div>
-                        </iframe>
-                      </object>
+                  {/* Drive Banner notice if needed */}
+                  {drivePreviewError && (
+                    <div className="p-2.5 bg-amber-500/15 border border-amber-400/40 rounded-xl text-xs text-amber-200 flex items-center gap-2 animate-fadeIn">
+                      <HardDrive className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>{drivePreviewError}</span>
+                    </div>
+                  )}
+
+                  <div className="w-full min-h-[540px] rounded-lg overflow-hidden bg-slate-900 border border-[#334d6e] relative">
+                    {isLoadingDrivePreview ? (
+                      <div className="flex flex-col items-center justify-center h-[540px] p-8 text-center text-slate-300 space-y-3 bg-slate-950">
+                        <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
+                        <p className="font-bold text-white text-sm">
+                          Conectando con Google Drive y preparando el visor de PDF...
+                        </p>
+                        <p className="text-xs text-slate-400 max-w-sm">
+                          Descargando el archivo en alta resolución para visualización directa.
+                        </p>
+                      </div>
+                    ) : previewBlob ? (
+                      <div className="w-full h-[540px] overflow-hidden bg-slate-950 flex flex-col">
+                        <PdfCanvasViewer
+                          blob={previewBlob}
+                          filename={previewDoc.fileName || previewDoc.title}
+                          blobUrl={previewBlobUrl || undefined}
+                          onOpenInNewTab={() => handleOpenInNewTab(previewDoc)}
+                        />
+                      </div>
+                    ) : (previewDoc.driveFileId || (previewDoc.fileUrl && previewDoc.fileUrl.includes('drive.google.com')) || (previewDoc.fileData && previewDoc.fileData.includes('drive.google.com'))) ? (
+                      /* High-fidelity Google Drive Document Card (Never shows Chrome blocked page) */
+                      <div className="flex flex-col items-center justify-center h-full p-6 sm:p-8 text-center bg-gradient-to-b from-[#111e33] to-[#0c1626] space-y-4">
+                        <div className="p-4 bg-cyan-500/15 border border-cyan-500/30 rounded-2xl text-cyan-400 shadow-xl">
+                          <FileType className="w-12 h-12 text-rose-400" />
+                        </div>
+                        <div className="space-y-1.5 max-w-md">
+                          <h4 className="text-sm sm:text-base font-bold text-white">
+                            {previewDoc.fileName || previewDoc.title}
+                          </h4>
+                          <p className="text-xs text-slate-300">
+                            Documento oficial en <strong className="text-amber-400 font-bold">Google Drive</strong> ({previewDoc.fileSize || 'PDF'}).
+                          </p>
+                          <p className="text-[11px] text-slate-400 leading-relaxed">
+                            Haz clic en <strong className="text-cyan-300">"Visualizar con Google Drive"</strong> para sincronizar tu sesión y cargarlo inmediatamente en el visor integrado:
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={handleConnectAndLoadDriveFile}
+                            disabled={isLoadingDrivePreview}
+                            className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg transition active:scale-95 cursor-pointer disabled:opacity-50"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDrivePreview ? 'animate-spin' : ''}`} />
+                            <span>Visualizar con Google Drive</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenInNewTab(previewDoc)}
+                            className="inline-flex items-center gap-1.5 bg-[#17253b] hover:bg-[#203452] border border-[#2d466b] text-slate-200 text-xs font-semibold px-3.5 py-2.5 rounded-xl transition cursor-pointer"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                            <span>Abrir en Google Drive</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadDoc(previewDoc)}
+                            className="inline-flex items-center gap-1.5 bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 text-xs font-semibold px-3.5 py-2.5 rounded-xl transition cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Descargar</span>
+                          </button>
+                        </div>
+                      </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-400">
                         <FileType className="w-10 h-10 text-rose-400 mb-2" />
@@ -598,15 +992,27 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
                 </button>
               )}
 
-              <div className="flex items-center gap-2 ml-auto">
-                <span className="text-[11px] text-slate-500 hidden sm:inline mr-2">Presione <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">ESC</kbd> para cerrar</span>
+              <div className="flex items-center gap-2.5 ml-auto">
+                <span className="text-[11px] text-slate-500 hidden sm:inline mr-1">Presione <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">ESC</kbd> para cerrar</span>
+                {(previewDoc.driveFileId || (previewDoc.fileUrl && previewDoc.fileUrl.includes('drive.google.com')) || (previewDoc.fileData && previewDoc.fileData.includes('drive.google.com'))) && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenInNewTab(previewDoc)}
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5"
+                    title="Abrir directamente en Google Drive con tu cuenta autorizada"
+                  >
+                    <HardDrive className="w-4 h-4 text-slate-950" />
+                    <span>Abrir en Google Drive</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleDownloadDoc(previewDoc)}
                   className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs px-4 py-2 rounded-xl shadow-lg transition cursor-pointer flex items-center gap-1.5"
+                  title="Descargar este archivo"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Descargar Archivo Real</span>
+                  <span>Descargar Archivo</span>
                 </button>
               </div>
             </div>
@@ -619,7 +1025,12 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
       {/* MODAL: CONFIRMATION TO DELETE DOCUMENT                                    */}
       {/* ========================================================================= */}
       {docToDelete && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-fadeIn">
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDocToDelete(null);
+          }}
+          className="fixed inset-0 z-[100] bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-2.5 sm:p-4 animate-fadeIn"
+        >
           <div className="bg-[#192b45] border border-rose-500/50 rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-3.5 shadow-2xl animate-scaleUp my-auto">
             <div className="flex items-start gap-3">
               <div className="p-2.5 bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl shrink-0">
@@ -633,6 +1044,12 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
                 <p className="text-[11px] text-slate-400 pt-0.5">
                   Equipo asociado: <strong className="text-slate-200">{docToDelete.equipmentName}</strong>.
                 </p>
+                {(docToDelete.driveFileId || (docToDelete.fileUrl && docToDelete.fileUrl.includes('drive.google.com')) || (docToDelete.fileData && docToDelete.fileData.includes('drive.google.com'))) && (
+                  <p className="text-[11px] text-amber-300 flex items-center gap-1.5 font-bold pt-1 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg">
+                    <HardDrive className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>También se eliminará de tu Google Drive.</span>
+                  </p>
+                )}
               </div>
             </div>
 

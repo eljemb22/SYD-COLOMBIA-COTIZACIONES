@@ -79,7 +79,10 @@ export const PrintModal: React.FC<PrintModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-y-auto animate-fadeIn"
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="bg-[#112237] border border-[#223d60] rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-6 space-y-4 shadow-2xl animate-scaleUp max-h-[92vh] overflow-y-auto my-auto">
         <div className="flex items-center justify-between pb-3 border-b border-[#223d60] no-print">

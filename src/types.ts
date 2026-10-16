@@ -92,6 +92,8 @@ export interface QuoteItem {
   code: string;
   name: string;
   brand: string;
+  supplier?: string;
+  supplierName?: string;
   productGroup?: ProductGroup;
   model: string;
   quantity: number;
@@ -219,6 +221,8 @@ export interface TenderItem {
   code: string;
   name: string;
   brand: string;
+  supplier?: string;
+  supplierName?: string;
   productGroup?: ProductGroup;
   model: string;
   originCountry: string;
@@ -291,6 +295,11 @@ export interface TechnicalDocument {
   fileSize: string;
   fileData?: string;
   fileType?: string;
+  fileUrl?: string; // Link de descarga en la nube (Google Drive, Dropbox, OneDrive, etc.)
+  downloadUrl?: string;
+  isCloudLink?: boolean;
+  cloudProvider?: 'google_drive' | 'dropbox' | 'onedrive' | 'direct_link' | 'other';
+  driveFileId?: string;
   uploadDate: string;
   status: 'Vigente' | 'En Trámite' | 'Vencido';
   invimaNumber?: string;
@@ -342,6 +351,7 @@ export interface ViewerPermissions {
   canExportData: boolean;
   canManageBackups: boolean;
   canAccessSqlAnalytics: boolean;
+  canManageGmailPurchases: boolean;
 }
 
 export type SalesOrderStatus =
@@ -366,6 +376,8 @@ export interface SalesOrderItem {
   name: string;
   brand: string;
   model: string;
+  supplier?: string;
+  supplierName?: string;
   quotedQuantity?: number;
   contractQuantity?: number;
   quantityToDispatch: number;
@@ -384,7 +396,12 @@ export interface AttachedSalesDoc {
   id?: string;
   name: string;
   size?: string;
-  dataUrl: string;
+  dataUrl: string; // Base64 data URL o link http(s) en la nube
+  fileUrl?: string; // Link directo / Drive
+  downloadUrl?: string;
+  isCloudLink?: boolean;
+  cloudProvider?: 'google_drive' | 'dropbox' | 'onedrive' | 'direct_link' | 'other';
+  driveFileId?: string;
   type?: string;
   uploadedAt: string;
 }
@@ -539,6 +556,10 @@ export interface IndividualSerialDoc {
   fileSize?: string;
   fileData?: string;
   fileType?: string;
+  fileUrl?: string; // Link directo / Drive
+  downloadUrl?: string;
+  isCloudLink?: boolean;
+  cloudProvider?: 'google_drive' | 'dropbox' | 'onedrive' | 'direct_link' | 'other';
   uploadDate: string;
   dianDeclarationNumber?: string;
   dianDate?: string;
@@ -603,7 +624,15 @@ export interface OCTrackingItem {
   notes: string;
   history: OCStatusLogEntry[];
   serialNumbers?: ItemSerialNumberRecord[]; // Seriales físicos y documentación individual
+  serialNumber?: string;     // Serial principal o único
+  assignedSerialNumbers?: string[]; // Seriales asignados en órdenes de venta
+  deliveryDate?: string;     // Fecha de entrega
+  installedDate?: string;    // Fecha de instalación
+  receptionDate?: string;    // Fecha de recepción en bodega
   supplierInvoices?: SupplierInvoiceAttachment[]; // Facturas del proveedor anexadas
+  salesOrderId?: string;     // ID de la Orden de Venta (OV)
+  salesOrderNumber?: string; // N° Consecutivo de la Orden de Venta (ej: OV-2026-001)
+  salesOrderItemId?: string; // ID del ítem en la Orden de Venta
 }
 
 export interface SupplierInvoiceAttachment {
@@ -612,9 +641,13 @@ export interface SupplierInvoiceAttachment {
   issueDate?: string;
   amountCOP?: number;
   fileName: string;
-  fileData?: string; // base64 / data URL
+  fileData?: string; // base64 / data URL o link http(s)
   fileType?: string;
   fileSize?: number;
+  fileUrl?: string; // Link directo / Drive
+  downloadUrl?: string;
+  isCloudLink?: boolean;
+  cloudProvider?: 'google_drive' | 'dropbox' | 'onedrive' | 'direct_link' | 'other';
   notes?: string;
   supplier?: string;
   ocNumber?: string;
@@ -673,7 +706,10 @@ export interface OCTrackingContract {
   quoteNumber?: string;
   salesOrderId?: string;     // Link to SalesOrderRecord (Ventana 7 - Órdenes de Venta)
   salesOrderNumber?: string;
-  sourceType: 'licitacion_adjudicada' | 'cotizacion_aprobada' | 'orden_venta' | 'manual';
+  salesOrderIds?: string[];  // Lista de IDs de Órdenes de Venta vinculadas
+  salesOrderNumbers?: string[]; // Lista de N° de Órdenes de Venta vinculadas (ej: ['OV-2024-001', 'OV-2024-002'])
+  sourceType: 'licitacion_adjudicada' | 'cotizacion_aprobada' | 'orden_venta' | 'oc_directa' | 'manual';
+  isDirectOC?: boolean;
   contractNumber: string;    // Proceso / Contrato / N° de OV / Referencia del Cliente
   ocNumber?: string;         // Número de Orden de Compra principal / de cliente
   supplier?: string;         // Proveedor principal o de referencia
@@ -696,6 +732,10 @@ export interface OCTrackingContract {
   paymentStatus?: OCPaymentStatus | string;
   createdAt: string;
   lastUpdatedAt: string;     // Timestamp for 2-day alert computation
+  deliveryDate?: string;     // Fecha de entrega del contrato
+  actualDeliveryDate?: string; // Fecha de entrega real
+  invoiceNumber?: string;    // Factura vinculada
+  attachedInvoiceFile?: any; // Factura adjunta
   notes?: string;
 }
 
@@ -868,5 +908,164 @@ export interface SystemAlertItem {
   actionLabel?: string;
   createdAt?: string;
   details?: Record<string, any>;
+}
+
+// =========================================================================
+// HOJAS DE VIDA DE EQUIPOS BIOMÉDICOS & CRONOGRAMA DE MANTENIMIENTO
+// (Resolución 3100 de 2019 / Circular 029 MinSalud / INVIMA)
+// =========================================================================
+
+export interface MaintenanceIntervention {
+  id: string;
+  date: string;
+  type: 'Preventivo' | 'Correctivo' | 'Calibración' | 'Inspección / Calificación' | 'Instalación';
+  description: string;
+  partsReplaced?: string;
+  engineerName: string;
+  professionalLicense?: string;
+  status: 'Operativo' | 'En Observación' | 'Fuera de Servicio' | 'Requiere Repuesto';
+  costCOP?: number;
+  reportNumber?: string;
+  notes?: string;
+}
+
+export interface EquipmentLifeSheetData {
+  id: string;
+  equipmentId?: string;
+  formatCode: string;
+  formatVersion: string;
+  // 1. Identificación del Equipo
+  institutionName: string;
+  institutionNit?: string;
+  departmentCity?: string;
+  serviceLocation: string;
+  equipmentName: string;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  inventoryPlate: string;
+  invimaRecord: string;
+  riskClassification: 'Clase I' | 'Clase IIa' | 'Clase IIb' | 'Clase III';
+  biomedicalClassification: 'Diagnóstico' | 'Tratamiento y Soporte de Vida' | 'Rehabilitación' | 'Monitoreo / Cuidados Intensivos' | 'Laboratorio Clínico';
+  technologyType: 'Electromédico' | 'Mecánico / Neumático' | 'Óptico / Láser' | 'Electrónico Microprocesado' | 'Hidráulico';
+  usefulLifeYears: number;
+
+  // 2. Adquisición y Garantía
+  acquisitionDate: string;
+  installationDate: string;
+  supplier: string;
+  supplierPhone?: string;
+  commercialValueCOP?: number;
+  warrantyStatus: 'Vigente' | 'Vencida' | 'Extendida';
+  warrantyExpiration: string;
+  purchaseInvoiceOrOC?: string;
+
+  // 3. Especificaciones Técnicas y Eléctricas
+  voltageVolts: string;
+  currentAmperes: string;
+  frequencyHz: string;
+  powerWatts: string;
+  batteryType?: string;
+  operatingPressure?: string;
+  operatingTemperature?: string;
+  humidityRange?: string;
+  weightDimensions?: string;
+
+  // 4. Protocolo de Mantenimiento y Metrología
+  maintenanceFrequency: 'Trimestral' | 'Cuatrimestral' | 'Semestral' | 'Anual';
+  requiresCalibration: boolean;
+  calibrationFrequency?: 'Semestral' | 'Anual' | 'Bianual' | 'No Aplica';
+  calibrationVariable?: string;
+  manualsAvailable: {
+    userManual: boolean;
+    serviceManual: boolean;
+    technicalSheet: boolean;
+  };
+  accessoriesIncluded: string;
+
+  // 5. Historial de Intervenciones
+  interventions: MaintenanceIntervention[];
+
+  // 6. Firmas y Responsables
+  biomedicalEngineerName: string;
+  biomedicalEngineerTitle: string;
+  biomedicalEngineerLicense: string;
+  maintenanceManagerName: string;
+  maintenanceManagerTitle: string;
+
+  // 7. Metadatos & Personalización
+  imageUrl?: string;
+  logoUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ScheduleMonthStatus = 'P' | 'E' | 'C' | 'A' | null;
+
+export interface MaintenanceScheduleItem {
+  id: string;
+  equipmentId?: string;
+  equipmentName: string;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  inventoryPlate: string;
+  serviceArea: string;
+  riskClass: string;
+  frequency: 'Trimestral' | 'Cuatrimestral' | 'Semestral' | 'Anual';
+  requiresCalibration: boolean;
+  responsibleSupplier: string;
+  months: Record<number, ScheduleMonthStatus>; // key: 1..12
+}
+
+export interface AnnualMaintenanceSchedule {
+  id: string;
+  year: number;
+  institutionName: string;
+  nit: string;
+  responsibleName: string;
+  responsibleTitle: string;
+  items: MaintenanceScheduleItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MaintenanceFrequencyType =
+  | 'Mensual'
+  | 'Bimestral'
+  | 'Trimestral'
+  | 'Cuatrimestral'
+  | 'Semestral'
+  | 'Anual';
+
+export interface ClientScheduleItem {
+  id: string;
+  equipmentId?: string;
+  equipmentName: string;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  inventoryPlate: string;
+  serviceArea: string;
+  // The 4 requested dimensions
+  preventiveMaintenance: string;
+  preventiveFrequency: MaintenanceFrequencyType;
+  correctiveMaintenance: string;
+  training: string;
+  status?: 'Programado' | 'En Proceso' | 'Ejecutado / Al Día';
+}
+
+export interface ClientMaintenanceSchedule {
+  id: string;
+  clientId: string;
+  clientName: string;
+  clientNit: string;
+  city: string;
+  contractNumber: string;
+  sourceType: 'licitacion_adjudicada' | 'oc_directa' | 'ambas';
+  year: number;
+  items: ClientScheduleItem[];
+  createdAt: string;
+  updatedAt: string;
 }
 

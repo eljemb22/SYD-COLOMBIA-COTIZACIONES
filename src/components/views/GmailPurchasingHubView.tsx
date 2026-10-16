@@ -212,6 +212,12 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
   const [catalogSearchText, setCatalogSearchText] = useState<string>('');
 
   const [copiedHTMLSuccess, setCopiedHTMLSuccess] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   // Supplier Directory Selection State
   const [showSupplierPickerModal, setShowSupplierPickerModal] = useState<boolean>(false);
@@ -710,7 +716,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
           const enrichedMerged = processAndEnrichOrder(merged);
           setSelectedOrderForDetail(enrichedMerged);
           setDetectedOrders((prev) =>
-            prev.map((o) => (o.id === enrichedMerged.id || o.messageId === enrichedMerged.messageId ? enrichedMerged : o))
+            prev.map((o) => (o.id === enrichedMerged.id ? enrichedMerged : o))
           );
         }
       } catch (e) {
@@ -773,9 +779,10 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
             try {
               const full = await gmailService.fetchMessageFullDetail(inc.messageId);
               if (full) {
+                full.id = inc.id || full.id;
                 const enriched = processAndEnrichOrder(full);
                 setDetectedOrders((prev) =>
-                  prev.map((o) => (o.id === enriched.id || o.messageId === enriched.messageId ? enriched : o))
+                  prev.map((o) => (o.id === enriched.id ? enriched : o))
                 );
               }
             } catch (e) {
@@ -799,12 +806,29 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
   };
 
   const handleSaveOrderModifications = (updatedOrder: DetectedPurchaseOrder) => {
+    const matchesOrder = (cand?: { id?: string; messageId?: string } | null) => {
+      if (!cand) return false;
+      if (cand.id && updatedOrder.id && cand.id === updatedOrder.id) return true;
+      if (cand.messageId && updatedOrder.messageId && cand.messageId === updatedOrder.messageId) return true;
+      const candRaw = cand.id?.replace(/^msg_/, '');
+      const updRaw = updatedOrder.id?.replace(/^msg_/, '');
+      if (candRaw && updRaw && candRaw === updRaw) return true;
+      if (candRaw && updatedOrder.messageId && candRaw === updatedOrder.messageId) return true;
+      if (cand.messageId && updRaw && cand.messageId === updRaw) return true;
+      return false;
+    };
+
     setDetectedOrders((prev) =>
-      prev.map((ord) => (ord.id === updatedOrder.id || (ord.messageId && ord.messageId === updatedOrder.messageId) ? updatedOrder : ord))
+      prev.map((ord) => (matchesOrder(ord) ? { ...ord, ...updatedOrder } : ord))
     );
-    if (selectedOrderForDetail && (selectedOrderForDetail.id === updatedOrder.id || selectedOrderForDetail.messageId === updatedOrder.messageId)) {
-      setSelectedOrderForDetail(updatedOrder);
+
+    if (matchesOrder(selectedOrderForDetail)) {
+      setSelectedOrderForDetail((prev) => (prev ? { ...prev, ...updatedOrder } : updatedOrder));
     }
+    if (matchesOrder(orderBeingEdited)) {
+      setOrderBeingEdited((prev) => (prev ? { ...prev, ...updatedOrder } : updatedOrder));
+    }
+
     const overridePayload = {
       emailType: updatedOrder.emailType,
       detectedOCNumber: updatedOrder.detectedOCNumber,
@@ -814,12 +838,20 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
       detectedPartsToImport: updatedOrder.detectedPartsToImport,
       urgency: updatedOrder.urgency,
     };
+
+    const keysToSave = new Set<string>();
     if (updatedOrder.id) {
-      saveOrderOverride(updatedOrder.id, overridePayload);
+      keysToSave.add(updatedOrder.id);
+      keysToSave.add(updatedOrder.id.replace(/^msg_/, ''));
+      keysToSave.add(`msg_${updatedOrder.id.replace(/^msg_/, '')}`);
     }
-    if (updatedOrder.messageId && updatedOrder.messageId !== updatedOrder.id) {
-      saveOrderOverride(updatedOrder.messageId, overridePayload);
+    if (updatedOrder.messageId) {
+      keysToSave.add(updatedOrder.messageId);
+      keysToSave.add(`msg_${updatedOrder.messageId}`);
     }
+    keysToSave.forEach((k) => {
+      if (k) saveOrderOverride(k, overridePayload);
+    });
   };
 
   const handleTransferToVentana5 = (order: DetectedPurchaseOrder) => {
@@ -896,7 +928,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
       status: 'Procesada',
     });
 
-    alert(`✓ Se radicaron exitosamente ${savedCount} documento(s) en Documentación Técnica. Puede consultarlos en dicha pestaña.`);
+    showToast(`✓ Se radicaron ${savedCount} documento(s) en Documentación Técnica.`);
   };
 
   const handleQuickSetEmailType = (
@@ -1007,6 +1039,11 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
     const updatedOrder: DetectedPurchaseOrder = {
       ...order,
       emailType: newType,
+      poDirection: newType === 'client_po' ? 'client_to_syd' : newType === 'general_po' ? 'syd_to_supplier' : order.poDirection,
+      detectedCustomer:
+        newType === 'client_po' && !order.detectedCustomer
+          ? extractClientNameFromOrder(order) || order.senderName
+          : order.detectedCustomer,
       detectedPartsToImport: updatedParts,
       partCreationNotice: updatedNotice,
     };
@@ -1022,7 +1059,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
       oc_response: 'Aprobación de Auditoría',
       other: 'Informativo / Consulta General',
     };
-    alert(`✓ Correo clasificado exitosamente como "${typeNames[newType] || newType}".`);
+    showToast(`✓ Clasificado como "${typeNames[newType] || newType}"`);
   };
 
   const handleOpenPartEdit = (part: DetectedPartToImport, order: DetectedPurchaseOrder) => {
@@ -1597,29 +1634,29 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
     }).format(val || 0);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       {/* Top Header Card */}
-      <div className="bg-[#0b192e] border border-[#1e3a8a]/40 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute -right-16 -top-16 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] rounded-2xl p-6 shadow-xl relative overflow-hidden transition-colors">
+        <div className="absolute -right-16 -top-16 w-64 h-64 bg-[var(--syd-accent-glow)] rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--syd-accent-glow)] border border-[var(--syd-accent)] text-[var(--syd-accent)] text-xs font-semibold uppercase tracking-wider mb-2">
               <Mail className="w-3.5 h-3.5" />
               <span>Centro de Conexión Gmail & Órdenes de Compra</span>
             </div>
-            <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl lg:text-3xl font-extrabold text-[var(--syd-text-primary,#ffffff)] tracking-tight">
               Gestión de Correo, Detección de OCs y Envío de Plantillas
             </h1>
-            <p className="text-sm text-slate-300 mt-1 max-w-2xl">
+            <p className="text-sm text-[var(--syd-text-secondary,#94a3b8)] mt-1 max-w-2xl">
               Conecte cualquier cuenta de Gmail para detectar automáticamente órdenes de compra recibidas del departamento de compras o clientes, y envíe correos formales con plantillas de partes nuevas y órdenes de compra.
             </p>
           </div>
 
           {/* Account Status Card */}
-          <div className="bg-[#0f2444]/90 border border-slate-700/60 rounded-xl p-4 min-w-[340px] max-w-md shadow-lg flex flex-col gap-3">
+          <div className="bg-[var(--syd-sidebar-bg)] border border-[var(--syd-border-color)] rounded-xl p-4 min-w-[340px] max-w-md shadow-lg flex flex-col gap-3 transition-colors">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-xs font-bold text-[var(--syd-text-secondary,#94a3b8)] uppercase tracking-wider flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                 <span>Cuenta de Gmail Activa</span>
               </span>
               {isConnected ? (
@@ -1728,7 +1765,13 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                       setShowConfigModal(true);
                     }}
                     disabled={isAuthenticating}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs py-2.5 px-3 rounded-lg shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50"
+                    style={{
+                      backgroundColor: 'var(--syd-btn-bg, #38bdf8)',
+                      color: 'var(--syd-btn-text, #0f172a)',
+                      borderRadius: 'var(--syd-btn-radius, 14px)',
+                      borderColor: 'var(--syd-btn-bg, #38bdf8)',
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-2 font-bold text-xs py-2.5 px-3 rounded-lg shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50 border"
                   >
                     <Mail className="w-4 h-4" />
                     <span>Conectar Cualquier Cuenta de Gmail</span>
@@ -1798,29 +1841,60 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
         </div>
 
         {/* Sub-Navigation Tabs */}
-        <div className="flex flex-wrap items-center gap-2 mt-6 pt-4 border-t border-slate-700/60">
+        <div className="flex flex-wrap items-center gap-2 mt-6 pt-4 border-t border-[var(--syd-border-color)]">
           <button
             onClick={() => setActiveSubTab('detected_orders')}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer ${
+            style={
               activeSubTab === 'detected_orders'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                : 'bg-slate-800/70 hover:bg-slate-800 text-slate-300 border border-slate-700/60'
-            }`}
+                ? {
+                    backgroundColor: 'var(--syd-accent, #06b6d4)',
+                    color: 'var(--syd-btn-text, #0f172a)',
+                    borderColor: 'var(--syd-accent, #06b6d4)',
+                  }
+                : {
+                    backgroundColor: 'var(--syd-sidebar-bg)',
+                    color: 'var(--syd-text-secondary)',
+                    borderColor: 'var(--syd-border-color)',
+                  }
+            }
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer border shadow-sm"
           >
             <Inbox className="w-4 h-4" />
             <span>Bandeja de OCs Detectadas</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${activeSubTab === 'detected_orders' ? 'bg-slate-950 text-cyan-300' : 'bg-slate-700 text-slate-300'}`}>
+            <span
+              style={
+                activeSubTab === 'detected_orders'
+                  ? {
+                      backgroundColor: 'var(--syd-card-bg)',
+                      color: 'var(--syd-accent, #06b6d4)',
+                    }
+                  : {
+                      backgroundColor: 'var(--syd-card-bg)',
+                      color: 'var(--syd-text-secondary)',
+                    }
+              }
+              className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold"
+            >
               {detectedOrders.length}
             </span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('new_part_template')}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer ${
+            style={
               activeSubTab === 'new_part_template'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                : 'bg-slate-800/70 hover:bg-slate-800 text-slate-300 border border-slate-700/60'
-            }`}
+                ? {
+                    backgroundColor: 'var(--syd-accent, #06b6d4)',
+                    color: 'var(--syd-btn-text, #0f172a)',
+                    borderColor: 'var(--syd-accent, #06b6d4)',
+                  }
+                : {
+                    backgroundColor: 'var(--syd-sidebar-bg)',
+                    color: 'var(--syd-text-secondary)',
+                    borderColor: 'var(--syd-border-color)',
+                  }
+            }
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer border shadow-sm"
           >
             <Plus className="w-4 h-4" />
             <span>Plantilla: Solicitud de Creación de Parte</span>
@@ -1828,11 +1902,20 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
 
           <button
             onClick={() => setActiveSubTab('purchase_order_template')}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer ${
+            style={
               activeSubTab === 'purchase_order_template'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                : 'bg-slate-800/70 hover:bg-slate-800 text-slate-300 border border-slate-700/60'
-            }`}
+                ? {
+                    backgroundColor: 'var(--syd-accent, #06b6d4)',
+                    color: 'var(--syd-btn-text, #0f172a)',
+                    borderColor: 'var(--syd-accent, #06b6d4)',
+                  }
+                : {
+                    backgroundColor: 'var(--syd-sidebar-bg)',
+                    color: 'var(--syd-text-secondary)',
+                    borderColor: 'var(--syd-border-color)',
+                  }
+            }
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer border shadow-sm"
           >
             <Send className="w-4 h-4" />
             <span>Plantilla: Emisión y Envío de Orden de Compra (OC)</span>
@@ -1840,15 +1923,37 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
 
           <button
             onClick={() => setActiveSubTab('sent_history')}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer ${
+            style={
               activeSubTab === 'sent_history'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                : 'bg-slate-800/70 hover:bg-slate-800 text-slate-300 border border-slate-700/60'
-            }`}
+                ? {
+                    backgroundColor: 'var(--syd-accent, #06b6d4)',
+                    color: 'var(--syd-btn-text, #0f172a)',
+                    borderColor: 'var(--syd-accent, #06b6d4)',
+                  }
+                : {
+                    backgroundColor: 'var(--syd-sidebar-bg)',
+                    color: 'var(--syd-text-secondary)',
+                    borderColor: 'var(--syd-border-color)',
+                  }
+            }
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer border shadow-sm"
           >
             <Clock className="w-4 h-4" />
             <span>Historial de Correos Enviados</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300 text-[10px] font-bold">
+            <span
+              style={
+                activeSubTab === 'sent_history'
+                  ? {
+                      backgroundColor: 'var(--syd-card-bg)',
+                      color: 'var(--syd-accent, #06b6d4)',
+                    }
+                  : {
+                      backgroundColor: 'var(--syd-card-bg)',
+                      color: 'var(--syd-text-secondary)',
+                    }
+              }
+              className="px-1.5 py-0.2 rounded-full text-[10px] font-bold"
+            >
               {sentHistory.length}
             </span>
           </button>
@@ -1861,7 +1966,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
       {activeSubTab === 'detected_orders' && (
         <div className="space-y-4">
           {/* Controls & Filter Bar */}
-          <div className="bg-[#0f172a] border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
+          <div className="bg-[#0f172a]/95 backdrop-blur-md border border-slate-800 rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-xl sticky top-0 z-20">
             {/* Top Row: Search + Mode Toggle + Sync 300 + Count */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <form
@@ -2281,7 +2386,11 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                           </span>
                           <select
                             value={order.emailType || 'other'}
-                            onChange={(e) => handleQuickSetEmailType(order, e.target.value as any)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleQuickSetEmailType(order, e.target.value as any);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
                             className="bg-slate-900 text-cyan-300 font-semibold text-xs py-1 px-2.5 rounded border border-slate-700 hover:border-cyan-500 focus:outline-hidden focus:border-cyan-400 cursor-pointer"
                             title="Cambiar clasificación manualmente"
                           >
@@ -4124,7 +4233,11 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                 </div>
                 <select
                   value={selectedOrderForDetail.emailType || 'other'}
-                  onChange={(e) => handleQuickSetEmailType(selectedOrderForDetail, e.target.value as any)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleQuickSetEmailType(selectedOrderForDetail, e.target.value as any);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
                   className="bg-slate-900 text-white font-semibold text-xs py-1 px-2.5 rounded-lg border border-slate-700 focus:outline-hidden focus:border-cyan-400 cursor-pointer"
                   title="Cambiar clasificación manualmente"
                 >
@@ -5325,6 +5438,14 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
             if (selectedOrderForDetail) setSelectedOrderForDetail(null);
           }}
         />
+      )}
+
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-50 bg-[#192b45] border border-cyan-400 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-2xl animate-bounce flex items-center gap-2 pointer-events-none">
+          <Sparkles className="w-4 h-4 text-cyan-300 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
       )}
     </div>
   );

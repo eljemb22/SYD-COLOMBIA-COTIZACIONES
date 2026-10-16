@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, X, Trash2, Building2, CreditCard, Activity, Boxes, DollarSign, Tag, CheckCircle2, ShieldCheck, FileText, Filter, AlertCircle } from 'lucide-react';
 import {
   OCTrackingContract,
@@ -401,9 +402,14 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
     onSave(newContract);
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-slate-950/85 flex items-center justify-center p-2.5 sm:p-4 md:p-6 backdrop-blur-xs animate-fadeIn overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-2.5 sm:p-4 md:p-6 animate-fadeIn overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="bg-[#192b45] border border-[#334d6e] rounded-2xl w-full max-w-5xl lg:max-w-6xl max-h-[82vh] h-[80vh] flex flex-col shadow-2xl overflow-hidden my-auto">
         {/* Modal Header */}
@@ -978,7 +984,8 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

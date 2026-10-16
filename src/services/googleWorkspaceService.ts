@@ -238,6 +238,44 @@ export class GoogleWorkspaceService {
   }
 
   /**
+   * Helper to ensure Google Workspace client is initialized
+   */
+  public async ensureInitialized(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    if (window.google?.accounts?.oauth2) return;
+
+    return new Promise<void>((resolve) => {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (window.google?.accounts?.oauth2 || attempts >= 30) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 100);
+    });
+  }
+
+  /**
+   * Alias for connectGoogleWorkspace
+   */
+  public async initiateAuthFlow(): Promise<{ profile: GoogleWorkspaceProfile; token: string }> {
+    return this.connectGoogleWorkspace();
+  }
+
+  /**
+   * Fetch drive files with query and parent folder
+   */
+  public async fetchDriveFiles(query = '', folderId?: string, limit = 60): Promise<DriveFileItem[]> {
+    return this.listUserDriveFiles({
+      searchQuery: query,
+      folderId,
+      pageSize: limit,
+      mimeTypeFilter: 'all',
+    });
+  }
+
+  /**
    * Authorize Google Workspace (Google Drive, Sheets) via Google Identity Services Popup
    */
   public async connectGoogleWorkspace(): Promise<{ profile: GoogleWorkspaceProfile; token: string }> {
@@ -462,6 +500,7 @@ export class GoogleWorkspaceService {
     }
 
     const fileData = await uploadRes.json();
+    await this.ensureFilePublicReadable(fileData.id).catch(() => {});
     return {
       id: fileData.id,
       name: fileData.name,
@@ -493,12 +532,430 @@ export class GoogleWorkspaceService {
   }
 
   /**
-   * List all files in the user's Google Drive account (unrestricted, ordered by modifiedTime desc)
+   * Create a new folder explicitly in Google Drive with parent folder support
+   * If a folder with this name already exists in the target location, returns the existing folder to avoid duplicates.
+   */
+  public async createDriveFolder(
+    folderName: string,
+    parentFolderId?: string
+  ): Promise<DriveFileItem> {
+    const token = this.getAccessToken();
+    if (!token) throw new Error('Debe conectar su cuenta de Google para crear carpetas en Google Drive.');
+
+    const cleanName = folderName.trim();
+    if (!cleanName) throw new Error('El nombre de la carpeta no puede estar vacío.');
+
+    // 1. Check if folder already exists in this parent to avoid duplicates
+    try {
+      let query = `mimeType='application/vnd.google-apps.folder' and name='${cleanName.replace(/'/g, "\\'")}' and trashed=false`;
+      if (parentFolderId && parentFolderId !== 'all' && parentFolderId !== 'root') {
+        query += ` and '${parentFolderId}' in parents`;
+      }
+      const searchRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,webViewLink,createdTime,modifiedTime)&spaces=drive`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        if (searchData.files && searchData.files.length > 0) {
+          const existing = searchData.files[0];
+          return {
+            id: existing.id,
+            name: existing.name,
+            mimeType: existing.mimeType || 'application/vnd.google-apps.folder',
+            webViewLink: existing.webViewLink || `https://drive.google.com/drive/folders/${existing.id}`,
+            createdTime: existing.createdTime,
+            modifiedTime: existing.modifiedTime,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Error checking existing folder in Google Drive:', e);
+    }
+
+    // 2. Create new folder
+    const metadata: any = {
+      name: cleanName,
+      mimeType: 'application/vnd.google-apps.folder',
+    };
+    if (parentFolderId && parentFolderId !== 'root' && parentFolderId !== 'all') {
+      metadata.parents = [parentFolderId];
+    }
+
+    const res = await fetch('https://www.googleapis.com/drive/v3/files?fields=id,name,mimeType,webViewLink,createdTime,modifiedTime', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(metadata),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Error al crear carpeta en Google Drive: ${errText}`);
+    }
+
+    const created = await res.json();
+    return {
+      id: created.id,
+      name: created.name,
+      mimeType: created.mimeType || 'application/vnd.google-apps.folder',
+      webViewLink: created.webViewLink || `https://drive.google.com/drive/folders/${created.id}`,
+      createdTime: created.createdTime,
+      modifiedTime: created.modifiedTime,
+    };
+  }
+
+  /**
+   * Copy an existing Google Drive file into a target folder with optional new name
+   */
+  public async copyDriveFile(
+    fileId: string,
+    targetFolderId?: string,
+    newFileName?: string
+  ): Promise<DriveFileItem> {
+    const token = this.getAccessToken();
+    if (!token) throw new Error('Debe conectar su cuenta de Google para copiar archivos en Google Drive.');
+
+    const body: any = {};
+    if (newFileName) {
+      body.name = newFileName;
+    }
+    if (targetFolderId && targetFolderId !== 'all' && targetFolderId !== 'root') {
+      body.parents = [targetFolderId];
+    }
+
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}/copy?fields=id,name,mimeType,webViewLink,createdTime,modifiedTime`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Error al copiar archivo en Google Drive: ${errText}`);
+    }
+
+    const copied = await res.json();
+    return {
+      id: copied.id,
+      name: copied.name,
+      mimeType: copied.mimeType || 'application/octet-stream',
+      webViewLink: copied.webViewLink || `https://drive.google.com/file/d/${copied.id}/view`,
+      createdTime: copied.createdTime,
+      modifiedTime: copied.modifiedTime,
+    };
+  }
+
+  /**
+   * Upload a raw file directly into a specific folder in Google Drive
+   * Supports both:
+   *   uploadFileToFolder(file: File, parentFolderId?: string)
+   *   uploadFileToFolder(file: File, customFileName: string, mimeType?: string, parentFolderId?: string)
+   *   uploadFileToFolder(fileBlob: Blob, fileName: string, mimeType: string, parentFolderId?: string)
+   */
+  public async uploadFileToFolder(
+    fileBlobOrFile: Blob | File,
+    fileNameOrFolderId?: string,
+    mimeType?: string,
+    parentFolderId?: string
+  ): Promise<DriveFileItem> {
+    const token = this.getAccessToken();
+    if (!token) throw new Error('Debe conectar su cuenta de Google para guardar en Google Drive.');
+
+    let fileBlob: Blob = fileBlobOrFile;
+    let fileName: string;
+    let effectiveMimeType: string;
+    let effectiveFolderId: string | undefined = undefined;
+
+    // Signature A: 4 or 3 arguments: (file, customFileName, mimeType, parentFolderId)
+    if (parentFolderId !== undefined || (mimeType !== undefined && mimeType.includes('/'))) {
+      fileName = fileNameOrFolderId || (fileBlobOrFile instanceof File ? fileBlobOrFile.name : 'archivo_sin_nombre');
+      effectiveMimeType = (fileBlobOrFile instanceof File ? fileBlobOrFile.type : '') || mimeType || 'application/octet-stream';
+      effectiveFolderId = parentFolderId;
+    }
+    // Signature B: 2 arguments: (file, parentFolderId) where 2nd argument is a folder ID (no dots, no spaces, no slashes)
+    else if (
+      fileNameOrFolderId &&
+      !fileNameOrFolderId.includes('.') &&
+      !fileNameOrFolderId.includes(' ') &&
+      !fileNameOrFolderId.includes('/')
+    ) {
+      fileName = fileBlobOrFile instanceof File ? fileBlobOrFile.name : 'archivo_sin_nombre';
+      effectiveMimeType = (fileBlobOrFile instanceof File ? fileBlobOrFile.type : '') || 'application/octet-stream';
+      effectiveFolderId = fileNameOrFolderId;
+    }
+    // Signature C: 2 arguments: (file, customFileName) where 2nd argument is a custom filename (contains spaces or dots)
+    else if (fileNameOrFolderId) {
+      fileName = fileNameOrFolderId;
+      effectiveMimeType = (fileBlobOrFile instanceof File ? fileBlobOrFile.type : '') || 'application/octet-stream';
+      effectiveFolderId = undefined;
+    }
+    // Signature D: 1 argument: (file)
+    else {
+      fileName = fileBlobOrFile instanceof File ? fileBlobOrFile.name : 'archivo_sin_nombre';
+      effectiveMimeType = (fileBlobOrFile instanceof File ? fileBlobOrFile.type : '') || 'application/octet-stream';
+      effectiveFolderId = undefined;
+    }
+
+    const metadata: any = {
+      name: fileName,
+      mimeType: effectiveMimeType,
+    };
+
+    // Sanitize effectiveFolderId: must not be root/all or look like a filename
+    const isFolderIdValid =
+      effectiveFolderId &&
+      effectiveFolderId !== 'root' &&
+      effectiveFolderId !== 'all' &&
+      !effectiveFolderId.includes('.') &&
+      !effectiveFolderId.includes(' ') &&
+      !effectiveFolderId.includes('/');
+
+    if (isFolderIdValid) {
+      metadata.parents = [effectiveFolderId];
+    }
+
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', fileBlob);
+
+    const uploadRes = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink,size,createdTime,modifiedTime',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      }
+    );
+
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      throw new Error(`Error subiendo archivo a Google Drive: ${errText}`);
+    }
+
+    const fileData = await uploadRes.json();
+    const driveItem: DriveFileItem = {
+      id: fileData.id,
+      name: fileData.name,
+      mimeType: fileData.mimeType,
+      webViewLink:
+        fileData.webViewLink ||
+        (fileData.mimeType === 'application/vnd.google-apps.folder'
+          ? `https://drive.google.com/drive/folders/${fileData.id}`
+          : `https://drive.google.com/file/d/${fileData.id}/view`),
+      createdTime: fileData.createdTime,
+      modifiedTime: fileData.modifiedTime,
+      size: fileData.size,
+    };
+
+    // Attempt to set link permissions so preview works smoothly across devices
+    await this.ensureFilePublicReadable(fileData.id).catch(() => {});
+
+    return driveItem;
+  }
+
+  /**
+   * Fetch binary blob of a Google Drive file using active OAuth token
+   */
+  public async fetchDriveFileBlob(fileId: string): Promise<Blob> {
+    const token =
+      this.getAccessToken() ||
+      (typeof localStorage !== 'undefined'
+        ? localStorage.getItem(GOOGLE_WORKSPACE_TOKEN_KEY) || localStorage.getItem('syd_gmail_oauth_token_v1')
+        : null);
+
+    if (token && !token.startsWith('direct_')) {
+      try {
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          return await res.blob();
+        }
+      } catch (directErr) {
+        console.warn('Direct Drive fetch failed, trying proxy:', directErr);
+      }
+    }
+
+    // Fallback: Use server-side proxy
+    const proxyUrl = `/api/drive/proxy-file/${fileId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    const proxyRes = await fetch(proxyUrl);
+    if (proxyRes.ok) {
+      return await proxyRes.blob();
+    }
+
+    const errText = await proxyRes.text().catch(() => '');
+    throw new Error(`Error al obtener archivo de Google Drive: ${errText || 'No autorizado o archivo inaccesible'}`);
+  }
+
+  /**
+   * Ensure a file in Google Drive has public-reader permissions (anyone with link can view)
+   */
+  public async ensureFilePublicReadable(fileId: string): Promise<boolean> {
+    const token =
+      this.getAccessToken() ||
+      (typeof localStorage !== 'undefined'
+        ? localStorage.getItem(GOOGLE_WORKSPACE_TOKEN_KEY) || localStorage.getItem('syd_gmail_oauth_token_v1')
+        : null);
+    if (!token || token.startsWith('direct_')) return false;
+
+    try {
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions?supportsAllDrives=true`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          role: 'reader',
+          type: 'anyone',
+        }),
+      });
+      return res.ok;
+    } catch (err) {
+      console.warn('Could not set public permission on Drive file:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Delete a file or folder in Google Drive (permanent delete or fallback to trash)
+   */
+  public async deleteDriveFile(fileId: string): Promise<boolean> {
+    if (!fileId) return false;
+    const token =
+      this.getAccessToken() ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem(GOOGLE_WORKSPACE_TOKEN_KEY) || localStorage.getItem('syd_gmail_oauth_token_v1') : null);
+
+    if (!token) {
+      console.warn('Debe conectar su cuenta de Google para administrar archivos en Google Drive.');
+      return false;
+    }
+
+    if (token.startsWith('direct_workspace_')) {
+      return true;
+    }
+
+    // Intent 1: Borrado permanente directo (DELETE)
+    try {
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok || res.status === 404) {
+        return true;
+      }
+    } catch (delErr) {
+      console.warn('Permanent DELETE failed in Drive, attempting trash:', delErr);
+    }
+
+    // Intent 2: Mover a la Papelera de Drive (PATCH trashed: true) para garantizar que desaparezca de la carpeta
+    try {
+      const patchRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ trashed: true }),
+      });
+
+      if (patchRes.ok || patchRes.status === 404) {
+        return true;
+      }
+      const errText = await patchRes.text();
+      console.warn(`Error al enviar archivo a papelera en Google Drive: ${errText}`);
+    } catch (trashErr) {
+      console.warn('Error trashing Drive file:', trashErr);
+    }
+
+    return false;
+  }
+
+  /**
+   * Update or replace an existing file in Google Drive
+   */
+  public async updateDriveFile(
+    fileId: string,
+    fileBlobOrFile: Blob | File,
+    newFileName?: string
+  ): Promise<DriveFileItem> {
+    const token = this.getAccessToken();
+    if (!token) throw new Error('Debe conectar su cuenta de Google para actualizar archivos en Google Drive.');
+
+    let fileBlob: Blob;
+    let fileName: string = newFileName || '';
+    let mimeType: string = 'application/octet-stream';
+
+    if (typeof File !== 'undefined' && fileBlobOrFile instanceof File) {
+      fileBlob = fileBlobOrFile;
+      fileName = newFileName || fileBlobOrFile.name;
+      mimeType = fileBlobOrFile.type || 'application/octet-stream';
+    } else {
+      fileBlob = fileBlobOrFile;
+    }
+
+    const form = new FormData();
+    if (fileName) {
+      form.append('metadata', new Blob([JSON.stringify({ name: fileName, mimeType })], { type: 'application/json' }));
+    }
+    form.append('file', fileBlob);
+
+    const updateRes = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart&fields=id,name,mimeType,webViewLink,size,modifiedTime`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      }
+    );
+
+    if (!updateRes.ok) {
+      const errText = await updateRes.text();
+      throw new Error(`Error actualizando archivo en Google Drive: ${errText}`);
+    }
+
+    const fileData = await updateRes.json();
+    return {
+      id: fileData.id,
+      name: fileData.name,
+      mimeType: fileData.mimeType,
+      webViewLink:
+        fileData.webViewLink ||
+        (fileData.mimeType === 'application/vnd.google-apps.folder'
+          ? `https://drive.google.com/drive/folders/${fileData.id}`
+          : `https://drive.google.com/file/d/${fileData.id}/view`),
+      modifiedTime: fileData.modifiedTime,
+      size: fileData.size,
+    };
+  }
+
+  /**
+   * List files in Google Drive with parent folder navigation and search support
    */
   public async listUserDriveFiles(options?: {
     pageSize?: number;
     mimeTypeFilter?: 'all' | 'sheets' | 'docs' | 'folders';
     searchQuery?: string;
+    folderId?: string;
   }): Promise<DriveFileItem[]> {
     const token = this.getAccessToken();
     if (!token) return [];
@@ -509,6 +966,10 @@ export class GoogleWorkspaceService {
 
     try {
       const parts: string[] = ['trashed=false'];
+
+      if (options?.folderId && options.folderId !== 'all') {
+        parts.push(`'${options.folderId}' in parents`);
+      }
 
       if (options?.mimeTypeFilter === 'sheets') {
         parts.push(
@@ -530,10 +991,10 @@ export class GoogleWorkspaceService {
       }
 
       const q = parts.join(' and ');
-      const limit = options?.pageSize || 60;
+      const limit = options?.pageSize || 80;
 
       const res = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=${limit}&orderBy=modifiedTime desc&fields=files(id,name,mimeType,webViewLink,size,createdTime,modifiedTime,iconLink,thumbnailLink)`,
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=${limit}&orderBy=folder,modifiedTime desc&fields=files(id,name,mimeType,webViewLink,size,createdTime,modifiedTime,iconLink,thumbnailLink,parents)`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -575,7 +1036,9 @@ export class GoogleWorkspaceService {
         mimeType: f.mimeType,
         webViewLink:
           f.webViewLink ||
-          (f.mimeType === 'application/vnd.google-apps.spreadsheet'
+          (f.mimeType === 'application/vnd.google-apps.folder'
+            ? `https://drive.google.com/drive/folders/${f.id}`
+            : f.mimeType === 'application/vnd.google-apps.spreadsheet'
             ? `https://docs.google.com/spreadsheets/d/${f.id}/edit`
             : `https://drive.google.com/file/d/${f.id}/view`),
         createdTime: f.createdTime,
@@ -1940,3 +2403,35 @@ export class GoogleWorkspaceService {
 }
 
 export const googleWorkspaceService = GoogleWorkspaceService.getInstance();
+
+// Defensively attach helper functions on prototype and singleton instance
+(GoogleWorkspaceService.prototype as any).ensureInitialized = GoogleWorkspaceService.prototype.ensureInitialized;
+(GoogleWorkspaceService.prototype as any).initiateAuthFlow = GoogleWorkspaceService.prototype.initiateAuthFlow;
+(GoogleWorkspaceService.prototype as any).fetchDriveFiles = GoogleWorkspaceService.prototype.fetchDriveFiles;
+
+(googleWorkspaceService as any).ensureInitialized = async function (): Promise<void> {
+  return googleWorkspaceService.ensureInitialized();
+};
+(googleWorkspaceService as any).initiateAuthFlow = async function (): Promise<{ profile: GoogleWorkspaceProfile; token: string }> {
+  return googleWorkspaceService.connectGoogleWorkspace();
+};
+(googleWorkspaceService as any).fetchDriveFiles = async function (query = '', folderId?: string, limit = 60): Promise<DriveFileItem[]> {
+  return googleWorkspaceService.listUserDriveFiles({
+    searchQuery: query,
+    folderId,
+    pageSize: limit,
+    mimeTypeFilter: 'all',
+  });
+};
+
+export const ensureInitialized = async (): Promise<void> => {
+  return googleWorkspaceService.ensureInitialized();
+};
+
+export const fetchDriveFileBlob = async (fileId: string): Promise<Blob> => {
+  return googleWorkspaceService.fetchDriveFileBlob(fileId);
+};
+
+export const ensureFilePublicReadable = async (fileId: string): Promise<boolean> => {
+  return googleWorkspaceService.ensureFilePublicReadable(fileId);
+};

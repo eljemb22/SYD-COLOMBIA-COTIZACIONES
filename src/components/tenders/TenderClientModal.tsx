@@ -432,7 +432,10 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-y-auto animate-fadeIn"
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="bg-[#192b45] border border-purple-400/60 rounded-2xl max-w-4xl w-full shadow-2xl animate-scaleUp max-h-[90vh] flex flex-col overflow-hidden my-auto">
         <div className="px-4 py-3 border-b border-[#334d6e] flex items-center justify-between gap-3 bg-[#15253d] shrink-0">

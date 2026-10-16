@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Check,
   Building,
+  Building2,
   Upload,
   User,
   Square,
@@ -19,7 +20,11 @@ import {
   Moon,
   Clock,
   ShieldCheck,
+  Trash2,
+  Image as ImageIcon,
 } from 'lucide-react';
+import { SyDLogo } from '../common/SyDLogo';
+import { makeImageBackgroundTransparent } from '../../utils/imageTransparencyUtils';
 import {
   ThemeSettings,
   CanvasThemeKey,
@@ -71,7 +76,10 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
   standbyTimeoutMinutes,
   onStandbyTimeoutChange,
 }) => {
-  const [theme, setTheme] = useState<ThemeSettings>(currentTheme);
+  const [theme, setTheme] = useState<ThemeSettings>(() => ({
+    ...DEFAULT_THEME_SETTINGS,
+    ...(currentTheme || {}),
+  }));
   const [showAdvancedSettings, setShowAdvancedSettings] = useState<boolean>(false);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
@@ -111,10 +119,29 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
     }
   };
 
+  const [activePresetId, setActivePresetId] = useState<string>(() => {
+    const match = PRESET_THEME_BUNDLES.find(
+      (b) =>
+        (currentTheme?.canvasTheme || DEFAULT_THEME_SETTINGS.canvasTheme) === b.theme.canvasTheme &&
+        (currentTheme?.accentColor || DEFAULT_THEME_SETTINGS.accentColor) === b.theme.accentColor
+    );
+    return match ? match.id : 'syd_default_original';
+  });
+
   // Keep local theme state in sync when opened or changed
   useEffect(() => {
     if (isOpen) {
-      setTheme(currentTheme);
+      const merged = {
+        ...DEFAULT_THEME_SETTINGS,
+        ...(currentTheme || {}),
+      };
+      setTheme(merged);
+      const match = PRESET_THEME_BUNDLES.find(
+        (b) =>
+          merged.canvasTheme === b.theme.canvasTheme &&
+          merged.accentColor === b.theme.accentColor
+      );
+      setActivePresetId(match ? match.id : 'syd_default_original');
     }
   }, [isOpen, currentTheme]);
 
@@ -130,24 +157,27 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || typeof document === 'undefined') return null;
-
   // Single atomic updater for one or more fields to prevent closure race conditions
   const updateFields = (partial: Partial<ThemeSettings>) => {
     setTheme((prev) => {
       const updated = { ...prev, ...partial, updatedAt: new Date().toISOString() };
       applyThemeToDOM(updated);
       saveStoredThemeSettings(updated);
-      onThemeUpdated(updated);
+      // Schedule parent update on next tick or synchronously outside closure
+      setTimeout(() => {
+        onThemeUpdated(updated);
+      }, 0);
       return updated;
     });
   };
 
   const applyPresetBundle = (bundle: typeof PRESET_THEME_BUNDLES[0]) => {
+    setActivePresetId(bundle.id);
     updateFields(bundle.theme);
   };
 
   const handleResetDefaults = () => {
+    setActivePresetId('syd_default_original');
     const defaults = { ...DEFAULT_THEME_SETTINGS, updatedAt: new Date().toISOString() };
     setTheme(defaults);
     applyThemeToDOM(defaults);
@@ -155,18 +185,39 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
     onThemeUpdated(defaults);
   };
 
+  // White Outline Border Mode state for logos on dark backgrounds
+  const [hasWhiteOutline, setHasWhiteOutline] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('syd_logo_white_outline');
+      if (stored !== null) return stored === 'true';
+    } catch {}
+    return true;
+  });
+
+  const toggleWhiteOutline = (enabled: boolean) => {
+    setHasWhiteOutline(enabled);
+    try {
+      localStorage.setItem('syd_logo_white_outline', String(enabled));
+    } catch {}
+  };
+
   const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const base64Url = event.target?.result as string;
       if (base64Url) {
+        // Automatically make white background transparent for clean floating look
+        const transparentLogo = await makeImageBackgroundTransparent(base64Url);
         updateFields({
-          companyLogoUrl: base64Url,
+          companyLogoUrl: transparentLogo,
           logoStyle: 'custom_image',
         });
+        try {
+          localStorage.setItem('syd_custom_login_logo_url', transparentLogo);
+        } catch {}
       }
     };
     reader.readAsDataURL(file);
@@ -245,13 +296,16 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
     return () => window.removeEventListener('paste', handleModalPaste);
   }, [isOpen, currentUser, onUpdateCurrentUserPhoto, onUserUpdated]);
 
-  const activeCanvas = CANVAS_THEME_MAP[theme.canvasTheme] || CANVAS_THEME_MAP.navy_dark;
-  const isLightMode = activeCanvas.isLight;
+  const activeCanvas = (theme?.canvasTheme && CANVAS_THEME_MAP[theme.canvasTheme]) || CANVAS_THEME_MAP.navy_dark;
+  const isLightMode = Boolean(activeCanvas?.isLight);
+
+  if (!isOpen || typeof document === 'undefined') return null;
 
   return createPortal(
     <div
       id="customization-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/25 animate-fadeIn"
+      onClick={onClose}
     >
       <div
         id="customization-modal-container"
@@ -269,7 +323,14 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
           }`}
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-[#38bdf8] shadow-sm">
+            <div
+              style={{
+                backgroundColor: 'var(--syd-accent-glow)',
+                borderColor: 'var(--syd-accent)',
+                color: 'var(--syd-accent)',
+              }}
+              className="w-9 h-9 rounded-xl border flex items-center justify-center shadow-sm"
+            >
               <Paintbrush className="w-5 h-5" />
             </div>
             <div>
@@ -301,32 +362,56 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
               isLightMode ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-[#334d6e]/80'
             }`}
           >
-            <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-amber-400" />
                 <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider">
                   Temas Rápidos del Sistema
                 </h3>
               </div>
-              <span className="text-xs text-slate-400">
-                Cambio instantáneo en 1 clic
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  id="btn-quick-reset-default-theme"
+                  type="button"
+                  onClick={handleResetDefaults}
+                  title="Restablecer todos los colores, fondos y bordes al Tema Original de fábrica (Default)"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer hover:opacity-90 active:scale-95 shadow-xs"
+                  style={{
+                    backgroundColor: 'var(--syd-card-bg)',
+                    borderColor: 'var(--syd-accent)',
+                    color: 'var(--syd-accent)',
+                  }}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Restablecer Tema Original (Default)</span>
+                </button>
+                <span className="text-xs text-slate-400 hidden sm:inline">
+                  Cambio instantáneo en 1 clic
+                </span>
+              </div>
             </div>
 
             {/* 6 columns responsive theme cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
               {PRESET_THEME_BUNDLES.map((bundle) => {
-                const isSelected =
-                  theme.canvasTheme === bundle.theme.canvasTheme &&
-                  theme.accentColor === bundle.theme.accentColor;
+                const isSelected = activePresetId === bundle.id;
                 return (
                   <button
                     key={bundle.id}
                     type="button"
                     onClick={() => applyPresetBundle(bundle)}
+                    style={
+                      isSelected
+                        ? {
+                            borderColor: 'var(--syd-accent)',
+                            backgroundColor: 'var(--syd-accent-glow)',
+                            boxShadow: '0 0 12px var(--syd-accent-glow)',
+                          }
+                        : undefined
+                    }
                     className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between gap-2 cursor-pointer relative group ${
                       isSelected
-                        ? 'bg-[#38bdf8]/15 border-[#38bdf8] ring-2 ring-[#38bdf8]/50 shadow-md scale-[1.02]'
+                        ? 'ring-2 ring-[var(--syd-accent)]/50 shadow-md scale-[1.02]'
                         : isLightMode
                         ? 'bg-slate-100 hover:bg-slate-200 border-slate-200'
                         : 'bg-[#15253d] hover:bg-[#1a2f4c] border-[#334d6e]/70'
@@ -342,7 +427,11 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                           />
                         ))}
                       </div>
-                      {isSelected && <Check className="w-4 h-4 text-[#38bdf8]" />}
+                      {isSelected && (
+                        <div style={{ color: 'var(--syd-accent)' }}>
+                          <Check className="w-4 h-4 stroke-[3]" />
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -394,7 +483,206 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
             </div>
           </div>
 
-          {/* SECTION 2: Foto de Perfil & Avatar del Usuario */}
+          {/* SECTION 2: Logo Oficial de la Empresa & Identidad Corporativa */}
+          <div
+            className={`p-4 rounded-xl border space-y-3.5 ${
+              isLightMode ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-[#334d6e]/80'
+            }`}
+          >
+            {/* Header del Cuadro */}
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-700/30">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4" style={{ color: 'var(--syd-accent)' }} />
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-100">
+                  Logo Oficial de la Empresa &amp; Membrete
+                </h3>
+              </div>
+              <span className="text-xs text-slate-400">
+                Visible en encabezados, cotizaciones, órdenes de venta y reportes oficiales
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
+              {/* Visual Preview Card & Actions */}
+              <div
+                className={`lg:col-span-5 p-3.5 rounded-xl border flex flex-col items-center text-center gap-3 ${
+                  isLightMode ? 'bg-slate-50 border-slate-200' : 'bg-[#15253d] border-[#334d6e]'
+                }`}
+              >
+                <div className="w-full flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-300">Vista Previa en Vivo</span>
+                  {theme.companyLogoUrl ? (
+                    <span className="text-[10px] font-black text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Logo Personalizado
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-sky-400 bg-sky-950/60 border border-sky-500/40 px-2 py-0.5 rounded-full">
+                      Emblema SYD Activo
+                    </span>
+                  )}
+                </div>
+
+                {/* Preview container */}
+                <div className="w-full h-24 rounded-xl border border-slate-600/40 bg-slate-900/60 flex items-center justify-center p-3 overflow-hidden shadow-inner relative group">
+                  {theme.companyLogoUrl ? (
+                    <img
+                      src={theme.companyLogoUrl}
+                      alt={theme.companyName || 'Logo Empresa'}
+                      className="max-h-full max-w-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <SyDLogo size="lg" showText={true} themeSettings={theme} />
+                  )}
+                </div>
+
+                {/* Buttons: Upload / Remove */}
+                <div className="w-full flex items-center gap-2">
+                  <input
+                    type="file"
+                    ref={logoFileInputRef}
+                    onChange={handleLogoFileUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => logoFileInputRef.current?.click()}
+                    className="flex-1 py-2 px-3 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition cursor-pointer shadow-md active:scale-95"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{theme.companyLogoUrl ? 'Cambiar Logo' : 'Subir Logo (PC / Ctrl+V)'}</span>
+                  </button>
+
+                  {theme.companyLogoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateFields({
+                          companyLogoUrl: '',
+                          logoStyle: 'emblem_3d',
+                        });
+                        try {
+                          localStorage.removeItem('syd_custom_login_logo_url');
+                        } catch {}
+                      }}
+                      title="Quitar logo personalizado y volver al emblema oficial SYD"
+                      className="p-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition cursor-pointer flex items-center justify-center"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Subtle White Outline Toggle for Dark Backgrounds */}
+                <div className="w-full pt-2 border-t border-slate-700/30 flex items-center justify-between">
+                  <div className="text-left">
+                    <span className="text-[11px] font-bold text-slate-200 block">Borde blanco fino en letras</span>
+                    <span className="text-[9.5px] text-slate-400">Realce sutil y elegante sobre fondo oscuro</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleWhiteOutline(!hasWhiteOutline)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      hasWhiteOutline ? 'bg-sky-500' : 'bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        hasWhiteOutline ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Controls: URL direct input, Company Name & Subtitle, Preset Vector Styles */}
+              <div className="lg:col-span-7 space-y-3">
+                {/* Direct URL / Web image link */}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                    URL Web Directa del Logo (Opcional o pegar con Ctrl+V)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="https://ejemplo.com/logo-empresa.png"
+                    value={theme.companyLogoUrl?.startsWith('data:') ? '' : theme.companyLogoUrl || ''}
+                    onChange={(e) => {
+                      const val = e.target.value.trim();
+                      updateFields({
+                        companyLogoUrl: val,
+                        logoStyle: val ? 'custom_image' : 'emblem_3d',
+                      });
+                    }}
+                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-sky-400 outline-none"
+                  />
+                </div>
+
+                {/* Company Name & Subtitle */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                      Nombre de la Empresa
+                    </label>
+                    <input
+                      type="text"
+                      value={theme.companyName || ''}
+                      onChange={(e) => updateFields({ companyName: e.target.value })}
+                      placeholder="SYD COLOMBIA"
+                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-sky-400 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                      Subtítulo / Línea de Negocio
+                    </label>
+                    <input
+                      type="text"
+                      value={theme.companySubtitle || ''}
+                      onChange={(e) => updateFields({ companySubtitle: e.target.value })}
+                      placeholder="Línea Diagnóstica"
+                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-sky-400 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Preset Vector Emblems (when no custom image is uploaded) */}
+                {!theme.companyLogoUrl && (
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 block mb-1.5">
+                      O selecciona un Emblema Corporativo Integrado:
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: 'emblem_3d', label: 'Emblema 3D SYD', desc: 'Caduceo y pulso' },
+                        { id: 'medical_cross', label: 'Cruz Médica', desc: 'Hospitalario' },
+                        { id: 'shield_tech', label: 'Escudo Tech', desc: 'Seguridad' },
+                        { id: 'minimal', label: 'Minimalista', desc: 'Texto limpio' },
+                      ].map((st) => (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => updateFields({ logoStyle: st.id as any })}
+                          className={`p-2 rounded-xl border text-left transition cursor-pointer ${
+                            theme.logoStyle === st.id
+                              ? 'bg-sky-500/20 border-sky-400 ring-2 ring-sky-400/40 text-white'
+                              : 'bg-[#15253d] hover:bg-[#1a2f4c] border-[#334d6e] text-slate-300'
+                          }`}
+                        >
+                          <div className="text-[11px] font-bold">{st.label}</div>
+                          <div className="text-[9.5px] text-slate-400">{st.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 3: Foto de Perfil & Avatar del Usuario */}
           <div
             className={`p-4 rounded-xl border space-y-3 ${
               isLightMode ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-[#334d6e]/80'
@@ -458,7 +746,12 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                   type="button"
                   onClick={() => avatarFileInputRef.current?.click()}
                   title="Subir foto o presionar Ctrl + V para pegar desde el portapapeles"
-                  className="px-3 py-1.5 rounded-lg bg-[#38bdf8]/15 hover:bg-[#38bdf8]/25 text-[#38bdf8] border border-[#38bdf8]/40 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                  style={{
+                    backgroundColor: 'var(--syd-card-bg)',
+                    borderColor: 'var(--syd-accent)',
+                    color: 'var(--syd-accent)',
+                  }}
+                  className="px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 hover:opacity-90 active:scale-95 shadow-xs"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   <span>Subir (Ctrl+V)</span>
@@ -474,9 +767,17 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                       key={av.id}
                       type="button"
                       onClick={() => applyNewUserPhoto(av.url)}
+                      style={
+                        isSelected
+                          ? {
+                              borderColor: 'var(--syd-accent)',
+                              boxShadow: '0 0 10px var(--syd-accent-glow)',
+                            }
+                          : undefined
+                      }
                       className={`p-2 rounded-xl border flex items-center gap-2 text-left transition cursor-pointer hover:scale-[1.02] ${
                         isSelected
-                          ? 'bg-[#38bdf8]/20 border-[#38bdf8] ring-2 ring-[#38bdf8]/50 shadow-sm'
+                          ? 'ring-2 ring-[var(--syd-accent)]/50 shadow-sm'
                           : isLightMode
                           ? 'bg-slate-50 hover:bg-slate-100 border-slate-200'
                           : 'bg-[#15253d] hover:bg-[#1a2f4c] border-[#334d6e]/70'
@@ -574,13 +875,13 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
-                      <Palette className="w-3.5 h-3.5 text-[#38bdf8]" />
+                      <Palette className="w-3.5 h-3.5" style={{ color: 'var(--syd-accent)' }} />
                       <h3 className="text-[10.5px] font-black uppercase tracking-wider">
                         Color de Fondo (Canvas)
                       </h3>
                     </div>
                     {theme.canvasTheme === 'custom' && (
-                      <span className="text-[9px] text-[#38bdf8] font-bold">Personalizado</span>
+                      <span className="text-[9px] font-bold" style={{ color: 'var(--syd-accent)' }}>Personalizado</span>
                     )}
                   </div>
 
@@ -595,9 +896,17 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                             key={k}
                             type="button"
                             onClick={() => updateFields({ canvasTheme: k })}
+                            style={
+                              isSelected
+                                ? {
+                                    borderColor: 'var(--syd-accent)',
+                                    backgroundColor: 'var(--syd-accent-glow)',
+                                  }
+                                : undefined
+                            }
                             className={`p-1.5 rounded-md border text-left flex items-center gap-1.5 transition cursor-pointer ${
                               isSelected
-                                ? 'bg-[#38bdf8]/15 border-[#38bdf8] shadow-2xs'
+                                ? 'shadow-2xs'
                                 : isLightMode
                                 ? 'bg-slate-100 hover:bg-slate-200 border-slate-200'
                                 : 'bg-[#15253d] hover:bg-[#1a2f4c] border-[#334d6e]/70'
@@ -612,7 +921,7 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                                 {c.name}
                               </div>
                             </div>
-                            {isSelected && <Check className="w-2.5 h-2.5 text-[#38bdf8] shrink-0" />}
+                            {isSelected && <Check className="w-2.5 h-2.5 shrink-0" style={{ color: 'var(--syd-accent)' }} />}
                           </button>
                         );
                       })}
@@ -683,9 +992,17 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                                 buttonColor: k,
                               })
                             }
+                            style={
+                              isSelected
+                                ? {
+                                    borderColor: 'var(--syd-accent)',
+                                    backgroundColor: 'var(--syd-accent-glow)',
+                                  }
+                                : undefined
+                            }
                             className={`p-1.5 rounded-md border text-left flex items-center gap-1.5 transition cursor-pointer ${
                               isSelected
-                                ? 'bg-[#38bdf8]/15 border-[#38bdf8]'
+                                ? 'shadow-2xs'
                                 : isLightMode
                                 ? 'bg-slate-100 hover:bg-slate-200 border-slate-200'
                                 : 'bg-[#15253d] hover:bg-[#1a2f4c] border-[#334d6e]/70'
@@ -700,7 +1017,7 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                                 {a.name}
                               </div>
                             </div>
-                            {isSelected && <Check className="w-2.5 h-2.5 text-[#38bdf8] shrink-0" />}
+                            {isSelected && <Check className="w-2.5 h-2.5 shrink-0" style={{ color: 'var(--syd-accent)' }} />}
                           </button>
                         );
                       })}
@@ -769,20 +1086,28 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                           key={shapeKey}
                           type="button"
                           onClick={() => updateFields({ buttonShape: shapeKey })}
+                          style={{
+                            borderRadius: item.radius,
+                            ...(isSelected
+                              ? {
+                                  borderColor: 'var(--syd-accent)',
+                                  backgroundColor: 'var(--syd-accent-glow)',
+                                }
+                              : {}),
+                          }}
                           className={`p-1.5 border text-left flex items-center justify-between transition cursor-pointer ${
                             isSelected
-                              ? 'bg-[#38bdf8]/15 border-[#38bdf8]'
+                              ? 'shadow-2xs'
                               : isLightMode
                               ? 'bg-slate-100 hover:bg-slate-200 border-slate-200'
                               : 'bg-[#15253d] hover:bg-[#1a2f4c] border-[#334d6e]/70'
                           }`}
-                          style={{ borderRadius: item.radius }}
                         >
                           <div>
                             <div className="text-[10px] font-bold leading-tight">{item.name}</div>
                             <span className="text-[8px] text-slate-400">{item.label}</span>
                           </div>
-                          {isSelected && <Check className="w-2.5 h-2.5 text-[#38bdf8] shrink-0" />}
+                          {isSelected && <Check className="w-2.5 h-2.5 shrink-0" style={{ color: 'var(--syd-accent)' }} />}
                         </button>
                       );
                     })}
@@ -796,7 +1121,7 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-1">
-                    <Type className="w-3.5 h-3.5 text-sky-400" />
+                    <Type className="w-3.5 h-3.5" style={{ color: 'var(--syd-accent)' }} />
                     <h3 className="text-[10.5px] font-black uppercase tracking-wider">
                       Tipografía &amp; Escala
                     </h3>
@@ -811,9 +1136,17 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                           key={fKey}
                           type="button"
                           onClick={() => updateFields({ fontFamily: fKey })}
+                          style={
+                            isSelected
+                              ? {
+                                  borderColor: 'var(--syd-accent)',
+                                  backgroundColor: 'var(--syd-accent-glow)',
+                                }
+                              : undefined
+                          }
                           className={`p-1.5 rounded-md border text-left flex items-center justify-between transition cursor-pointer ${
                             isSelected
-                              ? 'bg-[#38bdf8]/15 border-[#38bdf8]'
+                              ? 'shadow-2xs'
                               : isLightMode
                               ? 'bg-slate-100 hover:bg-slate-200 border-slate-200'
                               : 'bg-[#15253d] hover:bg-[#1a2f4c] border-[#334d6e]/70'
@@ -825,7 +1158,7 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                             </div>
                             <div className="text-[8px] text-slate-400">{f.category}</div>
                           </div>
-                          {isSelected && <Check className="w-2.5 h-2.5 text-[#38bdf8]" />}
+                          {isSelected && <Check className="w-2.5 h-2.5 shrink-0" style={{ color: 'var(--syd-accent)' }} />}
                         </button>
                       );
                     })}
@@ -863,9 +1196,14 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
               id="btn-save-close-customization"
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1 rounded-md bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 text-[10.5px] font-black transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
+              style={{
+                backgroundColor: 'var(--syd-btn-bg, var(--syd-accent))',
+                color: 'var(--syd-btn-text)',
+                borderRadius: 'var(--syd-btn-radius)',
+              }}
+              className="px-3.5 py-1 text-[10.5px] font-black transition flex items-center gap-1 shadow-xs cursor-pointer active:scale-95 hover:opacity-90"
             >
-              <Check className="w-3 h-3" />
+              <Check className="w-3 h-3 stroke-[3]" />
               <span>Listo</span>
             </button>
           </div>

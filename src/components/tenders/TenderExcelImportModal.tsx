@@ -452,7 +452,7 @@ export const TenderExcelImportModal: React.FC<TenderExcelImportModalProps> = ({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fadeIn"
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fadeIn"
     >
       <div className="bg-[#192b45] border border-purple-400/60 rounded-xl max-w-5xl lg:max-w-6xl w-full shadow-2xl animate-scaleUp max-h-[92vh] flex flex-col overflow-hidden my-auto">
         {/* Modal Header - Ultra Compact & Context-Aware */}

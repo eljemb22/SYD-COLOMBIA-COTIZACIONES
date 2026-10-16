@@ -36,6 +36,7 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronRight,
+  ChevronsUpDown,
   FolderTree,
   MapPin,
   Tag,
@@ -85,6 +86,8 @@ import {
   ExcelColumnHeader,
   useExcelTableFilters,
 } from '../common/ExcelTableFilter';
+import { DocumentPreviewModal } from '../common/DocumentPreviewModal';
+import { getFileBlobUrlFromIndexedDB } from '../../utils/fileStorageIndexedDB';
 
 const SALES_ORDER_COLUMNS: ExcelColumnConfig<SalesOrderRecord>[] = [
   {
@@ -285,7 +288,8 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   const [orderSearchText, setOrderSearchText] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
   const [orderOriginFilter, setOrderOriginFilter] = useState<'all' | 'tender' | 'quote' | 'direct'>('all');
-  const [orderLifecycleFilter, setOrderLifecycleFilter] = useState<'active' | 'archived' | 'all'>('active');
+  const [showActiveOrders, setShowActiveOrders] = useState<boolean>(true);
+  const [showArchivedOrders, setShowArchivedOrders] = useState<boolean>(true);
   const [ordersViewMode, setOrdersViewMode] = useState<'clients' | 'list' | 'grid'>('clients');
   const [collapsedClientKeys, setCollapsedClientKeys] = useState<Set<string>>(new Set());
 
@@ -306,6 +310,59 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
     setCollapsedClientKeys(new Set(allKeys));
   };
 
+  // State for expanded equipments per sales order (plegar/desplegar equipos para optimizar espacio)
+  const [expandedOrderEquipments, setExpandedOrderEquipments] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('syd_expanded_order_equipments_v1');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const toggleOrderEquipments = (orderId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setExpandedOrderEquipments((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      try {
+        localStorage.setItem('syd_expanded_order_equipments_v1', JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+  };
+
+  const expandAllOrderEquipments = (orderIds: string[]) => {
+    setExpandedOrderEquipments((prev) => {
+      const next = new Set(prev);
+      orderIds.forEach((id) => next.add(id));
+      try {
+        localStorage.setItem('syd_expanded_order_equipments_v1', JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+  };
+
+  const collapseAllOrderEquipments = (orderIds?: string[]) => {
+    setExpandedOrderEquipments((prev) => {
+      let next: Set<string>;
+      if (orderIds && orderIds.length > 0) {
+        next = new Set(prev);
+        orderIds.forEach((id) => next.delete(id));
+      } else {
+        next = new Set();
+      }
+      try {
+        localStorage.setItem('syd_expanded_order_equipments_v1', JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+  };
+
   // Search & Filter State (Invoices)
   const [invoiceSearchText, setInvoiceSearchText] = useState('');
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>('all');
@@ -317,6 +374,18 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   const [invoiceToDelete, setInvoiceToDelete] = useState<SalesInvoiceRecord | null>(null);
   const [quoteToConvert, setQuoteToConvert] = useState<SavedQuote | null>(initialQuoteToConvert || null);
   const [tenderToConvert, setTenderToConvert] = useState<TenderClientProject | null>(initialTenderToConvert || null);
+
+  // Document preview modal for invoice attachments
+  const [previewInvoiceDoc, setPreviewInvoiceDoc] = useState<{
+    isOpen: boolean;
+    title: string;
+    subtitle?: string;
+    fileName: string;
+    fileSize?: string;
+    fileData?: string;
+    fileType?: string;
+    onDownload?: () => void;
+  } | null>(null);
 
   // Handle ESC key press to close delete modal
   useEffect(() => {
@@ -389,10 +458,6 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
         if (normOrderContract && normOrderContract.length >= 4 && !['nohboc', 'hboc', 'na', 'n/a'].includes(normOrderContract)) {
           const cContract = normalizeClean(c.contractNumber?.replace(/^n°?o?hboc/i, 'hboc'));
           if (cContract === normOrderContract || cContract.includes(normOrderContract) || normOrderContract.includes(cContract)) return true;
-        }
-        if (normOrderClient && normOrderClient.length >= 4 && c.clientName) {
-          const cNorm = normalizeClean(c.clientName);
-          if (cNorm === normOrderClient || cNorm.includes(normOrderClient) || normOrderClient.includes(cNorm)) return true;
         }
         return false;
       });
@@ -541,8 +606,8 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
       );
       const isArchived = order.status === 'Facturada' || (hasInvoiceFile && order.invoicedStatus === 'Facturada Total');
 
-      if (orderLifecycleFilter === 'active' && isArchived) return false;
-      if (orderLifecycleFilter === 'archived' && !isArchived) return false;
+      if (!showActiveOrders && !isArchived) return false;
+      if (!showArchivedOrders && isArchived) return false;
 
       if (orderStatusFilter !== 'all' && order.status !== orderStatusFilter) {
         return false;
@@ -575,7 +640,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
       }
       return true;
     });
-  }, [deduplicatedSalesOrders, orderStatusFilter, orderOriginFilter, orderSearchText, orderLifecycleFilter, salesInvoices]);
+  }, [deduplicatedSalesOrders, orderStatusFilter, orderOriginFilter, orderSearchText, showActiveOrders, showArchivedOrders, salesInvoices]);
 
   // Counts for active vs archived orders
   const activeOrdersCount = useMemo(() => {
@@ -753,8 +818,8 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
       console.error('Error saving sales order to Firestore:', e);
     }
 
-    // If requested to generate OC now in Ventana 5
-    if (generateOCNow && onGenerateOCTracking) {
+    // If requested or order has items, generate/sync OC now in Ventana 5
+    if (onGenerateOCTracking && (savedOrder.items || []).length > 0) {
       onGenerateOCTracking(savedOrder);
     }
   };
@@ -864,24 +929,20 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
     const normSO = normalizeClean(order.salesOrderNumber?.replace(/^ov:\s*/i, ''));
     const normContract = normalizeClean(order.contractNumber?.replace(/^n°?o?hboc/i, 'hboc'));
 
-    // Prioritize direct matched contract first
+    // Prioritize direct matched contract strictly for this specific order
     const matchedContracts = (contracts || []).filter((c) => {
       if (order.ocContractId && c.id === order.ocContractId) return true;
       if (order.id && c.salesOrderId === order.id) return true;
+      if (order.id && (c.salesOrderIds || []).includes(order.id)) return true;
       if (order.tenderClientId && (c.tenderClientId === order.tenderClientId || c.id === order.tenderClientId)) return true;
       if (order.contractId && (c.id === order.contractId || c.tenderClientId === order.contractId)) return true;
       if (normSO && normSO.length >= 3 && !['ov', 'sinov', 'na', 'n/a'].includes(normSO)) {
         const cSO = normalizeClean(c.salesOrderNumber?.replace(/^ov:\s*/i, ''));
-        if (cSO === normSO || cSO.includes(normSO) || normSO.includes(cSO)) return true;
+        if (cSO === normSO || (c.salesOrderNumbers || []).some(s => normalizeClean(s?.replace(/^ov:\s*/i, '')) === normSO)) return true;
       }
       if (normContract && normContract.length >= 4 && !['nohboc', 'hboc', 'na', 'n/a'].includes(normContract)) {
         const cContract = normalizeClean(c.contractNumber?.replace(/^n°?o?hboc/i, 'hboc'));
         if (cContract === normContract || cContract.includes(normContract) || normContract.includes(cContract)) return true;
-      }
-      if (order.clientName && c.clientName) {
-        const normClient = normalizeClean(order.clientName);
-        const cNorm = normalizeClean(c.clientName);
-        if (normClient.length >= 4 && (cNorm === normClient || cNorm.includes(normClient) || normClient.includes(cNorm))) return true;
       }
       return false;
     });
@@ -909,21 +970,17 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
       const normItemName = normalizeClean(item.name);
       const normItemCode = normalizeClean(item.code);
 
-      let matchedCItem = contractItems.find(
+      const matchedCItem = contractItems.find(
         (cIt) =>
+          (cIt.salesOrderItemId && item.id && cIt.salesOrderItemId === item.id) ||
           (cIt.equipmentId && item.equipmentId && cIt.equipmentId === item.equipmentId) ||
           (cIt.code && item.code && normalizeClean(cIt.code) === normItemCode) ||
           (cIt.name && item.name && (
             normalizeClean(cIt.name) === normItemName ||
-            normalizeClean(cIt.name).includes(normItemName) ||
-            normItemName.includes(normalizeClean(cIt.name))
+            (normItemName.length >= 6 && normalizeClean(cIt.name).includes(normItemName)) ||
+            (normItemName.length >= 6 && normItemName.includes(normalizeClean(cIt.name)))
           ))
       );
-
-      // Single item or index fallback if counts match
-      if (!matchedCItem && (contractItems.length === 1 || contractItems.length === order.items.length)) {
-        matchedCItem = contractItems[i] || contractItems[0];
-      }
 
       const status = matchedCItem?.status || item.equipmentStatus;
       const isDelivered = isDeliveredStatus(status);
@@ -984,22 +1041,35 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
         });
 
         if (matchedTender && onUpdateTenderClient) {
-          onUpdateTenderClient(matchedTender.id, { status: 'Cumplido / Archivado' });
-        } else if (targetTenderId && onUpdateTenderClient) {
-          onUpdateTenderClient(targetTenderId, { status: 'Cumplido / Archivado' });
+          const tenderItems = matchedTender.items || [];
+          const allDelivered = tenderItems.length > 0 && tenderItems.every((tIt) => {
+            return (contracts || []).some((c) =>
+              (c.items || []).some((cIt) => {
+                const isMatch = (cIt.equipmentId && tIt.equipmentId && cIt.equipmentId === tIt.equipmentId) ||
+                  (cIt.code && tIt.code && cIt.code === tIt.code) ||
+                  (cIt.name && tIt.name && normalizeClean(cIt.name) === normalizeClean(tIt.name));
+                return isMatch && (cIt.status === 'Entregado e Instalado' || cIt.status === 'Cerrado / Concluido');
+              })
+            );
+          });
+          if (allDelivered) {
+            onUpdateTenderClient(matchedTender.id, { status: 'Cumplido / Archivado' });
+          }
         }
         if (onUpdateContracts && contracts && contracts.length > 0) {
           const normSO = normalizeClean(targetOrd.salesOrderNumber);
-          const normClient = normalizeClean(targetOrd.clientName);
           const updatedContracts = contracts.map((c) => {
             const isMatch =
               (targetOrd.ocContractId && c.id === targetOrd.ocContractId) ||
               c.salesOrderId === targetOrd.id ||
-              (targetTenderId && (c.tenderClientId === targetTenderId || c.id === targetTenderId)) ||
-              (normSO && c.salesOrderNumber && normalizeClean(c.salesOrderNumber) === normSO) ||
-              (normClient && c.clientName && normalizeClean(c.clientName) === normClient);
+              (normSO && c.salesOrderNumber && normalizeClean(c.salesOrderNumber) === normSO);
             if (isMatch) {
-              return { ...c, globalStatus: 'Cerrado / Concluido' as any, lastUpdatedAt: new Date().toISOString() };
+              const allDelivered = (c.items || []).length > 0 && (c.items || []).every(
+                (it) => it.status === 'Entregado e Instalado' || it.status === 'Cerrado / Concluido'
+              );
+              if (allDelivered) {
+                return { ...c, globalStatus: 'Cerrado / Concluido' as any, lastUpdatedAt: new Date().toISOString() };
+              }
             }
             return c;
           });
@@ -1056,31 +1126,52 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
       });
 
       if (matchedTender && onUpdateTenderClient) {
-        onUpdateTenderClient(matchedTender.id, { status: 'Cumplido / Archivado' });
-      } else if (targetTenderId && onUpdateTenderClient) {
-        onUpdateTenderClient(targetTenderId, { status: 'Cumplido / Archivado' });
+        const tenderItems = matchedTender.items || [];
+        const allDelivered = tenderItems.length > 0 && tenderItems.every((tIt) => {
+          return (contracts || []).some((c) =>
+            (c.items || []).some((cIt) => {
+              const isMatch = (cIt.equipmentId && tIt.equipmentId && cIt.equipmentId === tIt.equipmentId) ||
+                (cIt.code && tIt.code && cIt.code === tIt.code) ||
+                (cIt.name && tIt.name && normalizeClean(cIt.name) === normalizeClean(tIt.name));
+              return isMatch && (cIt.status === 'Entregado e Instalado' || cIt.status === 'Cerrado / Concluido');
+            })
+          );
+        });
+        if (allDelivered) {
+          onUpdateTenderClient(matchedTender.id, { status: 'Cumplido / Archivado' });
+        }
       }
 
       if (onUpdateContracts && contracts && contracts.length > 0) {
         const normSO = normalizeClean(updatedSalesOrder.salesOrderNumber);
-        const normClient = normalizeClean(updatedSalesOrder.clientName);
 
         const updatedContracts = contracts.map((c) => {
           const isMatch =
             (updatedSalesOrder.ocContractId && c.id === updatedSalesOrder.ocContractId) ||
             c.salesOrderId === updatedSalesOrder.id ||
-            (targetTenderId && (c.tenderClientId === targetTenderId || c.id === targetTenderId)) ||
-            (normSO && c.salesOrderNumber && normalizeClean(c.salesOrderNumber) === normSO) ||
-            (normClient && c.clientName && normalizeClean(c.clientName) === normClient);
+            (normSO && c.salesOrderNumber && normalizeClean(c.salesOrderNumber) === normSO);
 
           if (isMatch) {
+            // Associate invoiceNumber with items in this order, but preserve their real logistical status!
+            const updatedItems = (c.items || []).map((it) => {
+              const matchingSOItem = (updatedSalesOrder.items || []).find(
+                (sIt) => sIt.code === it.code || sIt.name === it.name || (sIt.equipmentId && sIt.equipmentId === it.equipmentId)
+              );
+              if (matchingSOItem) {
+                return {
+                  ...it,
+                  invoiceNumber: savedInvoice.invoiceNumber || it.invoiceNumber,
+                };
+              }
+              return it;
+            });
+            const allDelivered = updatedItems.length > 0 && updatedItems.every(
+              (it) => it.status === 'Entregado e Instalado' || it.status === 'Cerrado / Concluido'
+            );
             return {
               ...c,
-              globalStatus: 'Cerrado / Concluido' as any,
-              items: (c.items || []).map((it) => ({
-                ...it,
-                status: it.status || 'Entregado e Instalado',
-              })),
+              globalStatus: allDelivered ? ('Cerrado / Concluido' as any) : c.globalStatus,
+              items: updatedItems,
               lastUpdatedAt: new Date().toISOString(),
             };
           }
@@ -1159,17 +1250,17 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Top Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-3">
+      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] shadow-xl flex flex-wrap items-center justify-between gap-3 transition-colors">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+            <div className="p-2 rounded-xl bg-[var(--syd-accent-glow)] border border-[var(--syd-accent)] text-[var(--syd-accent)] shrink-0">
               <PackageCheck className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-base sm:text-lg font-extrabold text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-extrabold text-[var(--syd-text-primary,#ffffff)] tracking-tight flex items-center gap-2">
                 Órdenes de Venta (OV) y Facturación
               </h1>
-              <p className="text-xs text-slate-400 truncate max-w-xl">
+              <p className="text-xs text-[var(--syd-text-secondary,#94a3b8)] truncate max-w-xl">
                 Gestión comercial unificada de pedidos vinculados a Licitaciones, Cotizaciones y Venta Directa
               </p>
             </div>
@@ -1180,17 +1271,17 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           <button
             type="button"
             onClick={toggleKpiMinimized}
-            className="px-3 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+            className="px-3 py-2 bg-[var(--syd-sidebar-bg)] hover:bg-[var(--syd-card-hover)] text-[var(--syd-text-primary,#ffffff)] rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border border-[var(--syd-border-color)] cursor-pointer"
             title={isKpiMinimized ? 'Expandir panel de resumen numérico' : 'Minimizar panel de resumen numérico'}
           >
             {isKpiMinimized ? (
               <>
-                <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                 <span>Mostrar Resumen ({totalOrdersCount} OVs)</span>
               </>
             ) : (
               <>
-                <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronUp className="w-3.5 h-3.5 text-[var(--syd-text-secondary,#94a3b8)]" />
                 <span>Minimizar Resumen</span>
               </>
             )}
@@ -1205,7 +1296,13 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                 setTenderToConvert(null);
                 setIsNewOrderModalOpen(true);
               }}
-              className="px-3.5 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-amber-500/20 cursor-pointer active:scale-95"
+              style={{
+                backgroundColor: 'var(--syd-btn-bg, #38bdf8)',
+                color: 'var(--syd-btn-text, #0f172a)',
+                borderRadius: 'var(--syd-btn-radius, 14px)',
+                borderColor: 'var(--syd-btn-bg, #38bdf8)',
+              }}
+              className="px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 border"
             >
               <Plus className="w-4 h-4" />
               <span>Nueva Orden de Venta</span>
@@ -1317,57 +1414,73 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
       {/* SUBTAB 1: Órdenes de Venta (OV) */}
       {activeSubTab === 'orders' && (
         <div className="space-y-4">
-          {/* Lifecycle Filter: Activas vs Culminadas / Archivadas */}
-          <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-900 border border-slate-800">
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setOrderLifecycleFilter('active')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  orderLifecycleFilter === 'active'
-                    ? 'bg-amber-500 text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <PackageCheck className="w-3.5 h-3.5" />
-                <span>OVs Activas / En Proceso ({activeOrdersCount})</span>
-              </button>
+          {/* Sticky Controls Container: Lifecycle Filter + Search & Filter bar */}
+          <div className="sticky top-0 z-20 bg-[var(--syd-body-bg,#0b1523)]/95 pt-1 pb-2 space-y-2.5 backdrop-blur-md">
+            {/* Lifecycle Filter: Activas vs Culminadas/Facturadas vs Todas las OVs (Permite activar/inactivar individualmente) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-900 border border-slate-800 shadow-md">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowActiveOrders((prev) => !prev)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    showActiveOrders
+                      ? 'bg-amber-500 text-slate-950 shadow-sm'
+                      : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/60'
+                  }`}
+                  title="Clic para activar o inactivar órdenes activas individualmente"
+                >
+                  <PackageCheck className="w-3.5 h-3.5" />
+                  <span>OVs Activas / En Proceso ({activeOrdersCount})</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-black ${showActiveOrders ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-700 text-slate-400'}`}>
+                    {showActiveOrders ? '✓ Activa' : 'Inactiva'}
+                  </span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setOrderLifecycleFilter('archived')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  orderLifecycleFilter === 'archived'
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Culminadas / Archivadas (100% Facturadas) ({archivedOrdersCount})</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setShowArchivedOrders((prev) => !prev)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    showArchivedOrders
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/60'
+                  }`}
+                  title="Clic para activar o inactivar órdenes culminadas / facturadas individualmente"
+                >
+                  <ReceiptText className="w-3.5 h-3.5" />
+                  <span>OVs Culminadas / Facturadas ({archivedOrdersCount})</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-black ${showArchivedOrders ? 'bg-slate-950/20 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                    {showArchivedOrders ? '✓ Activa' : 'Inactiva'}
+                  </span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setOrderLifecycleFilter('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  orderLifecycleFilter === 'all'
-                    ? 'bg-slate-700 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Todas las OVs ({deduplicatedSalesOrders.length})</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowActiveOrders(true);
+                    setShowArchivedOrders(true);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    showActiveOrders && showArchivedOrders
+                      ? 'bg-slate-700 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                  title="Activar ambas opciones para ver todas las OVs"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Todas las OVs ({deduplicatedSalesOrders.length})</span>
+                </button>
+              </div>
+
+              <span className="text-[11px] text-slate-400 italic">
+                {showActiveOrders && showArchivedOrders
+                  ? 'Mostrando todas las OVs (activas, terminadas y facturadas)'
+                  : showActiveOrders
+                  ? 'Mostrando únicamente órdenes activas en gestión y proceso'
+                  : showArchivedOrders
+                  ? 'Mostrando únicamente órdenes culminadas / facturadas'
+                  : 'Ambos filtros inactivados individualmente'}
+              </span>
             </div>
-
-            <span className="text-[11px] text-slate-400 italic">
-              {orderLifecycleFilter === 'active'
-                ? 'Las OVs facturadas con soporte se archivan automáticamente'
-                : orderLifecycleFilter === 'archived'
-                ? 'Histórico de OVs culminadas al 100% con facturas adjuntas'
-                : 'Mostrando todo el registro comercial'}
-            </span>
-          </div>
 
           {/* Search & Filter bar */}
           <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
@@ -1453,6 +1566,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
               </div>
             </div>
           </div>
+          </div>
 
           {/* Orders Empty State */}
           {filteredOrders.length === 0 ? (
@@ -1460,8 +1574,12 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
               <PackageCheck className="w-12 h-12 text-slate-500 mx-auto mb-2 opacity-50" />
               <h3 className="text-sm font-bold text-white mb-1">No hay Órdenes de Venta que coincidan</h3>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                {orderLifecycleFilter === 'archived'
-                  ? 'No hay Órdenes de Venta archivadas todavía. Cuando una OV esté facturada con factura adjunta, se guardará aquí automáticamente.'
+                {!showActiveOrders && !showArchivedOrders
+                  ? 'Has inactivado ambos filtros individualmente. Activa "OVs Activas" o "OVs Culminadas / Facturadas" para visualizar pedidos.'
+                  : showActiveOrders && !showArchivedOrders
+                  ? 'No hay Órdenes de Venta activas en este momento. Puedes activar las órdenes culminadas / facturadas para consultar el histórico.'
+                  : !showActiveOrders && showArchivedOrders
+                  ? 'No hay Órdenes de Venta culminadas o facturadas con el criterio actual.'
                   : 'Las OVs de licitaciones adjudicadas y cotizaciones se generan automáticamente aquí, o puedes crear una OV de venta directa usando el botón superior "Nueva Orden de Venta".'}
               </p>
             </div>
@@ -1497,46 +1615,46 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                 return (
                   <div
                     key={clientGroup.clientKey}
-                    className="bg-[#0f172a] border border-slate-700/80 rounded-2xl shadow-xl overflow-hidden transition-all hover:border-amber-500/40"
+                    className="bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] rounded-2xl shadow-xl overflow-hidden transition-all hover:border-[var(--syd-accent)]"
                   >
                     {/* CLIENT ACCORDION HEADER (Cuadro grande del cliente) */}
                     <div
                       onClick={() => toggleClientCollapse(clientGroup.clientKey)}
-                      className="p-3.5 sm:p-4 bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 cursor-pointer hover:bg-slate-800/50 transition-colors select-none"
+                      className="p-3.5 sm:p-4 bg-[var(--syd-sidebar-bg)] border-b border-[var(--syd-border-color)] flex flex-wrap items-center justify-between gap-3 cursor-pointer hover:bg-[var(--syd-card-hover)] transition-colors select-none"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <button
                           type="button"
-                          className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                          className="p-1 rounded-lg bg-[var(--syd-card-bg)] hover:bg-[var(--syd-card-hover)] text-[var(--syd-text-secondary)] hover:text-[var(--syd-text-primary)] border border-[var(--syd-border-color)] transition cursor-pointer"
                           title={isCollapsed ? 'Desplegar OVs del cliente' : 'Plegar OVs del cliente'}
                         >
                           <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`} />
                         </button>
 
-                        <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+                        <div className="p-2 rounded-xl bg-[var(--syd-accent-glow)] border border-[var(--syd-accent)] text-[var(--syd-accent)] shrink-0">
                           <Building2 className="w-5 h-5" />
                         </div>
 
                         <div className="min-w-0 space-y-0.5">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-base sm:text-lg font-black text-white truncate hover:text-amber-300 transition">
+                            <h3 className="text-base sm:text-lg font-black text-[var(--syd-text-primary,#ffffff)] truncate hover:text-[var(--syd-accent)] transition">
                               {clientGroup.clientName}
                             </h3>
                             {clientGroup.clientNit && (
-                              <span className="text-[11px] text-slate-300 font-mono bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                              <span className="text-[11px] text-[var(--syd-text-secondary)] font-mono bg-[var(--syd-card-bg)] px-2 py-0.5 rounded border border-[var(--syd-border-color)]">
                                 NIT: {clientGroup.clientNit}
                               </span>
                             )}
                             {clientGroup.clientCity && (
-                              <span className="text-[11px] text-slate-300 font-medium flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                              <span className="text-[11px] text-[var(--syd-text-secondary)] font-medium flex items-center gap-1 bg-[var(--syd-card-bg)] px-2 py-0.5 rounded border border-[var(--syd-border-color)]">
                                 <MapPin className="w-3 h-3 text-rose-400" />
                                 {clientGroup.clientCity}
                               </span>
                             )}
                           </div>
                           {clientGroup.clientContactPerson && (
-                            <p className="text-[11px] text-slate-400 truncate">
-                              Contacto: <strong className="text-slate-300">{clientGroup.clientContactPerson}</strong> {clientGroup.clientContactPhone ? `(${clientGroup.clientContactPhone})` : ''}
+                            <p className="text-[11px] text-[var(--syd-text-secondary,#94a3b8)] truncate">
+                              Contacto: <strong className="text-[var(--syd-text-primary,#ffffff)]">{clientGroup.clientContactPerson}</strong> {clientGroup.clientContactPhone ? `(${clientGroup.clientContactPhone})` : ''}
                             </p>
                           )}
                         </div>
@@ -1544,7 +1662,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
 
                       {/* Header KPIs on Client Card */}
                       <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
-                        <span className="px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-300 text-xs font-bold">
+                        <span className="px-2.5 py-1 rounded-lg bg-[var(--syd-accent-glow)] border border-[var(--syd-accent)] text-[var(--syd-accent)] text-xs font-bold">
                           {clientGroup.orders.length} {clientGroup.orders.length === 1 ? 'Orden de Venta' : 'Órdenes de Venta'} ({clientGroup.totalItems} eq.)
                         </span>
 
@@ -1563,7 +1681,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                           </span>
                         )}
 
-                        <span className="text-slate-400 text-xs font-semibold hover:text-white transition flex items-center gap-1">
+                        <span className="text-[var(--syd-text-secondary)] text-xs font-semibold hover:text-[var(--syd-text-primary)] transition flex items-center gap-1">
                           {isCollapsed ? 'Desplegar' : 'Plegar'}
                         </span>
                       </div>
@@ -1577,7 +1695,30 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                             <thead className="bg-slate-950/90 text-[11px] font-bold text-slate-300 border-b border-slate-800">
                               <tr>
                                 <th className="py-2.5 px-3 min-w-[140px]">N° OV / Origen</th>
-                                <th className="py-2.5 px-3 min-w-[220px]">Equipos & N° OC / Estado Logístico</th>
+                                <th className="py-2.5 px-3 min-w-[240px]">
+                                  <div className="flex items-center justify-between gap-1.5">
+                                    <span>Equipos & N° OC / Logística</span>
+                                    {clientGroup.orders.some((o) => (o.items?.length || 0) > 2) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const orderIds = clientGroup.orders.map((o) => o.id);
+                                          const allExpanded = orderIds.every((id) => expandedOrderEquipments.has(id));
+                                          if (allExpanded) {
+                                            collapseAllOrderEquipments(orderIds);
+                                          } else {
+                                            expandAllOrderEquipments(orderIds);
+                                          }
+                                        }}
+                                        className="text-[9.5px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition font-medium cursor-pointer flex items-center gap-1 border border-slate-700/60"
+                                        title="Alternar plegar/desplegar equipos de todas las órdenes de este cliente"
+                                      >
+                                        <ChevronsUpDown className="w-2.5 h-2.5 text-amber-400" />
+                                        <span>{clientGroup.orders.every((o) => expandedOrderEquipments.has(o.id)) ? 'Plegar todos' : 'Desplegar todos'}</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </th>
                                 <th className="py-2.5 px-3 min-w-[130px] text-right">Monto Total COP</th>
                                 <th className="py-2.5 px-3 min-w-[150px]">Estado OV</th>
                                 <th className="py-2.5 px-3 min-w-[130px]">Seguimiento OC</th>
@@ -1656,48 +1797,113 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                                       </span>
                                     </td>
 
-                                    {/* Equipos, OC, Status */}
-                                    <td className="py-3 px-3">
-                                      <span className="font-semibold text-slate-200 block text-xs">
-                                        {order.items?.length || 0} equipos ({order.items?.reduce((acc, it) => acc + (it.quantityToDispatch || 1), 0)} unidades)
-                                      </span>
-                                      <div className="space-y-1 mt-1 max-w-sm">
-                                        {order.items?.map((it, itIdx) => {
-                                          const statusMeta = resolveItemStatusAndBadge(order, it);
-                                          const hasOC = Boolean(statusMeta.ocNumber);
-                                          return (
-                                            <div key={it.id || itIdx} className="text-[10px] p-1.5 rounded bg-slate-950/70 border border-slate-800 space-y-0.5">
-                                              <div className="flex items-center justify-between text-slate-300">
-                                                <span className="truncate font-bold text-white">{it.name}</span>
-                                                <span className="font-mono text-emerald-400 font-bold shrink-0 ml-1">x{it.quantityToDispatch}</span>
+                                    {/* Equipos, OC, Status (Harmonious, Compact & Single Toggle) */}
+                                    <td className="py-2.5 px-3 align-top min-w-[240px]">
+                                      {(() => {
+                                        const isExpanded = expandedOrderEquipments.has(order.id);
+                                        const itemsCount = order.items?.length || 0;
+                                        const totalUnits = order.items?.reduce((acc, it) => acc + (it.quantityToDispatch || 1), 0) || 0;
+                                        const visibleItems = isExpanded || itemsCount <= 2 ? (order.items || []) : (order.items || []).slice(0, 2);
+                                        const hasMore = itemsCount > 2;
+
+                                        return (
+                                          <div className="space-y-1.5">
+                                            {/* Header: Item & units counter + Single Toggle button */}
+                                            <div className="flex items-center justify-between gap-1.5">
+                                              <div className="flex items-center gap-1.5">
+                                                <span className="font-bold text-slate-100 text-xs">
+                                                  {itemsCount} {itemsCount === 1 ? 'equipo' : 'equipos'}
+                                                </span>
+                                                <span className="text-[10px] text-slate-400 font-medium px-1.5 py-0.2 rounded-full bg-slate-800/80 border border-slate-700/60">
+                                                  {totalUnits} uds
+                                                </span>
                                               </div>
-                                              <div className="flex items-center gap-1 flex-wrap text-[9px]">
-                                                {hasOC ? (
-                                                  <>
-                                                    <span className="px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-mono font-bold">
-                                                      OC: {statusMeta.ocNumber}
-                                                    </span>
-                                                    {statusMeta.status && (
-                                                      <span className={`px-1.5 py-0.2 rounded border ${statusMeta.badgeClass}`}>
-                                                        {statusMeta.status}
-                                                      </span>
-                                                    )}
-                                                  </>
-                                                ) : (
-                                                  <span className="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
-                                                    Pendiente de OC
-                                                  </span>
-                                                )}
-                                                {it.assignedSerialNumbers && it.assignedSerialNumbers.length > 0 && (
-                                                  <span className="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono" title={it.assignedSerialNumbers.join(', ')}>
-                                                    S/N: {it.assignedSerialNumbers.join(', ')}
-                                                  </span>
-                                                )}
-                                              </div>
+
+                                              {hasMore && (
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => toggleOrderEquipments(order.id, e)}
+                                                  className="text-[10.5px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                                  title={isExpanded ? 'Plegar lista de equipos' : `Ver todos los ${itemsCount} equipos`}
+                                                >
+                                                  {isExpanded ? (
+                                                    <>
+                                                      <ChevronUp className="w-3 h-3 text-amber-400" />
+                                                      <span>Plegar</span>
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      <ChevronDown className="w-3 h-3 text-amber-400" />
+                                                      <span>Ver todos ({itemsCount})</span>
+                                                    </>
+                                                  )}
+                                                </button>
+                                              )}
                                             </div>
-                                          );
-                                        })}
-                                      </div>
+
+                                            {/* Harmonious Equipment List */}
+                                            <div className={`space-y-1 max-w-sm ${isExpanded && itemsCount > 4 ? 'max-h-56 overflow-y-auto pr-1' : ''}`}>
+                                              {visibleItems.map((it, itIdx) => {
+                                                const statusMeta = resolveItemStatusAndBadge(order, it);
+                                                const hasOC = Boolean(statusMeta.ocNumber);
+                                                return (
+                                                  <div
+                                                    key={it.id || itIdx}
+                                                    className="flex items-center justify-between gap-2 px-2 py-1 rounded-lg bg-slate-950/60 hover:bg-slate-900 border border-slate-800/80 transition-colors text-[11px]"
+                                                  >
+                                                    <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                                                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400/80 shrink-0" />
+                                                      <span className="font-medium text-slate-200 truncate" title={it.name}>
+                                                        {it.name}
+                                                      </span>
+                                                      {it.code && (
+                                                        <span className="text-[9px] font-mono text-cyan-300/80 bg-slate-900 px-1 py-0.2 rounded border border-slate-800 shrink-0">
+                                                          {it.code}
+                                                        </span>
+                                                      )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                      <span className="font-mono text-emerald-400 font-bold text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20">
+                                                        x{it.quantityToDispatch}
+                                                      </span>
+
+                                                      {hasOC ? (
+                                                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                                                          OC: {statusMeta.ocNumber}
+                                                        </span>
+                                                      ) : (
+                                                        <span className="text-[9px] font-medium px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300/90 border border-amber-500/20">
+                                                          Pend. OC
+                                                        </span>
+                                                      )}
+                                                      {it.assignedSerialNumbers && it.assignedSerialNumbers.length > 0 && (
+                                                        <span
+                                                          className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700"
+                                                          title={`S/N: ${it.assignedSerialNumbers.join(', ')}`}
+                                                        >
+                                                          S/N
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })}
+
+                                              {/* Subtle link when collapsed with more items */}
+                                              {hasMore && !isExpanded && (
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => toggleOrderEquipments(order.id, e)}
+                                                  className="w-full text-center text-[10px] font-medium text-amber-400/90 hover:text-amber-300 py-0.5 hover:underline transition cursor-pointer"
+                                                >
+                                                  +{itemsCount - 2} equipos más • Ver todos
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })()}
                                     </td>
 
                                     {/* Monto Total */}
@@ -2365,58 +2571,112 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                             <span className="font-bold text-white block">{order.clientName}</span>
                             <span className="text-[11px] text-slate-400">{order.clientCity || 'Colombia'}</span>
                           </td>
-                          <td className="py-3 px-4">
-                            <span className="font-semibold text-slate-200 block">{order.items?.length || 0} equipos</span>
-                            <span className="text-[10px] text-slate-400 block mb-1">
-                              {order.items?.reduce((acc, it) => acc + (it.quantityToDispatch || 1), 0)} unidades
-                            </span>
-                            {/* Detailed equipment status, supplier OC & serials preview */}
-                            <div className="space-y-1 mt-1 max-w-xs">
-                              {order.items?.slice(0, 3).map((it, itIdx) => (
-                                <div key={it.id || itIdx} className="text-[10.5px] p-1 rounded bg-slate-950/60 border border-slate-800 space-y-0.5">
-                                  <div className="flex items-center justify-between text-slate-300">
-                                    <span className="truncate font-medium">{it.name}</span>
-                                    <span className="font-mono text-emerald-400 font-bold shrink-0 ml-1">x{it.quantityToDispatch}</span>
+                          <td className="py-2.5 px-4 align-top min-w-[240px]">
+                            {(() => {
+                              const isExpanded = expandedOrderEquipments.has(order.id);
+                              const itemsCount = order.items?.length || 0;
+                              const totalUnits = order.items?.reduce((acc, it) => acc + (it.quantityToDispatch || 1), 0) || 0;
+                              const visibleItems = isExpanded || itemsCount <= 2 ? (order.items || []) : (order.items || []).slice(0, 2);
+                              const hasMore = itemsCount > 2;
+
+                              return (
+                                <div className="space-y-1.5">
+                                  {/* Header: Item & units counter + Single Toggle button */}
+                                  <div className="flex items-center justify-between gap-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-bold text-slate-100 text-xs">
+                                        {itemsCount} {itemsCount === 1 ? 'equipo' : 'equipos'}
+                                      </span>
+                                      <span className="text-[10px] text-slate-400 font-medium px-1.5 py-0.2 rounded-full bg-slate-800/80 border border-slate-700/60">
+                                        {totalUnits} uds
+                                      </span>
+                                    </div>
+
+                                    {hasMore && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => toggleOrderEquipments(order.id, e)}
+                                        className="text-[10.5px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                        title={isExpanded ? 'Plegar lista de equipos' : `Ver todos los ${itemsCount} equipos`}
+                                      >
+                                        {isExpanded ? (
+                                          <>
+                                            <ChevronUp className="w-3 h-3 text-amber-400" />
+                                            <span>Plegar</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ChevronDown className="w-3 h-3 text-amber-400" />
+                                            <span>Ver todos ({itemsCount})</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
                                   </div>
-                                  <div className="flex items-center gap-1 flex-wrap text-[9.5px]">
-                                    {(() => {
+
+                                  {/* Harmonious Equipment List */}
+                                  <div className={`space-y-1 max-w-sm ${isExpanded && itemsCount > 4 ? 'max-h-56 overflow-y-auto pr-1' : ''}`}>
+                                    {visibleItems.map((it, itIdx) => {
                                       const statusMeta = resolveItemStatusAndBadge(order, it);
                                       const hasOC = Boolean(statusMeta.ocNumber);
                                       return (
-                                        <>
-                                          {hasOC ? (
-                                            <>
-                                              <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-mono font-bold">
+                                        <div
+                                          key={it.id || itIdx}
+                                          className="flex items-center justify-between gap-2 px-2 py-1 rounded-lg bg-slate-950/60 hover:bg-slate-900 border border-slate-800/80 transition-colors text-[11px]"
+                                        >
+                                          <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-sky-400/80 shrink-0" />
+                                            <span className="font-medium text-slate-200 truncate" title={it.name}>
+                                              {it.name}
+                                            </span>
+                                            {it.code && (
+                                              <span className="text-[9px] font-mono text-cyan-300/80 bg-slate-900 px-1 py-0.2 rounded border border-slate-800 shrink-0">
+                                                {it.code}
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          <div className="flex items-center gap-1.5 shrink-0">
+                                            <span className="font-mono text-emerald-400 font-bold text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20">
+                                              x{it.quantityToDispatch}
+                                            </span>
+
+                                            {hasOC ? (
+                                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">
                                                 OC: {statusMeta.ocNumber}
                                               </span>
-                                              {statusMeta.status && statusMeta.status !== 'Pendiente de OC' && (
-                                                <span className={`px-1.5 py-0.5 rounded border ${statusMeta.badgeClass}`}>
-                                                  {statusMeta.status}
-                                                </span>
-                                              )}
-                                            </>
-                                          ) : (
-                                            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
-                                              Pendiente de OC
-                                            </span>
-                                          )}
-                                          {it.assignedSerialNumbers && it.assignedSerialNumbers.length > 0 && (
-                                            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono" title={it.assignedSerialNumbers.join(', ')}>
-                                              S/N: {it.assignedSerialNumbers.join(', ')}
-                                            </span>
-                                          )}
-                                        </>
+                                            ) : (
+                                              <span className="text-[9px] font-medium px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300/90 border border-amber-500/20">
+                                                Pend. OC
+                                              </span>
+                                            )}
+                                            {it.assignedSerialNumbers && it.assignedSerialNumbers.length > 0 && (
+                                              <span
+                                                className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700"
+                                                title={`S/N: ${it.assignedSerialNumbers.join(', ')}`}
+                                              >
+                                                S/N
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
                                       );
-                                    })()}
+                                    })}
+
+                                    {/* Subtle link when collapsed with more items */}
+                                    {hasMore && !isExpanded && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => toggleOrderEquipments(order.id, e)}
+                                        className="w-full text-center text-[10px] font-medium text-amber-400/90 hover:text-amber-300 py-0.5 hover:underline transition cursor-pointer"
+                                      >
+                                        +{itemsCount - 2} equipos más • Ver todos
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
-                              ))}
-                              {order.items && order.items.length > 3 && (
-                                <span className="text-[9.5px] text-slate-400 block">
-                                  +{order.items.length - 3} equipos más...
-                                </span>
-                              )}
-                            </div>
+                              );
+                            })()}
                           </td>
                           <td className="py-3 px-4 font-mono font-bold text-emerald-400">
                             {formatCOP(order.totalValueCOP)}
@@ -2823,16 +3083,51 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                         {/* Soporte Adjunto */}
                         <td className="py-3 px-4 text-center">
                           {inv.attachedInvoiceFile ? (
-                            <a
-                              href={inv.attachedInvoiceFile.dataUrl}
-                              download={inv.attachedInvoiceFile.name}
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 transition cursor-pointer"
-                              title={`Descargar: ${inv.attachedInvoiceFile.name}`}
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const rawSize = (inv.attachedInvoiceFile as any)?.size;
+                                let formattedFileSize: string | undefined = undefined;
+                                if (typeof rawSize === 'number' && !isNaN(rawSize) && rawSize > 0) {
+                                  formattedFileSize = rawSize > 1024 * 1024
+                                    ? `${(rawSize / (1024 * 1024)).toFixed(2)} MB`
+                                    : `${(rawSize / 1024).toFixed(1)} KB`;
+                                } else if (typeof rawSize === 'string' && rawSize.trim() && !rawSize.includes('NaN')) {
+                                  formattedFileSize = rawSize;
+                                }
+
+                                let effectiveData = inv.attachedInvoiceFile!.dataUrl;
+                                if (!effectiveData && inv.attachedInvoiceFile!.id) {
+                                  const idbUrl = await getFileBlobUrlFromIndexedDB(inv.attachedInvoiceFile!.id);
+                                  if (idbUrl) effectiveData = idbUrl;
+                                }
+
+                                setPreviewInvoiceDoc({
+                                  isOpen: true,
+                                  title: `Factura ${inv.invoiceNumber} - ${inv.clientName}`,
+                                  subtitle: `Soporte Oficial Facturado • OV: ${inv.salesOrderNumber || 'Sin OV'} • Emisión: ${inv.issueDate || '—'}`,
+                                  fileName: inv.attachedInvoiceFile!.name,
+                                  fileSize: formattedFileSize,
+                                  fileData: effectiveData,
+                                  fileType: inv.attachedInvoiceFile!.type,
+                                  onDownload: () => {
+                                    if (!effectiveData) return;
+                                    const a = document.createElement('a');
+                                    a.href = effectiveData;
+                                    a.download = inv.attachedInvoiceFile!.name;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                  },
+                                });
+                              }}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-500/15 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 hover:border-purple-400 transition cursor-pointer group/att shadow-xs"
+                              title={`Previsualizar soporte oficial: ${inv.attachedInvoiceFile.name}`}
                             >
-                              <Paperclip className="w-3 h-3 text-purple-400" />
-                              <span className="max-w-[100px] truncate">{inv.attachedInvoiceFile.name}</span>
-                              <Download className="w-3 h-3 ml-0.5" />
-                            </a>
+                              <Paperclip className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                              <span className="max-w-[110px] truncate">{inv.attachedInvoiceFile.name}</span>
+                              <Eye className="w-3.5 h-3.5 text-purple-300 ml-0.5 group-hover/att:scale-110 transition-transform" />
+                            </button>
                           ) : (
                             <span className="text-[11px] text-slate-500 italic">Sin adjunto</span>
                           )}
@@ -3100,6 +3395,21 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           </div>,
           document.body
         )}
+
+      {/* Document Preview Modal for Invoices & Attachments */}
+      {previewInvoiceDoc && (
+        <DocumentPreviewModal
+          isOpen={previewInvoiceDoc.isOpen}
+          onClose={() => setPreviewInvoiceDoc(null)}
+          title={previewInvoiceDoc.title}
+          subtitle={previewInvoiceDoc.subtitle}
+          fileName={previewInvoiceDoc.fileName}
+          fileSize={previewInvoiceDoc.fileSize}
+          fileData={previewInvoiceDoc.fileData}
+          fileType={previewInvoiceDoc.fileType}
+          onDownload={previewInvoiceDoc.onDownload}
+        />
+      )}
     </div>
   );
 };

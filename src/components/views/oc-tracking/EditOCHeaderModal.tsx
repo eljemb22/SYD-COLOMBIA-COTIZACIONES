@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Edit3, X, Save, Building2, CreditCard, DollarSign, Activity } from 'lucide-react';
 import { OCTrackingContract, OCStatus, OCPaymentTerms, OCPaymentStatus, AuthUser } from '../../../types';
 import {
@@ -99,8 +100,15 @@ export const EditOCHeaderModal: React.FC<EditOCHeaderModalProps> = ({
     );
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-3 sm:p-5 md:p-6 backdrop-blur-xs animate-fadeIn">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-3 sm:p-5 md:p-6 animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="bg-[#192b45] border border-amber-500/50 rounded-2xl w-full max-w-4xl lg:max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Modal Header */}
         <div className="px-4 py-2.5 bg-[#142338] border-b border-[#334d6e] flex items-center justify-between">
@@ -399,6 +407,7 @@ export const EditOCHeaderModal: React.FC<EditOCHeaderModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

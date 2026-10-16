@@ -9,6 +9,9 @@ import {
   MedicalEquipment,
   SavedQuote,
   SupplierProfile,
+  SalesOrderRecord,
+  ItemSerialNumberRecord,
+  SerialUnitStatus,
 } from '../types';
 import { MASTER_SUPPLIERS_CATALOG } from '../data/masterSuppliersCatalog';
 import {
@@ -24,6 +27,7 @@ import {
   evaluateSupplierPairSimilarity,
 } from './supplierDeduplication';
 import { isContractDeleted } from './tombstones';
+import { resolveItemManufacturerBrand } from './equipmentBrandResolver';
 
 export {
   getSupplierCanonicalKey,
@@ -499,24 +503,34 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
       : (c.quoteId || '');
 
     // Key selection:
-    // Retain 1 single contract card per client as requested
+    // 1. Client container:
+    //    All OVs and direct orders for the same client (e.g. "Armando Pabon") MUST ALWAYS resolve
+    //    into ONE single parent contract card for that client/process, NEVER creating duplicate client cards!
+    // 2. Tender / Licitación Adjudicada container
+    // 3. Overarching Contract / Process number
+    // 4. Fallback to quote or unique id.
     let key = '';
-    if (normClient && normClient.length >= 4 && !normClient.includes('clientenuevo') && !normClient.includes('sincliente')) {
-      key = `client-${normClient}`;
-    } else if (normNit && normNit.length >= 5) {
-      key = `nit-${normNit}`;
-    } else if (c.tenderClientId) {
+    const cleanContract = normContractNum.replace(/^ov:\s*/i, '').trim();
+    const isOverarchingContract =
+      cleanContract.length >= 3 &&
+      !['na', 'n/a', 'sincontrato'].includes(cleanContract) &&
+      !cleanContract.startsWith('ov-') &&
+      !cleanContract.startsWith('orden-');
+
+    if (c.tenderClientId) {
       key = `tender-${c.tenderClientId}`;
+    } else if (isOverarchingContract) {
+      key = `contract-${cleanContract}`;
     } else if (c.salesOrderId) {
       key = `soid-${c.salesOrderId}`;
-    } else if (normSO && normSO.length >= 3 && !['ov', 'sinov', 'na', 'n/a'].includes(normSO)) {
+    } else if (normSO && normSO.length >= 2 && !['ov', 'sinov', 'na', 'n/a'].includes(normSO)) {
       key = `so-${normSO}`;
-    } else if (normContractNum && normContractNum.length >= 3 && !['nohboc', 'hboc', 'na', 'n/a'].includes(normContractNum)) {
-      key = `contract-${normContractNum}`;
     } else if (normQuote && normQuote.length >= 3 && !['cot', 'sincot'].includes(normQuote)) {
       key = `quote-${normQuote}`;
     } else if (c.id) {
       key = `id-${c.id}`;
+    } else if (normClient && normClient.length >= 2) {
+      key = `client-${normClient}`;
     } else {
       key = `id-${Math.random()}`;
     }
@@ -529,11 +543,27 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
     } else {
       const existing = map.get(key)!;
 
-      // Consolidate identifiers
-      if (!existing.salesOrderId && c.salesOrderId) existing.salesOrderId = c.salesOrderId;
-      if (!existing.salesOrderNumber && c.salesOrderNumber) existing.salesOrderNumber = c.salesOrderNumber;
-      if (c.salesOrderNumber && existing.salesOrderNumber && !existing.salesOrderNumber.includes(c.salesOrderNumber)) {
-        existing.salesOrderNumber = existing.salesOrderNumber || c.salesOrderNumber;
+      // Consolidate identifiers and keep track of all linked Sales Orders (OVs)
+      const allSOIds = new Set<string>([
+        ...(existing.salesOrderIds || []).map((x) => String(x || '')),
+        ...(existing.salesOrderId ? [String(existing.salesOrderId)] : []),
+        ...(c.salesOrderIds || []).map((x) => String(x || '')),
+        ...(c.salesOrderId ? [String(c.salesOrderId)] : []),
+      ]);
+      existing.salesOrderIds = Array.from(allSOIds).filter(Boolean);
+
+      const allSONumbers = new Set<string>([
+        ...(existing.salesOrderNumbers || []).map((x) => String(x || '')),
+        ...(existing.salesOrderNumber ? [String(existing.salesOrderNumber)] : []),
+        ...(c.salesOrderNumbers || []).map((x) => String(x || '')),
+        ...(c.salesOrderNumber ? [String(c.salesOrderNumber)] : []),
+      ]);
+      existing.salesOrderNumbers = Array.from(allSONumbers).filter(Boolean);
+
+      if (!existing.salesOrderId && c.salesOrderId) existing.salesOrderId = String(c.salesOrderId);
+      if (!existing.salesOrderNumber && c.salesOrderNumber) existing.salesOrderNumber = String(c.salesOrderNumber);
+      if (c.salesOrderNumber && existing.salesOrderNumber && !String(existing.salesOrderNumber).includes(String(c.salesOrderNumber))) {
+        existing.salesOrderNumber = `${existing.salesOrderNumber}, ${c.salesOrderNumber}`;
       }
       if (!existing.quoteId && c.quoteId) existing.quoteId = c.quoteId;
       if (!existing.quoteNumber && c.quoteNumber) existing.quoteNumber = c.quoteNumber;
@@ -546,25 +576,42 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
       if (!existing.contactPhone && c.contactPhone) existing.contactPhone = c.contactPhone;
       if (!existing.contactEmail && c.contactEmail) existing.contactEmail = c.contactEmail;
 
-      // Merge items without duplication (by id, code, or name+brand)
+      // Merge items without duplication (by id, code, or name+brand, while respecting OV division)
       if (c.items && c.items.length > 0) {
         if (!existing.items) existing.items = [];
-        c.items.forEach((newItem) => {
-          const itemCode = (newItem.code || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-          const itemName = (newItem.name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
-          const itemBrand = (newItem.brand || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        c.items.forEach((rawNewItem) => {
+          const newItem = {
+            ...rawNewItem,
+            salesOrderId: rawNewItem.salesOrderId || c.salesOrderId,
+            salesOrderNumber: rawNewItem.salesOrderNumber || c.salesOrderNumber,
+          };
+
+          const itemCode = String(newItem.code || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+          const itemName = String(newItem.name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+          const itemBrand = String(newItem.brand || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+          const newItemSO = String(newItem.salesOrderNumber || newItem.salesOrderId || '');
 
           const duplicateIdx = existing.items.findIndex((existingItem) => {
-            if (existingItem.id === newItem.id) return true;
-            if (itemCode && (existingItem.code || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '') === itemCode) {
+            const existingSO = String(existingItem.salesOrderNumber || existingItem.salesOrderId || '');
+            // Items belonging to distinct Sales Orders (OVs) are NOT duplicates!
+            if (newItemSO && existingSO && newItemSO !== existingSO) {
+              return false;
+            }
+            if (newItem.salesOrderItemId && existingItem.salesOrderItemId && newItem.salesOrderItemId === existingItem.salesOrderItemId) {
               return true;
             }
-            if (
-              itemName &&
-              (existingItem.name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') === itemName &&
-              (!itemBrand || (existingItem.brand || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '') === itemBrand)
-            ) {
-              return true;
+            if (existingItem.id === newItem.id) return true;
+            if (newItemSO && existingSO && newItemSO === existingSO) {
+              if (itemCode && String(existingItem.code || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '') === itemCode) {
+                return true;
+              }
+              if (
+                itemName &&
+                String(existingItem.name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') === itemName &&
+                (!itemBrand || String(existingItem.brand || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '') === itemBrand)
+              ) {
+                return true;
+              }
             }
             return false;
           });
@@ -573,6 +620,8 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
             existing.items.push({ ...newItem });
           } else {
             const existingItem = existing.items[duplicateIdx];
+            if (!existingItem.salesOrderId && newItem.salesOrderId) existingItem.salesOrderId = newItem.salesOrderId;
+            if (!existingItem.salesOrderNumber && newItem.salesOrderNumber) existingItem.salesOrderNumber = newItem.salesOrderNumber;
             if (newItem.serialNumbers && newItem.serialNumbers.length > (existingItem.serialNumbers?.length || 0)) {
               existingItem.serialNumbers = newItem.serialNumbers;
             }
@@ -620,7 +669,312 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
     }
   });
 
-  return Array.from(map.values());
+  // Final cleanup per contract: purge any duplicate equipment entries for the same sales order
+  const finalized = Array.from(map.values()).map((contract) => {
+    if (!contract.items || contract.items.length === 0) return contract;
+
+    const seenItemKeys = new Set<string>();
+    const cleanItems: OCTrackingItem[] = [];
+
+    contract.items.forEach((it) => {
+      const soKey = String(it.salesOrderId || it.salesOrderNumber || 'global');
+      const itCode = String(it.code || '').trim().toLowerCase();
+      const itName = String(it.name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const itEqId = it.equipmentId ? String(it.equipmentId) : '';
+      const itemKey = `${soKey}__${itEqId || itCode || itName}`;
+
+      if (seenItemKeys.has(itemKey)) {
+        return; // Skip duplicate item inside the same OV
+      }
+      seenItemKeys.add(itemKey);
+      cleanItems.push({
+        ...it,
+        brand: resolveItemManufacturerBrand(it),
+      });
+    });
+
+    const totalCost = cleanItems.reduce((sum, it) => sum + (it.totalCostCOP || ((it.costPriceCOP || 0) * (it.quantity || 1))), 0);
+    return {
+      ...contract,
+      items: cleanItems,
+      totalCostCOP: totalCost,
+    };
+  });
+
+  return finalized;
+}
+
+/**
+ * Segregates and sanitizes contracts to guarantee that each Sales Order (OV)
+ * has its OWN dedicated contract containing STRICTLY the items belonging to that OV.
+ * Purges any accidental item contamination across different OVs or tenders.
+ */
+export function segregateOCTrackingContractsBySalesOrder(
+  contracts: OCTrackingContract[]
+): OCTrackingContract[] {
+  if (!Array.isArray(contracts)) return [];
+
+  let salesOrders: SalesOrderRecord[] = [];
+  try {
+    const rawSO = localStorage.getItem('syd_sales_orders_v1');
+    if (rawSO) {
+      const parsed = JSON.parse(rawSO);
+      if (Array.isArray(parsed)) {
+        salesOrders = parsed.filter((o) => o && o.id && o.status !== 'Cancelada');
+      }
+    }
+  } catch {}
+
+  if (salesOrders.length === 0) {
+    return deduplicateOCTrackingContracts(contracts);
+  }
+
+  const resultContracts: OCTrackingContract[] = [];
+  const processedSOIds = new Set<string>();
+
+  contracts.forEach((contract) => {
+    if (!contract || !contract.id || isContractDeleted(contract.id)) return;
+
+    // Check if this contract is linked to a specific Sales Order
+    const linkedSO = salesOrders.find(
+      (so) =>
+        so.id === contract.salesOrderId ||
+        so.ocContractId === contract.id ||
+        contract.id === `oc-contract-ov-${so.id}` ||
+        (so.salesOrderNumber &&
+          contract.salesOrderNumber &&
+          String(so.salesOrderNumber).trim().toLowerCase() ===
+            String(contract.salesOrderNumber).trim().toLowerCase())
+    );
+
+    if (linkedSO) {
+      processedSOIds.add(linkedSO.id);
+
+      // This contract belongs strictly to linkedSO.
+      // Retain ONLY items that match this exact sales order!
+      const soItemCodes = new Set(
+        (linkedSO.items || []).map((it) => String(it.code || '').trim().toLowerCase()).filter(Boolean)
+      );
+      const soItemNames = new Set(
+        (linkedSO.items || []).map((it) => String(it.name || '').trim().toLowerCase()).filter(Boolean)
+      );
+      const soItemIds = new Set(
+        (linkedSO.items || []).map((it) => String(it.id || '')).filter(Boolean)
+      );
+      const soItemEqIds = new Set(
+        (linkedSO.items || []).map((it) => String(it.equipmentId || '')).filter(Boolean)
+      );
+
+      const pureItems: OCTrackingItem[] = [];
+
+      (contract.items || []).forEach((cIt) => {
+        const matchesThisSO =
+          (cIt.salesOrderId && String(cIt.salesOrderId) === String(linkedSO.id)) ||
+          (cIt.salesOrderNumber &&
+            String(cIt.salesOrderNumber).trim().toLowerCase() ===
+              String(linkedSO.salesOrderNumber).trim().toLowerCase()) ||
+          (cIt.salesOrderItemId && soItemIds.has(String(cIt.salesOrderItemId))) ||
+          (cIt.equipmentId &&
+            soItemEqIds.has(String(cIt.equipmentId)) &&
+            soItemCodes.has(String(cIt.code || '').trim().toLowerCase())) ||
+          (cIt.code &&
+            soItemCodes.has(String(cIt.code || '').trim().toLowerCase()) &&
+            soItemNames.has(String(cIt.name || '').trim().toLowerCase()));
+
+        // CRITICAL: Reject any item that explicitly belongs to ANOTHER sales order
+        const belongsToOtherSO =
+          cIt.salesOrderId && String(cIt.salesOrderId) !== String(linkedSO.id);
+
+        if (matchesThisSO && !belongsToOtherSO) {
+          // Verify it doesn't exceed the quantity in this sales order
+          pureItems.push({
+            ...cIt,
+            salesOrderId: linkedSO.id,
+            salesOrderNumber: linkedSO.salesOrderNumber,
+          });
+        }
+      });
+
+      // Ensure all items defined in the sales order are present in pureItems
+      (linkedSO.items || []).forEach((soIt, idx) => {
+        const alreadyInPure = pureItems.some(
+          (pIt) =>
+            (pIt.salesOrderItemId && soIt.id && String(pIt.salesOrderItemId) === String(soIt.id)) ||
+            (pIt.code &&
+              soIt.code &&
+              String(pIt.code).trim().toLowerCase() === String(soIt.code).trim().toLowerCase()) ||
+            (pIt.name &&
+              soIt.name &&
+              String(pIt.name).trim().toLowerCase() === String(soIt.name).trim().toLowerCase())
+        );
+
+        if (!alreadyInPure) {
+          const qty = Number(soIt.quantityToDispatch) || 1;
+          const cost = Math.round(Number(soIt.unitSalePriceCOP || 1000000) * 0.65);
+          pureItems.push({
+            id: `oc-item-${linkedSO.id}-${soIt.id || idx}-${Date.now()}`,
+            equipmentId: soIt.equipmentId,
+            code: String(soIt.code || `EQ-${idx + 1}`),
+            name: String(soIt.name || 'Equipo Biomédico'),
+            brand: String(soIt.brand || ''),
+            model: String(soIt.model || ''),
+            quantity: qty,
+            costPriceCOP: cost,
+            totalCostCOP: cost * qty,
+            supplier: String(soIt.supplier || soIt.supplierName || 'Sin Proveedor Asignado'),
+            ocNumber: String(soIt.supplierOCRef || soIt.linkedSupplierOCNumber || ''),
+            status: ((soIt.equipmentStatus as OCStatus) || ((soIt as any).status as OCStatus) || 'Borrador / Solicitud'),
+            paymentStatus: 'Pendiente',
+            createdAt: linkedSO.orderDate || new Date().toISOString(),
+            lastUpdatedAt: new Date().toISOString(),
+            deliveryDate: (soIt as any).deliveryDate || (soIt as any).actualDeliveryDate || linkedSO.actualDeliveryDate || linkedSO.deliveryDate,
+            serialNumber: (soIt as any).serialNumber || (soIt.assignedSerialNumbers?.[0]),
+            serialNumbers: (soIt.serialNumbers || ((soIt as any).serialNumber ? [{
+              id: `sn-${soIt.id || idx}`,
+              serialNumber: String((soIt as any).serialNumber),
+              status: (((soIt.equipmentStatus as any) || 'Entregado e Instalado') as SerialUnitStatus),
+              documents: [],
+            }] : [])) as ItemSerialNumberRecord[],
+            salesOrderId: linkedSO.id,
+            salesOrderNumber: linkedSO.salesOrderNumber,
+            salesOrderItemId: soIt.id,
+            notes: `Equipo de Orden de Venta ${linkedSO.salesOrderNumber}`,
+            history: [],
+          });
+        }
+      });
+
+      resultContracts.push({
+        ...contract,
+        id: contract.id || `oc-contract-ov-${linkedSO.id}`,
+        salesOrderId: linkedSO.id,
+        salesOrderNumber: linkedSO.salesOrderNumber,
+        salesOrderIds: [linkedSO.id],
+        salesOrderNumbers: linkedSO.salesOrderNumber ? [linkedSO.salesOrderNumber] : [],
+        contractNumber: linkedSO.contractNumber
+          ? `OV: ${linkedSO.salesOrderNumber} (${linkedSO.contractNumber})`
+          : `OV: ${linkedSO.salesOrderNumber}`,
+        clientName: linkedSO.clientName || contract.clientName,
+        nit: linkedSO.clientNit || contract.nit,
+        city: linkedSO.clientCity || contract.city,
+        items: pureItems,
+        totalCostCOP: pureItems.reduce(
+          (s, it) => s + (it.totalCostCOP || it.costPriceCOP * (it.quantity || 1)),
+          0
+        ),
+      });
+    } else {
+      // Contract is for a tender or client OC, not an OV.
+      // Exclude items that have already been allocated to an OV so they don't duplicate.
+      const tenderOnlyItems = (contract.items || []).filter((it) => {
+        if (it.salesOrderId && salesOrders.some((so) => String(so.id) === String(it.salesOrderId))) {
+          return false;
+        }
+        if (
+          it.salesOrderNumber &&
+          salesOrders.some(
+            (so) =>
+              so.salesOrderNumber &&
+              String(so.salesOrderNumber).trim().toLowerCase() ===
+                String(it.salesOrderNumber).trim().toLowerCase()
+          )
+        ) {
+          return false;
+        }
+        return true;
+      });
+
+      resultContracts.push({
+        ...contract,
+        items: tenderOnlyItems,
+        totalCostCOP: tenderOnlyItems.reduce(
+          (s, it) => s + (it.totalCostCOP || it.costPriceCOP * (it.quantity || 1)),
+          0
+        ),
+      });
+    }
+  });
+
+  // Ensure every Sales Order that has items gets its own tracking contract if missing
+  salesOrders.forEach((so) => {
+    if (processedSOIds.has(so.id) || !so.items || so.items.length === 0) return;
+    const exists = resultContracts.find(
+      (c) =>
+        c.salesOrderId === so.id ||
+        c.id === `oc-contract-ov-${so.id}` ||
+        (so.salesOrderNumber &&
+          c.salesOrderNumber &&
+          String(c.salesOrderNumber).trim().toLowerCase() ===
+            String(so.salesOrderNumber).trim().toLowerCase())
+    );
+
+    if (!exists) {
+      const ocItems: OCTrackingItem[] = (so.items || []).map((item, idx) => {
+        const qty = Number(item.quantityToDispatch) || 1;
+        const cost = Math.round(Number(item.unitSalePriceCOP || 1000000) * 0.65);
+        return {
+          id: `oc-item-${so.id}-${item.id || idx}-${Date.now()}`,
+          equipmentId: item.equipmentId,
+          code: String(item.code || `EQ-${idx + 1}`),
+          name: String(item.name || 'Equipo Biomédico'),
+          brand: String(item.brand || ''),
+          model: String(item.model || ''),
+          quantity: qty,
+          costPriceCOP: cost,
+          totalCostCOP: cost * qty,
+          supplier: String(item.supplier || item.supplierName || 'Sin Proveedor Asignado'),
+          ocNumber: String(item.supplierOCRef || item.linkedSupplierOCNumber || ''),
+          status: ((item.equipmentStatus as OCStatus) || ((item as any).status as OCStatus) || 'Borrador / Solicitud'),
+          paymentStatus: 'Pendiente',
+          createdAt: so.orderDate || new Date().toISOString(),
+          lastUpdatedAt: new Date().toISOString(),
+          deliveryDate: (item as any).deliveryDate || (item as any).actualDeliveryDate || so.actualDeliveryDate || so.deliveryDate,
+          serialNumber: (item as any).serialNumber || (item.assignedSerialNumbers?.[0]),
+          serialNumbers: (item.serialNumbers || ((item as any).serialNumber ? [{
+            id: `sn-${item.id || idx}`,
+            serialNumber: String((item as any).serialNumber),
+            status: (((item.equipmentStatus as any) || 'Entregado e Instalado') as SerialUnitStatus),
+            documents: [],
+          }] : [])) as ItemSerialNumberRecord[],
+          salesOrderId: so.id,
+          salesOrderNumber: so.salesOrderNumber,
+          salesOrderItemId: item.id,
+          notes: `Equipo de Orden de Venta ${so.salesOrderNumber}`,
+          history: [],
+        };
+      });
+
+      resultContracts.push({
+        id: `oc-contract-ov-${so.id}`,
+        salesOrderId: so.id,
+        salesOrderNumber: so.salesOrderNumber,
+        salesOrderIds: [so.id],
+        salesOrderNumbers: so.salesOrderNumber ? [so.salesOrderNumber] : [],
+        tenderClientId: so.tenderClientId || so.contractId,
+        quoteId: so.quoteId,
+        quoteNumber: so.quoteNumber,
+        sourceType: so.contractId ? 'licitacion_adjudicada' : 'cotizacion_aprobada',
+        contractNumber: so.contractNumber
+          ? `OV: ${so.salesOrderNumber} (${so.contractNumber})`
+          : `OV: ${so.salesOrderNumber}`,
+        clientName: so.clientName,
+        nit: so.clientNit,
+        city: so.clientCity,
+        contactPerson: so.clientContactPerson,
+        contactPhone: so.clientContactPhone,
+        contactEmail: so.clientContactEmail,
+        totalBudgetCOP: so.totalValueCOP,
+        totalCostCOP: ocItems.reduce((acc, it) => acc + (it.totalCostCOP || 0), 0),
+        items: ocItems,
+        globalStatus: 'Borrador / Solicitud',
+        createdAt: so.createdAt || new Date().toISOString(),
+        lastUpdatedAt: new Date().toISOString(),
+        notes: `Seguimiento de compras generado para Orden de Venta ${so.salesOrderNumber}`,
+      });
+    }
+  });
+
+  return deduplicateOCTrackingContracts(resultContracts);
 }
 
 export const getStoredOCTrackingContracts = (): OCTrackingContract[] => {
@@ -637,11 +991,11 @@ export const getStoredOCTrackingContracts = (): OCTrackingContract[] => {
     const parsed: OCTrackingContract[] = JSON.parse(raw);
     // Remove any leftover demo items
     const clean = parsed.filter((c) => !c.id.includes('demo'));
-    const deduped = deduplicateOCTrackingContracts(clean);
-    if (deduped.length !== parsed.length) {
-      localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(deduped));
+    const segregated = segregateOCTrackingContractsBySalesOrder(clean);
+    if (JSON.stringify(segregated) !== raw) {
+      localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(segregated));
     }
-    return deduped;
+    return segregated;
   } catch (error) {
     console.error('Error reading OC tracking storage:', error);
     return INITIAL_DEMO_OC_CONTRACTS;
@@ -652,6 +1006,10 @@ export const saveStoredOCTrackingContracts = (contracts: OCTrackingContract[]): 
   try {
     const deduped = deduplicateOCTrackingContracts(contracts);
     localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(deduped));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('syd-oc-tracking-updated'));
+      window.dispatchEvent(new Event('storage'));
+    }
   } catch (error) {
     console.error('Error saving OC tracking storage:', error);
   }
@@ -1725,7 +2083,7 @@ export const autoRegisterSuppliersFromEquipments = (
       });
     }
 
-    const rawSuppliers = Array.from(
+    let rawSuppliers = Array.from(
       new Set(
         candidates.filter(
           (s) =>
@@ -1737,6 +2095,13 @@ export const autoRegisterSuppliersFromEquipments = (
         )
       )
     );
+
+    if (rawSuppliers.length === 0 && it.brand && it.brand.trim()) {
+      const bTrim = it.brand.trim();
+      if (!['por asignar', 'n/a', 'ninguno', 'sin proveedor asignado'].includes(bTrim.toLowerCase())) {
+        rawSuppliers = [bTrim];
+      }
+    }
 
     if (rawSuppliers.length === 0) return;
 

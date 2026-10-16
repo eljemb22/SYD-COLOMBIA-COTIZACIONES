@@ -201,7 +201,10 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn"
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-5xl w-full shadow-2xl animate-scaleUp max-h-[92vh] flex flex-col overflow-hidden my-auto">
         {/* Header */}
@@ -273,7 +276,13 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
               }`}
             >
               <span>Todos</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 font-mono">
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold border ${
+                  selectedStatusFilter === 'all'
+                    ? 'bg-slate-950 text-white border-white/20'
+                    : 'bg-black/30 text-slate-200 border-white/10'
+                }`}
+              >
                 {clients.length}
               </span>
             </button>
@@ -289,7 +298,13 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
             >
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>Datos Pendientes</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 font-mono">
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold border ${
+                  selectedStatusFilter === 'pending'
+                    ? 'bg-slate-950 text-amber-300 border-amber-400/40'
+                    : 'bg-amber-950/40 text-amber-300 border-amber-500/30'
+                }`}
+              >
                 {pendingCount}
               </span>
             </button>
@@ -305,7 +320,13 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Datos Completos</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 font-mono">
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold border ${
+                  selectedStatusFilter === 'complete'
+                    ? 'bg-slate-950 text-emerald-300 border-emerald-400/40'
+                    : 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30'
+                }`}
+              >
                 {completeCount}
               </span>
             </button>

@@ -7,12 +7,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&family=Montserrat:wght@400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    <meta name="description" content="Sistema de gestión biomédica y cotizaciones para SYD Colombia con sincronización en la nube mediante Firebase Firestore, integración oficial con Gmail, almacenamiento en Google Drive y exportación en vivo a Google Sheets." />
+    <meta name="description" content="Sistema de gestión biomédica y cotizaciones para SYD Colombia con sincronización en la nube mediante Firebase Firestore, integración con Gmail, órdenes de compra, licitaciones y catálogo maestro." />
     <meta name="theme-color" content="#0284c7" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="/logos/syd_colombia_iso_iqnet.svg" />
     <meta property="og:title" content="SYD Colombia - Cotización y Licitaciones" />
-    <meta property="og:description" content="Sistema de gestión biomédica y cotizaciones para SYD Colombia con sincronización en la nube mediante Firebase Firestore, integración oficial con Gmail, almacenamiento en Google Drive y exportación en vivo a Google Sheets." />
+    <meta property="og:description" content="Sistema de gestión biomédica y cotizaciones para SYD Colombia con sincronización en la nube mediante Firebase Firestore, integración con Gmail, órdenes de compra, licitaciones y catálogo maestro." />
     <meta property="og:type" content="website" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
@@ -44,6 +44,24 @@
             if (event.stopPropagation) event.stopPropagation();
           }
         }, true);
+      })();
+
+      // Early Theme Bootstrap to guarantee crisp contrast and prevent dark text flashes
+      (function() {
+        try {
+          var raw = localStorage.getItem('syd_theme_settings_v3');
+          var settings = raw ? JSON.parse(raw) : {};
+          var canvas = settings.canvasTheme || 'navy_dark';
+          var isLight = canvas === 'clean_light';
+          document.documentElement.dataset.theme = canvas;
+          document.documentElement.dataset.isLight = isLight ? 'true' : 'false';
+          document.documentElement.dataset.accent = settings.accentColor || 'sky';
+          document.documentElement.dataset.buttonShape = settings.buttonShape || 'rounded';
+          document.documentElement.dataset.buttonColor = settings.buttonColor || 'sky';
+        } catch (_) {
+          document.documentElement.dataset.theme = 'navy_dark';
+          document.documentElement.dataset.isLight = 'false';
+        }
       })();
     </script>
   </head>

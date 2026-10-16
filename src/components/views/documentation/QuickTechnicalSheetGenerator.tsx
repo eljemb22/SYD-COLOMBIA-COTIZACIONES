@@ -2012,17 +2012,17 @@ export const QuickTechnicalSheetGenerator: React.FC<QuickTechnicalSheetGenerator
                   type="button"
                   onClick={() => handleResearchWithAi()}
                   disabled={isSearchingAi || !productName.trim()}
-                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0 active:scale-95"
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0 active:scale-95 border border-cyan-300/30"
                   title="Consultar en internet con IA y autocompletar especificaciones y fotografía real del producto"
                 >
                   {isSearchingAi ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
                       <span>Investigando...</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-4 h-4 text-slate-950" />
+                      <Sparkles className="w-4 h-4 text-cyan-200" />
                       <span>Investigar con IA</span>
                     </>
                   )}
@@ -2503,10 +2503,10 @@ export const QuickTechnicalSheetGenerator: React.FC<QuickTechnicalSheetGenerator
                   <button
                     type="button"
                     onClick={handleApplyAllEmptySuggestions}
-                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition cursor-pointer shadow active:scale-95 shrink-0"
+                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition cursor-pointer shadow active:scale-95 shrink-0 border border-cyan-300/30"
                     title="Rellenar los campos fijos vacíos con sugerencias biomédicas"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-200" />
                     <span>Sugerir campos vacíos</span>
                   </button>
                 </div>
@@ -3343,9 +3343,9 @@ export const QuickTechnicalSheetGenerator: React.FC<QuickTechnicalSheetGenerator
                 <button
                   type="button"
                   onClick={handleDownloadPdf}
-                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition cursor-pointer shadow-md"
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition cursor-pointer shadow-md border border-cyan-300/30"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-3.5 h-3.5 text-cyan-200" />
                   <span>Descargar PDF</span>
                 </button>
                 <button

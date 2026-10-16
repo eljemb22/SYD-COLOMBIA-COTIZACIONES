@@ -23,7 +23,7 @@ export const ACCENT_COLOR_MAP: Record<
   }
 > = {
   sky: {
-    name: 'Cian Quirúrgico',
+    name: 'Cian Quirúrgico (Original / Default)',
     hex: '#38bdf8',
     lightHex: '#0284c7',
     glow: 'rgba(56, 189, 248, 0.35)',
@@ -140,8 +140,8 @@ export const CANVAS_THEME_MAP: Record<
   }
 > = {
   navy_dark: {
-    name: 'Azul Marino SYD',
-    description: 'Paleta corporativa predeterminada de alta fidelidad clínica',
+    name: 'Azul Marino SYD (Original / Default)',
+    description: 'Paleta corporativa predeterminada original de alta fidelidad clínica',
     bodyBg: '#0f1a2e',
     cardBg: '#15253d',
     cardHover: '#192b45',
@@ -751,21 +751,28 @@ export const PRESET_THEME_BUNDLES: {
   theme: Partial<ThemeSettings>;
 }[] = [
   {
-    id: 'syd_official',
-    name: 'SYD Insignia',
-    badge: 'Oficial',
+    id: 'syd_default_original',
+    name: 'Tema Original (Default)',
+    badge: 'Predeterminado',
     swatches: ['#0f1a2e', '#15253d', '#38bdf8'],
     theme: {
       canvasTheme: 'navy_dark',
+      customCanvasHex: '#0f1a2e',
       accentColor: 'sky',
       customAccentHex: '#38bdf8',
       buttonShape: 'rounded',
       buttonColor: 'sky',
+      customButtonHex: '#38bdf8',
       textColor: 'pure_white',
+      customTextHex: '#ffffff',
       fontFamily: 'plus_jakarta',
       fontSize: 'normal',
       cardRadius: 'lg',
       logoStyle: 'emblem_3d',
+      sidebarBackground: '#111c2e',
+      headerBackground: '#15253d',
+      enableAmbientGlow: true,
+      enableGlassmorphism: true,
     },
   },
   {
@@ -1000,7 +1007,7 @@ export const applyThemeToDOM = (settings: ThemeSettings): void => {
     ? {
         hex: settings.customAccentHex || '#38bdf8',
         lightHex: settings.customAccentHex || '#0284c7',
-        glow: `rgba(56, 189, 248, 0.4)`,
+        glow: hexToRgba(settings.customAccentHex || '#38bdf8', 0.35),
       }
     : ACCENT_COLOR_MAP[settings.accentColor] || ACCENT_COLOR_MAP.sky;
 
@@ -1123,4 +1130,18 @@ export function adjustColorBrightness(hex: string, percent: number): string {
   b = Math.min(255, Math.max(0, b));
 
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+/** Helper to convert hex to rgba string */
+export function hexToRgba(hex: string, alpha: number = 0.35): string {
+  let cleanHex = hex.replace('#', '');
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex.split('').map((c) => c + c).join('');
+  }
+  const num = parseInt(cleanHex, 16);
+  if (isNaN(num)) return `rgba(56, 189, 248, ${alpha})`;
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }

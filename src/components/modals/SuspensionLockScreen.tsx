@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Building2,
   Lock,
   User,
   ArrowRight,
@@ -19,6 +18,8 @@ import {
 } from 'lucide-react';
 import { AuthUser } from '../../types';
 import { authenticateUser, getStoredUsers } from '../../data/authData';
+import { SyDOfficialIsoLogo } from '../common/SyDOfficialIsoLogo';
+import { makeImageBackgroundTransparent } from '../../utils/imageTransparencyUtils';
 
 interface SuspensionLockScreenProps {
   isOpen: boolean;
@@ -41,6 +42,21 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isQuickUnlockMode, setIsQuickUnlockMode] = useState(true);
+
+  // Custom Logo URL from storage with transparent background removal
+  const [customLogoUrl, setCustomLogoUrl] = useState<string>('');
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const stored = localStorage.getItem('syd_custom_login_logo_url');
+        if (stored) {
+          const transparent = await makeImageBackgroundTransparent(stored, 210);
+          setCustomLogoUrl(transparent);
+        }
+      } catch {}
+    };
+    loadLogo();
+  }, [isOpen]);
 
   // If there is an active current user when suspended, default to quick unlock mode
   useEffect(() => {
@@ -115,16 +131,36 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
         {/* Corporate Header */}
         <div className="p-6 bg-gradient-to-br from-[#15253d] to-[#1e314b] border-b border-[#334d6e] text-center relative">
           <div className="relative inline-block mb-3">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[#38bdf8] to-[#0284c7] flex items-center justify-center text-slate-950 shadow-xl shadow-[#38bdf8]/20">
-              <Building2 className="w-9 h-9" />
+            <div className="bg-transparent rounded-2xl p-2 max-w-[320px] mx-auto min-h-[50px] flex items-center justify-center">
+              {customLogoUrl ? (
+                <img
+                  src={customLogoUrl}
+                  alt="SUMINISTROS Y DOTACIONES DE COLOMBIA S.A.S."
+                  style={{
+                    filter:
+                      'drop-shadow(0 0 1.5px rgba(255,255,255,0.95)) drop-shadow(0 0 3px rgba(255,255,255,0.5)) drop-shadow(0 2px 8px rgba(0,0,0,0.55))',
+                  }}
+                  className="w-full max-h-16 object-contain"
+                />
+              ) : (
+                <div
+                  style={{
+                    filter:
+                      'drop-shadow(0 0 1.5px rgba(255,255,255,0.95)) drop-shadow(0 0 3px rgba(255,255,255,0.5)) drop-shadow(0 2px 8px rgba(0,0,0,0.55))',
+                  }}
+                  className="w-full flex items-center justify-center"
+                >
+                  <SyDOfficialIsoLogo className="w-full h-auto max-h-16" isDarkTheme={true} />
+                </div>
+              )}
             </div>
-            <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-amber-500 border-2 border-[#111c2e] flex items-center justify-center text-slate-950 shadow-md">
+            <div className="absolute -bottom-2 -right-2 w-7 h-7 rounded-full bg-amber-500 border-2 border-[#111c2e] flex items-center justify-center text-slate-950 shadow-md">
               <Lock className="w-3.5 h-3.5 stroke-[2.5]" />
             </div>
           </div>
 
-          <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
-            SUMINISTROS Y DOTACIONES DE COLOMBIA
+          <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
+            SUMINISTROS Y DOTACIONES DE COLOMBIA S.A.S.
           </h2>
           <p className="text-xs text-[#38bdf8] font-bold tracking-widest uppercase mt-0.5">
             {isSuspended ? '🔒 Sesión Suspendida por Seguridad' : 'Portal de Acceso Corporativo'}
@@ -271,19 +307,27 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
 
             {/* Submit Action Button */}
             <button
+              id="btn-suspension-unlock"
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#38bdf8] to-[#0284c7] hover:from-[#0284c7] hover:to-[#0369a1] text-slate-950 hover:text-white font-black text-sm shadow-lg shadow-[#38bdf8]/20 hover:shadow-[#38bdf8]/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
+              className="w-full py-3.5 px-4 rounded-xl text-white font-extrabold text-sm shadow-xl flex items-center justify-center gap-2.5 cursor-pointer active:scale-95 hover:brightness-110 disabled:opacity-50 border border-cyan-300/50 relative overflow-hidden group transition-all duration-200"
+              style={{
+                background: 'linear-gradient(135deg, #0284c7 0%, #0ea5e9 45%, #38bdf8 100%)',
+                color: '#ffffff',
+                boxShadow: '0 0 30px rgba(56, 189, 248, 0.55), 0 4px 20px rgba(2, 132, 199, 0.5)',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
+              }}
             >
+              <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-[300%] transition-transform duration-1000 ease-in-out pointer-events-none" />
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <LockKeyhole className="w-4 h-4" />
-                  <span>
+                  <LockKeyhole className="w-4 h-4 text-white" />
+                  <span className="tracking-wide text-sm font-black drop-shadow-xs">
                     {isSuspended ? 'Desbloquear y Continuar' : 'Ingresar al Sistema'}
                   </span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>

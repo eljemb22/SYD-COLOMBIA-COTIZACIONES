@@ -23,7 +23,9 @@ export interface OCMatchResult {
   nit: string;
   city: string;
   contractNumber: string;
-  sourceType: 'licitacion_adjudicada' | 'orden_venta' | 'cotizacion_aprobada' | 'manual';
+  sourceType: 'licitacion_adjudicada' | 'oc_directa' | 'orden_venta' | 'cotizacion_aprobada' | 'manual';
+  isDirectOC?: boolean;
+  typeLabel?: string;
   matchConfidence: 'alta' | 'media' | 'baja' | 'general';
   matchReasons: string[];
 }
@@ -88,7 +90,100 @@ export function detectMatchingProjectForOC(order: DetectedPurchaseOrder): OCMatc
   const normalizedEmailText = normalizeText(fullEmailText);
   const detectedCustomerNorm = normalizeText(order.detectedCustomer || '');
 
-  // 1. Check existing OC Tracking Contracts (Ventana 5)
+  // 1. Check Tender Client Projects (Ventana 4 - Licitaciones & Contratos Directos del Cliente)
+  // Prioritized so that contracts and direct OCs registered in Ventana 4 are matched primarily
+  // and labeled as either "OC Directa" or "Licitación Normal" without duplicate detection.
+  let tenderProjects: TenderClientProject[] = [];
+  try {
+    const rawTenders = localStorage.getItem('syd_tender_clients_v2');
+    if (rawTenders) tenderProjects = JSON.parse(rawTenders);
+  } catch {}
+
+  let bestTenderMatch: { tender: TenderClientProject; score: number; reasons: string[] } | null = null;
+
+  for (const t of tenderProjects) {
+    let score = 0;
+    const reasons: string[] = [];
+
+    const tClientNorm = normalizeText(t.clientName || t.header?.entityName || '');
+    if (detectedCustomerNorm && tClientNorm.includes(detectedCustomerNorm)) {
+      score += 40;
+      reasons.push(`Entidad/Cliente coincide: "${t.clientName}"`);
+    } else if (tClientNorm && normalizedEmailText.includes(tClientNorm)) {
+      score += 35;
+      reasons.push(`Mención de "${t.clientName}" en correo`);
+    }
+
+    // Process number match
+    const procNorm = normalizeText(t.header?.processNumber || '');
+    if (procNorm && normalizedEmailText.includes(procNorm)) {
+      score += 50;
+      reasons.push(`N° de Proceso/Licitación/OC encontrado: ${t.header?.processNumber}`);
+    }
+
+    // Direct OC number match
+    if (order.detectedOCNumber) {
+      const ocClean = normalizeText(order.detectedOCNumber);
+      if (procNorm && (procNorm.includes(ocClean) || ocClean.includes(procNorm))) {
+        score += 65;
+        reasons.push(`Coincidencia con N° de Orden de Compra #${order.detectedOCNumber}`);
+      }
+    }
+
+    // Items match
+    if (t.items && Array.isArray(t.items)) {
+      for (const tItem of t.items) {
+        const itemDescNorm = normalizeText(tItem.name || '');
+        const itemCodeNorm = (tItem.code || '').toLowerCase().trim();
+
+        if (itemCodeNorm && partCodes.includes(itemCodeNorm)) {
+          score += 45;
+          reasons.push(`Código de equipo coincide: ${itemCodeNorm}`);
+        } else if (itemDescNorm) {
+          const itemTokens = extractTokens(itemDescNorm);
+          const common = itemTokens.filter((t) => emailTokens.includes(t));
+          if (common.length >= 2) {
+            score += 20 * common.length;
+            reasons.push(`Equipo coincide: "${tItem.name}"`);
+          }
+        }
+      }
+    }
+
+    if (score > (bestTenderMatch?.score || 0)) {
+      bestTenderMatch = { tender: t, score, reasons };
+    }
+  }
+
+  if (bestTenderMatch && bestTenderMatch.score >= 30) {
+    const isDirect =
+      Boolean((bestTenderMatch.tender as any).isDirectOC) ||
+      bestTenderMatch.tender.header?.processType === 'OC Directa' ||
+      bestTenderMatch.tender.header?.processType === 'Orden de Compra Directa del Cliente' ||
+      bestTenderMatch.tender.header?.processType === 'Contratación Directa' ||
+      /orden\s+de\s+compra|oc\s+directa/i.test(bestTenderMatch.tender.header?.processType || '') ||
+      /oc[-_\s]/i.test(bestTenderMatch.tender.header?.processNumber || '');
+
+    const typeLabel = isDirect ? 'OC Directa' : 'Licitación Normal';
+    const badgeIcon = isDirect ? '📦' : '🏛️';
+
+    return {
+      matchedType: 'licitacion',
+      matchedId: bestTenderMatch.tender.id,
+      matchedTitle: `${badgeIcon} ${typeLabel}: ${bestTenderMatch.tender.header?.processNumber || bestTenderMatch.tender.clientName}`,
+      clientName: bestTenderMatch.tender.clientName || bestTenderMatch.tender.header?.entityName || 'Cliente SYD',
+      nit: bestTenderMatch.tender.nit || bestTenderMatch.tender.header?.nit || '900.123.456-1',
+      city: (bestTenderMatch.tender.header as any)?.city || 'Bogotá D.C.',
+      contractNumber: bestTenderMatch.tender.header?.processNumber || `LIC-${bestTenderMatch.tender.clientName.slice(0, 10).toUpperCase()}`,
+      sourceType: isDirect ? 'oc_directa' : 'licitacion_adjudicada',
+      isDirectOC: isDirect,
+      typeLabel: typeLabel,
+      matchConfidence: bestTenderMatch.score >= 60 ? 'alta' : 'media',
+      matchReasons: bestTenderMatch.reasons,
+    };
+  }
+
+  // 2. Check existing OC Tracking Contracts (Ventana 5)
   const existingContracts = getStoredOCTrackingContracts();
   if (order.detectedOCNumber) {
     const existingWithSameOC = existingContracts.find(
@@ -97,22 +192,66 @@ export function detectMatchingProjectForOC(order: DetectedPurchaseOrder): OCMatc
         c.purchaseOrders?.some((po) => po.ocNumber?.toLowerCase() === order.detectedOCNumber?.toLowerCase())
     );
     if (existingWithSameOC) {
+      // If this contract is linked to or shares process number with a tender project in Ventana 4, resolve to the Ventana 4 tender
+      const parentTender = existingWithSameOC.tenderClientId
+        ? tenderProjects.find((t) => t.id === existingWithSameOC.tenderClientId)
+        : tenderProjects.find(
+            (t) =>
+              (t.header?.processNumber && normalizeText(t.header.processNumber) === normalizeText(existingWithSameOC.contractNumber)) ||
+              (t.clientName && normalizeText(t.clientName) === normalizeText(existingWithSameOC.clientName))
+          );
+
+      if (parentTender) {
+        const isDirect =
+          Boolean((parentTender as any).isDirectOC) ||
+          parentTender.header?.processType === 'OC Directa' ||
+          parentTender.header?.processType === 'Orden de Compra Directa del Cliente' ||
+          parentTender.header?.processType === 'Contratación Directa' ||
+          /orden\s+de\s+compra|oc\s+directa/i.test(parentTender.header?.processType || '') ||
+          /oc[-_\s]/i.test(parentTender.header?.processNumber || '');
+        const typeLabel = isDirect ? 'OC Directa' : 'Licitación Normal';
+        const badgeIcon = isDirect ? '📦' : '🏛️';
+
+        return {
+          matchedType: 'licitacion',
+          matchedId: parentTender.id,
+          matchedTitle: `${badgeIcon} ${typeLabel}: ${parentTender.header?.processNumber || parentTender.clientName}`,
+          clientName: parentTender.clientName || parentTender.header?.entityName || existingWithSameOC.clientName,
+          nit: parentTender.nit || parentTender.header?.nit || existingWithSameOC.nit || '900.123.456-1',
+          city: (parentTender.header as any)?.city || existingWithSameOC.city || 'Bogotá D.C.',
+          contractNumber: parentTender.header?.processNumber || existingWithSameOC.contractNumber,
+          sourceType: isDirect ? 'oc_directa' : 'licitacion_adjudicada',
+          isDirectOC: isDirect,
+          typeLabel: typeLabel,
+          matchConfidence: 'alta',
+          matchReasons: [`Vinculado al expediente de Licitaciones / OC Directa #${parentTender.header?.processNumber || parentTender.clientName}`],
+        };
+      }
+
+      const isDirect =
+        Boolean((existingWithSameOC as any).isDirectOC) ||
+        existingWithSameOC.sourceType === 'oc_directa' ||
+        /oc|directa/i.test(existingWithSameOC.contractNumber || '');
+      const typeLabel = isDirect ? 'OC Directa' : 'Licitación Normal';
+
       return {
         matchedType: 'contrato_existente',
         matchedId: existingWithSameOC.id,
-        matchedTitle: `Contrato Activo: ${existingWithSameOC.contractNumber} (${existingWithSameOC.clientName})`,
+        matchedTitle: `${isDirect ? '📦 OC Directa' : '🏛️ Contrato Activo'}: ${existingWithSameOC.contractNumber} (${existingWithSameOC.clientName})`,
         clientName: existingWithSameOC.clientName,
         nit: existingWithSameOC.nit || '900.123.456-1',
         city: existingWithSameOC.city || 'Bogotá D.C.',
         contractNumber: existingWithSameOC.contractNumber,
-        sourceType: existingWithSameOC.sourceType,
+        sourceType: isDirect ? 'oc_directa' : existingWithSameOC.sourceType,
+        isDirectOC: isDirect,
+        typeLabel: typeLabel,
         matchConfidence: 'alta',
         matchReasons: [`Coincidencia directa con N° de Orden de Compra #${order.detectedOCNumber}`],
       };
     }
   }
 
-  // 2. Check Sales Orders (Ventana 7)
+  // 3. Check Sales Orders (Ventana 7)
   const salesOrders = getStoredSalesOrders();
   let bestSOMatch: { so: SalesOrderRecord; score: number; reasons: string[] } | null = null;
 
@@ -166,86 +305,22 @@ export function detectMatchingProjectForOC(order: DetectedPurchaseOrder): OCMatc
   }
 
   if (bestSOMatch && bestSOMatch.score >= 30) {
+    const isDirect = /oc|directa/i.test(bestSOMatch.so.contractNumber || bestSOMatch.so.notes || '');
+    const typeLabel = isDirect ? 'OC Directa' : 'Licitación Normal';
+
     return {
       matchedType: 'orden_venta',
       matchedId: bestSOMatch.so.id,
-      matchedTitle: `Orden de Venta: ${bestSOMatch.so.salesOrderNumber} (${bestSOMatch.so.clientName})`,
+      matchedTitle: `Orden de Venta (${typeLabel}): ${bestSOMatch.so.salesOrderNumber} (${bestSOMatch.so.clientName})`,
       clientName: bestSOMatch.so.clientName,
       nit: bestSOMatch.so.clientNit || '900.123.456-1',
       city: bestSOMatch.so.clientCity || 'Bogotá D.C.',
       contractNumber: bestSOMatch.so.salesOrderNumber,
       sourceType: 'orden_venta',
+      isDirectOC: isDirect,
+      typeLabel: typeLabel,
       matchConfidence: bestSOMatch.score >= 60 ? 'alta' : 'media',
       matchReasons: bestSOMatch.reasons,
-    };
-  }
-
-  // 3. Check Tender Client Projects (Ventana 4 - Licitaciones)
-  let tenderProjects: TenderClientProject[] = [];
-  try {
-    const rawTenders = localStorage.getItem('syd_tender_clients_v2');
-    if (rawTenders) tenderProjects = JSON.parse(rawTenders);
-  } catch {}
-
-  let bestTenderMatch: { tender: TenderClientProject; score: number; reasons: string[] } | null = null;
-
-  for (const t of tenderProjects) {
-    let score = 0;
-    const reasons: string[] = [];
-
-    const tClientNorm = normalizeText(t.clientName || t.header?.entityName || '');
-    if (detectedCustomerNorm && tClientNorm.includes(detectedCustomerNorm)) {
-      score += 40;
-      reasons.push(`Entidad/Cliente de Licitación coincide: "${t.clientName}"`);
-    } else if (tClientNorm && normalizedEmailText.includes(tClientNorm)) {
-      score += 35;
-      reasons.push(`Mención de "${t.clientName}" en correo`);
-    }
-
-    // Process number match
-    const procNorm = normalizeText(t.header?.processNumber || '');
-    if (procNorm && normalizedEmailText.includes(procNorm)) {
-      score += 50;
-      reasons.push(`N° de Proceso/Licitación encontrado: ${t.header?.processNumber}`);
-    }
-
-    // Items match
-    if (t.items && Array.isArray(t.items)) {
-      for (const tItem of t.items) {
-        const itemDescNorm = normalizeText(tItem.name || '');
-        const itemCodeNorm = (tItem.code || '').toLowerCase().trim();
-
-        if (itemCodeNorm && partCodes.includes(itemCodeNorm)) {
-          score += 45;
-          reasons.push(`Código de equipo de licitación coincide: ${itemCodeNorm}`);
-        } else if (itemDescNorm) {
-          const itemTokens = extractTokens(itemDescNorm);
-          const common = itemTokens.filter((t) => emailTokens.includes(t));
-          if (common.length >= 2) {
-            score += 20 * common.length;
-            reasons.push(`Equipo de licitación coincide: "${tItem.name}"`);
-          }
-        }
-      }
-    }
-
-    if (score > (bestTenderMatch?.score || 0)) {
-      bestTenderMatch = { tender: t, score, reasons };
-    }
-  }
-
-  if (bestTenderMatch && bestTenderMatch.score >= 30) {
-    return {
-      matchedType: 'licitacion',
-      matchedId: bestTenderMatch.tender.id,
-      matchedTitle: `Licitación: ${bestTenderMatch.tender.header?.processNumber || bestTenderMatch.tender.clientName}`,
-      clientName: bestTenderMatch.tender.clientName || bestTenderMatch.tender.header?.entityName || 'Cliente SYD',
-      nit: bestTenderMatch.tender.nit || bestTenderMatch.tender.header?.nit || '900.123.456-1',
-      city: (bestTenderMatch.tender.header as any)?.city || 'Bogotá D.C.',
-      contractNumber: bestTenderMatch.tender.header?.processNumber || `LIC-${bestTenderMatch.tender.clientName.slice(0, 10).toUpperCase()}`,
-      sourceType: 'licitacion_adjudicada',
-      matchConfidence: bestTenderMatch.score >= 60 ? 'alta' : 'media',
-      matchReasons: bestTenderMatch.reasons,
     };
   }
 

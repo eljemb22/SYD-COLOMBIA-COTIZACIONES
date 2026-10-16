@@ -25,28 +25,29 @@
   </g>
 
   <!-- Icontec ISO 9001 Certification Badge -->
-  <g transform="translate(178, 6)">
+  <g transform="translate(178, 4)">
     <!-- Outer Blue Pill / Rounded Card -->
     <rect x="0" y="0" width="56" height="74" rx="8" fill="#0084C9"/>
     
     <!-- icontec Circular Nested Logo -->
-    <g transform="translate(28, 18)" stroke="#FFFFFF" fill="none" stroke-width="1.8">
+    <g transform="translate(28, 17)" stroke="#FFFFFF" fill="none" stroke-width="1.8">
       <circle cx="0" cy="0" r="9.5" stroke-dasharray="50 7"/>
       <circle cx="0" cy="0" r="5.5" stroke-dasharray="28 5"/>
       <circle cx="0" cy="0" r="2.2" fill="#FFFFFF"/>
     </g>
     
     <!-- icontec Text -->
-    <text x="28" y="36" font-family="'Segoe UI', Arial, sans-serif" font-size="8.5" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.2">icontec</text>
+    <text x="28" y="35" font-family="'Segoe UI', Arial, sans-serif" font-size="8.5" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.2">icontec</text>
     
-    <!-- White Shield Bottom Section -->
-    <path d="M 4 42 C 12 39 44 39 52 42 L 52 64 C 52 68 48 70 44 70 L 12 70 C 8 70 4 68 4 64 Z" fill="#FFFFFF"/>
+    <!-- Solid Pure White Bottom Section - Completely Fills Interior -->
+    <path d="M 0 38 C 14 33 42 33 56 38 L 56 66 C 56 70.4 52.4 74 48 74 L 8 74 C 3.6 74 0 70.4 0 66 Z" fill="#FFFFFF"/>
     
-    <!-- ISO 9001 text inside white section -->
-    <text x="28" y="54" font-family="'Segoe UI', Arial, sans-serif" font-size="8.5" font-weight="bold" fill="#0084C9" text-anchor="middle">ISO 9001</text>
+    <!-- ISO 9001 text inside solid white section -->
+    <text x="28" y="58" font-family="'Segoe UI', Arial, sans-serif" font-size="9.5" font-weight="bold" fill="#0084C9" text-anchor="middle">ISO 9001</text>
     
-    <!-- Certificate Code SC7290-1 -->
-    <text x="28" y="65" font-family="'Segoe UI', Arial, sans-serif" font-size="6.5" font-weight="bold" fill="#1E2B6D" text-anchor="middle">SC7290-1</text>
+    <!-- Certificate Code SC7290-1 on white pill -->
+    <rect x="4" y="78" width="48" height="13" rx="4" fill="#FFFFFF"/>
+    <text x="28" y="87.5" font-family="'Segoe UI', Arial, sans-serif" font-size="7.5" font-weight="bold" fill="#0084C9" text-anchor="middle">SC7290-1</text>
   </g>
 
   <!-- IQNET International Certification Seal -->

@@ -1,18 +1,15 @@
 {
   "name": "syd-colombia",
   "private": true,
-  "version": "2.10.1",
+  "version": "2.10.2",
   "description": "SYD Colombia - Software de Cotizaciones y Licitaciones",
   "author": "SYD Colombia",
-  "main": "dist/server.cjs",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && node -e \"const fs=require('fs'); fs.cpSync('dist', 'build', {recursive: true});\"",
-    "start": "node dist/server.cjs",
-    "clean": "rm -rf dist build server.js release",
-    "lint": "tsc --noEmit",
-    "dist:win": "npm run build && npx electron-builder --win nsis"
+    "build": "node scripts/build.js",
+    "start": "node server.ts",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -52,32 +49,5 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2"
-  },
-  "build": {
-    "appId": "com.sydcolombia.app",
-    "productName": "SYD Colombia",
-    "extraMetadata": {
-      "main": "electron.cjs",
-      "version": "2.10.1"
-    },
-    "win": {
-      "target": [
-        "nsis",
-        "portable",
-        "zip"
-      ]
-    },
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron.cjs"
-    ],
-    "asar": true,
-    "asarUnpack": [
-      "dist/server.cjs",
-      "dist/server.cjs.map"
-    ]
   }
 }

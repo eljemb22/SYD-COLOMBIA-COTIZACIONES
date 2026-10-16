@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { History, X } from 'lucide-react';
 import { OCTrackingItem } from '../../../types';
 
@@ -20,8 +21,15 @@ export const OCHistoryModal: React.FC<OCHistoryModalProps> = ({ contractName, it
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-3 sm:p-5 md:p-6 backdrop-blur-xs animate-fadeIn">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-3 sm:p-5 md:p-6 animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="bg-[#192b45] border border-[#334d6e] rounded-2xl w-full max-w-3xl lg:max-w-4xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
         <div className="p-3.5 sm:p-4 bg-[#142338] border-b border-[#334d6e] flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -86,6 +94,7 @@ export const OCHistoryModal: React.FC<OCHistoryModalProps> = ({ contractName, it
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

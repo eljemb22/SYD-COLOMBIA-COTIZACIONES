@@ -48,6 +48,7 @@ import {
 import { downloadTenderEquipmentTemplate } from '../../utils/excelImportUtils';
 import { createTenderProjectFromQuote } from '../../utils/salesOrdersStorage';
 import { formatCOP } from '../../utils/formatters';
+import { isTenderProjectDirectOC, formatTenderProcessNumber } from '../../utils/tenderDeduplication';
 import {
   ExcelColumnConfig,
   ExcelColumnHeader,
@@ -60,7 +61,7 @@ const TENDER_CLIENT_COLUMNS: ExcelColumnConfig<TenderClientProject>[] = [
     id: 'processNumber',
     label: 'N° Proceso / Tipo',
     type: 'text',
-    accessor: (row) => `${row.header?.processNumber || 'Sin proceso'} ${row.header?.processType || ''}`.trim(),
+    accessor: (row) => `${formatTenderProcessNumber(row)} ${isTenderProjectDirectOC(row) ? 'OC Directa' : (row.header?.processType || '')}`.trim(),
     minWidth: '150px',
   },
   {
@@ -174,6 +175,7 @@ interface TendersViewProps {
   contracts?: OCTrackingContract[];
   salesOrders?: SalesOrderRecord[];
   salesInvoices?: SalesInvoiceRecord[];
+  onCreateSalesOrder?: (tender: TenderClientProject) => void;
 }
 
 export const TendersView: React.FC<TendersViewProps> = ({
@@ -200,6 +202,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
   contracts = [],
   salesOrders = [],
   salesInvoices = [],
+  onCreateSalesOrder,
 }) => {
   const handleCreateClientFn = onCreateTenderClient || onCreateClient;
   // Client selection state
@@ -239,20 +242,6 @@ export const TendersView: React.FC<TendersViewProps> = ({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Sync active client selection
-  useEffect(() => {
-    if (tenderClients.length > 0) {
-      if (!activeClientId || !tenderClients.find((c) => c.id === activeClientId)) {
-        const firstId = tenderClients[0].id;
-        if (onSelectClient) onSelectClient(firstId);
-        else setInternalActiveClientId(firstId);
-      }
-    } else {
-      if (onSelectClient) onSelectClient('');
-      else setInternalActiveClientId(null);
-    }
-  }, [tenderClients, activeClientId, onSelectClient]);
-
   // Handle ESC key press to close modals
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -279,22 +268,26 @@ export const TendersView: React.FC<TendersViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [clientToDelete, isCatalogModalOpen, isClientModalOpen, isLinkQuoteModalOpen, isExcelImportModalOpen, isManualItemModalOpen]);
 
+  // Helper to determine if a tender is terminated/completed
+  const isCompletedTender = (c: TenderClientProject) => {
+    const s = (c.status || '').toLowerCase().trim();
+    return s.includes('cumplido') || s.includes('archivado') || s.includes('terminad') || s.includes('finaliz');
+  };
+
   // Computed counts for Active vs Terminated tenders
   const activeCount = useMemo(
-    () => tenderClients.filter((c) => c.status !== 'Cumplido / Archivado').length,
+    () => tenderClients.filter((c) => !isCompletedTender(c)).length,
     [tenderClients]
   );
   const completedCount = useMemo(
-    () => tenderClients.filter((c) => c.status === 'Cumplido / Archivado').length,
+    () => tenderClients.filter((c) => isCompletedTender(c)).length,
     [tenderClients]
   );
 
-  // Base clients from search query filtered by active vs terminadas window
+  // Base clients from search query filtered strictly by active vs terminadas window
   const baseClients = useMemo(() => {
     return tenderClients.filter((c) => {
-      const isCompleted = c.status === 'Cumplido / Archivado';
-      // Keep currently viewed client visible so transitioning to Cumplido / Archivado doesn't flicker or vanish abruptly
-      if (activeClientId && c.id === activeClientId) return true;
+      const isCompleted = isCompletedTender(c);
       if (tenderStatusFilter === 'activas' && isCompleted) return false;
       if (tenderStatusFilter === 'terminadas' && !isCompleted) return false;
 
@@ -310,15 +303,30 @@ export const TendersView: React.FC<TendersViewProps> = ({
       }
       return true;
     });
-  }, [tenderClients, tenderStatusFilter, clientSearchQuery, activeClientId]);
+  }, [tenderClients, tenderStatusFilter, clientSearchQuery]);
 
   const activeClient = useMemo(() => {
+    if (baseClients.length === 0) return null;
     if (activeClientId) {
       const found = baseClients.find((c) => c.id === activeClientId);
       if (found) return found;
     }
     return baseClients[0] || null;
   }, [baseClients, activeClientId]);
+
+  // Sync active client selection strictly within the filtered baseClients window
+  useEffect(() => {
+    if (baseClients.length > 0) {
+      if (!activeClientId || !baseClients.find((c) => c.id === activeClientId)) {
+        const firstId = baseClients[0].id;
+        if (onSelectClient) onSelectClient(firstId);
+        else setInternalActiveClientId(firstId);
+      }
+    } else {
+      if (onSelectClient) onSelectClient('');
+      else setInternalActiveClientId(null);
+    }
+  }, [baseClients, activeClientId, onSelectClient]);
 
   const handleSelectClient = (clientId: string) => {
     if (onSelectClient) onSelectClient(clientId);
@@ -640,7 +648,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
       )}
 
       {/* Top Header & Layout Mode Switcher Bar */}
-      <div className="bg-[#192b45] border border-[#334d6e] rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-md">
+      <div className="bg-[#192b45]/95 backdrop-blur-md border border-[#334d6e] rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xl sticky top-0 z-20">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
             <Award className="w-5 h-5 text-amber-300" />
@@ -665,8 +673,8 @@ export const TendersView: React.FC<TendersViewProps> = ({
               type="button"
               onClick={() => {
                 setTenderStatusFilter('activas');
-                const firstActive = tenderClients.find((c) => c.status !== 'Cumplido / Archivado');
-                if (firstActive) handleSelectClient(firstActive.id);
+                const firstActive = tenderClients.find((c) => !isCompletedTender(c));
+                handleSelectClient(firstActive ? firstActive.id : '');
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 tenderStatusFilter === 'activas'
@@ -681,8 +689,8 @@ export const TendersView: React.FC<TendersViewProps> = ({
               type="button"
               onClick={() => {
                 setTenderStatusFilter('terminadas');
-                const firstTerm = tenderClients.find((c) => c.status === 'Cumplido / Archivado');
-                if (firstTerm) handleSelectClient(firstTerm.id);
+                const firstTerm = tenderClients.find((c) => isCompletedTender(c));
+                handleSelectClient(firstTerm ? firstTerm.id : '');
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 tenderStatusFilter === 'terminadas'
@@ -853,9 +861,9 @@ export const TendersView: React.FC<TendersViewProps> = ({
                     return (
                       <tr key={client.id} className="hover:bg-[#192b45] transition-colors">
                         <td className="py-3 px-4 font-mono font-bold text-amber-300">
-                          {client.header.clientOrderNumber || client.header.processNumber || 'PROCESO-LIC'}
+                          {formatTenderProcessNumber(client)}
                           <span className="text-[10px] text-slate-400 block font-normal">
-                            {client.header.isDirectClientOC || client.header.processType === 'Orden de Compra Directa del Cliente'
+                            {isTenderProjectDirectOC(client)
                               ? '📦 OC Directa del Cliente'
                               : (client.header.processType || 'Licitación Pública')}
                           </span>
@@ -951,9 +959,9 @@ export const TendersView: React.FC<TendersViewProps> = ({
         </div>
       ) : (
         /* WORKSPACE VIEW MODE (Sidebar + Details Matrix) */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 min-w-0 w-full items-start">
           {/* Left Sidebar: Contracts & Tenders List (Compact & Narrow) */}
-          <div className="lg:col-span-3 xl:col-span-3 bg-[#192b45] border border-[#334d6e] rounded-xl p-3 flex flex-col gap-2.5 shadow-md">
+          <div className="lg:col-span-4 xl:col-span-3 bg-[#192b45] border border-[#334d6e] rounded-xl p-3 flex flex-col gap-2.5 shadow-md min-w-0">
             <div className="flex items-center justify-between gap-1.5 pb-2 border-b border-[#334d6e]">
               <div className="flex items-center gap-1.5 min-w-0">
                 <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
@@ -1005,9 +1013,9 @@ export const TendersView: React.FC<TendersViewProps> = ({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 flex-wrap">
                           <span className="font-mono text-[9.5px] text-purple-300 font-bold bg-[#15253d] px-1.5 py-0.2 rounded border border-purple-500/30 truncate max-w-[110px]">
-                            {client.header.processNumber || 'Sin proceso'}
+                            {formatTenderProcessNumber(client)}
                           </span>
-                          {client.header?.isDirectClientOC || client.header?.processType === 'Orden de Compra Directa del Cliente' ? (
+                          {isTenderProjectDirectOC(client) ? (
                             <span className="text-[9px] font-black bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/40">
                               📦 OC Directa
                             </span>
@@ -1081,7 +1089,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
         </div>
 
         {/* Right Panel: Connected Two-Section Window (Spacious 9 Cols) */}
-        <div className="lg:col-span-9 xl:col-span-9 space-y-3">
+        <div className="lg:col-span-8 xl:col-span-9 space-y-3 min-w-0 w-full">
           {activeClient ? (
             <>
               {/* Top Connected Sub-Tabs Navigation */}
@@ -1097,7 +1105,13 @@ export const TendersView: React.FC<TendersViewProps> = ({
                 >
                   <Award className="w-4 h-4 text-amber-300" />
                   <span>1. Licitaciones & Contratos Adjudicados</span>
-                  <span className="text-[10px] bg-slate-900/60 px-2 py-0.5 rounded-full font-mono">
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold border transition-colors ${
+                      activeSubTab === 'adjudicadas'
+                        ? 'bg-slate-950 text-white border-white/30 shadow-xs'
+                        : 'bg-[#15253d] text-slate-200 border-[#334d6e]'
+                    }`}
+                  >
                     {activeClient.items?.length || 0} Equipos
                   </span>
                 </button>
@@ -1113,7 +1127,13 @@ export const TendersView: React.FC<TendersViewProps> = ({
                 >
                   <Sliders className="w-4 h-4 text-[#38bdf8]" />
                   <span>2. Especificaciones Técnicas & Anexos</span>
-                  <span className="text-[10px] bg-slate-900/60 px-2 py-0.5 rounded-full font-mono">
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold border transition-colors ${
+                      activeSubTab === 'especificaciones'
+                        ? 'bg-slate-950 text-white border-white/30 shadow-xs'
+                        : 'bg-[#15253d] text-slate-200 border-[#334d6e]'
+                    }`}
+                  >
                     {activeClient.items?.reduce((acc, it) => acc + (it.requirements?.length || 0), 0) || 0} Specs
                   </span>
                 </button>
@@ -1141,6 +1161,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
                   contracts={contracts}
                   salesOrders={salesOrders}
                   salesInvoices={salesInvoices}
+                  onCreateSalesOrder={onCreateSalesOrder}
                 />
               )}
 
@@ -1167,10 +1188,14 @@ export const TendersView: React.FC<TendersViewProps> = ({
               </div>
               <div className="space-y-1 max-w-md mx-auto">
                 <h3 className="text-base sm:text-lg font-black text-white">
-                  No hay licitaciones o contratos seleccionados
+                  {tenderStatusFilter === 'terminadas'
+                    ? 'No hay licitaciones terminadas o archivadas'
+                    : 'No hay licitaciones o contratos seleccionados'}
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Seleccione un proceso existente en el panel lateral izquierdo, registre uno nuevo con el botón <strong className="text-sky-300">+ Nuevo</strong> o importe contratos y equipos médicos desde los botones superiores de Excel.
+                  {tenderStatusFilter === 'terminadas'
+                    ? 'Actualmente no hay contratos marcados como cumplidos o archivados. Puedes consultar los procesos en curso en la pestaña de «Activas».'
+                    : 'Seleccione un proceso existente en el panel lateral izquierdo, registre uno nuevo con el botón «+ Nueva Licitación» o importe contratos y equipos médicos desde Excel.'}
                 </p>
               </div>
             </div>
@@ -1214,7 +1239,10 @@ export const TendersView: React.FC<TendersViewProps> = ({
       {/* MODAL: ADD EQUIPMENT FROM CATALOG */}
       {isCatalogModalOpen && activeClient && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto animate-fadeIn"
+          className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto animate-fadeIn"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsCatalogModalOpen(false);
+          }}
         >
           <div className="bg-[#192b45] border border-purple-400/60 rounded-2xl max-w-3xl w-full shadow-2xl animate-scaleUp max-h-[88vh] flex flex-col overflow-hidden my-auto">
             <div className="px-4 py-3 border-b border-[#334d6e] flex items-center justify-between gap-3 bg-[#15253d] shrink-0">
@@ -1371,7 +1399,10 @@ export const TendersView: React.FC<TendersViewProps> = ({
       {/* MODAL: DELETE CLIENT CONFIRMATION */}
       {clientToDelete && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-fadeIn"
+          className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-2.5 sm:p-4 animate-fadeIn"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setClientToDelete(null);
+          }}
         >
           <div className="bg-[#192b45] border border-rose-500/50 rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-3.5 shadow-2xl animate-scaleUp my-auto">
             <div className="flex items-start gap-3">

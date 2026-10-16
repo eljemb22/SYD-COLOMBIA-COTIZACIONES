@@ -12,6 +12,63 @@ export function normalizeKey(str?: string | null): string {
 }
 
 /**
+ * Checks if a tender project is an Orden de Compra Directa del Cliente (OC Directa)
+ * based on flag, processType, clientOrderNumber, or process code pattern (e.g. HBOC..., NoHBOC...).
+ */
+export function isTenderProjectDirectOC(t?: Partial<TenderClientProject> | null): boolean {
+  if (!t) return false;
+  if (t.header?.isDirectClientOC === true) return true;
+  const pType = (t.header?.processType || '').toLowerCase().trim();
+  if (
+    pType === 'orden de compra directa del cliente' ||
+    pType === 'oc directa' ||
+    pType === 'oc directo' ||
+    pType === 'orden de compra directa' ||
+    pType === 'orden de compra directo' ||
+    pType === 'orden de compra' ||
+    pType.includes('oc direct') ||
+    pType.includes('compra direct') ||
+    pType.includes('directa del cliente') ||
+    pType.includes('directo del cliente') ||
+    pType.includes('directa') ||
+    pType.includes('directo')
+  ) {
+    return true;
+  }
+  if (Boolean(t.header?.clientOrderNumber && String(t.header.clientOrderNumber).trim().length > 0)) {
+    return true;
+  }
+  const rawProc = (t.header?.processNumber || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (
+    rawProc.includes('hboc') ||
+    rawProc.startsWith('nohb') ||
+    rawProc.startsWith('ocdirect') ||
+    rawProc.startsWith('oc-') ||
+    rawProc.startsWith('orden')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Normalizes process number display for direct client orders
+ * ensuring masculine typo "OC directo" is always corrected to "OC Directa".
+ */
+export function formatTenderProcessNumber(t?: Partial<TenderClientProject> | null): string {
+  if (!t) return 'Sin proceso';
+  const raw = (t.header?.processNumber || t.header?.clientOrderNumber || '').trim();
+  const lower = raw.toLowerCase();
+  if (lower === 'oc directo' || lower === 'ocdirecto' || lower === 'orden de compra directo' || lower === 'oc directo.') {
+    return 'OC Directa';
+  }
+  if ((!raw || lower === 'sin proceso' || lower === 'proceso-lic') && isTenderProjectDirectOC(t)) {
+    return 'OC Directa';
+  }
+  return raw || 'Sin proceso';
+}
+
+/**
  * Deduplicates and consolidates Tender / Contract / Direct Client OC projects.
  * Prevents multiple identical cards in Ventana 4 (Licitaciones & Contratos)
  * when a quote is converted, linked, or updated.
@@ -46,10 +103,32 @@ export function deduplicateTenderProjects(tenders: TenderClientProject[]): Tende
       key = `id-${t.id}`;
     }
 
+    const isDirect = isTenderProjectDirectOC(t);
+    const rawProc = (t.header?.processNumber || '').trim();
+    const cleanProc = rawProc.toLowerCase() === 'oc directo' || rawProc.toLowerCase() === 'ocdirecto' ? 'OC Directa' : rawProc;
+    const cleanHeader = t.header
+      ? {
+          ...t.header,
+          processNumber: cleanProc,
+          isDirectClientOC: isDirect,
+          processType: isDirect ? 'Orden de Compra Directa del Cliente' : (t.header.processType || 'Licitación Pública'),
+        }
+      : ({
+          entityName: t.clientName || '',
+          processNumber: isDirect ? 'OC Directa' : '',
+          processType: isDirect ? 'Orden de Compra Directa del Cliente' : 'Licitación Pública',
+          isDirectClientOC: isDirect,
+          contractObject: '',
+          openingDate: '',
+          closingDate: '',
+          city: '',
+          budgetCOP: 0,
+        } as any);
+
     if (!map.has(key)) {
       map.set(key, {
         ...t,
-        header: t.header ? { ...t.header } : ({ entityName: t.clientName || '', processNumber: '', processType: 'Licitación Pública', contractObject: '', openingDate: '', closingDate: '', city: '', budgetCOP: 0 } as any),
+        header: cleanHeader,
         items: [...(t.items || [])],
       });
     } else {
@@ -61,11 +140,14 @@ export function deduplicateTenderProjects(tenders: TenderClientProject[]): Tende
       }
 
       // Merge header attributes
-      const isDirect = Boolean(t.header?.isDirectClientOC || existing.header?.isDirectClientOC);
+      const mergedIsDirect = Boolean(isDirect || isTenderProjectDirectOC(existing));
       existing.header = {
         ...existing.header,
-        ...t.header,
-        isDirectClientOC: isDirect,
+        ...cleanHeader,
+        isDirectClientOC: mergedIsDirect,
+        processType: mergedIsDirect
+          ? 'Orden de Compra Directa del Cliente'
+          : (existing.header?.processType || t.header?.processType || 'Licitación Pública'),
         clientName: existing.clientName || t.clientName || existing.header?.clientName || t.header?.clientName,
         nit: existing.nit || t.nit || existing.header?.nit || t.header?.nit,
         city: existing.header?.city || t.header?.city,

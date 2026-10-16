@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Building2,
   X,
@@ -151,8 +152,13 @@ export const ClientQuickCreateModal: React.FC<ClientQuickCreateModalProps> = ({
 
   const isExisting = Boolean(existingClient);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+  if (!isOpen || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 animate-fade-in"
+      onClick={onClose}
+    >
       <div
         className="relative w-full max-w-2xl bg-slate-900 border border-cyan-500/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
@@ -510,6 +516,7 @@ export const ClientQuickCreateModal: React.FC<ClientQuickCreateModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

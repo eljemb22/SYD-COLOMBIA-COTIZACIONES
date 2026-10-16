@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Plus,
@@ -27,7 +28,9 @@ import {
   Ban,
   Edit3,
   Check,
+  HardDrive,
 } from 'lucide-react';
+import { UnifiedAttachmentSelector, AttachmentResult } from '../../common/UnifiedAttachmentSelector';
 import {
   MedicalEquipment,
   OCTrackingContract,
@@ -43,6 +46,8 @@ import {
   generateActaEntregaHtml,
   generateConsolidatedDossierHtml,
 } from '../../../utils/dossierGenerator';
+import { resolveItemManufacturerBrand } from '../../../utils/equipmentBrandResolver';
+import { DocumentPreviewModal } from '../../common/DocumentPreviewModal';
 
 interface ItemSerialsDossierModalProps {
   isOpen: boolean;
@@ -101,6 +106,21 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
   // Inline edit state for doc title
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [editingDocTitle, setEditingDocTitle] = useState<string>('');
+
+  // Preview attachment modal state
+  const [previewAttachment, setPreviewAttachment] = useState<{
+    isOpen: boolean;
+    title: string;
+    subtitle?: string;
+    fileName: string;
+    fileSize?: string;
+    fileData?: string;
+    fileType?: string;
+    onDownload?: () => void;
+  } | null>(null);
+
+  const [isCloudSelectorModalOpen, setIsCloudSelectorModalOpen] = useState(false);
+  const [serialCloudAttachment, setSerialCloudAttachment] = useState<AttachmentResult | null>(null);
 
   // Initialize or load existing serials
   useEffect(() => {
@@ -357,8 +377,15 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
 
   const activeIdType = activeSerial?.identifierType || 'serial';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn overflow-y-auto">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/25 animate-fadeIn overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="bg-[#0e1726] border border-[#243c5a] rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
         {/* MODAL HEADER */}
         <div className="p-4 bg-[#142338] border-b border-[#243c5a] flex items-center justify-between gap-3">
@@ -378,7 +405,7 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
               <h2 className="text-base sm:text-lg font-black text-white leading-tight mt-0.5 flex items-center gap-2">
                 <span>{item.name}</span>
                 <span className="text-xs px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-500/40 font-mono font-normal">
-                  {item.brand} {item.model}
+                  {resolveItemManufacturerBrand(item, equipments)} {item.model}
                 </span>
               </h2>
             </div>
@@ -851,17 +878,17 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
                     </span>
                   </div>
 
-                  {/* 2 MAIN UPLOAD BUTTONS: DECLARACIÓN DIAN & OTRO ANEXO */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* 3 MAIN UPLOAD BUTTONS: DECLARACIÓN DIAN, OTRO ANEXO, ENLACE / DRIVE */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {/* DECLARACIÓN DIAN */}
-                    <label className="flex items-center gap-3 p-3 bg-[#111e30] hover:bg-[#182942] border border-dashed border-emerald-500/40 hover:border-emerald-400 rounded-xl cursor-pointer transition group">
-                      <div className="p-2.5 rounded-lg bg-emerald-500/20 text-emerald-300 group-hover:scale-105 transition shrink-0">
-                        <FileSpreadsheet className="w-5 h-5" />
+                    <label className="flex items-center gap-2.5 p-2.5 bg-[#111e30] hover:bg-[#182942] border border-dashed border-emerald-500/40 hover:border-emerald-400 rounded-xl cursor-pointer transition group">
+                      <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-300 group-hover:scale-105 transition shrink-0">
+                        <FileSpreadsheet className="w-4 h-4" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <span className="text-xs font-bold text-emerald-300 block">Declaración DIAN</span>
                         <span className="text-[10px] text-slate-400 block truncate">
-                          Subir Manifiesto / Declaración aduanera (PDF/Img)
+                          Manifiesto aduanero
                         </span>
                       </div>
                       <input
@@ -876,15 +903,15 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
                       />
                     </label>
 
-                    {/* OTRO ANEXO */}
-                    <label className="flex items-center gap-3 p-3 bg-[#111e30] hover:bg-[#182942] border border-dashed border-purple-500/40 hover:border-purple-400 rounded-xl cursor-pointer transition group">
-                      <div className="p-2.5 rounded-lg bg-purple-500/20 text-purple-300 group-hover:scale-105 transition shrink-0">
-                        <Plus className="w-5 h-5" />
+                    {/* OTRO ANEXO LOCAL */}
+                    <label className="flex items-center gap-2.5 p-2.5 bg-[#111e30] hover:bg-[#182942] border border-dashed border-purple-500/40 hover:border-purple-400 rounded-xl cursor-pointer transition group">
+                      <div className="p-2 rounded-lg bg-purple-500/20 text-purple-300 group-hover:scale-105 transition shrink-0">
+                        <Plus className="w-4 h-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="text-xs font-bold text-purple-300 block">+ Otro Anexo</span>
+                        <span className="text-xs font-bold text-purple-300 block">+ Archivo Local</span>
                         <span className="text-[10px] text-slate-400 block truncate">
-                          Actas, Garantía, Pruebas, Fotos... (Elegir nombre)
+                          Actas, Pruebas, Fotos
                         </span>
                       </div>
                       <input
@@ -904,6 +931,26 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
                         }}
                       />
                     </label>
+
+                    {/* ENLACE EN LA NUBE / GOOGLE DRIVE */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSerialCloudAttachment(null);
+                        setIsCloudSelectorModalOpen(true);
+                      }}
+                      className="flex items-center gap-2.5 p-2.5 bg-[#111e30] hover:bg-[#182942] border border-dashed border-sky-500/40 hover:border-sky-400 rounded-xl cursor-pointer transition group text-left"
+                    >
+                      <div className="p-2 rounded-lg bg-sky-500/20 text-sky-300 group-hover:scale-105 transition shrink-0">
+                        <HardDrive className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-bold text-sky-300 block">☁️ Link / Drive</span>
+                        <span className="text-[10px] text-slate-400 block truncate">
+                          Archivos pesados / Drive
+                        </span>
+                      </div>
+                    </button>
                   </div>
 
                   {/* List of uploaded docs for active serial */}
@@ -948,10 +995,44 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
                                     </button>
                                   </div>
                                 ) : (
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-white truncate block">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    {Boolean(doc.isCloudLink || (doc.fileData && doc.fileData.startsWith('http')) || doc.fileUrl) && (
+                                      <span title="Alojado en Google Drive / Nube" className="inline-flex items-center">
+                                        <HardDrive className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                      </span>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setPreviewAttachment({
+                                          isOpen: true,
+                                          title: doc.title,
+                                          subtitle: `Serial: ${activeSerial.serialNumber || 'Unidad'} • ${doc.fileName || ''}`,
+                                          fileName: doc.fileName || 'documento.pdf',
+                                          fileSize: doc.fileSize,
+                                          fileData: doc.fileUrl || doc.fileData,
+                                          onDownload: () => {
+                                            const url = doc.downloadUrl || doc.fileUrl || doc.fileData;
+                                            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                                              window.open(url, '_blank');
+                                              return;
+                                            }
+                                            if (doc.fileData) {
+                                              const a = document.createElement('a');
+                                              a.href = doc.fileData;
+                                              a.download = doc.fileName || 'documento.pdf';
+                                              document.body.appendChild(a);
+                                              a.click();
+                                              document.body.removeChild(a);
+                                            }
+                                          },
+                                        });
+                                      }}
+                                      className="font-bold text-white hover:text-cyan-300 truncate block text-left cursor-pointer transition"
+                                      title="Previsualizar anexo"
+                                    >
                                       {doc.title}
-                                    </span>
+                                    </button>
                                     {isDian && (
                                       <span className="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-1 rounded font-mono shrink-0">
                                         DIAN
@@ -966,6 +1047,33 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
                             </div>
 
                             <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPreviewAttachment({
+                                    isOpen: true,
+                                    title: doc.title,
+                                    subtitle: `Serial: ${activeSerial.serialNumber || 'Unidad'} • ${doc.fileName || ''}`,
+                                    fileName: doc.fileName || 'documento.pdf',
+                                    fileSize: doc.fileSize,
+                                    fileData: doc.fileData,
+                                    onDownload: () => {
+                                      if (doc.fileData) {
+                                        const a = document.createElement('a');
+                                        a.href = doc.fileData;
+                                        a.download = doc.fileName || 'documento.pdf';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        document.body.removeChild(a);
+                                      }
+                                    },
+                                  });
+                                }}
+                                className="p-1 text-slate-300 hover:text-cyan-300 rounded bg-[#182942] hover:bg-[#203657] transition cursor-pointer"
+                                title="Previsualizar documento antes de descargar"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                              </button>
                               {!isEditingThis && (
                                 <button
                                   type="button"
@@ -973,7 +1081,7 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
                                     setEditingDocId(doc.id);
                                     setEditingDocTitle(doc.title);
                                   }}
-                                  className="p-1 text-slate-400 hover:text-sky-300 rounded bg-[#182942] hover:bg-[#203657] transition"
+                                  className="p-1 text-slate-400 hover:text-sky-300 rounded bg-[#182942] hover:bg-[#203657] transition cursor-pointer"
                                   title="Renombrar anexo"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
@@ -983,7 +1091,7 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
                                 <a
                                   href={doc.fileData}
                                   download={doc.fileName || 'documento.pdf'}
-                                  className="p-1 text-sky-400 hover:text-sky-300 rounded bg-[#182942] hover:bg-[#203657] transition"
+                                  className="p-1 text-sky-400 hover:text-sky-300 rounded bg-[#182942] hover:bg-[#203657] transition cursor-pointer"
                                   title="Descargar archivo"
                                 >
                                   <Download className="w-3.5 h-3.5" />
@@ -1127,6 +1235,88 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
         </div>
       )}
 
+      {/* CLOUD ATTACHMENT MODAL (GOOGLE DRIVE & EXTERNAL LINKS) */}
+      {isCloudSelectorModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#101b2b] border border-[#28466d] rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#243c5a] pb-3">
+              <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                <HardDrive className="w-5 h-5 text-amber-400" />
+                <span>Vincular Documento desde la Nube o Google Drive</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCloudSelectorModalOpen(false);
+                  setSerialCloudAttachment(null);
+                }}
+                className="p-1 rounded text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <UnifiedAttachmentSelector
+              currentAttachment={serialCloudAttachment}
+              onAttachmentChange={(att) => setSerialCloudAttachment(att)}
+              label="Selecciona un archivo desde Google Drive o ingresa un enlace"
+              suggestedName={`Documento ${item.name} - ${activeSerial?.serialNumber || 'Serial'}`}
+              equipmentName={item.name}
+              equipmentData={{
+                partNumber: item.code,
+                name: item.name,
+                brand: item.brand,
+                model: item.model,
+              }}
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#243c5a]">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCloudSelectorModalOpen(false);
+                  setSerialCloudAttachment(null);
+                }}
+                className="px-3 py-1.5 bg-[#182942] hover:bg-[#203657] text-slate-300 text-xs font-bold rounded-lg transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!serialCloudAttachment}
+                onClick={() => {
+                  if (serialCloudAttachment && activeSerial) {
+                    const newDoc: IndividualSerialDoc = {
+                      id: `doc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                      docType: 'otro',
+                      title: serialCloudAttachment.fileName,
+                      fileName: serialCloudAttachment.fileName,
+                      fileSize: serialCloudAttachment.fileSize,
+                      fileType: serialCloudAttachment.fileType,
+                      fileData: serialCloudAttachment.fileData,
+                      fileUrl: serialCloudAttachment.fileUrl,
+                      downloadUrl: serialCloudAttachment.downloadUrl,
+                      isCloudLink: serialCloudAttachment.isCloudLink,
+                      cloudProvider: serialCloudAttachment.cloudProvider,
+                      uploadDate: new Date().toISOString(),
+                      dianDeclarationNumber: activeSerial.dianDeclarationNumber,
+                      dianDate: activeSerial.dianDate,
+                    };
+                    const updatedDocs = [...(activeSerial.documents || []), newDoc];
+                    handleUpdateActiveSerial('documents', updatedDocs);
+                    setIsCloudSelectorModalOpen(false);
+                    setSerialCloudAttachment(null);
+                  }
+                }}
+                className="px-4 py-1.5 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 disabled:opacity-40 text-white text-xs font-black rounded-lg shadow transition cursor-pointer"
+              >
+                Vincular a este Serial
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DOCUMENT PREVIEW MODAL */}
       {previewModalDoc && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
@@ -1163,6 +1353,22 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
           </div>
         </div>
       )}
-    </div>
+
+      {/* Document Preview Modal for Serial Attachments */}
+      {previewAttachment && (
+        <DocumentPreviewModal
+          isOpen={previewAttachment.isOpen}
+          onClose={() => setPreviewAttachment(null)}
+          title={previewAttachment.title}
+          subtitle={previewAttachment.subtitle}
+          fileName={previewAttachment.fileName}
+          fileSize={previewAttachment.fileSize}
+          fileData={previewAttachment.fileData}
+          fileType={previewAttachment.fileType}
+          onDownload={previewAttachment.onDownload}
+        />
+      )}
+    </div>,
+    document.body
   );
 };

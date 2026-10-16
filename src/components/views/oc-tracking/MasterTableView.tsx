@@ -29,6 +29,7 @@ import {
   OC_STATUS_OPTIONS,
 } from '../../../utils/ocTrackingStorage';
 import { isValidOCNumber } from '../../../utils/formatters';
+import { resolveItemManufacturerBrand } from '../../../utils/equipmentBrandResolver';
 import {
   ExcelColumnConfig,
   ExcelColumnHeader,
@@ -77,7 +78,7 @@ const MASTER_TABLE_COLUMNS: ExcelColumnConfig<FlatItemRow>[] = [
   {
     id: 'equipment',
     label: 'Equipo Médico',
-    accessor: (r) => `${r.item.name} - ${r.item.brand} ${r.item.model}`,
+    accessor: (r) => `${r.item.name} - ${resolveItemManufacturerBrand(r.item)} ${r.item.model}`,
     type: 'text',
   },
   {
@@ -343,7 +344,7 @@ export const MasterTableView: React.FC<MasterTableViewProps> = ({
                     <td className="py-2.5 px-3">
                       <div className="font-bold text-white">{item.name}</div>
                       <div className="text-[10px] text-slate-400">
-                        {item.brand} • {item.model}
+                        {resolveItemManufacturerBrand(item)} • {item.model}
                       </div>
                       {onOpenSerialsModal && (
                         <div className="mt-1">

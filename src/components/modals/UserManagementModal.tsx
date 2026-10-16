@@ -330,6 +330,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       canExportData: enableAll,
       canManageBackups: enableAll,
       canAccessSqlAnalytics: enableAll,
+      canManageGmailPurchases: enableAll,
     };
     setPermissions(newPerms);
 
@@ -529,19 +530,28 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       description: 'Permite desbloquear con contraseña y ejecutar consultas SQL avanzadas sobre todas las tablas del sistema.',
       badge: 'SQL Admin',
     },
+    {
+      key: 'canManageGmailPurchases',
+      title: 'Bandeja Inteligente Gmail Compras & IA',
+      description: 'Permite gestionar correos de compras, conectar cuentas de Gmail, enviar OCs y cotizaciones a proveedores.',
+      badge: 'Gmail Compras',
+    },
   ];
 
   if (typeof document === 'undefined') return null;
 
   return createPortal(
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-slate-950/85 backdrop-blur-sm animate-fadeIn overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-black/25 animate-fadeIn overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="bg-[#111c2e] border border-[#334d6e] rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-5 space-y-4 shadow-2xl animate-scaleUp my-auto max-h-[82vh] h-[80vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#334d6e] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-[#38bdf8] to-[#0284c7] text-slate-950 shadow-md shrink-0">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-[#38bdf8] to-[#0284c7] text-white shadow-md shrink-0">
               {isAdmin ? <Users className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
             </div>
             <div className="min-w-0">
@@ -909,6 +919,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                           canExportData: true,
                           canManageBackups: true,
                           canAccessSqlAnalytics: true,
+                          canManageGmailPurchases: true,
                         })
                       }
                       className="text-[11px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-1 rounded hover:bg-emerald-500/30 transition"
@@ -933,6 +944,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                           canExportData: false,
                           canManageBackups: false,
                           canAccessSqlAnalytics: false,
+                          canManageGmailPurchases: false,
                         })
                       }
                       className="text-[11px] font-bold text-slate-400 bg-slate-800 px-2 py-1 rounded hover:bg-slate-700 transition"

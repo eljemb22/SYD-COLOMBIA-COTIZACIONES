@@ -173,7 +173,7 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
   return (
     <div
       id="app-updates-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/25 animate-fadeIn overflow-y-auto"
       onClick={handleDismissModal}
     >
       <div

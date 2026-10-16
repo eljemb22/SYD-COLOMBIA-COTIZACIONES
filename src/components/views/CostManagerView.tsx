@@ -1056,9 +1056,10 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
         </div>
       )}
 
-      {/* Sleek Top Bar with Centered Global Factor & Add Cost Controls */}
-      {/* Compact Top Action Bar: Global Factor, Add Cost, Client selector */}
-      <div className="bg-[#192b45] border border-[#334d6e] rounded-xl p-2 sm:p-2.5 shadow-md flex flex-wrap items-center justify-between gap-2">
+      {/* Sleek Top Bar with Centered Global Factor & Add Cost Controls + KPI Summary */}
+      <div className="sticky top-0 z-20 bg-[var(--syd-body-bg,#0b1523)]/95 pt-1 pb-2 space-y-2 backdrop-blur-md">
+        {/* Compact Top Action Bar: Global Factor, Add Cost, Client selector */}
+        <div className="bg-[#192b45] border border-[#334d6e] rounded-xl p-2 sm:p-2.5 shadow-md flex flex-wrap items-center justify-between gap-2">
         {/* Left: Global Factor Applicator (Admin Only or Disabled) */}
         {!isReadOnly ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -1332,7 +1333,10 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
       {/* Searchable & Spacious Add Equipment Modal */}
       {isAddEquipmentDrawerOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto animate-fadeIn"
+          className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto animate-fadeIn"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsAddEquipmentDrawerOpen(false);
+          }}
         >
           <div className="bg-[#192b45] border border-[#38bdf8]/60 rounded-2xl max-w-4xl w-full max-h-[90vh] h-[86vh] flex flex-col shadow-2xl overflow-hidden animate-scaleUp my-auto">
             {/* Modal Header */}
@@ -1581,11 +1585,12 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
           </div>
         </div>
       )}
+      </div>
 
       {/* Main Cost & Margin Breakdown Table - Compact & Screen Optimized */}
       <div className="overflow-x-auto rounded-xl border border-[#334d6e] bg-[#192b45] shadow-md scrollbar-thin">
         <table className="w-full text-left text-xs border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="bg-[#15253d] text-slate-300 font-bold border-b border-[#334d6e] text-[11px] select-none">
               {costTableColumns.map((col) => {
                 if (!columnVisibility[col.id as CostTableColumnKey]) return null;

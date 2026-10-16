@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Building2,
   Lock,
   User,
   ArrowRight,
@@ -12,11 +11,21 @@ import {
 } from 'lucide-react';
 import { AuthUser } from '../../types';
 import { authenticateUser } from '../../data/authData';
+import { SyDOfficialIsoLogo } from '../common/SyDOfficialIsoLogo';
+import { getStoredThemeSettings } from '../../utils/themeStorage';
+import { makeImageBackgroundTransparent } from '../../utils/imageTransparencyUtils';
 
 interface LoginModalProps {
   isOpen: boolean;
   onLoginSuccess: (user: AuthUser) => void;
 }
+
+/**
+ * Ultra-thin, delicate hairline white contour filter for dark backgrounds.
+ * Creates an elegant, barely-visible fine white edge (0.5px) around dark letters and shapes.
+ */
+export const ULTRA_THIN_WHITE_OUTLINE =
+  'drop-shadow(0 0 1.5px rgba(255,255,255,0.95)) drop-shadow(0 0 3px rgba(255,255,255,0.5)) drop-shadow(0 2px 8px rgba(0,0,0,0.55))';
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoginSuccess }) => {
   const [username, setUsername] = useState('');
@@ -24,6 +33,43 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoginSuccess }
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Custom Logo URL state (configured exclusively in Admin Configuration)
+  const [customLogoUrl, setCustomLogoUrl] = useState<string>(() => {
+    try {
+      const storedLoginLogo = localStorage.getItem('syd_custom_login_logo_url');
+      if (storedLoginLogo) return storedLoginLogo;
+      const theme = getStoredThemeSettings();
+      if (theme?.companyLogoUrl) return theme.companyLogoUrl;
+    } catch {}
+    return '';
+  });
+
+  // Automatically process existing custom logo to ensure white background (including inside "D") is removed cleanly
+  useEffect(() => {
+    const processStoredLogo = async () => {
+      try {
+        const storedLoginLogo = localStorage.getItem('syd_custom_login_logo_url');
+        if (storedLoginLogo && storedLoginLogo.startsWith('data:image/')) {
+          const transparent = await makeImageBackgroundTransparent(storedLoginLogo, 205);
+          setCustomLogoUrl(transparent);
+          localStorage.setItem('syd_custom_login_logo_url', transparent);
+        }
+      } catch (err) {
+        console.error('Error processing stored logo background:', err);
+      }
+    };
+    processStoredLogo();
+  }, []);
+
+  // Read stored preference for subtle white outline
+  const hasWhiteOutline = (() => {
+    try {
+      const stored = localStorage.getItem('syd_logo_white_outline');
+      if (stored !== null) return stored === 'true';
+    } catch {}
+    return true;
+  })();
 
   if (!isOpen) return null;
 
@@ -42,7 +88,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoginSuccess }
     }
 
     const cleanInput = cleanUsername.toLowerCase();
-    if (cleanInput === 'papi' || cleanInput === 'hijo' || cleanInput === 'papi@syd.com.co' || cleanInput === 'hijo@syd.com.co') {
+    if (
+      cleanInput === 'papi' ||
+      cleanInput === 'hijo' ||
+      cleanInput === 'papi@syd.com.co' ||
+      cleanInput === 'hijo@syd.com.co'
+    ) {
       setErrorMsg('Este usuario ya no existe. El acceso está restringido únicamente a "Jairo" y "Fabian".');
       return;
     }
@@ -66,43 +117,46 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoginSuccess }
     }
   };
 
-  const handleQuickLogin = (quickUser: string, quickPass: string) => {
-    setUsername(quickUser);
-    setPassword(quickPass);
-    setErrorMsg(null);
-    setIsLoading(true);
-    try {
-      const user = authenticateUser(quickUser, quickPass);
-      if (user) {
-        setIsLoading(false);
-        setUsername('');
-        setPassword('');
-        onLoginSuccess(user);
-      } else {
-        setIsLoading(false);
-        setErrorMsg('No se pudo autenticar al usuario.');
-      }
-    } catch (err) {
-      setIsLoading(false);
-      setErrorMsg('Error en el ingreso rápido.');
-    }
-  };
-
   const modalContent = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-md bg-[#111c2e] border border-[#334d6e] rounded-2xl shadow-2xl overflow-hidden">
-        {/* Header with Corporate Branding */}
-        <div className="p-6 bg-gradient-to-br from-[#15253d] to-[#1e314b] border-b border-[#334d6e] text-center relative">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-[#38bdf8] to-[#0284c7] flex items-center justify-center text-slate-950 shadow-lg shadow-[#38bdf8]/20 mb-3">
-            <Building2 className="w-8 h-8" />
+      <div className="w-full max-w-md bg-[#111c2e] border border-[#334d6e] rounded-3xl shadow-2xl overflow-hidden">
+        {/* Header with Pristine Corporate Branding */}
+        <div className="p-6 pb-4 bg-gradient-to-br from-[#15253d] to-[#1e314b] border-b border-[#334d6e] text-center relative">
+          
+          {/* Logo Display Area - Clean, static corporate display without hover artifacts */}
+          <div className="rounded-2xl p-2 max-w-[320px] mx-auto mb-3 flex flex-col items-center justify-center select-none">
+            {customLogoUrl ? (
+              <div className="w-full flex items-center justify-center min-h-[64px]">
+                <img
+                  src={customLogoUrl}
+                  alt="SUMINISTROS Y DOTACIONES DE COLOMBIA S.A.S."
+                  style={{
+                    filter: hasWhiteOutline ? ULTRA_THIN_WHITE_OUTLINE : 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))',
+                  }}
+                  className="w-full max-h-20 object-contain pointer-events-none"
+                />
+              </div>
+            ) : (
+              <div className="w-full flex items-center justify-center min-h-[64px]">
+                <div
+                  style={{
+                    filter: hasWhiteOutline ? ULTRA_THIN_WHITE_OUTLINE : 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))',
+                  }}
+                  className="w-full flex items-center justify-center"
+                >
+                  <SyDOfficialIsoLogo className="w-full h-auto max-h-18" isDarkTheme={true} />
+                </div>
+              </div>
+            )}
           </div>
-          <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
+
+          <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
             SUMINISTROS Y DOTACIONES DE COLOMBIA S.A.S.
           </h2>
           <p className="text-xs text-[#38bdf8] font-bold tracking-wider uppercase mt-0.5">
             Portal de Acceso Corporativo
           </p>
-          <p className="text-xs text-slate-400 mt-2">
+          <p className="text-xs text-slate-400 mt-1.5">
             Ingrese sus credenciales de usuario y contraseña autorizados para ingresar a la plataforma.
           </p>
         </div>
@@ -163,7 +217,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoginSuccess }
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -172,27 +226,41 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLoginSuccess }
 
           {/* Submit Button */}
           <button
+            id="btn-login-submit"
             type="submit"
             disabled={isLoading}
-            className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#38bdf8] hover:from-[#0369a1] hover:to-[#0284c7] text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#38bdf8]/20 transition cursor-pointer active:scale-98 disabled:opacity-50"
+            className="w-full py-3.5 px-4 rounded-xl text-white font-extrabold text-sm flex items-center justify-center gap-2.5 transition-all duration-200 transform active:scale-95 hover:brightness-110 disabled:opacity-50 cursor-pointer border border-cyan-300/50 relative overflow-hidden group"
+            style={{
+              background: 'linear-gradient(135deg, #0284c7 0%, #0ea5e9 45%, #38bdf8 100%)',
+              color: '#ffffff',
+              boxShadow: '0 0 30px rgba(56, 189, 248, 0.55), 0 4px 20px rgba(2, 132, 199, 0.5)',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
+            }}
           >
+            {/* Shimmer light reflection effect */}
+            <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-[300%] transition-transform duration-1000 ease-in-out pointer-events-none" />
             {isLoading ? (
-              <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
-                <Shield className="w-4 h-4" />
-                <span>Ingresar al Sistema</span>
-                <ArrowRight className="w-4 h-4" />
+                <span className="tracking-wide text-sm font-black drop-shadow-xs">Ingresar al Sistema</span>
+                <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
               </>
             )}
           </button>
         </form>
+
+        {/* Footer */}
+        <div className="px-6 py-3 bg-[#0d1522] border-t border-[#334d6e]/50 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Sistema Seguro Verificado</span>
+          </div>
+          <span className="font-mono text-[#38bdf8]">v3.5 Enterprise</span>
+        </div>
       </div>
     </div>
   );
 
-  if (typeof document !== 'undefined' && document.body) {
-    return createPortal(modalContent, document.body);
-  }
-  return modalContent;
+  return createPortal(modalContent, document.body);
 };

@@ -4,13 +4,19 @@ import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import * as XLSX from 'xlsx';
-import { sendHourlyBackupEmail, BackupDataPayload } from './src/services/backupEmailService';
+import { sendHourlyBackupEmail, type BackupDataPayload } from './src/services/backupEmailService.ts';
 
 async function startServer() {
   const app = express();
-  const PORT = parseInt(process.env.PORT || process.env.DEFAULT_APP_PORT || '3000', 10);
+  // In AI Studio / Cloud Run container environment, Nginx binds to external port 8080 and proxies traffic to localhost:3000.
+  // DEFAULT_APP_PORT is 3000. If PORT is 8080, we must listen on 3000 to avoid EADDRINUSE conflict with Nginx.
+  const PORT = parseInt(
+    process.env.DEFAULT_APP_PORT ||
+    (process.env.PORT && process.env.PORT !== '8080' ? process.env.PORT : '3000'),
+    10
+  );
   const SERVER_BOOT_TIME = Date.now();
-  const APP_VERSION = '2.10.1';
+  const APP_VERSION = '2.10.2';
 
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -583,6 +589,121 @@ async function startServer() {
         totalFound: 0,
         warning: err?.message || 'No se pudieron consultar archivos en Google Drive.',
       });
+    }
+  });
+
+  // API endpoint: Cache document file locally on disk for ultra-fast, offline-resilient PDF preview
+  app.post('/api/documents/cache', express.json({ limit: '50mb' }), async (req, res) => {
+    try {
+      const { id, base64 } = req.body || {};
+      if (!id || !base64) {
+        return res.status(400).json({ success: false, error: 'id and base64 required' });
+      }
+
+      const docsDir = path.join(process.cwd(), 'data', 'documents');
+      if (!fs.existsSync(docsDir)) {
+        fs.mkdirSync(docsDir, { recursive: true });
+      }
+
+      const rawBase64 = base64.includes('base64,') ? base64.split('base64,')[1] : base64;
+      const buffer = Buffer.from(rawBase64, 'base64');
+      const safeId = id.replace(/[^a-zA-Z0-9_-]/g, '_');
+      fs.writeFileSync(path.join(docsDir, `${safeId}.pdf`), buffer);
+
+      return res.json({ success: true, path: `/api/documents/cached/${safeId}` });
+    } catch (err: any) {
+      console.warn('Could not cache document on server:', err);
+      return res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // API endpoint: Retrieve locally cached PDF document
+  app.get('/api/documents/cached/:id', (req, res) => {
+    try {
+      const safeId = (req.params.id || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filePath = path.join(process.cwd(), 'data', 'documents', `${safeId}.pdf`);
+
+      if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return fs.createReadStream(filePath).pipe(res);
+      }
+
+      return res.status(404).send('Document not found in local cache');
+    } catch (err: any) {
+      return res.status(500).send(err?.message || 'Error reading cached document');
+    }
+  });
+
+  // API endpoint: Proxy Google Drive file to bypass browser iframe & CORS restrictions for integrated PDF preview
+  app.get('/api/drive/proxy-file/:fileId', async (req, res) => {
+    try {
+      const fileId = req.params.fileId;
+      const token =
+        (req.query.token as string) ||
+        (req.headers.authorization ? req.headers.authorization.replace(/^Bearer\s+/i, '') : '');
+
+      if (!fileId) {
+        return res.status(400).send('Se requiere el ID del archivo.');
+      }
+
+      const safeId = fileId.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const cachedPath = path.join(process.cwd(), 'data', 'documents', `${safeId}.pdf`);
+      if (fs.existsSync(cachedPath)) {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return fs.createReadStream(cachedPath).pipe(res);
+      }
+
+      const headers: Record<string, string> = {};
+      if (token && !token.startsWith('direct_')) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // 1. Try Google Drive v3 files.get with alt=media
+      let driveRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
+        { headers }
+      );
+
+      // 2. If unauthorized or failed, attempt public download link
+      if (!driveRes.ok) {
+        try {
+          const publicRes = await fetch(`https://drive.google.com/uc?export=download&id=${fileId}`);
+          if (publicRes.ok) {
+            driveRes = publicRes;
+          }
+        } catch (_) {}
+      }
+
+      if (!driveRes.ok) {
+        return res.status(driveRes.status).json({
+          success: false,
+          error: `Google Drive respondió con código ${driveRes.status}`,
+        });
+      }
+
+      const contentType = driveRes.headers.get('content-type') || 'application/pdf';
+      res.setHeader('Content-Type', contentType.includes('json') ? 'application/pdf' : contentType);
+      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      const arrayBuffer = await driveRes.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Cache on local disk for subsequent visits
+      try {
+        const docsDir = path.join(process.cwd(), 'data', 'documents');
+        if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true });
+        fs.writeFileSync(cachedPath, buffer);
+      } catch (_) {}
+
+      return res.send(buffer);
+    } catch (err: any) {
+      console.error('Error in /api/drive/proxy-file:', err);
+      return res.status(500).json({ success: false, error: err?.message || 'Error proxying Drive file' });
     }
   });
 
@@ -2577,8 +2698,8 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con la siguiente estructura:
     }
   });
 
-  // Health check
-  app.get('/api/health', (req, res) => {
+  // Health checks for Cloud Run and monitoring
+  app.get(['/healthz', '/health', '/api/health'], (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
@@ -2904,11 +3025,11 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con la siguiente estructura:
     fs.existsSync(path.join(dir, 'index.html'))
   );
 
-  const isProduction =
-    process.env.NODE_ENV === 'production' ||
-    !fs.existsSync(path.join(process.cwd(), 'src'));
+  const isProduction = process.env.NODE_ENV === 'production';
+  const shouldServeStatic = isProduction && Boolean(staticDir);
 
-  if (isProduction && staticDir) {
+  if (shouldServeStatic && staticDir) {
+    console.log(`[Production/Static] Serving static files from: ${staticDir}`);
     app.use(express.static(staticDir));
     app.get('*', (req, res) => {
       const indexPath = path.join(staticDir, 'index.html');
@@ -2919,7 +3040,7 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con la siguiente estructura:
       });
     });
   } else {
-    // If running in development OR if static assets have not been pre-built, mount Vite SPA middleware
+    // If running in development without pre-built assets, mount Vite SPA middleware with proper HTML transformation
     try {
       const vite = await createViteServer({
         server: {
@@ -2930,6 +3051,24 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con la siguiente estructura:
         appType: 'spa',
       });
       app.use(vite.middlewares);
+      app.use('*', async (req, res, next) => {
+        const url = req.originalUrl;
+        try {
+          const indexPath = path.resolve(process.cwd(), 'index.html');
+          if (fs.existsSync(indexPath)) {
+            let template = fs.readFileSync(indexPath, 'utf-8');
+            template = await vite.transformIndexHtml(url, template);
+            res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+            return;
+          }
+          next();
+        } catch (e: any) {
+          if (vite) {
+            vite.ssrFixStacktrace(e);
+          }
+          next(e);
+        }
+      });
     } catch (viteErr) {
       console.error('Failed to initialize Vite dev server, falling back to static handler:', viteErr);
       if (staticDir) {

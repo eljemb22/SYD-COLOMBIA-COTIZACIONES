@@ -33,6 +33,7 @@ import {
   OC_STATUS_OPTIONS,
 } from '../../../utils/ocTrackingStorage';
 import { isValidOCNumber } from '../../../utils/formatters';
+import { resolveItemManufacturerBrand } from '../../../utils/equipmentBrandResolver';
 import { SupplierInvoicesModal } from './SupplierInvoicesModal';
 
 export interface GroupedSupplierData {
@@ -116,12 +117,29 @@ export const SupplierGroupedView: React.FC<SupplierGroupedViewProps> = ({
       {supplierGroups.map((grp, grpIdx) => (
         <div
           key={`supplier_group_${grp.supplier}_${grpIdx}`}
-          className="bg-[#15253d] border border-[#334d6e] rounded-2xl shadow-xl overflow-hidden"
+          style={{
+            backgroundColor: 'var(--syd-card-bg)',
+            borderColor: 'var(--syd-border-color)',
+          }}
+          className="border rounded-2xl shadow-xl overflow-hidden"
         >
           {/* Supplier Header */}
-          <div className="p-4 bg-[#142338] border-b border-[#334d6e] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div
+            style={{
+              backgroundColor: 'var(--syd-card-hover)',
+              borderColor: 'var(--syd-border-color)',
+            }}
+            className="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+          >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-300 border border-sky-400/40 flex items-center justify-center font-black">
+              <div
+                style={{
+                  backgroundColor: 'var(--syd-accent-glow)',
+                  borderColor: 'var(--syd-accent)',
+                  color: 'var(--syd-accent)',
+                }}
+                className="w-10 h-10 rounded-xl border flex items-center justify-center font-black"
+              >
                 <Building2 className="w-5 h-5" />
               </div>
               <div>
@@ -140,7 +158,13 @@ export const SupplierGroupedView: React.FC<SupplierGroupedViewProps> = ({
               </div>
             </div>
 
-            <div className="text-left sm:text-right px-3 py-1 bg-[#101b2b] rounded-xl border border-[#334d6e]">
+            <div
+              style={{
+                backgroundColor: 'var(--syd-card-bg)',
+                borderColor: 'var(--syd-border-color)',
+              }}
+              className="text-left sm:text-right px-3 py-1 rounded-xl border"
+            >
               <span className="text-[10px] text-slate-400 font-bold block">Inversión con este Proveedor</span>
               <span className="text-sm sm:text-base font-black text-emerald-400">
                 ${grp.totalCostCOP.toLocaleString('es-CO')} COP
@@ -153,14 +177,31 @@ export const SupplierGroupedView: React.FC<SupplierGroupedViewProps> = ({
             {grp.ocGroups.map((oc, ocIdx) => (
               <div
                 key={`grp_oc_${oc.contractId}_${oc.ocNumber}_${ocIdx}`}
-                className="bg-[#101b2b] border border-[#2d4666] rounded-2xl overflow-hidden"
+                style={{
+                  backgroundColor: 'var(--syd-card-bg)',
+                  borderColor: 'var(--syd-border-color)',
+                }}
+                className="border rounded-2xl overflow-hidden"
               >
                 {/* OC Header */}
-                <div className="p-3 bg-[#142338] border-b border-[#2d4666] flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+                <div
+                  style={{
+                    backgroundColor: 'var(--syd-card-hover)',
+                    borderColor: 'var(--syd-border-color)',
+                  }}
+                  className="p-3 border-b flex flex-col md:flex-row md:items-center justify-between gap-2.5"
+                >
                   <div className="flex items-center gap-2 flex-wrap">
                     {oc.ocNumber && oc.ocNumber !== 'Sin N° OC' ? (
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-xs font-black text-sky-300 bg-sky-950 px-2 py-0.5 rounded border border-sky-400/40">
+                        <span
+                          style={{
+                            backgroundColor: 'var(--syd-accent-glow)',
+                            borderColor: 'var(--syd-accent)',
+                            color: 'var(--syd-accent)',
+                          }}
+                          className="font-mono text-xs font-black px-2 py-0.5 rounded border"
+                        >
                           {oc.ocNumber}
                         </span>
                         {!isReadOnly && onUpdateOCNumber && (
@@ -331,7 +372,7 @@ export const SupplierGroupedView: React.FC<SupplierGroupedViewProps> = ({
                               )}
                             </td>
                             <td className="py-2 px-3 text-sky-300">
-                              {it.brand} <span className="text-slate-400 font-normal">({it.model})</span>
+                              {resolveItemManufacturerBrand(it)} <span className="text-slate-400 font-normal">({it.model})</span>
                             </td>
                             <td className="py-2 px-3 text-center font-bold text-white">{it.quantity}</td>
                             <td className="py-2 px-3 text-right text-slate-300 font-mono">

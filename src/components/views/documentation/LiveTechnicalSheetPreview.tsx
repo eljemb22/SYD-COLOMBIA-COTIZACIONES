@@ -563,10 +563,10 @@ GARANTÍA: ${data.warranty || 'Garantía oficial del fabricante'}`;
             <button
               type="button"
               onClick={onDownloadPdf}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl shadow-lg transition flex items-center gap-1.5 cursor-pointer"
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs px-3.5 py-1.5 rounded-xl shadow-lg transition flex items-center gap-1.5 cursor-pointer border border-cyan-300/30"
               title="Descargar PDF Oficial Idéntico a la Vista Previa"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 text-cyan-200" />
               <span>Descargar PDF</span>
             </button>
           )}

@@ -194,10 +194,10 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
               e.stopPropagation();
               onWakeUp();
             }}
-            className="group w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-sky-500/25 hover:shadow-sky-500/40 transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-95"
+            className="group w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-sky-500/30 hover:shadow-sky-500/50 transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-95 border border-sky-300/40"
           >
             <span>Reanudar Sesión</span>
-            <kbd className="px-2 py-0.5 text-xs font-mono font-bold bg-slate-950/20 text-slate-950 border border-slate-950/30 rounded-md flex items-center gap-1 group-hover:bg-slate-950/30">
+            <kbd className="px-2 py-0.5 text-xs font-mono font-bold bg-white/20 text-white border border-white/40 rounded-md flex items-center gap-1 group-hover:bg-white/30 shadow-xs">
               <span>ENTER</span>
               <CornerDownLeft className="w-3.5 h-3.5 stroke-[2.5]" />
             </kbd>

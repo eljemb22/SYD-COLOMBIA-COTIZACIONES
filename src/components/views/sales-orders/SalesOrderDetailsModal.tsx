@@ -1,4 +1,6 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
+import { resolveItemManufacturerBrand } from '../../../utils/equipmentBrandResolver';
 import {
   X,
   Printer,
@@ -86,8 +88,15 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
   const remainingToInvoiceCOP = Math.max(0, totalOrderCOP - totalInvoicedCOP);
   const percentInvoiced = totalOrderCOP > 0 ? Math.min(100, Math.round((totalInvoicedCOP / totalOrderCOP) * 100)) : 0;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+  if (!isOpen || !order || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden text-slate-100 animate-in fade-in duration-200 my-8">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950/50">
@@ -219,8 +228,7 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
                         (order.salesOrderNumber && order.salesOrderNumber !== 'PENDIENTE' && c.salesOrderNumber === order.salesOrderNumber) ||
                         (order.contractId && (c.tenderClientId === order.contractId || c.id === order.contractId)) ||
                         (order.tenderClientId && (c.tenderClientId === order.tenderClientId || c.id === order.tenderClientId)) ||
-                        (order.contractNumber && c.contractNumber && order.contractNumber.trim().toLowerCase() === c.contractNumber.trim().toLowerCase()) ||
-                        (order.clientName && c.clientName && order.clientName.trim().toLowerCase() === c.clientName.trim().toLowerCase())
+                        (order.contractNumber && c.contractNumber && order.contractNumber.trim().toLowerCase() === c.contractNumber.trim().toLowerCase())
                     );
                     const contractItems = matchedContracts.flatMap((c) => c.items || []);
                     if (contractItems.length === 0 && matchedContracts.length === 0) return false;
@@ -301,7 +309,6 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
                         if (order.contractId && (c.tenderClientId === order.contractId || c.id === order.contractId)) return true;
                         if (order.tenderClientId && (c.tenderClientId === order.tenderClientId || c.id === order.tenderClientId)) return true;
                         if (order.contractNumber && c.contractNumber && order.contractNumber.trim().toLowerCase() === c.contractNumber.trim().toLowerCase()) return true;
-                        if (order.clientName && c.clientName && order.clientName.trim().toLowerCase() === c.clientName.trim().toLowerCase()) return true;
                         return false;
                       });
                       for (const mc of candidateContracts) {
@@ -325,7 +332,7 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
                         <td className="py-2.5 px-3 font-mono text-amber-400 font-bold">{item.code || '-'}</td>
                         <td className="py-2.5 px-3 font-medium text-white">{item.name}</td>
                         <td className="py-2.5 px-3 text-slate-400">
-                          {item.brand} {item.model ? `/ ${item.model}` : ''}
+                          {resolveItemManufacturerBrand(item)} {item.model ? `/ ${item.model}` : ''}
                         </td>
                         <td className="py-2.5 px-3 text-center font-bold text-slate-200">
                           {item.quantityToDispatch || 1}
@@ -521,6 +528,7 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

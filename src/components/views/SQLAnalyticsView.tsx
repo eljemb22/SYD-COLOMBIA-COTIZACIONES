@@ -222,7 +222,7 @@ export const SQLAnalyticsView: React.FC<SQLAnalyticsViewProps> = ({
   ];
 
   return (
-    <div id="sql-analytics-view-container" className="space-y-6 max-w-7xl mx-auto">
+    <div id="sql-analytics-view-container" className="space-y-6 w-full">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-indigo-500/30 shadow-2xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>

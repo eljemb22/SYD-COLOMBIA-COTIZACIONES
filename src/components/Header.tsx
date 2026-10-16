@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Menu, Check, Sparkles, Database, Share2, Copy, Cloud, Moon, Bell } from 'lucide-react';
+import { RefreshCw, Menu, Check, Sparkles, Database, Share2, Copy, Cloud, Moon, Bell, Paintbrush } from 'lucide-react';
 import { ActiveTab } from './Navigation';
 import { AuthUser, ThemeSettings } from '../types';
 import { SyDLogo } from './common/SyDLogo';
@@ -174,9 +174,15 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenShareModal}
             title="Instalar en este PC (Sin Node ni Administrador) y Compartir con otros computadores conectados"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-gradient-to-r from-sky-600/90 to-blue-600/90 hover:from-sky-500 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer active:scale-95 border border-sky-400/40"
+            style={{
+              backgroundColor: 'var(--syd-card-bg)',
+              borderColor: 'var(--syd-border-color)',
+              color: 'var(--syd-text-primary)',
+              borderRadius: 'var(--syd-btn-radius)',
+            }}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 border font-bold text-xs shadow-sm transition cursor-pointer active:scale-95 hover:opacity-90"
           >
-            <Share2 className="w-3.5 h-3.5 text-sky-200" />
+            <Share2 className="w-3.5 h-3.5" style={{ color: 'var(--syd-accent)' }} />
             <span className="hidden xl:inline">Instalar / Compartir</span>
             <span className="hidden sm:inline xl:hidden">Compartir</span>
           </button>
@@ -189,9 +195,15 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenBackupModal}
             title="Base de Datos & Excel: Exportar e importar todo en Microsoft Excel (.xlsx), respaldos y sincronización"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer active:scale-95 border border-emerald-400/40"
+            style={{
+              backgroundColor: 'var(--syd-card-bg)',
+              borderColor: 'var(--syd-border-color)',
+              color: 'var(--syd-text-primary)',
+              borderRadius: 'var(--syd-btn-radius)',
+            }}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 border font-bold text-xs shadow-sm transition cursor-pointer active:scale-95 hover:brightness-110 hover:border-[var(--syd-accent)]/50"
           >
-            <Database className="w-3.5 h-3.5 text-emerald-200" />
+            <Database className="w-3.5 h-3.5" style={{ color: 'var(--syd-accent)' }} />
             <span className="hidden xl:inline">Base de Datos / Excel</span>
             <span className="hidden sm:inline xl:hidden">Excel / DB</span>
           </button>
@@ -204,61 +216,19 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenGoogleWorkspaceModal}
             title="Google Workspace: Conexión con Hojas de Cálculo (Sheets), Catálogo N-FCO-03 y Respaldos en Google Drive"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer active:scale-95 border border-sky-400/40"
+            style={{
+              backgroundColor: 'var(--syd-card-bg)',
+              borderColor: 'var(--syd-border-color)',
+              color: 'var(--syd-text-primary)',
+              borderRadius: 'var(--syd-btn-radius)',
+            }}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 border font-bold text-xs shadow-sm transition cursor-pointer active:scale-95 hover:brightness-110 hover:border-[var(--syd-accent)]/50"
           >
-            <Cloud className="w-3.5 h-3.5 text-sky-200" />
+            <Cloud className="w-3.5 h-3.5" style={{ color: 'var(--syd-accent)' }} />
             <span className="hidden xl:inline">Google Workspace</span>
             <span className="hidden sm:inline xl:hidden">Sheets</span>
           </button>
         )}
-
-        {/* Notification Bell Button in Header */}
-        <button
-          id="btn-header-notifications"
-          type="button"
-          onClick={() => {
-            if (onOpenNotifications) {
-              onOpenNotifications();
-            } else {
-              window.dispatchEvent(new CustomEvent('syd-toggle-alerts-widget'));
-            }
-          }}
-          title={
-            hasNewUpdate
-              ? `Nueva actualización disponible (v${CURRENT_APP_VERSION}). Haz clic para ver notificaciones.`
-              : alertsCount > 0
-              ? `Centro de Notificaciones (${alertsCount} alertas pendientes)`
-              : 'Centro de Notificaciones (Al día)'
-          }
-          className={`relative flex items-center justify-center p-2 rounded-xl border text-xs font-bold transition cursor-pointer active:scale-95 shadow-xs ${
-            hasNewUpdate
-              ? 'bg-gradient-to-r from-emerald-600/30 to-cyan-600/30 border-emerald-400 text-emerald-300 ring-2 ring-emerald-500/40 animate-pulse'
-              : alertsCount > 0
-              ? 'bg-[#1a2d48] border-cyan-400/80 text-cyan-300 ring-2 ring-cyan-500/30'
-              : 'bg-[#152338] border-slate-700 text-slate-300 hover:text-white hover:border-slate-600'
-          }`}
-        >
-          <Bell
-            className={`w-4 h-4 ${
-              hasNewUpdate
-                ? 'text-emerald-300 animate-spin-slow'
-                : alertsCount > 0
-                ? 'text-cyan-300 animate-pulse'
-                : 'text-slate-400'
-            }`}
-          />
-          {(alertsCount > 0 || hasNewUpdate) && (
-            <span
-              className={`absolute -top-1 -right-1 font-black text-[9px] min-w-[17px] h-[17px] px-0.5 rounded-full flex items-center justify-center border border-slate-900 shadow-md ${
-                hasNewUpdate
-                  ? 'bg-emerald-400 text-slate-950 font-black animate-pulse'
-                  : 'bg-cyan-500 text-slate-950 font-bold'
-              }`}
-            >
-              {alertsCount > 0 ? alertsCount : '1'}
-            </span>
-          )}
-        </button>
 
         {/* Button to Open App Updates Center */}
         {onOpenAppUpdates && (
@@ -267,13 +237,22 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenAppUpdates}
             title="Centro de Actualizaciones y Novedades del Sistema"
-            className={`relative flex items-center gap-1.5 px-2.5 sm:px-3 py-2 border text-xs font-bold transition cursor-pointer active:scale-95 shadow-xs hover:opacity-90 rounded-xl ${
+            style={{
+              backgroundColor: 'var(--syd-card-bg)',
+              borderColor: 'var(--syd-border-color)',
+              color: 'var(--syd-text-primary)',
+              borderRadius: 'var(--syd-btn-radius)',
+            }}
+            className={`relative flex items-center gap-1.5 px-2.5 sm:px-3 py-2 border text-xs font-bold transition cursor-pointer active:scale-95 shadow-xs hover:brightness-110 hover:border-[var(--syd-accent)]/50 ${
               hasNewUpdate
-                ? 'bg-gradient-to-r from-emerald-600/30 to-cyan-600/30 border-emerald-400 text-emerald-300 ring-2 ring-emerald-500/40 animate-pulse'
-                : 'bg-[#152338] border-slate-700 text-slate-300 hover:text-white'
+                ? 'ring-2 ring-emerald-500/40 animate-pulse'
+                : ''
             }`}
           >
-            <Sparkles className={`w-3.5 h-3.5 ${hasNewUpdate ? 'text-emerald-400 animate-spin-slow' : 'text-cyan-400'}`} />
+            <Sparkles
+              className={`w-3.5 h-3.5 ${hasNewUpdate ? 'text-emerald-400 animate-spin-slow' : ''}`}
+              style={!hasNewUpdate ? { color: 'var(--syd-accent)' } : undefined}
+            />
             {hasNewUpdate ? (
               <span className="font-extrabold text-emerald-300 flex items-center gap-1">
                 <span>¡Actualizar!</span>
@@ -282,20 +261,6 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <span className="font-bold">v{CURRENT_APP_VERSION}</span>
             )}
-          </button>
-        )}
-
-        {/* Standby / Suspension Mode Button */}
-        {onSuspendApp && (
-          <button
-            id="btn-header-standby"
-            type="button"
-            onClick={onSuspendApp}
-            title="Activar Modo Suspensión / Standby (Atajo: Ctrl+L o Alt+S)"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-[#152338] hover:bg-[#1e3250] border border-slate-700 hover:border-sky-500/50 text-slate-300 hover:text-white text-xs font-bold rounded-xl transition cursor-pointer active:scale-95 shadow-xs"
-          >
-            <Moon className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden xl:inline">Standby</span>
           </button>
         )}
 
@@ -312,7 +277,7 @@ export const Header: React.FC<HeaderProps> = ({
             color: showSuccessToast ? '#10b981' : 'var(--syd-text-primary)',
             borderRadius: 'var(--syd-btn-radius)',
           }}
-          className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 border text-xs font-bold transition cursor-pointer active:scale-95 shadow-xs hover:opacity-90"
+          className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 border text-xs font-bold transition cursor-pointer active:scale-95 shadow-xs hover:brightness-110 hover:border-[var(--syd-accent)]/50"
         >
           <RefreshCw
             className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`}

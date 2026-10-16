@@ -16,6 +16,7 @@ export const DEFAULT_VIEWER_PERMISSIONS: ViewerPermissions = {
   canExportData: false,
   canManageBackups: false,
   canAccessSqlAnalytics: false,
+  canManageGmailPurchases: false,
 };
 
 export const FULL_ADMIN_PERMISSIONS: ViewerPermissions = {
@@ -33,6 +34,7 @@ export const FULL_ADMIN_PERMISSIONS: ViewerPermissions = {
   canExportData: true,
   canManageBackups: true,
   canAccessSqlAnalytics: true,
+  canManageGmailPurchases: true,
 };
 
 export const INITIAL_SYSTEM_USERS: StoredUserAccount[] = [
@@ -142,11 +144,23 @@ export const getStoredUsers = (): StoredUserAccount[] => {
   }
 };
 
+let authBroadcastChannel: BroadcastChannel | null = null;
+try {
+  if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+    authBroadcastChannel = new BroadcastChannel('syd_auth_broadcast_channel');
+  }
+} catch {}
+
 export const saveStoredUsers = (users: StoredUserAccount[]) => {
   try {
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('syd_users_updated', { detail: users }));
+    }
+    if (authBroadcastChannel) {
+      try {
+        authBroadcastChannel.postMessage({ type: 'USERS_UPDATED', users });
+      } catch {}
     }
     saveSystemUsersToFirestore(users).catch((e) => console.error('Cloud user sync error:', e));
   } catch (err) {
@@ -286,17 +300,8 @@ export const getActiveSessionUser = (): AuthUser | null => {
   return null;
 };
 
-/**
- * Returns null so that every time the app opens, refreshes, or restarts,
- * it always begins at the corporate login screen requesting credentials.
- */
 export const getStoredAuthUser = (): AuthUser | null => {
-  try {
-    sessionStorage.removeItem(AUTH_SESSION_KEY);
-    localStorage.removeItem(AUTH_SESSION_KEY);
-    localStorage.removeItem('syd_current_session_user_v3');
-    sessionStorage.removeItem('syd_current_session_user_v3');
-  } catch {}
+  // Cada vez que se abra la aplicación debe solicitar autenticación (pantalla de ingreso primero)
   return null;
 };
 
@@ -330,33 +335,6 @@ export const authenticateUser = (usernameInput: string, passwordInput: string): 
     return null;
   }
 
-  // Master Admin direct override for Jairo
-  if (
-    (cleanUsername === 'jairo' ||
-     cleanUsername === 'jairo@syd.com.co' ||
-     cleanUsername === 'admin' ||
-     cleanUsername === 'administrador') &&
-    cleanPass === '221295'
-  ) {
-    const defaultAdmin = INITIAL_SYSTEM_USERS.find((u) => u.role === 'admin') || INITIAL_SYSTEM_USERS[0];
-    const { password, ...safeUser } = defaultAdmin;
-    return safeUser;
-  }
-
-  // Master Viewer direct override for Fabian
-  if (
-    (cleanUsername === 'fabian' ||
-     cleanUsername === 'fabian@syd.com.co' ||
-     cleanUsername === 'investigador' ||
-     cleanUsername === 'consulta' ||
-     cleanUsername === 'viewer') &&
-    cleanPass === '123456'
-  ) {
-    const defaultViewer = INITIAL_SYSTEM_USERS.find((u) => u.role === 'viewer') || INITIAL_SYSTEM_USERS[1];
-    const { password, ...safeUser } = defaultViewer;
-    return safeUser;
-  }
-
   let users = getStoredUsers();
   if (!Array.isArray(users) || users.length === 0) {
     users = INITIAL_SYSTEM_USERS;
@@ -371,20 +349,53 @@ export const authenticateUser = (usernameInput: string, passwordInput: string): 
       u.name?.toLowerCase() !== 'hijo'
   );
 
+  // Check if credentials match any registered user in system
   const found = filteredUsers.find(
     (u) =>
       (u.username?.toLowerCase() === cleanUsername ||
        u.name?.toLowerCase() === cleanUsername ||
        u.email?.toLowerCase() === cleanUsername ||
        (cleanUsername === 'admin' && u.role === 'admin') ||
-       (cleanUsername === 'investigador' && u.role === 'viewer')) &&
-      (u.password === cleanPass || (u.role === 'admin' && cleanPass === '221295'))
+       (cleanUsername === 'investigador' && u.role === 'viewer') ||
+       (cleanUsername === 'jairo' && u.username?.toLowerCase() === 'jairo') ||
+       (cleanUsername === 'fabian' && u.username?.toLowerCase() === 'fabian')) &&
+      (u.password === cleanPass ||
+       (u.role === 'admin' && cleanPass === '221295') ||
+       (u.role === 'viewer' && cleanUsername === 'fabian' && cleanPass === '123456'))
   );
 
   if (found) {
     const { password, ...safeUser } = found;
     return safeUser;
   }
+
+  // Fallback to default admin for Jairo if not found in stored users
+  if (
+    (cleanUsername === 'jairo' ||
+     cleanUsername === 'jairo@syd.com.co' ||
+     cleanUsername === 'admin' ||
+     cleanUsername === 'administrador') &&
+    cleanPass === '221295'
+  ) {
+    const defaultAdmin = INITIAL_SYSTEM_USERS.find((u) => u.role === 'admin') || INITIAL_SYSTEM_USERS[0];
+    const { password, ...safeUser } = defaultAdmin;
+    return safeUser;
+  }
+
+  // Fallback to default viewer for Fabian if not found in stored users
+  if (
+    (cleanUsername === 'fabian' ||
+     cleanUsername === 'fabian@syd.com.co' ||
+     cleanUsername === 'investigador' ||
+     cleanUsername === 'consulta' ||
+     cleanUsername === 'viewer') &&
+    cleanPass === '123456'
+  ) {
+    const defaultViewer = INITIAL_SYSTEM_USERS.find((u) => u.role === 'viewer') || INITIAL_SYSTEM_USERS[1];
+    const { password, ...safeUser } = defaultViewer;
+    return safeUser;
+  }
+
   return null;
 };
 

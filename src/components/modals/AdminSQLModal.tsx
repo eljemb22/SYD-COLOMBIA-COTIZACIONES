@@ -105,7 +105,7 @@ export const AdminSQLModal: React.FC<AdminSQLModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#334d6e] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-slate-950 font-black shadow-md shrink-0">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-black shadow-md shrink-0">
               <Database className="w-5 h-5" />
             </div>
             <div>
@@ -237,9 +237,9 @@ export const AdminSQLModal: React.FC<AdminSQLModalProps> = ({
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 transition cursor-pointer"
+                    className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 transition cursor-pointer border border-cyan-300/30"
                   >
-                    <Unlock className="w-4 h-4" />
+                    <Unlock className="w-4 h-4 text-cyan-100" />
                     <span>Desbloquear Consola</span>
                   </button>
                 </div>

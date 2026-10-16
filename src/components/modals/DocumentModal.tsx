@@ -17,14 +17,31 @@ import {
   FileType,
   Trash2,
   Plus,
+  Check,
 } from 'lucide-react';
 import { TechnicalDocument, TechnicalDocumentType, MedicalEquipment } from '../../types';
+import { UnifiedAttachmentSelector, AttachmentResult } from '../common/UnifiedAttachmentSelector';
 
 interface DocumentModalProps {
   isOpen: boolean;
   equipments: MedicalEquipment[];
   existingDocuments?: TechnicalDocument[];
   initialEquipmentId?: string;
+  initialEquipmentData?: {
+    id?: string;
+    code?: string;
+    name?: string;
+    brand?: string;
+    model?: string;
+    invimaRecordNumber?: string;
+    invimaExpiryDate?: string;
+  };
+  contractContext?: {
+    processNumber: string;
+    clientName: string;
+    contractFolderId?: string;
+    contractFolderName?: string;
+  };
   initialDocType?: string;
   onClose: () => void;
   onSave: (doc: TechnicalDocument) => void;
@@ -116,6 +133,8 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
   equipments,
   existingDocuments = [],
   initialEquipmentId,
+  initialEquipmentData,
+  contractContext,
   initialDocType,
   onClose,
   onSave,
@@ -135,6 +154,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
 
   // File state
+  const [attachment, setAttachment] = useState<AttachmentResult | null>(null);
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('');
   const [fileData, setFileData] = useState<string | undefined>(undefined);
@@ -143,6 +163,31 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleAttachmentChange = (att: AttachmentResult | null) => {
+    setAttachment(att);
+    if (att) {
+      setFileName(att.fileName);
+      setFileSize(att.fileSize);
+      setFileData(att.fileData);
+      setFileType(att.fileType);
+      setErrorMessage(null);
+      if (att.classification) {
+        handleTypeSelect(att.classification);
+      }
+      if (att.invimaNumber) {
+        setInvimaNumber(att.invimaNumber);
+      }
+      if (att.fileName && (!title || title.startsWith('Ficha Técnica Oficial') || title.startsWith('Registro Sanitario') || title.startsWith('Manual de Operación') || title.startsWith('Documento Técnico'))) {
+        setTitle(att.fileName.replace(/\.[^/.]+$/, ''));
+      }
+    } else {
+      setFileName('');
+      setFileSize('');
+      setFileData(undefined);
+      setFileType(undefined);
+    }
+  };
 
   // Sync state with props when opening modal
   useEffect(() => {
@@ -160,7 +205,25 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
         setCustomTypeName(targetType === 'Otro' ? '' : targetType);
       }
 
-      const eq = equipments.find((e) => e.id === selectedEqId);
+      let eq = equipments.find((e) => e.id === selectedEqId);
+      if (!eq && initialEquipmentData) {
+        eq = {
+          id: selectedEqId,
+          code: initialEquipmentData.code || '',
+          name: initialEquipmentData.name || '',
+          brand: initialEquipmentData.brand || 'SYD',
+          model: initialEquipmentData.model || 'General',
+          category: 'Biomédico',
+          description: '',
+          technicalSpecs: [],
+          accessories: [],
+          commercialConditions: '',
+          invimaRecordNumber: initialEquipmentData.invimaRecordNumber || '',
+          invimaExpiryDate: initialEquipmentData.invimaExpiryDate || '2028-12-31',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        } as MedicalEquipment;
+      }
       const existingSameTypeCount = existingDocuments.filter(
         (d) => d.equipmentId === selectedEqId && d.docType === targetType
       ).length;
@@ -197,6 +260,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
         setTitle('');
       }
 
+      setAttachment(null);
       setFileName('');
       setFileSize('');
       setFileData(undefined);
@@ -220,6 +284,12 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
 
   const handleEquipmentChange = (newEqId: string) => {
     setEquipmentId(newEqId);
+    setAttachment(null);
+    setFileName('');
+    setFileSize('');
+    setFileData(undefined);
+    setFileType(undefined);
+    setErrorMessage(null);
     const eq = equipments.find((e) => e.id === newEqId);
     const effectiveType = selectedType === 'Otro Anexo' && customTypeName ? customTypeName : selectedType;
     if (eq) {
@@ -259,7 +329,29 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentEquipment = equipments.find((eq) => eq.id === equipmentId);
+  const currentEquipment = useMemo(() => {
+    let eq = equipments.find((e) => e.id === equipmentId);
+    if (!eq && initialEquipmentData && (!initialEquipmentId || equipmentId === initialEquipmentId)) {
+      eq = {
+        id: equipmentId || initialEquipmentData.id || `eq-${Date.now()}`,
+        code: initialEquipmentData.code || '',
+        name: initialEquipmentData.name || '',
+        brand: initialEquipmentData.brand || 'SYD',
+        model: initialEquipmentData.model || 'General',
+        category: 'Biomédico',
+        description: '',
+        technicalSpecs: [],
+        accessories: [],
+        commercialConditions: '',
+        invimaRecordNumber: initialEquipmentData.invimaRecordNumber || '',
+        invimaExpiryDate: initialEquipmentData.invimaExpiryDate || '2028-12-31',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as MedicalEquipment;
+    }
+    return eq;
+  }, [equipments, equipmentId, initialEquipmentData, initialEquipmentId]);
+
   const attachedForThisEq = existingDocuments.filter((d) => d.equipmentId === equipmentId);
 
   const validateAndProcessFile = (file: File) => {
@@ -351,8 +443,13 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
       return;
     }
 
-    if (!fileName || !fileData) {
-      setErrorMessage('Es obligatorio adjuntar un archivo en formato PDF, JPG, PNG o Word (.doc/.docx).');
+    const hasAttachedFile = Boolean(
+      (fileName && (fileData || attachment?.fileUrl || attachment?.downloadUrl || attachment?.driveFileId)) ||
+      (attachment && (attachment.fileData || attachment.fileUrl || attachment.downloadUrl || attachment.driveFileId))
+    );
+
+    if (!hasAttachedFile) {
+      setErrorMessage('Es obligatorio adjuntar un archivo (PDF, JPG, PNG, Word) o vincular un documento desde Google Drive.');
       return;
     }
 
@@ -375,10 +472,15 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
       equipmentName: selectedEq ? `${selectedEq.name} (${selectedEq.brand})` : 'General SYD',
       docType: effectiveDocType,
       title: title.trim(),
-      fileName: fileName.trim(),
-      fileSize: fileSize || '1.5 MB',
-      fileData: fileData,
-      fileType: fileType || (fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream'),
+      fileName: (attachment?.fileName || fileName).trim(),
+      fileSize: attachment?.fileSize || fileSize || (attachment?.isCloudLink ? 'Google Drive' : '1.5 MB'),
+      fileData: attachment?.fileData || fileData,
+      fileType: attachment?.fileType || fileType || (fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream'),
+      fileUrl: attachment?.fileUrl,
+      downloadUrl: attachment?.downloadUrl,
+      isCloudLink: attachment?.isCloudLink,
+      cloudProvider: attachment?.cloudProvider,
+      driveFileId: attachment?.driveFileId,
       uploadDate: new Date().toISOString().split('T')[0],
       status,
       invimaNumber:
@@ -393,6 +495,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
       onClose();
     } else {
       // Clear current file so user can immediately attach another one
+      setAttachment(null);
       setFileName('');
       setFileSize('');
       setFileData(undefined);
@@ -420,9 +523,12 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto animate-fadeIn"
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-5 shadow-2xl animate-scaleUp max-h-[82vh] h-[80vh] flex flex-col overflow-hidden my-auto">
+      <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-5 shadow-2xl animate-scaleUp max-h-[92vh] h-[88vh] flex flex-col overflow-hidden my-auto">
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-2.5 border-b border-[#334d6e] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -539,11 +645,12 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <span className="font-bold text-xs text-white truncate">{dt.label}</span>
-                        {countSameType > 0 && (
-                          <span className="text-[9.5px] bg-blue-500/20 text-blue-300 px-1.5 py-0.2 rounded font-black shrink-0">
-                            {countSameType} existente{countSameType > 1 ? 's' : ''}
+                        {countSameType > 0 ? (
+                          <span className="text-[9.5px] bg-emerald-500/25 border border-emerald-400 text-emerald-300 px-1.5 py-0.2 rounded font-black shrink-0 flex items-center gap-0.5">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                            <span>{countSameType} Subido{countSameType > 1 ? 's' : ''}</span>
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <p className="text-[10px] text-slate-400 leading-tight mt-0.5 line-clamp-1">
                         {dt.desc}
@@ -620,98 +727,51 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
             )}
           </div>
 
-          {/* File Upload Drag & Drop */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                <span className="text-[#38bdf8]">3.</span> Archivo Adjunto (PDF, JPG, PNG, Word) *
-              </label>
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
-                <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">PDF</span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">JPG/PNG</span>
-                <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">DOCX/DOC</span>
-              </div>
-            </div>
-
-            {fileName && fileData ? (
-              // Attached File Card
-              <div className="bg-[#15253d] border-2 border-emerald-500/60 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-md animate-fadeIn">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-3 rounded-xl bg-[#111c2e] border border-[#334d6e] shrink-0">
-                    {fileCategory === 'pdf' ? (
-                      <FileType className="w-6 h-6 text-rose-400" />
-                    ) : fileCategory === 'image' ? (
-                      <ImageIcon className="w-6 h-6 text-emerald-400" />
-                    ) : (
-                      <FileText className="w-6 h-6 text-blue-400" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white truncate max-w-xs block">
-                        {fileName}
-                      </span>
-                      <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                        {fileCategory.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      Tamaño: <strong className="text-slate-200">{fileSize}</strong> • Archivo listo para visualización y descarga
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleRemoveFile}
-                  className="px-3 py-1.5 text-xs font-bold text-rose-300 hover:text-white bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 rounded-xl transition cursor-pointer flex items-center gap-1.5 shrink-0"
-                  title="Eliminar este archivo para seleccionar otro"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Quitar para subir otro</span>
-                </button>
-              </div>
-            ) : (
-              // Drag & Drop Area
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleFileDrop}
-                className={`border-2 border-dashed rounded-xl p-5 text-center transition cursor-pointer ${
-                  isDragging
-                    ? 'border-[#38bdf8] bg-[#38bdf8]/15'
-                    : 'border-[#334d6e] bg-[#15253d] hover:border-[#38bdf8]'
-                }`}
-              >
-                <UploadCloud className="w-8 h-8 text-[#38bdf8] mx-auto mb-2" />
-                <p className="font-bold text-white text-xs mb-1">
-                  Arrastre aquí su archivo (PDF, JPG, PNG, DOC, DOCX)
-                </p>
-                <p className="text-[11px] text-slate-400 mb-3">
-                  Solo se admiten documentos en formato PDF, imágenes o Word
-                </p>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  id="doc-file-input-dynamic"
-                />
-                <label
-                  htmlFor="doc-file-input-dynamic"
-                  className="inline-block bg-[#1e314b] text-[#38bdf8] hover:bg-[#284368] hover:text-white px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border border-[#334d6e]"
-                >
-                  Examinar Archivo desde su Equipo
-                </label>
-              </div>
-            )}
-          </div>
+          {/* Unified File / Cloud Link / Drive Selector */}
+          <UnifiedAttachmentSelector
+            key={`att-sel-${equipmentId || currentEquipment?.id || 'eq'}-${contractContext?.contractFolderId || contractContext?.processNumber || 'no-contract'}-${selectedType}`}
+            currentAttachment={
+              attachment ||
+              (fileName && (fileData || attachment?.fileUrl)
+                ? {
+                    fileName,
+                    fileSize: fileSize || 'Documento adjunto',
+                    fileData,
+                    fileType,
+                    fileUrl: attachment?.fileUrl,
+                    downloadUrl: attachment?.downloadUrl,
+                    isCloudLink: Boolean(attachment?.isCloudLink),
+                    cloudProvider: attachment?.cloudProvider,
+                    isFolder: Boolean(attachment?.isFolder),
+                    driveFileId: attachment?.driveFileId,
+                  }
+                : null)
+            }
+            onAttachmentChange={handleAttachmentChange}
+            label="3. Archivo Adjunto o Enlace de Descarga (PDF, Imagen, Word, Drive) *"
+            equipmentName={currentEquipment ? currentEquipment.name : ''}
+            equipmentData={
+              currentEquipment
+                ? {
+                    partNumber: currentEquipment.code,
+                    name: currentEquipment.name,
+                    brand: currentEquipment.brand,
+                    model: currentEquipment.model,
+                    invimaRecordNumber: currentEquipment.invimaRecordNumber,
+                  }
+                : undefined
+            }
+            existingDocumentTypes={attachedForThisEq.map((d) => d.docType)}
+            contractContext={contractContext}
+            onDocumentClassified={(info) => {
+              if (info.classification) {
+                handleTypeSelect(info.classification);
+              }
+              if (info.invimaNumber) {
+                setInvimaNumber(info.invimaNumber);
+              }
+            }}
+          />
 
           {/* Document Title */}
           <div>

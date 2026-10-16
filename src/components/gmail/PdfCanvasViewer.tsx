@@ -75,10 +75,13 @@ export const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({
         const arrayBuffer = await blob.arrayBuffer();
         if (!isMounted) return;
 
-        // Verify valid PDF header (%PDF)
-        const header = new Uint8Array(arrayBuffer.slice(0, 5));
-        const headerStr = String.fromCharCode(...header);
-        if (!headerStr.startsWith('%PDF')) {
+        // Verify valid PDF header (%PDF) in the initial chunk (handles BOM or leading comments)
+        const headerSlice = new Uint8Array(arrayBuffer.slice(0, 1024));
+        let headerStr = '';
+        for (let i = 0; i < headerSlice.length; i++) {
+          headerStr += String.fromCharCode(headerSlice[i]);
+        }
+        if (!headerStr.includes('%PDF')) {
           throw new Error('El archivo no contiene un encabezado PDF estándar válido (%PDF). Se visualizará en modo nativo.');
         }
 
@@ -372,34 +375,58 @@ export const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({
         className="flex-1 min-h-0 w-full overflow-hidden bg-[#0a0f1d] flex flex-col items-center justify-center relative"
       >
         {viewMode === 'native' || renderError ? (
-          <div className="w-full h-full flex flex-col">
-            {renderError && (
-              <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-amber-300 text-xs flex items-center justify-between">
-                <span>Visualizando documento en el Visor PDF integrado del navegador.</span>
+          <div className="w-full h-full flex flex-col p-4 sm:p-6 overflow-y-auto">
+            <div className="max-w-xl w-full mx-auto my-auto bg-[#131f33] border border-cyan-500/30 rounded-2xl p-6 shadow-2xl text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center mx-auto">
+                <FileText className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[10.5px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold uppercase">
+                  Documento PDF Adjunto
+                </span>
+                <h4 className="text-base font-bold text-white break-all">{filename}</h4>
+                <p className="text-xs text-slate-300 max-w-md mx-auto">
+                  El visor del navegador bloquea iframes embebidos por seguridad. Puedes abrir la previsualización directa en una pestaña limpia o descargarlo.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+                {effectiveBlobUrl && (
+                  <button
+                    type="button"
+                    onClick={onOpenInNewTab || (() => window.open(effectiveBlobUrl, '_blank'))}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Abrir en Pestaña Nueva</span>
+                  </button>
+                )}
+
+                {onDownload && (
+                  <button
+                    type="button"
+                    onClick={onDownload}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Descargar Archivo</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
                     setRenderError(null);
                     setViewMode('canvas');
                   }}
-                  className="text-xs underline hover:text-white cursor-pointer"
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs border border-slate-700 transition cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Reintentar en Canvas
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Reintentar Canvas</span>
                 </button>
               </div>
-            )}
-            {effectiveBlobUrl ? (
-              <iframe
-                src={`${effectiveBlobUrl}#toolbar=1&navpanes=0&view=FitH`}
-                className="w-full h-full border-0 bg-white"
-                title={filename}
-              />
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
-                <AlertCircle className="w-8 h-8 text-rose-400 mb-2" />
-                <p>No se pudo generar la URL del archivo para visualización directa.</p>
-              </div>
-            )}
+            </div>
           </div>
         ) : isLoading ? (
           <div className="flex flex-col items-center justify-center gap-3 p-10 text-center">

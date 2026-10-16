@@ -26,6 +26,25 @@ export const WorkflowPipelineGuide: React.FC<WorkflowPipelineGuideProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(!compact);
 
+  // Determine strictly ONE active step based on the current tab
+  const activeStepNum = (() => {
+    switch (currentTab) {
+      case 'ventas':
+      case 'historial':
+        return 1;
+      case 'licitaciones':
+        return 2;
+      case 'seguimiento_oc':
+        return 3;
+      case 'gmail_compras':
+        return 4;
+      case 'ordenes_venta':
+        return 5;
+      default:
+        return null;
+    }
+  })();
+
   const steps = [
     {
       num: 1,
@@ -123,8 +142,8 @@ export const WorkflowPipelineGuide: React.FC<WorkflowPipelineGuideProps> = ({
         <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
           {steps.map((step, idx) => {
             const Icon = step.icon;
-            const isCurrent =
-              currentTab === step.tab || (step.altTab && currentTab === step.altTab);
+            // Only mark strictly one step as active at a time
+            const isCurrent = activeStepNum !== null && step.num === activeStepNum;
 
             return (
               <button

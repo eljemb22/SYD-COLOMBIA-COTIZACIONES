@@ -586,7 +586,13 @@ export const SalesView: React.FC<SalesViewProps> = ({
       />
 
       {/* TOP CONTROL PANEL */}
-      <div className="bg-[#192b45] border border-[#334d6e] rounded-2xl p-5 shadow-xl">
+      <div
+        id="sales-view-top-control-panel"
+        className="border border-[#334d6e] rounded-2xl p-4 sm:p-5 shadow-xl relative transition-all"
+        style={{
+          backgroundColor: 'var(--syd-card-bg, #15253d)',
+        }}
+      >
         {/* Banner for ReadOnly / Investigator Mode */}
         {isReadOnly && (
           <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs font-semibold flex items-center justify-between shadow-sm">
@@ -844,7 +850,12 @@ export const SalesView: React.FC<SalesViewProps> = ({
         )}
 
         {/* CALIBRATION SLIDERS (Subir / Bajar, Márgenes Laterales y Tamaño de Tabla) */}
-        <div className="mt-4 pt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-[#15253d] p-4 rounded-xl border border-[#334d6e]/70">
+        <div
+          className="mt-4 pt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 rounded-xl border border-[#334d6e]/70"
+          style={{
+            backgroundColor: 'var(--syd-sidebar-bg, #111c2e)',
+          }}
+        >
           {/* SLIDER 1: SUBIR / BAJAR */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
@@ -947,7 +958,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
       </div>
 
       {/* DOCUMENT PREVIEW CONTAINER (3 HOJAS DE WORD) */}
-      <div className="flex flex-col items-center space-y-12">
+      <div className="relative z-0 flex flex-col items-center space-y-12">
         {/* ========================================================================= */}
         {/* ======================= HOJA 1: CARTA DE PRESENTACIÓN ================== */}
         {/* ========================================================================= */}
@@ -963,7 +974,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
           <div
             id="hoja-word-1"
             data-printable-sheet="true"
-            className="relative bg-white text-slate-900 rounded-lg shadow-2xl overflow-hidden min-h-[1100px] border border-slate-300 print:border-none print:shadow-none print:m-0 commercial-quote-sheet print-paper word-document-page"
+            className="relative z-0 bg-white text-slate-900 rounded-lg shadow-2xl overflow-hidden min-h-[1100px] border border-slate-300 print:border-none print:shadow-none print:m-0 commercial-quote-sheet print-paper word-document-page"
             style={{
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
             }}
@@ -981,7 +992,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
 
             {/* DOCUMENT CONTENT */}
             <div
-              className="relative z-10 font-sans text-[13.5px] leading-relaxed text-slate-900"
+              className="relative z-1 font-sans text-[13.5px] leading-relaxed text-slate-900"
               style={{
                 paddingTop: `${subirBajar}px`,
                 paddingLeft: `${izqDer}px`,
@@ -1204,7 +1215,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
               <div
                 id={`hoja-word-${pageChunk.globalPageNumber}`}
                 data-printable-sheet="true"
-                className="relative bg-white text-slate-900 rounded-lg shadow-2xl overflow-hidden min-h-[1056px] h-[1056px] border border-slate-300 print:border-none print:shadow-none print:m-0 commercial-quote-sheet print-paper word-document-page flex flex-col justify-between"
+                className="relative z-0 bg-white text-slate-900 rounded-lg shadow-2xl overflow-hidden min-h-[1056px] h-[1056px] border border-slate-300 print:border-none print:shadow-none print:m-0 commercial-quote-sheet print-paper word-document-page flex flex-col justify-between"
                 style={{
                   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
                 }}
@@ -1222,7 +1233,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
 
                 {/* DOCUMENT CONTENT */}
                 <div
-                  className="relative z-10 font-sans text-slate-900 flex-1 flex flex-col justify-start"
+                  className="relative z-1 font-sans text-slate-900 flex-1 flex flex-col justify-start"
                   style={{
                     paddingTop: `${subirBajar}px`,
                     paddingLeft: `${izqDer}px`,
@@ -1634,7 +1645,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
             <div
               id={`hoja-word-${totalPagesCount}`}
               data-printable-sheet="true"
-              className="relative bg-white text-slate-900 rounded-lg shadow-2xl overflow-hidden min-h-[1056px] border border-slate-300 print:border-none print:shadow-none print:m-0 commercial-quote-sheet print-paper word-document-page"
+              className="relative z-0 bg-white text-slate-900 rounded-lg shadow-2xl overflow-hidden min-h-[1056px] border border-slate-300 print:border-none print:shadow-none print:m-0 commercial-quote-sheet print-paper word-document-page"
               style={{
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
               }}
@@ -1652,7 +1663,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
 
               {/* DOCUMENT CONTENT */}
               <div
-                className="relative z-10 font-sans text-[13.5px] leading-relaxed text-slate-900"
+                className="relative z-1 font-sans text-[13.5px] leading-relaxed text-slate-900"
                 style={{
                   paddingTop: `${subirBajar}px`,
                   paddingLeft: `${izqDer}px`,
@@ -1785,7 +1796,10 @@ export const SalesView: React.FC<SalesViewProps> = ({
       {isClientModalOpen &&
         createPortal(
           <div
-            className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+            className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-4 animate-fadeIn"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsClientModalOpen(false);
+            }}
           >
             <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-xl w-full shadow-2xl animate-scaleUp overflow-hidden flex flex-col text-slate-200">
               {/* Modal Header */}

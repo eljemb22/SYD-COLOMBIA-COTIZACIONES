@@ -335,7 +335,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-[#192b45] p-4 rounded-xl border border-[#334d6e]/70 flex flex-col md:flex-row items-center gap-3">
+      <div className="bg-[#192b45]/95 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-[#334d6e] flex flex-col md:flex-row items-center gap-3 sticky top-0 z-10 shadow-lg">
         {/* Search */}
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -657,7 +657,12 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
 
       {/* DETAIL / PREVIEW MODAL */}
       {previewQuote && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
+        <div
+          className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-2.5 sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewQuote(null);
+          }}
+        >
           <div className="bg-[#192b45] border border-[#334d6e] rounded-2xl w-full max-w-5xl max-h-[92vh] h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="p-4 border-b border-[#334d6e] flex items-center justify-between bg-[#15253d]">

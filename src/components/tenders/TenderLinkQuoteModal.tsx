@@ -88,7 +88,10 @@ export const TenderLinkQuoteModal: React.FC<TenderLinkQuoteModalProps> = ({
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 animate-fadeIn"
+      onClick={onClose}
+    >
       <div
         className="bg-[#111e30] border border-[#334d6e] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-scaleUp"
         onClick={(e) => e.stopPropagation()}

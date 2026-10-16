@@ -32,6 +32,7 @@ import {
   AuthUser,
   OCStatus,
 } from '../../../types';
+import { resolveItemManufacturerBrand } from '../../../utils/equipmentBrandResolver';
 import { formatCOP } from '../../../utils/formatters';
 
 interface ContractTraceabilityViewProps {
@@ -93,12 +94,13 @@ export const ContractTraceabilityView: React.FC<ContractTraceabilityViewProps> =
     return currentOrdersList.length > 0 ? currentOrdersList[0].id : salesOrders[0]?.id || '';
   });
 
-  // Make sure selectedOrderId stays synchronized with current list
+  // Make sure selectedOrder strictly comes from currentOrdersList (never leaks active order into completed view)
   const selectedOrder = useMemo(() => {
-    const found = salesOrders.find((o) => o.id === selectedOrderId);
+    if (currentOrdersList.length === 0) return null;
+    const found = currentOrdersList.find((o) => o.id === selectedOrderId);
     if (found) return found;
-    return currentOrdersList[0] || salesOrders[0];
-  }, [salesOrders, selectedOrderId, currentOrdersList]);
+    return currentOrdersList[0] || null;
+  }, [selectedOrderId, currentOrdersList]);
 
   // Find linked Quote
   const linkedQuote = useMemo(() => {
@@ -273,6 +275,7 @@ export const ContractTraceabilityView: React.FC<ContractTraceabilityViewProps> =
             onClick={() => {
               setActiveTraceSection('completed');
               if (completedOrders.length > 0) setSelectedOrderId(completedOrders[0].id);
+              else setSelectedOrderId('');
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTraceSection === 'completed'
@@ -586,7 +589,7 @@ export const ContractTraceabilityView: React.FC<ContractTraceabilityViewProps> =
                               </div>
                             </td>
                             <td className="py-3 px-3 text-slate-300">
-                              <span className="font-bold text-sky-300 block">{item.brand}</span>
+                              <span className="font-bold text-sky-300 block">{resolveItemManufacturerBrand(item)}</span>
                               <span className="text-[10px] text-slate-400">{item.model}</span>
                             </td>
                             <td className="py-3 px-3 text-center font-bold text-white">

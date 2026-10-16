@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   ReceiptText,
@@ -26,6 +27,8 @@ import {
 } from '../../../types';
 import { generateNextInvoiceNumber } from '../../../utils/salesOrdersStorage';
 import { formatCOP } from '../../../utils/formatters';
+import { saveFileToIndexedDB } from '../../../utils/fileStorageIndexedDB';
+import { UnifiedAttachmentSelector, AttachmentResult } from '../../common/UnifiedAttachmentSelector';
 
 interface AttachInvoiceModalProps {
   isOpen: boolean;
@@ -163,21 +166,59 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       const dataUrl = loadEvt.target?.result as string;
       const sizeKB = (file.size / 1024).toFixed(1);
       const sizeStr = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : `${sizeKB} KB`;
+      const docId = `doc-${Date.now()}`;
 
       setAttachedInvoiceFile({
-        id: `doc-${Date.now()}`,
+        id: docId,
         name: file.name,
         size: sizeStr,
         dataUrl: dataUrl,
         type: file.type,
         uploadedAt: new Date().toISOString(),
       });
-    };
-    reader.readAsDataURL(file);
-  };
 
-  const handleRemoveFile = () => {
-    setAttachedInvoiceFile(undefined);
+      // Save binary copy to IndexedDB for seamless PDF previews
+      saveFileToIndexedDB(docId, dataUrl, {
+        fileName: file.name,
+        fileSize: sizeStr,
+        mimeType: file.type,
+      }).catch((err) => console.warn('Could not save to IndexedDB:', err));
+    };
+      reader.readAsDataURL(file);
+    };
+
+    const handleRemoveFile = () => {
+      setAttachedInvoiceFile(undefined);
+    };
+
+  const handleInvoiceAttachmentChange = (att: AttachmentResult | null) => {
+    if (!att) {
+      setAttachedInvoiceFile(undefined);
+      return;
+    }
+    const docId = `doc-${Date.now()}`;
+    const newAttachedFile: AttachedSalesDoc = {
+      id: docId,
+      name: att.fileName,
+      size: att.fileSize,
+      dataUrl: att.fileData || att.fileUrl || '',
+      fileUrl: att.fileUrl,
+      downloadUrl: att.downloadUrl,
+      isCloudLink: att.isCloudLink,
+      cloudProvider: att.cloudProvider,
+      driveFileId: att.driveFileId,
+      type: att.fileType,
+      uploadedAt: new Date().toISOString(),
+    };
+    setAttachedInvoiceFile(newAttachedFile);
+
+    if (att.fileData && att.fileData.startsWith('data:')) {
+      saveFileToIndexedDB(docId, att.fileData, {
+        fileName: att.fileName,
+        fileSize: att.fileSize,
+        mimeType: att.fileType,
+      }).catch((err) => console.warn('Could not save to IndexedDB:', err));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -255,8 +296,15 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
     orderTotalCOP > 0 ? Math.min(100, Math.round((currentAccumulatedAfterThis / orderTotalCOP) * 100)) : 0;
   const isCoveringFullValue = orderTotalCOP > 0 && currentAccumulatedAfterThis >= orderTotalCOP;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+  if (!isOpen || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/25 overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70">
@@ -397,59 +445,33 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[68vh] overflow-y-auto">
-          {/* Section 1: Upload Invoice File */}
-          <div className="p-4 rounded-xl bg-slate-800/40 border border-purple-500/30 space-y-2">
-            <label className="block text-xs font-bold text-purple-300 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Paperclip className="w-4 h-4 text-purple-400" />
-                1. Adjuntar Archivo de Soporte (PDF o Imagen de Factura)
-              </span>
-              <span className="text-[11px] text-slate-400 font-normal">PDF / PNG / JPG</span>
-            </label>
-
-            {attachedInvoiceFile ? (
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="p-2 rounded-lg bg-purple-500/20 text-purple-300">
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  <div className="truncate">
-                    <p className="text-xs font-bold text-white truncate">{attachedInvoiceFile.name}</p>
-                    <span className="text-[11px] text-slate-400">{attachedInvoiceFile.size} • Adjuntada correctamente</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <a
-                    href={attachedInvoiceFile.dataUrl}
-                    download={attachedInvoiceFile.name}
-                    className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                    title="Descargar archivo"
-                  >
-                    <Download className="w-4 h-4" />
-                  </a>
-                  <button
-                    type="button"
-                    onClick={handleRemoveFile}
-                    className="p-2 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
-                    title="Cambiar archivo"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-purple-500/40 rounded-xl bg-purple-950/20 hover:bg-purple-950/30 cursor-pointer transition-colors group">
-                <Upload className="w-7 h-7 text-purple-400 group-hover:scale-110 mb-1.5 transition-transform" />
-                <span className="text-xs text-white font-bold">Haz clic para seleccionar o arrastra la Factura (PDF)</span>
-                <span className="text-[11px] text-slate-400 mt-0.5">Soporta Factura Electrónica en PDF o imagen escaneada</span>
-                <input
-                  type="file"
-                  accept=".pdf,image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
-            )}
+          {/* Section 1: Upload Invoice File or Cloud / Drive Link */}
+          <div className="p-4 rounded-xl bg-slate-800/40 border border-purple-500/30">
+            <UnifiedAttachmentSelector
+              currentAttachment={
+                attachedInvoiceFile
+                  ? {
+                      fileName: attachedInvoiceFile.name,
+                      fileSize: attachedInvoiceFile.size || 'Factura adjunta',
+                      fileData: attachedInvoiceFile.dataUrl,
+                      fileUrl: attachedInvoiceFile.fileUrl,
+                      downloadUrl: attachedInvoiceFile.downloadUrl,
+                      isCloudLink: Boolean(
+                        attachedInvoiceFile.isCloudLink ||
+                        attachedInvoiceFile.fileUrl ||
+                        (attachedInvoiceFile.dataUrl && attachedInvoiceFile.dataUrl.startsWith('http'))
+                      ),
+                      cloudProvider: attachedInvoiceFile.cloudProvider,
+                      driveFileId: attachedInvoiceFile.driveFileId,
+                      fileType: attachedInvoiceFile.type,
+                    }
+                  : null
+              }
+              onAttachmentChange={handleInvoiceAttachmentChange}
+              allowedExtensions={['.pdf', '.png', '.jpg', '.jpeg']}
+              label="1. Soporte de Factura (Subir PDF/Imagen, Enlace en la Nube o Google Drive) *"
+              suggestedName={invoiceNumber ? `Factura Electrónica ${invoiceNumber}` : 'Factura de Venta'}
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -615,6 +637,7 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

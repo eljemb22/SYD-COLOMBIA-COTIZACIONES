@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   FileSpreadsheet,
   Download,
@@ -21,9 +21,22 @@ import {
   AlertTriangle,
   X,
   RotateCcw,
+  PackageCheck,
+  Truck,
+  AlertCircle,
+  Receipt,
 } from 'lucide-react';
-import { TenderClientProject, TenderItem, OCTrackingContract, SalesOrderRecord, SalesInvoiceRecord } from '../../types';
+import {
+  TenderClientProject,
+  TenderItem,
+  OCTrackingContract,
+  OCTrackingItem,
+  SalesOrderRecord,
+  SalesOrderItem,
+  SalesInvoiceRecord,
+} from '../../types';
 import { formatCOP, normalizeClean } from '../../utils/formatters';
+import { formatTenderProcessNumber } from '../../utils/tenderDeduplication';
 import {
   ExcelColumnConfig,
   ExcelColumnHeader,
@@ -36,21 +49,21 @@ const TENDER_ITEM_COLUMNS: ExcelColumnConfig<TenderItem>[] = [
     label: 'Parte / Código',
     type: 'text',
     accessor: (row) => row.code || '',
-    minWidth: '100px',
+    minWidth: '85px',
   },
   {
     id: 'name',
     label: 'Equipo Biomédico',
     type: 'text',
     accessor: (row) => row.name || '',
-    minWidth: '180px',
+    minWidth: '150px',
   },
   {
     id: 'brandModel',
     label: 'Marca / Modelo',
     type: 'text',
     accessor: (row) => `${row.brand || ''} ${row.model || ''}`.trim(),
-    minWidth: '130px',
+    minWidth: '105px',
   },
   {
     id: 'quantity',
@@ -58,7 +71,7 @@ const TENDER_ITEM_COLUMNS: ExcelColumnConfig<TenderItem>[] = [
     type: 'number',
     accessor: (row) => row.quantity || 1,
     align: 'center',
-    minWidth: '60px',
+    minWidth: '55px',
   },
   {
     id: 'unitPrice',
@@ -67,7 +80,7 @@ const TENDER_ITEM_COLUMNS: ExcelColumnConfig<TenderItem>[] = [
     accessor: (row) => row.offeredUnitPrice || 0,
     formatter: (val) => formatCOP(Number(val) || 0),
     align: 'right',
-    minWidth: '130px',
+    minWidth: '110px',
   },
   {
     id: 'subtotal',
@@ -76,7 +89,7 @@ const TENDER_ITEM_COLUMNS: ExcelColumnConfig<TenderItem>[] = [
     accessor: (row) => (row.quantity || 1) * (row.offeredUnitPrice || 0),
     formatter: (val) => formatCOP(Number(val) || 0),
     align: 'right',
-    minWidth: '120px',
+    minWidth: '105px',
   },
   {
     id: 'totalWithIva',
@@ -89,7 +102,7 @@ const TENDER_ITEM_COLUMNS: ExcelColumnConfig<TenderItem>[] = [
     },
     formatter: (val) => formatCOP(Number(val) || 0),
     align: 'right',
-    minWidth: '130px',
+    minWidth: '115px',
   },
   {
     id: 'specs',
@@ -98,7 +111,7 @@ const TENDER_ITEM_COLUMNS: ExcelColumnConfig<TenderItem>[] = [
     accessor: (row) => row.requirements?.length || 0,
     formatter: (val) => `${val} specs`,
     align: 'center',
-    minWidth: '110px',
+    minWidth: '95px',
   },
 ];
 
@@ -118,6 +131,7 @@ interface TenderAwardedViewProps {
   contracts?: OCTrackingContract[];
   salesOrders?: SalesOrderRecord[];
   salesInvoices?: SalesInvoiceRecord[];
+  onCreateSalesOrder?: (tender: TenderClientProject) => void;
 }
 
 export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
@@ -136,6 +150,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
   contracts = [],
   salesOrders = [],
   salesInvoices = [],
+  onCreateSalesOrder,
 }) => {
   const [isConfirmClearModalOpen, setIsConfirmClearModalOpen] = useState(false);
   const items = activeClient.items || [];
@@ -169,122 +184,410 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
   const isAwarded = activeClient.status === 'Adjudicada';
   const isFulfilled = activeClient.status === 'Cumplido / Archivado';
 
-  // 1. Verify equipment delivery in Seguimiento de OC
-  const linkedContracts = useMemo(() => {
-    const normClient = normalizeClean(activeClient.clientName || activeClient.header?.entityName);
-    const normProcess = normalizeClean(activeClient.header?.processNumber);
+  // Helper: Strips prefixes (No, N°, CTO, Contrato, leading zeros in HBOC) to match contract/process numbers perfectly
+  const cleanRef = (str?: string | null): string => {
+    if (!str) return '';
+    return normalizeClean(str)
+      .replace(/^(no|n°|nro|num|numero|cto|contrato|ov|oc)[\s.:_-]*/i, '')
+      .replace(/^hboc0*/i, 'hboc')
+      .replace(/^oc0*/i, 'oc')
+      .replace(/[^a-z0-9]/g, '');
+  };
 
-    return (contracts || []).filter((c) => {
-      if (c.tenderClientId === activeClient.id || c.id === activeClient.id) return true;
-      if (normProcess && c.contractNumber && normalizeClean(c.contractNumber).includes(normProcess)) return true;
-      if (c.salesOrderId && (salesOrders || []).some(so => (so.tenderClientId === activeClient.id || so.contractId === activeClient.id) && so.id === c.salesOrderId)) return true;
-      if (c.id && (salesOrders || []).some(so => (so.tenderClientId === activeClient.id || so.contractId === activeClient.id) && so.ocContractId === c.id)) return true;
-      if (normClient && c.clientName) {
-        const cNorm = normalizeClean(c.clientName);
-        if (cNorm === normClient || cNorm.includes(normClient) || normClient.includes(cNorm)) return true;
+  const isSameClientEntity = (name1?: string, name2?: string): boolean => {
+    if (!name1 || !name2) return false;
+    const n1 = normalizeClean(name1);
+    const n2 = normalizeClean(name2);
+    if (n1 === n2 || n1.includes(n2) || n2.includes(n1)) return true;
+    const isNap1 = /napoleon|infantil|casa del nino|especialidades|hboc/i.test(n1);
+    const isNap2 = /napoleon|infantil|casa del nino|especialidades|hboc/i.test(n2);
+    return isNap1 && isNap2;
+  };
+
+  const extractCleanTokens = (text?: string): string[] => {
+    if (!text) return [];
+    const stopWords = new Set([
+      'de', 'del', 'la', 'el', 'los', 'las', 'para', 'con', 'por', 'en', 'un', 'una',
+      'equipo', 'equipos', 'sistema', 'sistemas', 'unidad', 'unidades', 'medico', 'medica',
+      'biomedico', 'biomedica', 'hospitalario', 'hospitalaria', 'clinico', 'clinica',
+      'digital', 'fijo', 'portatil', 'tipo', 'marca', 'suministro', 'e', 'instalacion',
+      'hospital', 'nacional', 'general', 'universal'
+    ]);
+    return normalizeClean(text)
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 2 && !stopWords.has(w));
+  };
+
+  const matchesTenderItemWithTarget = (
+    tIt: TenderItem,
+    target: { id?: string; equipmentId?: string; code?: string; name?: string; brand?: string; model?: string }
+  ): boolean => {
+    if (!target) return false;
+    if (tIt.equipmentId && target.equipmentId && tIt.equipmentId === target.equipmentId) return true;
+    if (tIt.id && target.id && tIt.id === target.id) return true;
+
+    const tCode = cleanRef(tIt.code);
+    const targetCode = cleanRef(target.code);
+    const genericCodes = new Set(['eq', 'item', 'eq1', 'eq2', 'eq3', 'equipo', 'part', 'na', 'pendiente']);
+    if (tCode && targetCode && tCode === targetCode && !genericCodes.has(tCode)) return true;
+
+    const tModel = cleanRef(tIt.model);
+    const targetModel = cleanRef(target.model);
+    if (tModel && targetModel && tModel.length >= 2 && (tModel === targetModel || tModel.includes(targetModel) || targetModel.includes(tModel))) {
+      const tBrand = normalizeClean(tIt.brand);
+      const targetBrand = normalizeClean(target.brand);
+      if (!tBrand || !targetBrand || tBrand.includes(targetBrand) || targetBrand.includes(tBrand)) {
+        return true;
       }
-      return false;
-    });
-  }, [contracts, activeClient.id, activeClient.header?.processNumber, activeClient.clientName, activeClient.header?.entityName, salesOrders]);
-
-  const allOCItemsDelivered = useMemo(() => {
-    const ocItems = linkedContracts.flatMap((c) => c.items || []);
-    const isOCDelivered = (status?: string) => {
-      if (!status) return false;
-      const s = normalizeClean(status);
-      return (
-        s.includes('entregad') ||
-        s.includes('instalad') ||
-        s.includes('despachad') ||
-        s.includes('bodega') ||
-        s.includes('cerrad') ||
-        s.includes('concluid') ||
-        s.includes('pagad') ||
-        s.includes('facturad')
-      );
-    };
-
-    if (ocItems.length > 0 && ocItems.every((it) => isOCDelivered(it.status))) {
-      return true;
     }
 
-    if (activeClient.items && activeClient.items.length > 0) {
-      const normClient = normalizeClean(activeClient.clientName || activeClient.header?.entityName);
-      const normProcess = normalizeClean(activeClient.header?.processNumber);
+    const tTokens = extractCleanTokens(tIt.name);
+    const targetTokens = extractCleanTokens(target.name);
+    if (tTokens.length > 0 && targetTokens.length > 0) {
+      const targetSet = new Set(targetTokens);
+      const common = tTokens.filter((tok) => targetSet.has(tok));
+      if (common.length >= 2) return true;
+      if (tTokens.length === 1 && common.length === 1) return true;
+    }
 
-      const allClientItemsDelivered = activeClient.items.every((tIt) => {
-        const normTName = normalizeClean(tIt.name);
-        const normTCode = normalizeClean(tIt.code);
-
-        const foundOC = ocItems.find(
-          (oIt) =>
-            (oIt.equipmentId && tIt.equipmentId && oIt.equipmentId === tIt.equipmentId) ||
-            (oIt.code && tIt.code && normalizeClean(oIt.code) === normTCode) ||
-            (oIt.name && tIt.name && (
-              normalizeClean(oIt.name) === normTName ||
-              normalizeClean(oIt.name).includes(normTName) ||
-              normTName.includes(normalizeClean(oIt.name))
-            ))
-        );
-        if (foundOC && isOCDelivered(foundOC.status)) return true;
-
-        const foundSO = (salesOrders || [])
-          .filter(
-            (so) =>
-              so.tenderClientId === activeClient.id ||
-              so.contractId === activeClient.id ||
-              (normProcess && so.contractNumber && normalizeClean(so.contractNumber).includes(normProcess)) ||
-              (normProcess && so.salesOrderNumber && normalizeClean(so.salesOrderNumber).includes(normProcess)) ||
-              (activeClient.linkedQuoteNumber && so.quoteNumber && normalizeClean(so.quoteNumber) === normalizeClean(activeClient.linkedQuoteNumber)) ||
-              (activeClient.linkedQuoteId && so.quoteId === activeClient.linkedQuoteId) ||
-              (normClient && so.clientName && (
-                normalizeClean(so.clientName) === normClient ||
-                normalizeClean(so.clientName).includes(normClient) ||
-                normClient.includes(normalizeClean(so.clientName))
-              ))
-          )
-          .flatMap((so) => so.items || [])
-          .find(
-            (sIt) =>
-              (sIt.equipmentId && tIt.equipmentId && sIt.equipmentId === tIt.equipmentId) ||
-              (sIt.code && tIt.code && normalizeClean(sIt.code) === normTCode) ||
-              (sIt.name && tIt.name && (
-                normalizeClean(sIt.name) === normTName ||
-                normalizeClean(sIt.name).includes(normTName) ||
-                normTName.includes(normalizeClean(sIt.name))
-              ))
-          );
-        if (foundSO && isOCDelivered(foundSO.equipmentStatus)) return true;
-
-        return false;
-      });
-
-      if (allClientItemsDelivered) return true;
+    const tNorm = normalizeClean(tIt.name);
+    const targetNorm = normalizeClean(target.name);
+    if (tNorm && targetNorm) {
+      if (tNorm === targetNorm) return true;
+      if (tNorm.length >= 6 && (targetNorm.includes(tNorm) || tNorm.includes(targetNorm))) return true;
     }
 
     return false;
-  }, [linkedContracts, activeClient.items, activeClient.id, activeClient.header?.processNumber, activeClient.clientName, activeClient.header?.entityName, activeClient.linkedQuoteNumber, activeClient.linkedQuoteId, salesOrders]);
+  };
 
-  // 2. Verify invoicing & invoice attachment in Órdenes de Venta & Facturas
-  const linkedOrders = useMemo(() => {
-    const normClient = normalizeClean(activeClient.clientName || activeClient.header?.entityName);
-    const normProcess = normalizeClean(activeClient.header?.processNumber);
-
-    return (salesOrders || []).filter(
-      (so) =>
-        so.tenderClientId === activeClient.id ||
-        so.contractId === activeClient.id ||
-        (normProcess && so.contractNumber && normalizeClean(so.contractNumber).includes(normProcess)) ||
-        (normProcess && so.salesOrderNumber && normalizeClean(so.salesOrderNumber).includes(normProcess)) ||
-        (activeClient.linkedQuoteNumber && so.quoteNumber && normalizeClean(so.quoteNumber) === normalizeClean(activeClient.linkedQuoteNumber)) ||
-        (activeClient.linkedQuoteId && so.quoteId === activeClient.linkedQuoteId) ||
-        (normClient && so.clientName && (
-          normalizeClean(so.clientName) === normClient ||
-          normalizeClean(so.clientName).includes(normClient) ||
-          normClient.includes(normalizeClean(so.clientName))
-        ))
+  const isStatusInTransit = (status?: string): boolean => {
+    if (!status) return false;
+    const s = normalizeClean(status);
+    return (
+      s.includes('transito') ||
+      s.includes('despachad') ||
+      s.includes('bodega') ||
+      s.includes('aduan') ||
+      s.includes('fabricacion') ||
+      s.includes('solicitud') ||
+      s.includes('emitida') ||
+      s.includes('confirmada') ||
+      s.includes('ingreso') ||
+      s.includes('listo') ||
+      s.includes('proceso') ||
+      s.includes('cancelad') ||
+      s.includes('0 entregad') ||
+      s.includes('no entregad')
     );
-  }, [salesOrders, activeClient.id, activeClient.header?.processNumber, activeClient.clientName, activeClient.header?.entityName, activeClient.linkedQuoteNumber, activeClient.linkedQuoteId]);
+  };
+
+  const isStatusDelivered = (status?: string): boolean => {
+    if (!status) return false;
+    if (isStatusInTransit(status)) return false;
+    const s = normalizeClean(status);
+    return (
+      s === 'entregado e instalado' ||
+      s === 'entregada al cliente' ||
+      s === 'entregado en clinica' ||
+      s === 'instalado / recibido' ||
+      s === 'entregado' ||
+      s === 'instalado' ||
+      s === 'cerrado / concluido' ||
+      s.includes('entregado e instalado') ||
+      s.includes('acta de entrega')
+    );
+  };
+
+  const tenderCodes = useMemo(() => {
+    const set = new Set<string>();
+    if (activeClient.header?.processNumber) set.add(cleanRef(activeClient.header.processNumber));
+    if (activeClient.header?.clientOrderNumber) set.add(cleanRef(activeClient.header.clientOrderNumber));
+    if (activeClient.linkedQuoteNumber) set.add(cleanRef(activeClient.linkedQuoteNumber));
+    if (activeClient.id) set.add(cleanRef(activeClient.id));
+    return Array.from(set).filter((c) => c.length >= 3);
+  }, [activeClient]);
+
+  // 1. Verify equipment delivery in Seguimiento de OC (strictly for this specific tender/contract)
+  const linkedContracts = useMemo(() => {
+    return (contracts || []).filter((c) => {
+      if (!c) return false;
+      if (c.tenderClientId && (c.tenderClientId === activeClient.id || c.id === activeClient.id)) return true;
+      if (c.id === activeClient.id) return true;
+
+      const cCodes = [
+        c.contractNumber,
+        c.ocNumber,
+        c.salesOrderNumber,
+        ...(c.salesOrderNumbers || []),
+        c.quoteNumber,
+      ]
+        .map(cleanRef)
+        .filter((code) => code.length >= 3);
+
+      const hasCodeMatch = tenderCodes.some((tCode) =>
+        cCodes.some((cCode) => cCode === tCode || (cCode.length >= 4 && (cCode.includes(tCode) || tCode.includes(cCode))))
+      );
+      if (hasCodeMatch) return true;
+
+      if (c.salesOrderId && (salesOrders || []).some((so) => (so.tenderClientId === activeClient.id || so.contractId === activeClient.id) && so.id === c.salesOrderId)) return true;
+      if (c.id && (salesOrders || []).some((so) => (so.tenderClientId === activeClient.id || so.contractId === activeClient.id) && so.ocContractId === c.id)) return true;
+      if (activeClient.linkedQuoteNumber && c.quoteNumber && normalizeClean(c.quoteNumber) === normalizeClean(activeClient.linkedQuoteNumber)) return true;
+      if (activeClient.linkedQuoteId && c.quoteId === activeClient.linkedQuoteId) return true;
+
+      if (isSameClientEntity(c.clientName, activeClient.clientName)) {
+        const hasMatchingItem = (c.items || []).some((cIt) =>
+          (activeClient.items || []).some((tIt) => matchesTenderItemWithTarget(tIt, cIt))
+        );
+        if (hasMatchingItem) return true;
+      }
+      return false;
+    });
+  }, [contracts, activeClient, tenderCodes, salesOrders]);
+
+  // 2. Verify invoicing & invoice attachment in Órdenes de Venta & Facturas (strictly for this tender project)
+  const linkedOrders = useMemo(() => {
+    return (salesOrders || []).filter((so) => {
+      if (!so) return false;
+      if (so.tenderClientId === activeClient.id || so.contractId === activeClient.id) return true;
+
+      const soCodes = [so.contractNumber, so.salesOrderNumber, so.quoteNumber]
+        .map(cleanRef)
+        .filter((code) => code.length >= 3);
+
+      const hasCodeMatch = tenderCodes.some((tCode) =>
+        soCodes.some((soCode) => soCode === tCode || (soCode.length >= 4 && (soCode.includes(tCode) || tCode.includes(soCode))))
+      );
+      if (hasCodeMatch) return true;
+
+      if (activeClient.linkedQuoteNumber && so.quoteNumber && normalizeClean(so.quoteNumber) === normalizeClean(activeClient.linkedQuoteNumber)) return true;
+      if (activeClient.linkedQuoteId && so.quoteId === activeClient.linkedQuoteId) return true;
+      if (so.ocContractId && linkedContracts.some((c) => c.id === so.ocContractId)) return true;
+
+      if (isSameClientEntity(so.clientName, activeClient.clientName)) {
+        const hasMatchingItem = (so.items || []).some((sIt) =>
+          (activeClient.items || []).some((tIt) => matchesTenderItemWithTarget(tIt, sIt))
+        );
+        if (hasMatchingItem) return true;
+      }
+      return false;
+    });
+  }, [salesOrders, activeClient, tenderCodes, linkedContracts]);
+
+  // 3. Match relevant sales invoices for this tender project
+  const linkedInvoices = useMemo(() => {
+    const linkedOrderIds = new Set(linkedOrders.map((so) => so.id));
+    const linkedOrderNums = new Set(linkedOrders.map((so) => cleanRef(so.salesOrderNumber)).filter(Boolean));
+
+    return (salesInvoices || []).filter((inv) => {
+      if (!inv) return false;
+      if (inv.contractId && (inv.contractId === activeClient.id || inv.contractId === activeClient.header?.processNumber)) return true;
+      if (inv.salesOrderId && linkedOrderIds.has(inv.salesOrderId)) return true;
+      if (inv.salesOrderNumber && linkedOrderNums.has(cleanRef(inv.salesOrderNumber))) return true;
+
+      const invCodes = [inv.contractNumber, inv.salesOrderNumber]
+        .map(cleanRef)
+        .filter((code) => code.length >= 3);
+
+      const hasCodeMatch = tenderCodes.some((tCode) =>
+        invCodes.some((invCode) => invCode === tCode || (invCode.length >= 4 && (invCode.includes(tCode) || tCode.includes(invCode))))
+      );
+      if (hasCodeMatch) return true;
+
+      return false;
+    });
+  }, [salesInvoices, activeClient, tenderCodes, linkedOrders]);
+
+  interface TenderItemDeliveryStatus {
+    isDelivered: boolean;
+    hasOC: boolean;
+    isInTransit: boolean;
+    isPendingOC: boolean;
+    isInvoiced: boolean;
+    status: string;
+    ocNumber?: string;
+    invoiceNumber?: string;
+  }
+
+  // Check individual item delivery & invoicing status in Seguimiento de OC / OV / Facturas
+  const getItemDeliveryStatus = useCallback(
+    (tIt: TenderItem): TenderItemDeliveryStatus => {
+      // 1. Search in linkedContracts (Seguimiento de OC a Proveedores)
+      let foundOC: (OCTrackingItem & { contractOC?: string; contractGlobalStatus?: string }) | undefined;
+      for (const c of linkedContracts) {
+        for (const it of c.items || []) {
+          if (matchesTenderItemWithTarget(tIt, it)) {
+            foundOC = {
+              ...it,
+              contractOC: it.ocNumber || c.ocNumber || c.contractNumber,
+              contractGlobalStatus: c.globalStatus,
+            };
+            break;
+          }
+        }
+        if (foundOC) break;
+      }
+
+      // 2. Search in linkedOrders (Órdenes de Venta & Facturas de Venta)
+      let foundSO: (SalesOrderItem & { parentOrder: SalesOrderRecord }) | undefined;
+      for (const so of linkedOrders) {
+        for (const sIt of so.items || []) {
+          if (matchesTenderItemWithTarget(tIt, sIt)) {
+            foundSO = { ...sIt, parentOrder: so };
+            break;
+          }
+        }
+        if (foundSO) break;
+      }
+
+      // 3. Search for linked invoice
+      let matchingInvoice: SalesInvoiceRecord | undefined;
+      if (foundSO) {
+        matchingInvoice = linkedInvoices.find(
+          (inv) =>
+            inv.salesOrderId === foundSO!.parentOrder.id ||
+            (foundSO!.parentOrder.salesOrderNumber &&
+              cleanRef(inv.salesOrderNumber) === cleanRef(foundSO!.parentOrder.salesOrderNumber))
+        );
+      }
+
+      const ocRef = foundOC?.contractOC || (foundSO as any)?.supplierOCNumber || (foundSO as any)?.linkedSupplierOCNumber || '';
+      const hasOC = Boolean(foundOC) || Boolean(ocRef) || Boolean(foundSO && foundSO.equipmentStatus && foundSO.equipmentStatus !== 'Pendiente de OC');
+
+      // A. If found in OC Tracking:
+      if (foundOC) {
+        const inTransit = isStatusInTransit(foundOC.status);
+        if (inTransit) {
+          // Explicitly in transit in Seguimiento de OC: MUST NOT be tachado / delivered!
+          return {
+            isDelivered: false,
+            hasOC: true,
+            isInTransit: true,
+            isPendingOC: false,
+            isInvoiced: Boolean(foundOC.invoiceNumber || matchingInvoice),
+            status: foundOC.status || 'En Tránsito / Despachada',
+            ocNumber: ocRef,
+            invoiceNumber: foundOC.invoiceNumber || matchingInvoice?.invoiceNumber,
+          };
+        }
+
+        const isDelivered =
+          isStatusDelivered(foundOC.status) ||
+          (Boolean((foundOC as any).deliveredQuantity) && ((foundOC as any).deliveredQuantity || 0) >= (foundOC.quantity || 1)) ||
+          (foundOC.contractGlobalStatus === 'Cerrado / Concluido' && !inTransit);
+
+        if (isDelivered) {
+          return {
+            isDelivered: true,
+            hasOC: true,
+            isInTransit: false,
+            isPendingOC: false,
+            isInvoiced: Boolean(
+              foundOC.invoiceNumber ||
+              matchingInvoice ||
+              foundSO?.parentOrder?.invoiceNumber ||
+              foundSO?.parentOrder?.status === 'Facturada' ||
+              foundSO?.parentOrder?.invoicedStatus === 'Facturada Total'
+            ),
+            status: foundOC.status || 'Entregado e Instalado',
+            ocNumber: ocRef,
+            invoiceNumber: foundOC.invoiceNumber || matchingInvoice?.invoiceNumber || foundSO?.parentOrder?.invoiceNumber,
+          };
+        }
+      }
+
+      // B. If found in Sales Orders (and not found in OC):
+      if (foundSO) {
+        const order = foundSO.parentOrder;
+        const soItemStatus = foundSO.equipmentStatus;
+        const inTransit = isStatusInTransit(soItemStatus) || isStatusInTransit(order.status);
+
+        if (inTransit) {
+          return {
+            isDelivered: false,
+            hasOC: hasOC,
+            isInTransit: true,
+            isPendingOC: !hasOC,
+            isInvoiced: Boolean(matchingInvoice || order.invoiceNumber),
+            status: soItemStatus || 'En Tránsito',
+            ocNumber: ocRef,
+            invoiceNumber: matchingInvoice?.invoiceNumber || order.invoiceNumber,
+          };
+        }
+
+        const isItemDelivered = isStatusDelivered(soItemStatus);
+        if (isItemDelivered) {
+          const isOrderInvoiced =
+            order.status === 'Facturada' ||
+            order.invoicedStatus === 'Facturada Total' ||
+            Boolean(order.invoiceNumber && order.invoiceNumber.trim().length > 0) ||
+            Boolean(order.attachedInvoiceFile?.dataUrl) ||
+            Boolean(matchingInvoice);
+
+          return {
+            isDelivered: true,
+            hasOC: hasOC,
+            isInTransit: false,
+            isPendingOC: !hasOC,
+            isInvoiced: isOrderInvoiced,
+            status: soItemStatus || 'Entregado e Instalado',
+            ocNumber: ocRef,
+            invoiceNumber: matchingInvoice?.invoiceNumber || order.invoiceNumber,
+          };
+        }
+      }
+
+      // C. Neither delivered nor in transit:
+      return {
+        isDelivered: false,
+        hasOC: hasOC,
+        isInTransit: false,
+        isPendingOC: !hasOC,
+        isInvoiced: false,
+        status: hasOC ? 'OC Generada' : 'Pendiente de OC',
+        ocNumber: ocRef,
+      };
+    },
+    [linkedContracts, linkedOrders, linkedInvoices]
+  );
+
+  const itemsDeliveryStatuses = useMemo(() => {
+    return items.map((it) => ({ item: it, delivery: getItemDeliveryStatus(it) }));
+  }, [items, getItemDeliveryStatus]);
+
+  const deliveredItemsCount = useMemo(() => {
+    return itemsDeliveryStatuses.filter((s) => s.delivery.isDelivered).length;
+  }, [itemsDeliveryStatuses]);
+
+  const itemsWithOCCount = useMemo(() => {
+    return itemsDeliveryStatuses.filter((s) => s.delivery.hasOC).length;
+  }, [itemsDeliveryStatuses]);
+
+  const pendingOCCount = useMemo(() => {
+    return itemsDeliveryStatuses.filter((s) => s.delivery.isPendingOC).length;
+  }, [itemsDeliveryStatuses]);
+
+  const inTransitCount = useMemo(() => {
+    return itemsDeliveryStatuses.filter((s) => s.delivery.isInTransit).length;
+  }, [itemsDeliveryStatuses]);
+
+  const invoicedItemsCount = useMemo(() => {
+    return itemsDeliveryStatuses.filter((s) => s.delivery.isInvoiced).length;
+  }, [itemsDeliveryStatuses]);
+
+  const allOCItemsDelivered = useMemo(() => {
+    if (!items || items.length === 0) return false;
+    return deliveredItemsCount === items.length;
+  }, [items, deliveredItemsCount]);
+
+  const allItemsHaveOC = useMemo(() => {
+    if (!items || items.length === 0) return false;
+    return itemsWithOCCount === items.length;
+  }, [items, itemsWithOCCount]);
+
+  const allItemsInvoiced = useMemo(() => {
+    if (!items || items.length === 0) return false;
+    return invoicedItemsCount === items.length;
+  }, [items, invoicedItemsCount]);
 
   const hasOrders = linkedOrders.length > 0;
   const isOrderBilledAndUploaded =
@@ -294,15 +597,16 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
       const hasInvoiceNumber = Boolean(so.invoiceNumber && so.invoiceNumber.trim().length > 0);
       const hasInvoiceFile = Boolean(
         so.attachedInvoiceFile?.dataUrl ||
-        (salesInvoices || []).some((inv) => (inv.salesOrderId === so.id || (so.salesOrderNumber && inv.salesOrderNumber === so.salesOrderNumber)) && Boolean(inv.attachedInvoiceFile?.dataUrl))
+        (salesInvoices || []).some((inv) => (inv.salesOrderId === so.id || (so.salesOrderNumber && inv.salesOrderNumber === so.salesOrderNumber)) && Boolean(inv.attachedInvoiceFile?.dataUrl)) ||
+        linkedInvoices.some((inv) => inv.salesOrderId === so.id || (so.salesOrderNumber && cleanRef(inv.salesOrderNumber) === cleanRef(so.salesOrderNumber)))
       );
       return isFacturada || hasInvoiceNumber || hasInvoiceFile;
     });
 
   // Ready to fulfill requirement: both OC equipments delivered and invoice uploaded
-  const isReadyToFulfill = allOCItemsDelivered && isOrderBilledAndUploaded;
+  const isReadyToFulfill = items.length > 0 && allOCItemsDelivered && allItemsInvoiced && isOrderBilledAndUploaded;
 
-  // Auto-mark as fulfilled when both conditions are satisfied (protected with ref to run once per client)
+  // Auto-mark as fulfilled when ALL conditions are 100% satisfied
   const fulfilledHandledForIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (isReadyToFulfill && activeClient.status !== 'Cumplido / Archivado' && fulfilledHandledForIdRef.current !== activeClient.id) {
@@ -310,6 +614,15 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
       onUpdateClient(activeClient.id, { status: 'Cumplido / Archivado' });
     }
   }, [isReadyToFulfill, activeClient.id, activeClient.status, onUpdateClient]);
+
+  // Auto-revert if contract was prematurely marked as 'Cumplido / Archivado' but actually has items in transit or pending OC
+  const autoRevertedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (activeClient.status === 'Cumplido / Archivado' && !allOCItemsDelivered && autoRevertedRef.current !== activeClient.id) {
+      autoRevertedRef.current = activeClient.id;
+      onUpdateClient(activeClient.id, { status: 'Adjudicada' });
+    }
+  }, [activeClient.status, allOCItemsDelivered, activeClient.id, onUpdateClient]);
 
   const handleStatusChange = (newStatus: TenderClientProject['status']) => {
     onUpdateClient(activeClient.id, { status: newStatus });
@@ -321,21 +634,26 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
   };
 
   return (
-    <div className="space-y-3 animate-fadeIn">
+    <div className="space-y-3 animate-fadeIn min-w-0 w-full">
       {/* Contract Status & Executive Overview Banner (Compact & High-Density) */}
-      <div className="bg-[#192b45] border border-[#334d6e] rounded-xl p-3 shadow-md space-y-2.5">
+      <div className="bg-[#192b45] border border-[#334d6e] rounded-xl p-3 shadow-md space-y-2.5 min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-[#334d6e]">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <span className="text-[11px] font-mono font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">
-              {activeClient.header.processNumber || 'Sin proceso'}
+              {formatTenderProcessNumber(activeClient)}
             </span>
             <h3 className="text-sm sm:text-base font-black text-white truncate">
               {activeClient.clientName}
             </h3>
-            {isFulfilled ? (
+            {isFulfilled && allOCItemsDelivered ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full shadow-xs">
                 <CheckCircle2 className="w-3 h-3 text-purple-300" />
-                <span>CUMPLIDO / ARCHIVADO</span>
+                <span>CUMPLIDO / ARCHIVADO (100% Entregado)</span>
+              </span>
+            ) : isFulfilled && !allOCItemsDelivered ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full shadow-xs">
+                <Clock className="w-3 h-3 text-amber-400" />
+                <span>EN PROCESO ({deliveredItemsCount}/{items.length} Entregados)</span>
               </span>
             ) : isAwarded ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full shadow-xs">
@@ -367,12 +685,44 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                     </button>
                   ) : (
                     <div
-                      className="inline-flex items-center gap-1.5 text-[10px] bg-[#111c2e] border border-[#334d6e] text-slate-300 px-2.5 py-1 rounded-lg"
-                      title="El botón para marcar cumplido aparecerá cuando los equipos se hayan entregado en Seguimiento de OC y la Orden de Venta esté facturada con factura subida."
+                      className="inline-flex items-center gap-1.5 text-[10.5px] bg-[#111c2e] border border-[#334d6e] text-slate-300 px-2.5 py-1 rounded-lg"
+                      title={`Desglose operativo: ${deliveredItemsCount}/${items.length} equipos entregados, ${itemsWithOCCount}/${items.length} con OC generada, ${invoicedItemsCount}/${items.length} facturados.`}
                     >
-                      <Clock className="w-3 h-3 text-amber-400" />
-                      <span>
-                        OC: <strong className={allOCItemsDelivered ? 'text-emerald-400' : 'text-amber-400'}>{allOCItemsDelivered ? 'Entregados ✓' : 'Pendiente'}</strong> • Factura: <strong className={isOrderBilledAndUploaded ? 'text-emerald-400' : 'text-amber-400'}>{isOrderBilledAndUploaded ? 'Subida ✓' : 'Pendiente'}</strong>
+                      <Clock className="w-3 h-3 text-sky-400 shrink-0" />
+                      <span className="flex items-center gap-1 flex-wrap">
+                        <span>OC:</span>{' '}
+                        <strong
+                          className={
+                            allOCItemsDelivered
+                              ? 'text-emerald-400'
+                              : itemsWithOCCount > 0
+                              ? 'text-sky-400'
+                              : 'text-amber-400'
+                          }
+                        >
+                          {allOCItemsDelivered
+                            ? `Entregados ✓ (${deliveredItemsCount}/${items.length})`
+                            : itemsWithOCCount > 0
+                            ? `${itemsWithOCCount}/${items.length} con OC (${deliveredItemsCount} entregados${pendingOCCount > 0 ? ` • ${pendingOCCount} pendiente${pendingOCCount > 1 ? 's' : ''} de OC` : inTransitCount > 0 ? ` • ${inTransitCount} en tránsito` : ''})`
+                            : 'Pendiente de OC'}
+                        </strong>
+                        <span className="text-slate-500">•</span>
+                        <span>Factura:</span>{' '}
+                        <strong
+                          className={
+                            allItemsInvoiced && isOrderBilledAndUploaded
+                              ? 'text-emerald-400'
+                              : invoicedItemsCount > 0
+                              ? 'text-sky-400'
+                              : 'text-amber-400'
+                          }
+                        >
+                          {allItemsInvoiced && isOrderBilledAndUploaded
+                            ? `Subida ✓ (${invoicedItemsCount}/${items.length})`
+                            : invoicedItemsCount > 0
+                            ? `${invoicedItemsCount}/${items.length} Facturados (${items.length - invoicedItemsCount} pendientes)`
+                            : 'Pendiente'}
+                        </strong>
                       </span>
                     </div>
                   )
@@ -383,6 +733,30 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                     className="inline-flex items-center gap-1 text-xs text-slate-300 bg-[#15253d] hover:bg-[#1e314b] border border-[#334d6e] px-2.5 py-1 rounded-lg font-bold transition cursor-pointer"
                   >
                     <span>Reabrir Contrato</span>
+                  </button>
+                )}
+
+                {isFulfilled && !allOCItemsDelivered && (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('Adjudicada')}
+                    className="inline-flex items-center gap-1 text-xs text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer"
+                    title="Este contrato tiene equipos en proceso o pendientes. Clic para reactivar a Adjudicada."
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reactivar a Adjudicada</span>
+                  </button>
+                )}
+
+                {onCreateSalesOrder && (
+                  <button
+                    type="button"
+                    onClick={() => onCreateSalesOrder(activeClient)}
+                    className="inline-flex items-center gap-1.5 text-xs text-slate-950 bg-amber-400 hover:bg-amber-300 px-3 py-1.5 rounded-lg font-black transition cursor-pointer shadow-sm active:scale-95"
+                    title="Crear una Orden de Venta en Despacho & Facturación con los equipos pendientes de este contrato"
+                  >
+                    <PackageCheck className="w-3.5 h-3.5" />
+                    <span>+ Generar OV</span>
                   </button>
                 )}
 
@@ -400,7 +774,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
         </div>
 
         {/* Compact Financial & Quantity Metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 text-xs min-w-0">
           <div className="bg-[#15253d] px-2.5 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/20">
             <span className="text-[9.5px] text-emerald-300 font-bold block">
               Presupuesto Contrato
@@ -446,7 +820,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
       </div>
 
       {/* Equipment Table for this Contract with Integrated Compact Actions */}
-      <div className="bg-[#192b45] border border-[#334d6e] rounded-xl overflow-hidden shadow-md">
+      <div className="bg-[#192b45] border border-[#334d6e] rounded-xl overflow-hidden shadow-md min-w-0 w-full">
         <div className="bg-[#15253d] px-3.5 py-2.5 border-b border-[#334d6e] flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
             <h4 className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
@@ -582,7 +956,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                       />
                     </th>
                   ))}
-                  <th className="p-2.5 text-right w-20 whitespace-nowrap">
+                  <th className="p-2.5 text-right w-20 whitespace-nowrap sticky right-0 z-20 bg-[#111e30] border-l border-[#334d6e]/60 shadow-[-4px_0_6px_rgba(0,0,0,0.35)]">
                     <div className="flex items-center justify-end gap-1.5">
                       <span>Acciones</span>
                       {isFilteredOrSorted && (
@@ -617,15 +991,78 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                   const unitConIVA = Math.round(unitSinIVA * (1 + itemTaxRate));
                   const rowSubtotalSinIVA = qty * unitSinIVA;
                   const rowTotalConIVA = Math.round(rowSubtotalSinIVA * (1 + itemTaxRate));
+                  const itemDelivery = getItemDeliveryStatus(item);
 
-                  return (
-                    <tr key={item.id} className="hover:bg-[#17263c] transition">
+                   return (
+                    <tr
+                      key={item.id}
+                      className={`transition ${
+                        itemDelivery.isDelivered
+                          ? "bg-[#0a1422]/80 opacity-75 hover:opacity-100 border-l-2 border-l-emerald-500"
+                          : itemDelivery.isInTransit
+                          ? "bg-[#0c1c2e]/60 hover:bg-[#15253d] border-l-2 border-l-sky-500"
+                          : itemDelivery.hasOC
+                          ? "bg-[#131b2e]/60 hover:bg-[#17263c] border-l-2 border-l-indigo-500/70"
+                          : "hover:bg-[#17263c] border-l-2 border-l-amber-500/50"
+                      }`}
+                    >
                       <td className="p-2.5 text-center font-mono font-bold text-purple-300">{idx + 1}</td>
-                      <td className="p-2.5 font-mono text-[11px] font-bold text-[#38bdf8] whitespace-nowrap">
-                        {item.code}
+                      <td className="p-2.5 font-mono text-[11px] font-bold whitespace-nowrap">
+                        <span className={itemDelivery.isDelivered ? "line-through text-slate-400" : "text-[#38bdf8]"}>
+                          {item.code}
+                        </span>
                       </td>
                       <td className="p-2.5 font-bold text-white">
-                        <div className="line-clamp-1" title={item.name}>{item.name}</div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={itemDelivery.isDelivered ? "line-through text-slate-300" : "text-white"}
+                            title={item.name}
+                          >
+                            {item.name}
+                          </span>
+                          {itemDelivery.isDelivered ? (
+                            <span
+                              className="inline-flex items-center gap-0.5 text-[8.5px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.2 rounded-md shrink-0"
+                              title={`Equipo entregado e instalado / facturado${itemDelivery.ocNumber ? ` (${itemDelivery.ocNumber})` : ""}`}
+                            >
+                              <CheckCircle2 className="w-2.5 h-2.5" />
+                              <span>ENTREGADO E INSTALADO</span>
+                            </span>
+                          ) : itemDelivery.isInTransit ? (
+                            <span
+                              className="inline-flex items-center gap-0.5 text-[8.5px] font-black bg-sky-500/20 text-sky-400 border border-sky-500/40 px-1.5 py-0.2 rounded-md shrink-0"
+                              title={`Equipo en tránsito hacia el cliente / en proceso logístico${itemDelivery.ocNumber ? ` (OC: ${itemDelivery.ocNumber})` : ""}`}
+                            >
+                              <Truck className="w-2.5 h-2.5" />
+                              <span>EN TRÁNSITO{itemDelivery.ocNumber ? ` (${itemDelivery.ocNumber})` : ""}</span>
+                            </span>
+                          ) : itemDelivery.hasOC ? (
+                            <span
+                              className="inline-flex items-center gap-0.5 text-[8.5px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-1.5 py-0.2 rounded-md shrink-0"
+                              title={`Orden de compra generada${itemDelivery.ocNumber ? ` (OC: ${itemDelivery.ocNumber})` : ""}`}
+                            >
+                              <Clock className="w-2.5 h-2.5" />
+                              <span>OC GENERADA{itemDelivery.ocNumber ? ` (${itemDelivery.ocNumber})` : ""}</span>
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-0.5 text-[8.5px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/40 px-1.5 py-0.2 rounded-md shrink-0"
+                              title="Falta generar la orden de compra a proveedor para este equipo"
+                            >
+                              <AlertCircle className="w-2.5 h-2.5" />
+                              <span>PENDIENTE DE OC</span>
+                            </span>
+                          )}
+                          {itemDelivery.invoiceNumber && (
+                            <span
+                              className="inline-flex items-center gap-0.5 text-[8.5px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-1 py-0.2 rounded shrink-0 font-mono"
+                              title={`Factura asociada: ${itemDelivery.invoiceNumber}`}
+                            >
+                              <Receipt className="w-2 h-2" />
+                              <span>{itemDelivery.invoiceNumber}</span>
+                            </span>
+                          )}
+                        </div>
                         {item.observations && (
                           <span className="text-[10px] text-slate-400 block font-normal truncate max-w-xs">
                             {item.observations}
@@ -633,7 +1070,9 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                         )}
                       </td>
                       <td className="p-2.5 text-slate-300">
-                        <div className="font-semibold text-slate-200 truncate">{item.brand}</div>
+                        <div className={`font-semibold truncate ${itemDelivery.isDelivered ? 'line-through text-slate-400' : 'text-slate-200'}`}>
+                          {item.brand}
+                        </div>
                         <div className="text-[10px] text-slate-400 font-mono truncate">{item.model}</div>
                       </td>
                       <td className="p-2.5 text-center">
@@ -669,11 +1108,11 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                         </div>
                       </td>
                       {/* Subtotal sin IVA */}
-                      <td className="p-2.5 text-right font-mono font-semibold text-slate-200 whitespace-nowrap">
+                      <td className={`p-2.5 text-right font-mono font-semibold whitespace-nowrap ${itemDelivery.isDelivered ? 'line-through text-slate-400' : 'text-slate-200'}`}>
                         {formatCOP(rowSubtotalSinIVA)}
                       </td>
                       {/* Total con IVA */}
-                      <td className="p-2.5 text-right font-mono font-bold text-emerald-300 whitespace-nowrap bg-emerald-950/10">
+                      <td className={`p-2.5 text-right font-mono font-bold whitespace-nowrap ${itemDelivery.isDelivered ? 'line-through text-emerald-500/70 bg-emerald-950/5' : 'text-emerald-300 bg-emerald-950/10'}`}>
                         {formatCOP(rowTotalConIVA)}
                       </td>
                       {/* Especificaciones */}
@@ -681,7 +1120,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onSwitchToSpecificationsTab(item.id)}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-300 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 px-2 py-0.5 rounded-lg transition cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-300 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 px-2 py-0.5 rounded-lg transition cursor-pointer whitespace-nowrap"
                           title="Ver y configurar especificaciones técnicas de este equipo"
                         >
                           <span>{itemSpecsCount} Specs</span>
@@ -693,8 +1132,8 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                           )}
                         </button>
                       </td>
-                      {/* Acciones */}
-                      <td className="p-2.5 text-right whitespace-nowrap">
+                      {/* Acciones (Sticky to the right edge) */}
+                      <td className="p-2.5 text-right whitespace-nowrap sticky right-0 z-10 bg-[#17263c] border-l border-[#334d6e]/50 shadow-[-4px_0_6px_rgba(0,0,0,0.3)]">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
@@ -738,7 +1177,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                   <td className="p-3 text-right text-emerald-300 font-mono text-sm bg-emerald-950/20">
                     {formatCOP(grandTotalCOP)}
                   </td>
-                  <td colSpan={2} className="p-3 text-right text-[11px] text-amber-300/90 font-mono">
+                  <td colSpan={2} className="p-3 text-right text-[11px] text-amber-300/90 font-mono sticky right-0 z-10 bg-[#101c2d] border-l border-[#334d6e]/50 shadow-[-4px_0_6px_rgba(0,0,0,0.35)] whitespace-nowrap">
                     IVA 19%: {formatCOP(totalIvaCOP)}
                   </td>
                 </tr>

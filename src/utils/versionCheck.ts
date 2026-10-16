@@ -10,7 +10,7 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '2.10.1';
+export const CURRENT_APP_VERSION = '2.10.2';
 export const CURRENT_RELEASE_DATE = '2026-10-01';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
@@ -344,7 +344,7 @@ export function markAppUpdateAsSeen(versionToMark?: string): void {
 }
 
 /**
- * Clears local caches, records update confirmation, and performs a clean reload of the application.
+ * Clears local caches, unregisters service workers, records update confirmation, and performs a clean reload of the application.
  */
 export async function applyAppUpdateAndReload(targetVersion?: string): Promise<void> {
   const version = targetVersion || activeRemoteVersion || CURRENT_APP_VERSION;
@@ -358,6 +358,16 @@ export async function applyAppUpdateAndReload(targetVersion?: string): Promise<v
     }
   } catch (e) {
     console.warn('Cache clear not fully supported:', e);
+  }
+
+  try {
+    // Unregister any active Service Workers
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((reg) => reg.unregister()));
+    }
+  } catch (e) {
+    console.warn('Service worker unregister error:', e);
   }
 
   // Force clean reload without asking again
@@ -377,8 +387,8 @@ async function syncCurrentVersionToFirestore(): Promise<void> {
     const data = snap.exists() ? snap.data() : null;
     const remoteVer = data?.latestVersion || '';
 
-    // If Firestore has an older version than this client or is missing, broadcast current release
-    if (!remoteVer || isVersionNewer(CURRENT_APP_VERSION, remoteVer)) {
+    // If Firestore does not match current release or is older, broadcast current release
+    if (!remoteVer || remoteVer !== CURRENT_APP_VERSION) {
       const currentRel = APP_RELEASES_HISTORY[0];
       await setDoc(
         versionDocRef,
@@ -393,20 +403,6 @@ async function syncCurrentVersionToFirestore(): Promise<void> {
         },
         { merge: true }
       );
-
-      // Emit reload signal so other active tabs / devices refresh smoothly
-      try {
-        const reloadDoc = doc(db, 'system_settings', 'app_reload_signal');
-        await setDoc(
-          reloadDoc,
-          {
-            timestamp: Date.now(),
-            version: CURRENT_APP_VERSION,
-            reason: `Actualización automática a v${CURRENT_APP_VERSION}`,
-          },
-          { merge: true }
-        );
-      } catch (_) {}
     }
   } catch (e) {
     // Non-blocking

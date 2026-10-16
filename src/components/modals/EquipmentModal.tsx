@@ -51,6 +51,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
   const [code, setCode] = useState('');
   const [brand, setBrand] = useState('MINDRAY');
   const [customBrand, setCustomBrand] = useState('');
+  const effectiveBrand = brand === 'OTRA' ? (customBrand.trim() || 'GENÉRICO') : brand;
   const [supplier, setSupplier] = useState('');
   const [model, setModel] = useState('');
   const [category, setCategory] = useState<MedicalEquipment['category']>('Monitoreo');
@@ -228,13 +229,50 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
         setName(equipmentToEdit.name || '');
         setCode(equipmentToEdit.code || '');
         const brandUpper = (equipmentToEdit.brand || '').trim().toUpperCase();
-        const isKnownBrand = ['MINDRAY', 'BOVIE', 'EDAN', 'MEDITECH', 'PHILIPS', 'ZOLL', 'GENERAL ELECTRIC'].includes(brandUpper);
+        // If brand was mistakenly set to ALLERS (distributor), map it to SECA for balanzas/tallímetros
+        let normalizedBrandUpper = brandUpper;
+        if (brandUpper === 'ALLERS') {
+          normalizedBrandUpper = 'SECA';
+        }
+        const isKnownBrand = [
+          'SECA',
+          'MINDRAY',
+          'WELCH ALLYN',
+          'BOVIE',
+          'EDAN',
+          'MEDITECH',
+          'PHILIPS',
+          'ZOLL',
+          'GENERAL ELECTRIC',
+          'DRÄGER',
+          'CA-MI',
+          'COMEN',
+          'B. BRAUN',
+          'MEDTRONIC',
+          'TUTTNAUER',
+          'STRYKER',
+          'KARL STORZ',
+          'NIHON KOHDEN',
+          'STERIS',
+          'GETINGE',
+          'SIEMENS HEALTHINEERS',
+          'COVIDIEN',
+          'RIESTER',
+          'KAWE',
+          'HEINE',
+          '3M LITTMANN',
+          'SONOSCAPE',
+          'BIONET',
+        ].includes(normalizedBrandUpper);
         if (isKnownBrand) {
-          setBrand(brandUpper);
+          setBrand(normalizedBrandUpper);
           setCustomBrand('');
-        } else {
+        } else if (brandUpper) {
           setBrand('OTRA');
           setCustomBrand(equipmentToEdit.brand || '');
+        } else {
+          setBrand('SECA');
+          setCustomBrand('');
         }
         setSupplier(equipmentToEdit.supplier || '');
         setModel(equipmentToEdit.model || '');
@@ -309,11 +347,14 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
   // Listen for background updates to suppliers directory
   useEffect(() => {
     const handleSuppliersUpdated = (e: any) => {
-      if (e.detail) {
-        setAvailableSuppliers(e.detail);
-      } else {
-        setAvailableSuppliers(getStoredSupplierProfiles());
-      }
+      const detail = e.detail;
+      setTimeout(() => {
+        if (detail) {
+          setAvailableSuppliers(detail);
+        } else {
+          setAvailableSuppliers(getStoredSupplierProfiles());
+        }
+      }, 0);
     };
     window.addEventListener('syd_suppliers_updated', handleSuppliersUpdated);
     return () => window.removeEventListener('syd_suppliers_updated', handleSuppliersUpdated);
@@ -344,7 +385,9 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
 
     const handleTrmUpdated = (e: any) => {
       if (e.detail) {
-        setTrmData(e.detail);
+        setTimeout(() => {
+          setTrmData(e.detail);
+        }, 0);
       }
     };
 
@@ -424,8 +467,6 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  const effectiveBrand = brand === 'OTRA' ? (customBrand.trim() || 'GENÉRICO') : brand;
 
   // Handler for COP changes: calculates USD
   const handleCOPChange = (value: number) => {
@@ -526,7 +567,10 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto animate-fadeIn"
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-5 shadow-2xl animate-scaleUp max-h-[82vh] h-[80vh] flex flex-col overflow-hidden my-auto">
         {/* Modal Header */}
@@ -660,14 +704,27 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                       onChange={(e) => setBrand(e.target.value)}
                       className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-bold focus:border-[#38bdf8] outline-none cursor-pointer"
                     >
-                      <option value="MINDRAY">MINDRAY</option>
-                      <option value="BOVIE">BOVIE</option>
-                      <option value="EDAN">EDAN</option>
+                      <option value="SECA">SECA (Pesas, Balanzas, Tallímetros)</option>
+                      <option value="MINDRAY">MINDRAY (Monitoreo, Anestesia, UCI)</option>
+                      <option value="WELCH ALLYN">WELCH ALLYN (Diagnóstico, Signos Vitales)</option>
+                      <option value="BOVIE">BOVIE (Electrocirugía)</option>
+                      <option value="EDAN">EDAN (Monitoreo, ECG)</option>
+                      <option value="PHILIPS">PHILIPS (Diagnóstico, UCI)</option>
+                      <option value="ZOLL">ZOLL (Desfibrilación, Reanimación)</option>
+                      <option value="GENERAL ELECTRIC">GENERAL ELECTRIC (GE Healthcare)</option>
+                      <option value="DRÄGER">DRÄGER (Ventilación, Quirófano)</option>
+                      <option value="CA-MI">CA-MI (Aspiradores Quirúrgicos)</option>
+                      <option value="COMEN">COMEN (Monitores Multiparámetros)</option>
+                      <option value="B. BRAUN">B. BRAUN / AESCULAP (Infusión, Instrumental)</option>
+                      <option value="MEDTRONIC">MEDTRONIC / VALLEYLAB</option>
+                      <option value="TUTTNAUER">TUTTNAUER (Autoclaves y Esterilización)</option>
+                      <option value="STRYKER">STRYKER (Camas UCI, Quirófano)</option>
+                      <option value="KARL STORZ">KARL STORZ (Endoscopia, Laparoscopia)</option>
+                      <option value="NIHON KOHDEN">NIHON KOHDEN (Monitoreo, Desfibriladores)</option>
+                      <option value="STERIS">STERIS (Mesas Quirúrgicas, Lámparas)</option>
                       <option value="MEDITECH">MEDITECH</option>
-                      <option value="PHILIPS">PHILIPS</option>
-                      <option value="ZOLL">ZOLL</option>
-                      <option value="GENERAL ELECTRIC">GENERAL ELECTRIC</option>
-                      <option value="OTRA">Otra (Personalizada)...</option>
+                      <option value="3M LITTMANN">3M LITTMANN (Fonendoscopios)</option>
+                      <option value="OTRA">Otra Marca (Personalizada)...</option>
                     </select>
                     {brand === 'OTRA' && (
                       <input

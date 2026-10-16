@@ -104,9 +104,9 @@ export const QuotesView: React.FC<QuotesViewProps> = ({
   };
 
   return (
-    <div id="unified-quotes-module" className="space-y-5 animate-fadeIn max-w-7xl mx-auto">
+    <div id="unified-quotes-module" className="w-full space-y-5 animate-fadeIn">
       {/* UNIFIED SUB-NAVIGATION HEADER */}
-      <div className="bg-[#18263a] border border-[#334d6e] rounded-2xl p-3 sm:p-4 shadow-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="bg-[#18263a]/95 backdrop-blur-md border border-[#334d6e] rounded-2xl p-3 sm:p-4 shadow-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sticky top-0 z-20">
         {/* Left: Tab Switcher (Editor vs Historial) */}
         <div className="flex items-center gap-2 bg-[#111c2e] p-1.5 rounded-xl border border-[#334d6e] self-start sm:self-auto overflow-x-auto max-w-full">
           <button

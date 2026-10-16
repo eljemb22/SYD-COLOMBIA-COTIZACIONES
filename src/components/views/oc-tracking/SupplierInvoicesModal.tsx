@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   FileText,
@@ -182,8 +183,15 @@ export const SupplierInvoicesModal: React.FC<SupplierInvoicesModalProps> = ({
 
   const totalInvoicedCOP = invoiceList.reduce((acc, inv) => acc + (inv.amountCOP || 0), 0);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-y-auto animate-fadeIn">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/25 overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="bg-[#0f192b] border border-[#233a59] rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
         {/* MODAL HEADER */}
         <div className="p-4 sm:p-5 bg-[#14233a] border-b border-[#233a59] flex items-center justify-between gap-3">
@@ -620,6 +628,7 @@ export const SupplierInvoicesModal: React.FC<SupplierInvoicesModalProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };

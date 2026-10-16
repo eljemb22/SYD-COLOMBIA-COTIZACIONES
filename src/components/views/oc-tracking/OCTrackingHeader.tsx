@@ -22,6 +22,11 @@ import {
 interface OCTrackingHeaderProps {
   viewMode: 'hierarchy' | 'supplier' | 'table';
   onChangeViewMode: (mode: 'hierarchy' | 'supplier' | 'table') => void;
+  lifecycleTab?: 'active' | 'archived' | 'all';
+  onChangeLifecycleTab?: (tab: 'active' | 'archived' | 'all') => void;
+  activeOCsCount?: number;
+  archivedOCsCount?: number;
+  totalOCsCount?: number;
   searchTerm: string;
   onSearchChange: (term: string) => void;
   filterSupplier: string;
@@ -59,6 +64,11 @@ interface OCTrackingHeaderProps {
 export const OCTrackingHeader: React.FC<OCTrackingHeaderProps> = ({
   viewMode,
   onChangeViewMode,
+  lifecycleTab = 'active',
+  onChangeLifecycleTab,
+  activeOCsCount = 0,
+  archivedOCsCount = 0,
+  totalOCsCount,
   searchTerm,
   onSearchChange,
   filterSupplier,
@@ -259,16 +269,120 @@ export const OCTrackingHeader: React.FC<OCTrackingHeaderProps> = ({
       </div>
 
       {/* View Mode Selector + Filters Bar */}
-      <div className="bg-[#15253d] p-3 rounded-2xl border border-[#334d6e] space-y-3">
+      <div
+        style={{
+          backgroundColor: 'var(--syd-card-bg)',
+          borderColor: 'var(--syd-border-color)',
+        }}
+        className="p-3 rounded-2xl border space-y-3"
+      >
+        {/* Lifecycle Filter Tabs: OCs Activas vs Entregadas & Archivadas vs Todas */}
+        {onChangeLifecycleTab && (
+          <div
+            style={{
+              backgroundColor: 'var(--syd-card-hover)',
+              borderColor: 'var(--syd-border-color)',
+            }}
+            className="flex flex-wrap items-center justify-between gap-2 p-1.5 rounded-xl border shadow-sm"
+          >
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => onChangeLifecycleTab('active')}
+                style={
+                  lifecycleTab === 'active'
+                    ? {
+                        backgroundColor: 'var(--syd-accent)',
+                        color: 'var(--syd-btn-text)',
+                      }
+                    : undefined
+                }
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  lifecycleTab === 'active'
+                    ? 'shadow-sm font-black'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>OCs Activas / En Tránsito ({activeOCsCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onChangeLifecycleTab('archived')}
+                style={
+                  lifecycleTab === 'archived'
+                    ? {
+                        backgroundColor: 'var(--syd-accent)',
+                        color: 'var(--syd-btn-text)',
+                      }
+                    : undefined
+                }
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  lifecycleTab === 'archived'
+                    ? 'shadow-sm font-black'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Entregadas & Archivadas ({archivedOCsCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onChangeLifecycleTab('all')}
+                style={
+                  lifecycleTab === 'all'
+                    ? {
+                        backgroundColor: 'var(--syd-accent)',
+                        color: 'var(--syd-btn-text)',
+                      }
+                    : undefined
+                }
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  lifecycleTab === 'all'
+                    ? 'shadow-sm font-black'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <FolderTree className="w-3.5 h-3.5" />
+                <span>Todas las OCs ({totalOCsCount !== undefined ? totalOCsCount : activeOCsCount + archivedOCsCount})</span>
+              </button>
+            </div>
+
+            <span className="text-[11px] text-slate-400 italic hidden sm:block pr-2">
+              {lifecycleTab === 'active'
+                ? 'Los equipos marcados como «Entregado e Instalado» se archivan automáticamente de esta vista activa'
+                : lifecycleTab === 'archived'
+                ? 'Histórico de OCs y equipos culminados al 100% con seriales y facturas'
+                : 'Mostrando todo el historial de órdenes de compra'}
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
           {/* View Mode Switcher */}
-          <div className="flex items-center bg-[#101b2b] p-1 rounded-xl border border-[#334d6e]">
+          <div
+            style={{
+              backgroundColor: 'var(--syd-card-hover)',
+              borderColor: 'var(--syd-border-color)',
+            }}
+            className="flex items-center p-1 rounded-xl border"
+          >
             <button
               type="button"
               onClick={() => onChangeViewMode('hierarchy')}
+              style={
+                viewMode === 'hierarchy'
+                  ? {
+                      backgroundColor: 'var(--syd-accent)',
+                      color: 'var(--syd-btn-text)',
+                    }
+                  : undefined
+              }
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 viewMode === 'hierarchy'
-                  ? 'bg-sky-500 text-slate-950 font-black shadow-md'
+                  ? 'font-black shadow-md'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -279,9 +393,17 @@ export const OCTrackingHeader: React.FC<OCTrackingHeaderProps> = ({
             <button
               type="button"
               onClick={() => onChangeViewMode('supplier')}
+              style={
+                viewMode === 'supplier'
+                  ? {
+                      backgroundColor: 'var(--syd-accent)',
+                      color: 'var(--syd-btn-text)',
+                    }
+                  : undefined
+              }
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 viewMode === 'supplier'
-                  ? 'bg-sky-500 text-slate-950 font-black shadow-md'
+                  ? 'font-black shadow-md'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -292,9 +414,17 @@ export const OCTrackingHeader: React.FC<OCTrackingHeaderProps> = ({
             <button
               type="button"
               onClick={() => onChangeViewMode('table')}
+              style={
+                viewMode === 'table'
+                  ? {
+                      backgroundColor: 'var(--syd-accent)',
+                      color: 'var(--syd-btn-text)',
+                    }
+                  : undefined
+              }
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 viewMode === 'table'
-                  ? 'bg-sky-500 text-slate-950 font-black shadow-md'
+                  ? 'font-black shadow-md'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -311,7 +441,12 @@ export const OCTrackingHeader: React.FC<OCTrackingHeaderProps> = ({
               placeholder="Buscar por Contrato, Cliente, OC, Proveedor, Equipo, Modelo..."
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full bg-[#101b2b] border border-[#334d6e] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-400 outline-none focus:border-[#38bdf8]"
+              style={{
+                backgroundColor: 'var(--syd-card-hover)',
+                borderColor: 'var(--syd-border-color)',
+                color: 'var(--syd-text-primary)',
+              }}
+              className="w-full border rounded-xl pl-9 pr-3 py-1.5 text-xs placeholder-slate-400 outline-none focus:ring-1 focus:ring-[var(--syd-accent)]"
             />
           </div>
         </div>

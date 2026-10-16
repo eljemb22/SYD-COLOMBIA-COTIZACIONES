@@ -10,8 +10,6 @@ import {
   Truck,
   PackageCheck,
   ReceiptText,
-  ChevronLeft,
-  ChevronRight,
   Building2,
   LogOut,
   User,
@@ -89,9 +87,6 @@ export const Navigation: React.FC<NavigationProps> = ({
   onOpenAppUpdates,
   onOpenShareModal,
 }) => {
-  // Hover expansion state: when cursor hovers over the sidebar, it unfolds; when cursor leaves, it minimizes
-  const [isHovered, setIsHovered] = useState(false);
-
   // Collapsible accordion state for menu sections
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     'COTIZACIÓN': false,
@@ -103,7 +98,10 @@ export const Navigation: React.FC<NavigationProps> = ({
     'DOCUMENTACIÓN': false,
   });
 
-  // Effective state: expanded if explicitly pinned open OR if currently hovered
+  // Hover expansion state: when cursor hovers over sidebar, it unfolds; when cursor leaves, it folds back
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Effective state: expanded if explicitly unpinned OR if currently hovered
   const isEffectiveExpanded = !isCollapsed || isHovered;
   const isEffectiveCollapsed = !isEffectiveExpanded;
 
@@ -278,7 +276,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         } ${
           isEffectiveCollapsed
             ? 'md:w-18'
-            : 'md:w-60 lg:w-64 md:border-r md:border-[#38bdf8]/40 md:shadow-[0_0_25px_rgba(0,0,0,0.5)]'
+            : 'md:w-60 lg:w-64 md:border-r md:shadow-[0_0_25px_rgba(0,0,0,0.5)]'
         }`}
       >
         {/* Unified Identity & Profile Header (Brand, User Avatar, Role, User Mgmt, Logout & Pin) */}
@@ -343,8 +341,47 @@ export const Navigation: React.FC<NavigationProps> = ({
                   </div>
                 </div>
 
-                {/* Right utility buttons: Dedicated Brush button (only trigger for customization) + Pin */}
-                <div className="flex items-center gap-1 shrink-0">
+                {/* Right utility buttons: Pin/Unpin + Dedicated Brush Customization button */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {onToggleCollapse && (
+                    <button
+                      id="btn-toggle-pin-sidebar"
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onToggleCollapse();
+                      }}
+                      title={
+                        !isCollapsed
+                          ? 'Menú lateral fijado (clic para desfijar y plegar)'
+                          : 'Fijar menú lateral desplegado (mantener visible)'
+                      }
+                      style={
+                        !isCollapsed
+                          ? {
+                              backgroundColor: 'var(--syd-accent)',
+                              borderColor: 'var(--syd-accent)',
+                              color: '#ffffff',
+                              boxShadow: '0 0 12px var(--syd-accent-glow), 0 2px 4px rgba(0,0,0,0.25)',
+                            }
+                          : {
+                              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                              borderColor: 'rgba(255, 255, 255, 0.18)',
+                              color: 'var(--syd-accent)',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                            }
+                      }
+                      className={`p-1.5 rounded-lg border shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center active:scale-95 ${
+                        !isCollapsed
+                          ? 'hover:brightness-110'
+                          : 'hover:bg-[var(--syd-accent)] hover:text-white hover:border-[var(--syd-accent)] hover:shadow-md hover:shadow-[var(--syd-accent-glow)]'
+                      }`}
+                    >
+                      <Pin className={`w-3.5 h-3.5 transition-transform duration-200 ${!isCollapsed ? 'fill-current' : ''}`} />
+                    </button>
+                  )}
+
                   {onOpenCustomization && (
                     <button
                       id="btn-open-customization-brush"
@@ -356,41 +393,21 @@ export const Navigation: React.FC<NavigationProps> = ({
                       }}
                       title="Personalizar interfaz, temas y colores"
                       style={{
-                        backgroundColor: 'var(--syd-sidebar-bg)',
-                        borderColor: 'var(--syd-border-color)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        borderColor: 'rgba(255, 255, 255, 0.18)',
+                        color: 'var(--syd-accent)',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
                       }}
-                      className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 border border-amber-400/50 hover:border-amber-400 shadow-sm transition cursor-pointer flex items-center justify-center group active:scale-95"
+                      className="p-1.5 rounded-lg border shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center group active:scale-95 hover:bg-[var(--syd-accent)] hover:text-white hover:border-[var(--syd-accent)] hover:shadow-md hover:shadow-[var(--syd-accent-glow)]"
                     >
-                      <Brush className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
-                    </button>
-                  )}
-
-                  {onToggleCollapse && (
-                    <button
-                      onClick={onToggleCollapse}
-                      title={
-                        isCollapsed
-                          ? 'Fijar menú siempre expandido'
-                          : 'Modo auto-minimizado (desplegar al pasar el cursor)'
-                      }
-                      style={{
-                        backgroundColor: 'var(--syd-sidebar-bg)',
-                        borderColor: 'var(--syd-border-color)',
-                      }}
-                      className="hidden md:flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-white border transition cursor-pointer"
-                    >
-                      {isCollapsed ? (
-                        <Pin className="w-3.5 h-3.5 text-slate-400 hover:text-[#38bdf8]" />
-                      ) : (
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      )}
+                      <Brush className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform duration-200" />
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Row 2: Compact User Management, Standby & Logout Action Buttons */}
-              <div className={`grid ${onSuspendApp ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5 pt-1 border-t border-slate-700/30`}>
+              {/* Row 2: Compact User Management & Logout Action Buttons */}
+              <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-700/30">
                 {onOpenUserManagement && (
                   <button
                     type="button"
@@ -401,25 +418,14 @@ export const Navigation: React.FC<NavigationProps> = ({
                         : 'Cambiar mi contraseña y ver mis permisos habilitados'
                     }
                     style={{
-                      backgroundColor: 'var(--syd-sidebar-bg)',
-                      borderColor: 'var(--syd-border-color)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                      borderColor: 'rgba(255, 255, 255, 0.14)',
+                      color: 'var(--syd-accent)',
                     }}
-                    className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg hover:opacity-90 text-[#38bdf8] hover:text-white border text-[10px] font-black transition cursor-pointer"
+                    className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg hover:bg-[var(--syd-accent)]/15 hover:border-[var(--syd-accent)]/40 hover:text-white border text-[10px] font-black transition cursor-pointer"
                   >
                     <KeyRound className="w-3 h-3 shrink-0" />
                     <span className="truncate">{currentUser?.role === 'admin' ? 'Usuarios' : 'Clave'}</span>
-                  </button>
-                )}
-
-                {onSuspendApp && (
-                  <button
-                    type="button"
-                    onClick={onSuspendApp}
-                    title="Suspender sesión en Standby (Ctrl+L o Alt+S)"
-                    className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-100 border border-amber-500/30 text-[10px] font-black transition cursor-pointer"
-                  >
-                    <Moon className="w-3 h-3 shrink-0" />
-                    <span className="truncate">Standby</span>
                   </button>
                 )}
 
@@ -433,24 +439,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                   <span className="truncate">Salir</span>
                 </button>
               </div>
-
-              {/* Version & Updates Shortcut Row */}
-              {onOpenAppUpdates && (
-                <button
-                  type="button"
-                  onClick={onOpenAppUpdates}
-                  title="Ver novedades de la versión y comprobar actualizaciones"
-                  className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#111e30] hover:bg-[#1a2d48] border border-cyan-500/30 text-[10.5px] text-cyan-300 font-bold transition cursor-pointer mt-1"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="w-3 h-3 text-cyan-400" />
-                    <span>Versión v{CURRENT_APP_VERSION}</span>
-                  </span>
-                  <span className="text-[9.5px] text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded border border-slate-700">
-                    Novedades
-                  </span>
-                </button>
-              )}
             </div>
           ) : (
             /* Collapsed Mode: Avatar + Mini Action Icons */
@@ -477,6 +465,37 @@ export const Navigation: React.FC<NavigationProps> = ({
                 )}
               </div>
 
+              {onToggleCollapse && (
+                <button
+                  id="btn-toggle-pin-sidebar-collapsed"
+                  type="button"
+                  onClick={onToggleCollapse}
+                  title={!isCollapsed ? 'Desfijar menú lateral' : 'Fijar menú lateral desplegado'}
+                  style={
+                    !isCollapsed
+                      ? {
+                          backgroundColor: 'var(--syd-accent)',
+                          borderColor: 'var(--syd-accent)',
+                          color: '#ffffff',
+                          boxShadow: '0 0 12px var(--syd-accent-glow), 0 2px 4px rgba(0,0,0,0.25)',
+                        }
+                      : {
+                          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                          borderColor: 'rgba(255, 255, 255, 0.18)',
+                          color: 'var(--syd-accent)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                        }
+                  }
+                  className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
+                    !isCollapsed
+                      ? 'hover:brightness-110'
+                      : 'hover:bg-[var(--syd-accent)] hover:text-white hover:border-[var(--syd-accent)] hover:shadow-md hover:shadow-[var(--syd-accent-glow)]'
+                  }`}
+                >
+                  <Pin className={`w-3.5 h-3.5 transition-transform duration-200 ${!isCollapsed ? 'fill-current' : ''}`} />
+                </button>
+              )}
+
               {onOpenShareModal && (
                 <button
                   type="button"
@@ -486,24 +505,15 @@ export const Navigation: React.FC<NavigationProps> = ({
                     onOpenShareModal();
                   }}
                   title="Compartir enlace web del sistema para abrir en cualquier computador o dispositivo"
-                  className="w-7 h-7 rounded-lg text-sky-400 hover:text-sky-200 hover:bg-sky-500/20 border border-sky-400/40 flex items-center justify-center transition cursor-pointer"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    borderColor: 'rgba(255, 255, 255, 0.18)',
+                    color: 'var(--syd-accent)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                  }}
+                  className="w-7 h-7 rounded-lg border flex items-center justify-center transition-all duration-200 cursor-pointer hover:bg-[var(--syd-accent)] hover:text-white hover:border-[var(--syd-accent)] hover:shadow-md hover:shadow-[var(--syd-accent-glow)] active:scale-95"
                 >
                   <Share2 className="w-3.5 h-3.5" />
-                </button>
-              )}
-
-              {onOpenAppUpdates && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onOpenAppUpdates();
-                  }}
-                  title={`Versión v${CURRENT_APP_VERSION} - Centro de Actualizaciones`}
-                  className="w-7 h-7 rounded-lg text-cyan-400 hover:text-cyan-200 hover:bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center transition cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
                 </button>
               )}
 
@@ -517,10 +527,12 @@ export const Navigation: React.FC<NavigationProps> = ({
                   }}
                   title="Personalizar temas y apariencia"
                   style={{
-                    backgroundColor: 'var(--syd-sidebar-bg)',
-                    borderColor: 'var(--syd-border-color)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    borderColor: 'rgba(255, 255, 255, 0.18)',
+                    color: 'var(--syd-accent)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
                   }}
-                  className="w-7 h-7 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 border border-amber-400/50 flex items-center justify-center transition cursor-pointer"
+                  className="w-7 h-7 rounded-lg border flex items-center justify-center transition-all duration-200 cursor-pointer hover:bg-[var(--syd-accent)] hover:text-white hover:border-[var(--syd-accent)] hover:shadow-md hover:shadow-[var(--syd-accent-glow)] active:scale-95"
                 >
                   <Brush className="w-3.5 h-3.5" />
                 </button>
@@ -536,23 +548,14 @@ export const Navigation: React.FC<NavigationProps> = ({
                       : 'Cambiar Mi Contraseña'
                   }
                   style={{
-                    backgroundColor: 'var(--syd-sidebar-bg)',
-                    borderColor: 'var(--syd-border-color)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    borderColor: 'rgba(255, 255, 255, 0.18)',
+                    color: 'var(--syd-accent)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
                   }}
-                  className="w-8 h-8 rounded-lg text-[#38bdf8] hover:text-white border flex items-center justify-center transition cursor-pointer"
+                  className="w-8 h-8 rounded-lg border flex items-center justify-center transition-all duration-200 cursor-pointer hover:bg-[var(--syd-accent)] hover:text-white hover:border-[var(--syd-accent)] hover:shadow-md hover:shadow-[var(--syd-accent-glow)] active:scale-95"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
-                </button>
-              )}
-
-              {onSuspendApp && (
-                <button
-                  type="button"
-                  onClick={onSuspendApp}
-                  title="Modo Suspensión / Standby (Ctrl+L o Alt+S)"
-                  className="w-8 h-8 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-100 border border-amber-500/30 flex items-center justify-center transition cursor-pointer"
-                >
-                  <Moon className="w-3.5 h-3.5" />
                 </button>
               )}
 
@@ -570,22 +573,38 @@ export const Navigation: React.FC<NavigationProps> = ({
 
         {/* Navigation Items List */}
         <div className="flex-1 overflow-y-auto py-2 px-2 space-y-2.5 scrollbar-thin">
-          {/* Standalone Inicio Tab */}
+              {/* Standalone Inicio Tab */}
           <div className="space-y-0.5">
             <button
               id="sidebar-tab-inicio"
               type="button"
               onClick={() => handleSelectTab('inicio')}
               title={isEffectiveCollapsed ? 'Inicio' : undefined}
+              style={
+                activeTab === 'inicio'
+                  ? {
+                      backgroundColor: 'var(--syd-accent-glow)',
+                      borderColor: 'var(--syd-accent)',
+                    }
+                  : undefined
+              }
               className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-150 cursor-pointer text-left border ${
                 activeTab === 'inicio'
-                  ? 'bg-[#38bdf8]/15 border-[#38bdf8] text-white shadow-sm shadow-[#38bdf8]/10'
-                  : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#192b45] hover:border-[#334d6e]/50'
+                  ? 'text-white shadow-sm font-black'
+                  : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
               } ${isEffectiveCollapsed ? 'justify-center px-1 py-2' : ''}`}
             >
               <div
+                style={
+                  activeTab === 'inicio'
+                    ? {
+                        backgroundColor: 'var(--syd-accent)',
+                        color: 'var(--syd-btn-text)',
+                      }
+                    : undefined
+                }
                 className={`p-1.5 rounded-md shrink-0 transition-transform ${
-                  activeTab === 'inicio' ? 'bg-[#38bdf8] text-slate-950' : 'bg-[#15253d] text-slate-400'
+                  activeTab === 'inicio' ? 'shadow-xs' : 'bg-slate-800/80 text-slate-400'
                 }`}
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
@@ -595,7 +614,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <div className="flex-1 min-w-0 flex items-center justify-between animate-fadeIn">
                   <span
                     className={`text-xs font-bold truncate leading-none ${
-                      activeTab === 'inicio' ? 'text-white' : 'text-slate-300'
+                      activeTab === 'inicio' ? 'text-white font-black' : 'text-slate-300'
                     }`}
                   >
                     Inicio
@@ -634,6 +653,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                       ? (tab as any).matchesTab(activeTab)
                       : activeTab === tab.id;
                     const Icon = tab.icon;
+                    const isAlertBadge = typeof tab.badge === 'string' && tab.badge.includes('⚠️');
 
                     return (
                       <button
@@ -641,15 +661,31 @@ export const Navigation: React.FC<NavigationProps> = ({
                         id={`sidebar-tab-${tab.id}`}
                         onClick={() => handleSelectTab(tab.id)}
                         title={isEffectiveCollapsed ? `${tab.name} (${tab.subtitle})` : undefined}
+                        style={
+                          isActive
+                            ? {
+                                backgroundColor: 'var(--syd-accent-glow)',
+                                borderColor: 'var(--syd-accent)',
+                              }
+                            : undefined
+                        }
                         className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-150 cursor-pointer text-left border ${
                           isActive
-                            ? tab.activeClass
-                            : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#192b45] hover:border-[#334d6e]/50'
+                            ? 'text-white shadow-sm font-black'
+                            : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                         } ${isEffectiveCollapsed ? 'justify-center px-1 py-2' : ''}`}
                       >
                         <div
+                          style={
+                            isActive
+                              ? {
+                                  backgroundColor: 'var(--syd-accent)',
+                                  color: 'var(--syd-btn-text)',
+                                }
+                              : undefined
+                          }
                           className={`p-1.5 rounded-md shrink-0 transition-transform ${
-                            isActive ? tab.iconBg : 'bg-[#15253d] text-slate-400'
+                            isActive ? 'shadow-xs' : 'bg-slate-800/80 text-slate-400'
                           }`}
                         >
                           <Icon className="w-3.5 h-3.5" />
@@ -659,7 +695,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                           <div className="flex-1 min-w-0 flex items-center justify-between animate-fadeIn">
                             <span
                               className={`text-xs font-bold truncate leading-none ${
-                                isActive ? 'text-white' : 'text-slate-300'
+                                isActive ? 'text-white font-black' : 'text-slate-300'
                               }`}
                             >
                               {tab.name}
@@ -667,7 +703,17 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                             {tab.badge !== null && (
                               <span
-                                className={`ml-1 px-1.5 py-0.2 rounded-full text-[9.5px] shrink-0 ${tab.badgeColor}`}
+                                style={
+                                  !isAlertBadge
+                                    ? {
+                                        backgroundColor: isActive ? 'var(--syd-accent)' : undefined,
+                                        color: isActive ? 'var(--syd-btn-text)' : undefined,
+                                      }
+                                    : undefined
+                                }
+                                className={`ml-1 px-1.5 py-0.2 rounded-full text-[9.5px] shrink-0 font-bold ${
+                                  isAlertBadge ? tab.badgeColor : isActive ? '' : tab.badgeColor
+                                }`}
                               >
                                 {tab.badge}
                               </span>

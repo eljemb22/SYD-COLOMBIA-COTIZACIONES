@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Search,
@@ -693,9 +694,14 @@ export const ManageSuppliersModal: React.FC<ManageSuppliersModalProps> = ({
     setTimeout(() => setSaveSuccessMsg(null), 3000);
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-slate-950/85 flex items-center justify-center p-2.5 sm:p-4 md:p-6 backdrop-blur-xs animate-fadeIn overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-2.5 sm:p-4 md:p-6 animate-fadeIn overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="bg-[#15253d] border border-[#334d6e] rounded-2xl w-full max-w-6xl max-h-[86vh] h-[82vh] min-h-[500px] flex flex-col shadow-2xl overflow-hidden text-xs my-auto">
         {/* Modal Header */}
@@ -1960,6 +1966,7 @@ export const ManageSuppliersModal: React.FC<ManageSuppliersModalProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };

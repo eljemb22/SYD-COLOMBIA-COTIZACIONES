@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Edit3, X, Save, Building2, CreditCard, DollarSign, Activity, FileText, Lock } from 'lucide-react';
 import { OCTrackingItem, OCStatus, OCPaymentTerms, OCPaymentStatus } from '../../../types';
 import { isValidOCNumber } from '../../../utils/formatters';
+import { resolveItemManufacturerBrand } from '../../../utils/equipmentBrandResolver';
 import {
   COMMON_SUPPLIERS,
   KNOWN_MANUFACTURERS,
@@ -116,8 +118,15 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
     );
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-3 sm:p-5 md:p-6 backdrop-blur-xs animate-fadeIn">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-3 sm:p-5 md:p-6 animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="bg-[#192b45] border border-[#334d6e] rounded-2xl w-full max-w-3xl lg:max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         <div className="p-3.5 sm:p-4 bg-[#142338] border-b border-[#334d6e] flex items-center justify-between">
           <div>
@@ -131,7 +140,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
             </div>
             <h3 className="text-sm font-black text-white mt-1">{item.name}</h3>
             <p className="text-[11px] text-slate-400">
-              Marca: <strong className="text-sky-300">{item.brand}</strong> • Modelo: {item.model}
+              Marca: <strong className="text-sky-300">{resolveItemManufacturerBrand(item)}</strong> • Modelo: {item.model}
             </p>
           </div>
           <button
@@ -401,6 +410,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

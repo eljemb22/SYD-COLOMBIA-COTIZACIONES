@@ -288,9 +288,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     },
     {
       id: 'documentacion' as ActiveTab,
-      badge: 'Ventana 6',
-      title: 'Documentación Técnica',
-      subtitle: 'Custodia de archivos INVIMA, fichas y manuales',
+      badge: 'Ventana 7',
+      title: 'Documentación Técnica & Gestión Biomédica',
+      subtitle: 'Fichas técnicas, Hojas de Vida (Res. 3100) y Cronograma de Mantenimiento',
       icon: FolderArchive,
       color: '#34d399',
       bgColor: 'bg-emerald-500/10',
@@ -299,11 +299,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       accentColor: 'text-emerald-400',
       statLabel: 'Documentos custodiados',
       statValue: `${documents.length} archivos`,
-      totalLabel: 'Desglose principal',
-      totalValue: `${fichasCount} Fichas • ${invimaCount} INVIMA`,
+      totalLabel: 'Herramientas oficiales',
+      totalValue: `Hojas de Vida • Cronograma • Fichas PDF`,
       description:
-        'Repositorio centralizado para consultar, visualizar y descargar documentos técnicos, registros sanitarios y manuales de servicio.',
-      bestFor: 'Buscar y descargar certificaciones sanitarias y fichas técnicas oficiales.',
+        'Cree y gestione Hojas de Vida de equipos según Resolución 3100, programe el Cronograma Anual de Mantenimiento y genere Fichas Técnicas Oficiales en PDF.',
+      bestFor: 'Gestión técnica biomédica, habilitación hospitalaria y consulta de documentos oficiales.',
     },
   ];
 
@@ -460,23 +460,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         'Cada registro de novedad en la bitácora reinicia automáticamente el contador de alerta de 2 días.',
       ],
     },
-    documentacion: {
-      title: 'Ventana 6: Documentación Técnica Oficial',
-      subtitle: 'Repositorio de registros INVIMA, manuales y fichas',
-      icon: FolderArchive,
-      steps: [
-        '1. Explora los documentos clasificados por: Fichas Técnicas, Registros INVIMA, Manuales y Certificados.',
-        '2. Utiliza el buscador para localizar documentos asociados a un equipo o marca específica.',
-        '3. Haz clic en "Previsualizar" para ver el contenido del documento en pantalla.',
-        '4. Descarga los archivos en formato PDF o Word cuando los requieras para adjuntar a una propuesta.',
-      ],
-      tips: [
-        'Mantener los registros INVIMA vigentes es fundamental para la validez de las propuestas en Colombia.',
-        'Los documentos pueden vincularse directamente a los equipos del catálogo para acceso rápido.',
-      ],
-    },
     ordenes_venta: {
-      title: 'Ventana 7: Órdenes de Venta y Facturación (OV & Facturas)',
+      title: 'Ventana 6: Órdenes de Venta y Facturación (OV & Facturas)',
       subtitle: 'Despacho de equipos a clientes, asignación de seriales y facturación electrónica',
       icon: PackageCheck,
       steps: [
@@ -488,7 +473,22 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       ],
       tips: [
         'Cada OV descuenta y controla los despachos acumulados sobre el total del contrato adjudicado.',
-        'Las facturas electrónicas adjuntas quedan guardadas de forma segura y asociadas tanto al cliente como al contrato.',
+        'Los seriales se vinculan automáticamente al expediente del contrato.',
+      ],
+    },
+    documentacion: {
+      title: 'Ventana 7: Documentación Técnica, Hojas de Vida & Mantenimiento',
+      subtitle: 'Hojas de Vida Res. 3100, Cronograma Anual, Fichas Técnicas PDF e INVIMA',
+      icon: FolderArchive,
+      steps: [
+        '1. Hojas de Vida de Equipos: Genera y custodia expedientes de equipos según estándar Resolución 3100 MinSalud para habilitación hospitalaria.',
+        '2. Cronograma de Mantenimiento: Controla matriz mensual de intervenciones preventivas (P), ejecutadas (E), calibraciones metrológicas (C) y alertas (A).',
+        '3. Fichas Técnicas Oficiales: Diseña y exporta fichas técnicas en formato PDF con especificaciones y logo institucional.',
+        '4. Base Maestra y Contratos: Administra el archivo digital de registros INVIMA, manuales de usuario y protocolos de desinfección.',
+      ],
+      tips: [
+        'Las Hojas de Vida y el Cronograma pueden imprimirse o guardarse directamente en PDF de alta resolución.',
+        'Desde el Catálogo Maestro puedes generar la Ficha Técnica o la Hoja de Vida de cualquier equipo con un solo clic.',
       ],
     },
     historial: {
@@ -526,7 +526,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const GuideIcon = currentGuide.icon;
 
   return (
-    <div id="dashboard-overview" className="space-y-6 animate-fadeIn max-w-7xl mx-auto pb-10">
+    <div id="dashboard-overview" className="space-y-6 animate-fadeIn w-full pb-10">
       {/* 1. HERO BANNER - Clean, informative, strictly navigation-oriented */}
       <div className="bg-gradient-to-br from-[#18283f] via-[#1a2e48] to-[#122033] border border-[#334d6e] rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-[#38bdf8]/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
@@ -1157,7 +1157,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             { id: 'catalogo' as ActiveTab, label: 'Ventana 3: Catálogo', icon: BookOpen },
             { id: 'licitaciones' as ActiveTab, label: 'Ventana 4: Licitaciones y Contratos', icon: FileSpreadsheet },
             { id: 'seguimiento_oc' as ActiveTab, label: 'Ventana 5: Seguimiento OC', icon: Truck },
-            { id: 'documentacion' as ActiveTab, label: 'Ventana 6: Documentación', icon: FolderArchive },
+            { id: 'ordenes_venta' as ActiveTab, label: 'Ventana 6: Facturas & Órdenes', icon: PackageCheck },
+            { id: 'documentacion' as ActiveTab, label: 'Ventana 7: Documentación', icon: FolderArchive },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = selectedGuideTab === tab.id;

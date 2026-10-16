@@ -51,10 +51,12 @@ import {
   StoredUserAccount,
   ThemeSettings,
   OCTrackingContract,
+  OCTrackingItem,
   OCStatus,
   SalesOrderRecord,
   SalesInvoiceRecord,
 } from './types';
+import { resolveItemManufacturerBrand } from './utils/equipmentBrandResolver';
 import { getTodayDateCode, getFormattedQuoteNumber, incrementConsecutive, getFormattedSpanishDate, getNextDailyQuoteNumber } from './utils/quoteConsecutive';
 import {
   getSavedQuotes,
@@ -105,6 +107,7 @@ import {
   createSalesOrderFromTenderProject,
   createSalesOrderFromOCTrackingContract,
   createTenderProjectFromQuote,
+  reconcileAndSyncSalesOrdersWithOC,
 } from './utils/salesOrdersStorage';
 import {
   getStoredThemeSettings,
@@ -166,6 +169,8 @@ import {
 } from './utils/backupRestoreUtils';
 import { deduplicateTenderProjects } from './utils/tenderDeduplication';
 import { sanitizeEquipmentSuppliers } from './utils/supplierDeduplication';
+import { googleWorkspaceService } from './services/googleWorkspaceService';
+import { extractGoogleDriveInfo } from './utils/cloudLinkUtils';
 
 /**
  * Master financial sanitizer for QuoteItem: guarantees 100% mathematical consistency
@@ -262,16 +267,18 @@ export default function App() {
     currentUserRef.current = currentUser;
   }, [currentUser]);
 
-  // Keep currentUser permissions synchronized with local updates
+  // Keep currentUser permissions synchronized with local updates & cross-tab events
   useEffect(() => {
-    const handleUsersUpdated = (e: any) => {
-      const users: StoredUserAccount[] = e?.detail || getStoredUsers();
+    const syncCurrentUserWithList = (users: StoredUserAccount[]) => {
       const currentActive = currentUserRef.current;
       if (currentActive && Array.isArray(users)) {
+        let searchUName = currentActive.username?.toLowerCase();
+        if (searchUName === 'papi') searchUName = 'jairo';
+        if (searchUName === 'hijo') searchUName = 'fabian';
         const fresh = users.find(
           (u) =>
             u.id === currentActive.id ||
-            (u.username && currentActive.username && u.username.toLowerCase() === currentActive.username.toLowerCase())
+            (u.username && u.username.toLowerCase() === searchUName)
         );
         if (fresh) {
           const { password, ...safe } = fresh;
@@ -280,8 +287,38 @@ export default function App() {
         }
       }
     };
+
+    const handleUsersUpdated = (e: any) => {
+      const users: StoredUserAccount[] = e?.detail || getStoredUsers();
+      syncCurrentUserWithList(users);
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'syd_registered_system_users_v4' || e.key === 'syd_registered_system_users_v3') {
+        const users = getStoredUsers();
+        syncCurrentUserWithList(users);
+      }
+    };
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('syd_auth_broadcast_channel');
+        bc.onmessage = (ev) => {
+          if (ev.data?.type === 'USERS_UPDATED' && Array.isArray(ev.data.users)) {
+            syncCurrentUserWithList(ev.data.users);
+          }
+        };
+      }
+    } catch {}
+
     window.addEventListener('syd_users_updated', handleUsersUpdated);
-    return () => window.removeEventListener('syd_users_updated', handleUsersUpdated);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('syd_users_updated', handleUsersUpdated);
+      window.removeEventListener('storage', handleStorageChange);
+      if (bc) bc.close();
+    };
   }, []);
 
   const [isSuspended, setIsSuspended] = useState<boolean>(false);
@@ -443,7 +480,9 @@ export default function App() {
           try {
             localStorage.setItem('syd_suppliers_directory_v1', JSON.stringify(suppliers));
             if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('syd_suppliers_updated', { detail: suppliers }));
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('syd_suppliers_updated', { detail: suppliers }));
+              }, 0);
             }
           } catch (e) {}
         }
@@ -453,7 +492,9 @@ export default function App() {
           try {
             localStorage.setItem('syd_clients_directory_v1', JSON.stringify(clients));
             if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('syd_clients_updated', { detail: clients }));
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('syd_clients_updated', { detail: clients }));
+              }, 0);
             }
           } catch (e) {}
         }
@@ -727,11 +768,12 @@ export default function App() {
   // Sales Orders & Invoices State (Window 7 - Órdenes de Venta y Facturación)
   const [salesOrders, setSalesOrders] = useState<SalesOrderRecord[]>(() => {
     const stored = getStoredSalesOrders();
-    const deduped = deduplicateSalesOrders(stored);
-    if (deduped.length !== stored.length) {
-      saveStoredSalesOrders(deduped);
+    const storedContracts = getStoredOCTrackingContracts();
+    const { syncedOrders, hasChanges } = reconcileAndSyncSalesOrdersWithOC(stored, storedContracts);
+    if (hasChanges) {
+      saveStoredSalesOrders(syncedOrders);
     }
-    return deduped;
+    return syncedOrders;
   });
   const [salesInvoices, setSalesInvoices] = useState<SalesInvoiceRecord[]>(() => getStoredSalesInvoices());
   const [tenderToConvertInOV, setTenderToConvertInOV] = useState<TenderClientProject | null>(null);
@@ -861,10 +903,12 @@ export default function App() {
           if (freshOrders.length > 0) {
             setSalesOrders((prev) => {
               const merged = deduplicateSalesOrders([...prev, ...freshOrders]);
+              const contractsToUse = serverState.ocContracts || ocContracts;
+              const { syncedOrders } = reconcileAndSyncSalesOrdersWithOC(merged, contractsToUse);
               try {
-                localStorage.setItem('syd_sales_orders_v1', JSON.stringify(merged));
+                localStorage.setItem('syd_sales_orders_v1', JSON.stringify(syncedOrders));
               } catch (e) {}
-              return merged;
+              return syncedOrders;
             });
           }
         }
@@ -1011,11 +1055,18 @@ export default function App() {
   const [documentModalParams, setDocumentModalParams] = useState<{
     equipmentId?: string;
     docType?: string;
+    equipmentData?: any;
+    contractContext?: any;
   }>({});
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
-  const handleOpenDocumentModal = (equipmentId?: string, docType?: string) => {
-    setDocumentModalParams({ equipmentId, docType });
+  const handleOpenDocumentModal = (
+    equipmentId?: string,
+    docType?: string,
+    equipmentData?: any,
+    contractContext?: any
+  ) => {
+    setDocumentModalParams({ equipmentId, docType, equipmentData, contractContext });
     setIsDocumentModalOpen(true);
   };
 
@@ -1882,7 +1933,29 @@ export default function App() {
   };
 
   const handleDeleteDocument = async (docId: string) => {
+    const targetDoc = documents.find((d) => d.id === docId);
     setDocuments((prev) => prev.filter((d) => d.id !== docId));
+
+    // Si el documento estaba en Google Drive, eliminarlo de la nube de inmediato
+    if (targetDoc) {
+      let driveId = targetDoc.driveFileId;
+      if (!driveId && targetDoc.fileUrl) {
+        driveId = extractGoogleDriveInfo(targetDoc.fileUrl)?.id;
+      }
+      if (!driveId && targetDoc.fileData && (targetDoc.fileData.includes('drive.google.com') || targetDoc.fileData.includes('docs.google.com'))) {
+        driveId = extractGoogleDriveInfo(targetDoc.fileData)?.id;
+      }
+
+      if (driveId) {
+        try {
+          await googleWorkspaceService.deleteDriveFile(driveId);
+          console.log(`[Drive] Archivo ${driveId} eliminado de Google Drive exitosamente.`);
+        } catch (driveErr) {
+          console.warn('[Drive] No se pudo eliminar el archivo en Google Drive:', driveErr);
+        }
+      }
+    }
+
     try {
       await deleteTechnicalDocumentFromFirestore(docId);
     } catch (e) {
@@ -1902,132 +1975,14 @@ export default function App() {
     saveOCTrackingContractsToFirestore(deduped).catch(() => {});
     broadcastLocalDataSync({ type: 'OC_SYNC', contracts: deduped });
 
-    // Synchronize serial numbers, equipment status, missing equipments, and supplier OC numbers with Sales Orders
+    // Synchronize serial numbers, equipment status, and supplier OC numbers with Sales Orders
     setSalesOrders((prevOrders) => {
-      let anyOrderChanged = false;
-      let orderList = [...prevOrders];
-
-      deduped.forEach((contract) => {
-        if (!contract || !contract.clientName) return;
-        const normSO = normalizeClean(contract.salesOrderNumber?.replace(/^ov:\s*/i, ''));
-        const normContract = normalizeClean(contract.contractNumber?.replace(/^n°?o?hboc/i, 'hboc'));
-        const normClient = normalizeClean(contract.clientName);
-
-        // Precise verification: check if salesOrderId, contract relation, tender, SO number, contract number, or client matches
-        const matchIdx = orderList.findIndex(
-          (o) =>
-            (contract.salesOrderId && o.id === contract.salesOrderId) ||
-            (contract.id && o.ocContractId === contract.id) ||
-            (contract.tenderClientId && (o.tenderClientId === contract.tenderClientId || o.contractId === contract.tenderClientId)) ||
-            (normSO && normSO.length >= 3 && !['ov', 'sinov', 'na', 'n/a'].includes(normSO) && (normalizeClean(o.salesOrderNumber?.replace(/^ov:\s*/i, '')) === normSO || normSO.includes(normalizeClean(o.salesOrderNumber?.replace(/^ov:\s*/i, ''))))) ||
-            (normContract && normContract.length >= 4 && !['nohboc', 'hboc', 'na', 'n/a'].includes(normContract) && (normalizeClean(o.contractNumber?.replace(/^n°?o?hboc/i, 'hboc')) === normContract || normContract.includes(normalizeClean(o.contractNumber?.replace(/^n°?o?hboc/i, 'hboc'))))) ||
-            (normClient && normClient.length >= 4 && normalizeClean(o.clientName) === normClient)
-        );
-
-        if (matchIdx >= 0) {
-          // Update the matched existing order without duplicating it
-          const order = orderList[matchIdx];
-          const isProcessNum = normSO.startsWith('nohb') || normSO.startsWith('hboc') || normSO.startsWith('lic');
-          const newSO = (!order.salesOrderNumber || order.salesOrderNumber.startsWith('NoHB')) && !isProcessNum
-            ? (contract.salesOrderNumber || order.salesOrderNumber)
-            : order.salesOrderNumber;
-
-          const updatedItems = (order.items || []).map((soItem, soIdx) => {
-            const normSoName = normalizeClean(soItem.name);
-            const normSoCode = normalizeClean(soItem.code);
-
-            const cItem = contract.items.find(
-              (it) =>
-                (it.equipmentId && soItem.equipmentId && it.equipmentId === soItem.equipmentId) ||
-                (it.code && soItem.code && normalizeClean(it.code) === normSoCode) ||
-                (it.name && soItem.name && (
-                  normalizeClean(it.name) === normSoName ||
-                  normalizeClean(it.name).includes(normSoName) ||
-                  normSoName.includes(normalizeClean(it.name))
-                ))
-            ) || (contract.items.length === (order.items || []).length ? contract.items[soIdx] : null);
-
-            if (!cItem) return soItem;
-            const eqStatus = cItem.status === 'Entregado e Instalado' ? 'Entregado al Cliente' : (cItem.status || soItem.equipmentStatus);
-            return {
-              ...soItem,
-              equipmentStatus: eqStatus,
-              supplierOCRef: cItem.ocNumber || soItem.supplierOCRef,
-              linkedSupplierOCNumber: cItem.ocNumber || soItem.linkedSupplierOCNumber,
-              assignedSerialNumbers: (cItem.serialNumbers || []).map((s) => s.serialNumber).filter(Boolean).length > 0
-                ? (cItem.serialNumbers || []).map((s) => s.serialNumber).filter(Boolean)
-                : soItem.assignedSerialNumbers,
-            };
-          });
-
-          // Also check for any extra/missing equipment items present in OC contract that are missing in order.items
-          const unmatchedContractItems = (contract.items || []).filter((cItem) => {
-            const normCName = normalizeClean(cItem.name);
-            const normCCode = normalizeClean(cItem.code);
-            return !(order.items || []).some((soItem) =>
-              (cItem.equipmentId && soItem.equipmentId && cItem.equipmentId === soItem.equipmentId) ||
-              (cItem.code && soItem.code && normalizeClean(soItem.code) === normCCode) ||
-              (cItem.name && soItem.name && (
-                normalizeClean(soItem.name) === normCName ||
-                normalizeClean(soItem.name).includes(normCName) ||
-                normCName.includes(normalizeClean(soItem.name))
-              ))
-            );
-          });
-
-          const newOrderItemsFromContract = unmatchedContractItems.map((cItem, extraIdx) => {
-            const qty = Number(cItem.quantity) || 1;
-            const cost = Number(cItem.costPriceCOP) || 0;
-            const salePrice = Math.round(cost > 0 ? cost * 1.35 : 10000000);
-            const eqStatus = cItem.status === 'Entregado e Instalado' ? 'Entregado al Cliente' : (cItem.status || 'Pendiente de OC');
-            return {
-              id: `ov-item-${contract.id}-extra-${Date.now()}-${extraIdx}`,
-              equipmentId: cItem.equipmentId,
-              code: cItem.code || `EQ-${(order.items?.length || 0) + extraIdx + 1}`,
-              name: cItem.name,
-              brand: cItem.brand || '',
-              model: cItem.model || '',
-              quotedQuantity: qty,
-              quantityToDispatch: qty,
-              unitSalePriceCOP: salePrice,
-              totalSalePriceCOP: salePrice * qty,
-              equipmentStatus: eqStatus as any,
-              supplierOCRef: cItem.ocNumber || '',
-              linkedSupplierOCNumber: cItem.ocNumber || '',
-              assignedSerialNumbers: (cItem.serialNumbers || []).map((s) => s.serialNumber).filter(Boolean),
-              notes: cItem.notes || '',
-            };
-          });
-
-          const finalItems = [...updatedItems, ...newOrderItemsFromContract];
-          const subtotalVal = finalItems.reduce((acc, it) => acc + (it.totalSalePriceCOP || 0), 0);
-
-          orderList[matchIdx] = {
-            ...order,
-            salesOrderNumber: newSO,
-            hasLinkedOC: true,
-            ocContractId: contract.id,
-            items: finalItems,
-            totalValueCOP: order.totalValueCOP && order.totalValueCOP > 0 ? Math.max(order.totalValueCOP, subtotalVal) : subtotalVal,
-            updatedAt: new Date().toISOString(),
-          };
-          anyOrderChanged = true;
-        } else if ((contract.items || []).length > 0) {
-          // Contract without sales order (e.g. Direct OC created in Ventana 5) -> Auto-generate linked Sales Order
-          const newSO = createSalesOrderFromOCTrackingContract(contract, orderList);
-          contract.salesOrderId = newSO.id;
-          contract.salesOrderNumber = newSO.salesOrderNumber;
-          orderList = [newSO, ...orderList];
-          anyOrderChanged = true;
-        }
-      });
-
-      const dedupedOrders = deduplicateSalesOrders(orderList);
-      if (anyOrderChanged || dedupedOrders.length !== prevOrders.length) {
-        saveStoredSalesOrders(dedupedOrders);
-        saveSalesOrdersBatchToFirestore(dedupedOrders).catch(() => {});
-        broadcastLocalDataSync({ type: 'ORDERS_SYNC', orders: dedupedOrders });
-        return dedupedOrders;
+      const { syncedOrders, hasChanges } = reconcileAndSyncSalesOrdersWithOC(prevOrders, deduped, equipments);
+      if (hasChanges) {
+        saveStoredSalesOrders(syncedOrders);
+        saveSalesOrdersBatchToFirestore(syncedOrders).catch(() => {});
+        broadcastLocalDataSync({ type: 'ORDERS_SYNC', orders: syncedOrders });
+        return syncedOrders;
       }
       return prevOrders;
     });
@@ -2047,82 +2002,123 @@ export default function App() {
     // Also sync back to linked OC Contracts in Ventana 5 if sales order items or OV numbers were updated
     setOcContracts((prevContracts) => {
       let contractChanged = false;
-      let newContractsToAdd: OCTrackingContract[] = [];
+      const newContractsToAdd: OCTrackingContract[] = [];
+
       const syncedContracts = prevContracts.map((contract) => {
-        const matchedOrder = updated.find(
+        const normCClient = normalizeClean(contract.clientName);
+        const normCContract = normalizeClean(contract.contractNumber);
+
+        // Find all orders in updated that belong to this contract or client
+        const linkedOrders = updated.filter(
           (o) =>
-            o.id === contract.salesOrderId ||
-            o.ocContractId === contract.id
+            o &&
+            o.id &&
+            !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId) &&
+            ((contract.salesOrderId && o.id === contract.salesOrderId) ||
+             (contract.salesOrderIds && contract.salesOrderIds.includes(o.id)) ||
+             (o.ocContractId && o.ocContractId === contract.id) ||
+             (contract.tenderClientId && (o.tenderClientId === contract.tenderClientId || o.contractId === contract.tenderClientId)) ||
+             (normCContract && normCContract.length >= 4 && o.contractNumber && normalizeClean(o.contractNumber) === normCContract))
         );
-        if (!matchedOrder || !matchedOrder.items) return contract;
 
+        if (linkedOrders.length === 0) return contract;
+
+        // Build items for all linked orders, preserving existing tracked state
+        let allNewItems: OCTrackingItem[] = [];
         let itemsChanged = false;
-        const newItems = contract.items.map((cItem, idx) => {
-          const soItem = matchedOrder.items.find(
-            (it) =>
-              (it.equipmentId && cItem.equipmentId && it.equipmentId === cItem.equipmentId) ||
-              (it.code && cItem.code && it.code.trim().toLowerCase() === cItem.code.trim().toLowerCase()) ||
-              (it.name && cItem.name && it.name.trim().toLowerCase() === cItem.name.trim().toLowerCase())
-          ) || (matchedOrder.items.length === contract.items.length ? matchedOrder.items[idx] : null);
 
-          if (!soItem) return cItem;
+        linkedOrders.forEach((matchedOrder) => {
+          if (!matchedOrder.items || matchedOrder.items.length === 0) return;
+          const freshContract = createOCTrackingContractFromSalesOrder(matchedOrder, equipments);
 
-          let updatedCItem = { ...cItem };
-          let changed = false;
+          freshContract.items.forEach((fItem) => {
+            const existingItem = (contract.items || []).find(
+              (cIt) =>
+                (cIt.salesOrderItemId && fItem.salesOrderItemId && cIt.salesOrderItemId === fItem.salesOrderItemId) ||
+                ((cIt.salesOrderId === matchedOrder.id || !cIt.salesOrderId) &&
+                 ((cIt.equipmentId && fItem.equipmentId && cIt.equipmentId === fItem.equipmentId) ||
+                  (cIt.code && fItem.code && cIt.code.trim().toLowerCase() === fItem.code.trim().toLowerCase()) ||
+                  (cIt.name && fItem.name && cIt.name.trim().toLowerCase() === fItem.name.trim().toLowerCase())))
+            );
 
-          if (soItem.serialNumbers && soItem.serialNumbers.length > 0 && JSON.stringify(soItem.serialNumbers) !== JSON.stringify(cItem.serialNumbers || [])) {
-            updatedCItem.serialNumbers = soItem.serialNumbers;
-            changed = true;
-          } else if (soItem.assignedSerialNumbers && soItem.assignedSerialNumbers.length > 0 && (!cItem.serialNumbers || cItem.serialNumbers.length === 0)) {
-            updatedCItem.serialNumbers = soItem.assignedSerialNumbers.map((s, sIdx) => ({
-              id: `sn-${Date.now()}-${sIdx}`,
-              serialNumber: s,
-              status: 'En Bodega',
-              documents: [],
-            }));
-            changed = true;
-          }
+            if (existingItem) {
+              const supplierToUse =
+                fItem.supplier &&
+                !['por asignar', 'sin proveedor asignado', 'proveedor principal', 'n/a', 'ninguno'].includes(
+                  fItem.supplier.trim().toLowerCase()
+                )
+                  ? fItem.supplier
+                  : existingItem.supplier || fItem.supplier;
 
-          if (soItem.linkedSupplierOCNumber && soItem.linkedSupplierOCNumber !== cItem.ocNumber) {
-            updatedCItem.ocNumber = soItem.linkedSupplierOCNumber;
-            changed = true;
-          }
+              const brandToUse = fItem.brand || existingItem.brand;
 
-          if (changed) {
-            itemsChanged = true;
-            return updatedCItem;
-          }
-          return cItem;
+              allNewItems.push({
+                ...fItem,
+                ocNumber: existingItem.ocNumber || fItem.ocNumber,
+                supplier: supplierToUse,
+                brand: brandToUse,
+                status: existingItem.status || fItem.status,
+                paymentStatus: existingItem.paymentStatus || fItem.paymentStatus,
+                serialNumbers:
+                  existingItem.serialNumbers && existingItem.serialNumbers.length > 0
+                    ? existingItem.serialNumbers
+                    : fItem.serialNumbers,
+              });
+            } else {
+              itemsChanged = true;
+              allNewItems.push(fItem);
+            }
+          });
         });
 
-        if (itemsChanged || (matchedOrder.salesOrderNumber && contract.salesOrderNumber !== matchedOrder.salesOrderNumber)) {
+        // Also preserve any unassigned items that did not belong to any sales order
+        const unassignedPreserved = (contract.items || []).filter(
+          (it) => !it.salesOrderId && !allNewItems.some((ni) => (ni.code && ni.code === it.code) || ni.name === it.name)
+        );
+        allNewItems = [...allNewItems, ...unassignedPreserved];
+
+        const allSOIds = Array.from(new Set(linkedOrders.map((o) => o.id).filter(Boolean)));
+        const allSONums = Array.from(new Set(linkedOrders.map((o) => o.salesOrderNumber).filter(Boolean)));
+        const totalBudget = linkedOrders.reduce((s, o) => s + (o.totalValueCOP || 0), 0);
+        const totalCost = allNewItems.reduce((s, it) => s + (it.totalCostCOP || (it.costPriceCOP * (it.quantity || 1))), 0);
+
+        if (
+          itemsChanged ||
+          allNewItems.length !== (contract.items || []).length ||
+          allSOIds.length !== (contract.salesOrderIds || []).length
+        ) {
           contractChanged = true;
-          return {
-            ...contract,
-            salesOrderNumber: matchedOrder.salesOrderNumber || contract.salesOrderNumber,
-            items: newItems,
-            lastUpdatedAt: new Date().toISOString(),
-          };
         }
-        return contract;
+
+        return {
+          ...contract,
+          salesOrderIds: allSOIds,
+          salesOrderNumbers: allSONums,
+          salesOrderNumber: allSONums.join(', ') || contract.salesOrderNumber,
+          items: allNewItems,
+          totalBudgetCOP: totalBudget > 0 ? totalBudget : contract.totalBudgetCOP,
+          totalCostCOP: totalCost,
+          lastUpdatedAt: new Date().toISOString(),
+        };
       });
 
-      // Check for any sales orders that have an explicit contract/tender connection but no matching ocContract yet
+      // Check for any sales orders that have items but no matching ocContract yet
       updated.forEach((order) => {
         if (isSalesOrderDeleted(order.id, order.salesOrderNumber, order.tenderClientId, order.contractId)) return;
         const normSO = normalizeClean(order.salesOrderNumber?.replace(/^ov:\s*/i, ''));
-        const normContract = normalizeClean(order.contractNumber?.replace(/^n°?o?hboc/i, 'hboc'));
+        const normContract = normalizeClean(order.contractNumber);
+        const normClient = normalizeClean(order.clientName);
 
         const hasMatch = syncedContracts.some(
           (c) =>
             (order.ocContractId && c.id === order.ocContractId) ||
             (c.salesOrderId && c.salesOrderId === order.id) ||
+            (c.salesOrderIds && c.salesOrderIds.includes(order.id)) ||
             (order.tenderClientId && (c.tenderClientId === order.tenderClientId || c.id === order.tenderClientId)) ||
-            (order.contractId && (c.id === order.contractId || c.tenderClientId === order.contractId)) ||
-            (normSO && normSO.length >= 3 && !['ov', 'sinov', 'na', 'n/a'].includes(normSO) && normalizeClean(c.salesOrderNumber?.replace(/^ov:\s*/i, '')) === normSO) ||
-            (normContract && normContract.length >= 4 && !['nohboc', 'hboc', 'na', 'n/a'].includes(normContract) && normalizeClean(c.contractNumber?.replace(/^n°?o?hboc/i, 'hboc')) === normContract)
+            (normContract && normContract.length >= 4 && c.contractNumber && normalizeClean(c.contractNumber) === normContract) ||
+            (normSO && normSO.length >= 3 && !['ov', 'sinov', 'na', 'n/a'].includes(normSO) && (normalizeClean(c.salesOrderNumber?.replace(/^ov:\s*/i, '')) === normSO || (c.salesOrderNumbers || []).some((s) => normalizeClean(s) === normSO)))
         );
-        if (!hasMatch && (order.contractId || order.tenderClientId) && (order.items || []).length > 0) {
+        if (!hasMatch && (order.items || []).length > 0) {
           const newC = createOCTrackingContractFromSalesOrder(order, equipments);
           newContractsToAdd.push(newC);
           contractChanged = true;
@@ -2147,11 +2143,19 @@ export default function App() {
   };
 
   const handleGenerateOCTrackingFromSalesOrder = (salesOrder: SalesOrderRecord, navigateToOCTab: boolean = false) => {
-    // Only match contract if it was specifically generated for this exact sales order
+    const normSO = normalizeClean(salesOrder.salesOrderNumber?.replace(/^ov:\s*/i, ''));
+    const normContract = normalizeClean(salesOrder.contractNumber);
+    const normClient = normalizeClean(salesOrder.clientName);
+
+    // Match contract if linked to this exact sales order, tender project, contract process, or same client
     const existing = ocContracts.find(
       (c) =>
         (salesOrder.ocContractId && c.id === salesOrder.ocContractId) ||
-        (salesOrder.id && c.salesOrderId === salesOrder.id)
+        (salesOrder.id && c.salesOrderId === salesOrder.id) ||
+        (salesOrder.id && (c.salesOrderIds || []).includes(salesOrder.id)) ||
+        (salesOrder.tenderClientId && (c.tenderClientId === salesOrder.tenderClientId || c.id === salesOrder.tenderClientId)) ||
+        (normContract && normContract.length >= 4 && c.contractNumber && normalizeClean(c.contractNumber) === normContract) ||
+        (normSO && normSO.length >= 3 && (normalizeClean(c.salesOrderNumber?.replace(/^ov:\s*/i, '')) === normSO || (c.salesOrderNumbers || []).some((s) => normalizeClean(s) === normSO)))
     );
 
     let newContract: OCTrackingContract;
@@ -2159,32 +2163,65 @@ export default function App() {
 
     if (existing) {
       const freshContract = createOCTrackingContractFromSalesOrder(salesOrder, equipments);
+      const itemsForThisOrder = (salesOrder.items && salesOrder.items.length > 0)
+        ? freshContract.items.map((fItem) => {
+            const existingItem = (existing.items || []).find(
+              (eIt) =>
+                (eIt.salesOrderId === salesOrder.id || !eIt.salesOrderId) &&
+                ((eIt.equipmentId && fItem.equipmentId && String(eIt.equipmentId) === String(fItem.equipmentId)) ||
+                 (eIt.code && fItem.code && String(eIt.code).trim().toLowerCase() === String(fItem.code).trim().toLowerCase()) ||
+                 (eIt.name && fItem.name && String(eIt.name).trim().toLowerCase() === String(fItem.name).trim().toLowerCase()))
+            );
+            if (existingItem) {
+              return {
+                ...fItem,
+                ocNumber: existingItem.ocNumber || fItem.ocNumber,
+                supplier:
+                  fItem.supplier &&
+                  fItem.supplier !== 'Sin Proveedor Asignado' &&
+                  fItem.supplier !== 'Proveedor Principal'
+                    ? fItem.supplier
+                    : existingItem.supplier || fItem.supplier,
+                brand: fItem.brand || existingItem.brand,
+                status: existingItem.status || fItem.status,
+                serialNumbers: existingItem.serialNumbers || fItem.serialNumbers,
+              };
+            }
+            return fItem;
+          })
+        : [];
+
+      // Preserve items from OTHER sales orders and unassigned contract items
+      const itemsFromOtherOrders = (existing.items || []).filter(
+        (it) => it.salesOrderId && it.salesOrderId !== salesOrder.id
+      );
+      const unassignedItems = (existing.items || []).filter(
+        (it) => !it.salesOrderId && !itemsForThisOrder.some((fo) => (fo.code && fo.code === it.code) || fo.name === it.name)
+      );
+
+      const combinedItems = [...itemsFromOtherOrders, ...itemsForThisOrder, ...unassignedItems];
+      const allSOIds = Array.from(new Set([...(existing.salesOrderIds || []), salesOrder.id])).filter(Boolean);
+      const allSONums = Array.from(
+        new Set([
+          ...(existing.salesOrderNumbers || []),
+          ...(existing.salesOrderNumber ? String(existing.salesOrderNumber).split(',').map((s) => s.trim()) : []),
+          salesOrder.salesOrderNumber,
+        ])
+      ).filter(Boolean);
+
       newContract = {
         ...existing,
         salesOrderId: salesOrder.id,
-        salesOrderNumber: salesOrder.salesOrderNumber || existing.salesOrderNumber,
+        salesOrderNumber: allSONums.join(', '),
+        salesOrderIds: allSOIds,
+        salesOrderNumbers: allSONums,
         quoteId: salesOrder.quoteId || existing.quoteId,
         quoteNumber: salesOrder.quoteNumber || existing.quoteNumber,
         tenderClientId: salesOrder.tenderClientId || salesOrder.contractId || existing.tenderClientId,
         clientName: salesOrder.clientName || existing.clientName,
         contractNumber: salesOrder.contractNumber || existing.contractNumber,
-        items: salesOrder.items && salesOrder.items.length > 0 ? freshContract.items.map((fItem) => {
-          const existingItem = (existing.items || []).find(
-            (eIt) => (eIt.equipmentId && fItem.equipmentId && eIt.equipmentId === fItem.equipmentId) ||
-                     (eIt.code && fItem.code && eIt.code.trim().toLowerCase() === fItem.code.trim().toLowerCase()) ||
-                     (eIt.name && fItem.name && eIt.name.trim().toLowerCase() === fItem.name.trim().toLowerCase())
-          );
-          if (existingItem) {
-            return {
-              ...fItem,
-              ocNumber: existingItem.ocNumber || fItem.ocNumber,
-              supplier: existingItem.supplier || fItem.supplier,
-              status: existingItem.status || fItem.status,
-              serialNumbers: existingItem.serialNumbers || fItem.serialNumbers,
-            };
-          }
-          return fItem;
-        }) : existing.items,
+        items: combinedItems,
+        totalCostCOP: combinedItems.reduce((acc, it) => acc + (it.totalCostCOP || 0), 0),
         lastUpdatedAt: new Date().toISOString(),
       };
       updatedContracts = ocContracts.map((c) => (c.id === existing.id ? newContract : c));
@@ -2344,7 +2381,7 @@ export default function App() {
 
   return (
     <div
-      className="min-h-screen flex flex-col md:flex-row font-sans transition-colors duration-200"
+      className="h-screen w-full flex flex-col md:flex-row font-sans transition-colors duration-200 overflow-hidden"
       style={{
         backgroundColor: 'var(--syd-body-bg)',
         color: 'var(--syd-text-primary)',
@@ -2377,12 +2414,12 @@ export default function App() {
         salesOrdersCount={salesOrders.length}
       />
 
-      {/* Main Workspace Area (Right side) */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden">
+      {/* Main Workspace Area (Right side) - Full width adapted with sidebar */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top Header Bar */}
         <div
           id="top-header-bar-container"
-          className="p-3 sm:px-6 sm:py-3.5 border-b sticky top-0 z-30 backdrop-blur-md transition-colors duration-200"
+          className="px-3 py-2 sm:px-4 lg:px-6 sm:py-2.5 border-b shrink-0 z-30 backdrop-blur-md shadow-sm transition-colors duration-200"
           style={{
             backgroundColor: 'var(--syd-header-bg)',
             borderColor: 'var(--syd-border-color)',
@@ -2405,9 +2442,10 @@ export default function App() {
         {/* Global Online Update Banner (Shows only when new version is available) */}
         <AppUpdateBanner onOpenDetails={() => setIsAppUpdatesModalOpen(true)} />
 
-        {/* Dynamic View Content */}
+        {/* Dynamic View Content - Active bounded scroll area for pristine sticky headers and full width */}
         <main
-          className="flex-1 p-3 sm:p-6 pb-28 sm:pb-36 overflow-y-auto transition-colors duration-200"
+          id="main-workspace-scroll-container"
+          className="flex-1 min-h-0 px-2 sm:px-4 lg:px-6 py-2.5 sm:py-4 pb-24 sm:pb-32 overflow-y-auto overflow-x-hidden transition-colors duration-200 w-full"
           style={{ backgroundColor: 'var(--syd-body-bg)' }}
         >
           {activeTab === 'inicio' && (
@@ -2515,6 +2553,10 @@ export default function App() {
               salesOrders={salesOrders}
               salesInvoices={salesInvoices}
               onNavigateToOCTracking={() => setActiveTab('seguimiento_oc')}
+              onCreateSalesOrder={(tender) => {
+                setTenderToConvertInOV(tender);
+                setActiveTab('ordenes_venta');
+              }}
             />
           )}
 
@@ -2523,6 +2565,7 @@ export default function App() {
               contracts={ocContracts}
               onUpdateContracts={handleUpdateContracts}
               tenderClients={tenderClients}
+              salesOrders={salesOrders}
               equipments={equipments}
               currentUser={currentUser}
               onNavigateToTab={(tab: string) => setActiveTab(tab as ActiveTab)}
@@ -2559,12 +2602,14 @@ export default function App() {
               equipments={equipments}
               tenderClients={tenderClients}
               ocContracts={ocContracts}
-              onUpdateContracts={setOcContracts}
+              salesOrders={salesOrders}
+              onUpdateContracts={handleUpdateContracts}
               onOpenNewDocumentModal={handleOpenDocumentModal}
               onSaveDocument={handleSaveNewDocument}
               onDeleteDocument={handleDeleteDocument}
               currentUser={currentUser}
               onNavigateToOCTracking={() => setActiveTab('seguimiento_oc')}
+              onNavigateToInvoicing={() => setActiveTab('ordenes_venta')}
             />
           )}
 
@@ -2585,15 +2630,17 @@ export default function App() {
         </main>
 
         {/* Global Modals */}
-        <EquipmentModal
-          isOpen={isEquipmentModalOpen}
-          onClose={() => {
-            setIsEquipmentModalOpen(false);
-            setEditingEquipment(null);
-          }}
-          onSave={handleSaveEquipment}
-          equipmentToEdit={editingEquipment}
-        />
+        {isEquipmentModalOpen && (
+          <EquipmentModal
+            isOpen={isEquipmentModalOpen}
+            onClose={() => {
+              setIsEquipmentModalOpen(false);
+              setEditingEquipment(null);
+            }}
+            onSave={handleSaveEquipment}
+            equipmentToEdit={editingEquipment}
+          />
+        )}
 
         <DocumentModal
           isOpen={isDocumentModalOpen}
@@ -2601,6 +2648,8 @@ export default function App() {
           existingDocuments={documents}
           initialEquipmentId={documentModalParams.equipmentId}
           initialDocType={documentModalParams.docType}
+          initialEquipmentData={documentModalParams.equipmentData}
+          contractContext={documentModalParams.contractContext}
           onClose={() => setIsDocumentModalOpen(false)}
           onSave={handleSaveNewDocument}
         />

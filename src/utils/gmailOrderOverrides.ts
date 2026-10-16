@@ -38,11 +38,20 @@ export function saveOrderOverride(
   if (typeof window === 'undefined' || !orderKey) return;
   try {
     const all = getStoredOrderOverrides();
-    all[orderKey] = {
+    const dataWithTs = {
       ...(all[orderKey] || {}),
       ...updates,
       lastModified: new Date().toISOString(),
     };
+    all[orderKey] = dataWithTs;
+
+    // Also persist under stripped or msg_ prefixed key to guarantee seamless lookup
+    const rawKey = orderKey.replace(/^msg_/, '');
+    if (rawKey) {
+      all[rawKey] = { ...(all[rawKey] || {}), ...dataWithTs };
+      all[`msg_${rawKey}`] = { ...(all[`msg_${rawKey}`] || {}), ...dataWithTs };
+    }
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
   } catch (err) {
     console.warn('Error saving order override:', err);
@@ -57,6 +66,11 @@ export function removeOrderOverride(orderKey: string): void {
   try {
     const all = getStoredOrderOverrides();
     delete all[orderKey];
+    const rawKey = orderKey.replace(/^msg_/, '');
+    if (rawKey) {
+      delete all[rawKey];
+      delete all[`msg_${rawKey}`];
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
   } catch (err) {
     console.warn('Error removing order override:', err);
@@ -68,7 +82,17 @@ export function removeOrderOverride(orderKey: string): void {
  */
 export function applyOrderOverrides(order: DetectedPurchaseOrder): DetectedPurchaseOrder {
   const all = getStoredOrderOverrides();
-  const override = all[order.id] || (order.messageId ? all[order.messageId] : undefined);
+  const rawId = order.id ? order.id.replace(/^msg_/, '') : undefined;
+  const rawMsgId = order.messageId ? order.messageId.replace(/^msg_/, '') : undefined;
+
+  const override =
+    all[order.id] ||
+    (rawId ? all[rawId] : undefined) ||
+    (rawId ? all[`msg_${rawId}`] : undefined) ||
+    (order.messageId ? all[order.messageId] : undefined) ||
+    (rawMsgId ? all[rawMsgId] : undefined) ||
+    (rawMsgId ? all[`msg_${rawMsgId}`] : undefined);
+
   if (!override) return order;
 
   const rawText = (order.rawBodyText || order.snippet || '').toLowerCase();

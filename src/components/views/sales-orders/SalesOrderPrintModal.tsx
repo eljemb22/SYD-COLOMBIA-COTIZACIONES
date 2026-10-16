@@ -1,7 +1,9 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Printer, Download, Share2, PackageCheck, FileCheck2, Building2, MapPin, Calendar, Truck, UserCheck, ShieldCheck } from 'lucide-react';
 import { SalesOrderRecord, ThemeSettings } from '../../../types';
 import { SyDLogo } from '../../common/SyDLogo';
+import { resolveItemManufacturerBrand } from '../../../utils/equipmentBrandResolver';
 
 interface SalesOrderPrintModalProps {
   isOpen: boolean;
@@ -18,7 +20,7 @@ export const SalesOrderPrintModal: React.FC<SalesOrderPrintModalProps> = ({
 }) => {
   const printAreaRef = useRef<HTMLDivElement>(null);
 
-  if (!isOpen || !order) return null;
+  if (!isOpen || !order || typeof document === 'undefined') return null;
 
   const handlePrint = () => {
     window.print();
@@ -30,8 +32,13 @@ export const SalesOrderPrintModal: React.FC<SalesOrderPrintModalProps> = ({
     maximumFractionDigits: 0,
   }).format(order.totalValueCOP || 0);
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/25 flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       {/* Container */}
       <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] print:max-h-none print:border-none print:shadow-none print:bg-white print:rounded-none">
         {/* Top bar (hidden in print) */}
@@ -165,7 +172,7 @@ export const SalesOrderPrintModal: React.FC<SalesOrderPrintModalProps> = ({
                         <td className="py-3 px-3">
                           <p className="font-bold text-slate-900 text-xs">{item.name}</p>
                           <p className="text-[11px] text-slate-600">
-                            Marca: <span className="font-semibold text-slate-800">{item.brand}</span> | Modelo: <span className="font-semibold text-slate-800">{item.model}</span> | Código: <span className="font-mono text-slate-500">{item.code}</span>
+                            Marca: <span className="font-semibold text-slate-800">{resolveItemManufacturerBrand(item)}</span> | Modelo: <span className="font-semibold text-slate-800">{item.model}</span> | Código: <span className="font-mono text-slate-500">{item.code}</span>
                           </p>
                           {item.notes && (
                             <p className="text-[10px] text-slate-500 mt-0.5 italic">Nota: {item.notes}</p>
@@ -275,6 +282,7 @@ export const SalesOrderPrintModal: React.FC<SalesOrderPrintModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
