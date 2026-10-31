@@ -44,6 +44,7 @@ import {
   RotateCcw,
   X,
   Check,
+  GitFork,
 } from 'lucide-react';
 import {
   SalesOrderRecord,
@@ -68,11 +69,15 @@ import {
 import {
   createSalesOrderFromOCTrackingContract,
   deduplicateSalesOrders,
+  splitSalesOrderRecord,
+  saveStoredSalesOrders,
 } from '../../utils/salesOrdersStorage';
+import { saveStoredOCTrackingContracts } from '../../utils/ocTrackingStorage';
 import { NewSalesOrderModal } from './sales-orders/NewSalesOrderModal';
 import { AttachInvoiceModal } from './sales-orders/AttachInvoiceModal';
 import { SalesOrderPrintModal } from './sales-orders/SalesOrderPrintModal';
 import { SalesOrderDetailsModal } from './sales-orders/SalesOrderDetailsModal';
+import { SplitSalesOrderModal } from './sales-orders/SplitSalesOrderModal';
 import { ContractTraceabilityView } from './sales-orders/ContractTraceabilityView';
 import { formatCOP, isValidOCNumber, normalizeClean, cleanRef } from '../../utils/formatters';
 import {
@@ -390,6 +395,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   const [invoiceToDelete, setInvoiceToDelete] = useState<SalesInvoiceRecord | null>(null);
   const [quoteToConvert, setQuoteToConvert] = useState<SavedQuote | null>(initialQuoteToConvert || null);
   const [tenderToConvert, setTenderToConvert] = useState<TenderClientProject | null>(initialTenderToConvert || null);
+  const [splitOrderModalTarget, setSplitOrderModalTarget] = useState<SalesOrderRecord | null>(null);
 
   // Document preview modal for invoice attachments
   const [previewInvoiceDoc, setPreviewInvoiceDoc] = useState<{
@@ -1016,6 +1022,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
     }
 
     let pending = 0;
+    let deliveredCount = 0;
     for (let i = 0; i < order.items.length; i++) {
       const item = order.items[i];
       const normItemName = normalizeClean(item.name);
@@ -1043,18 +1050,21 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
 
       if (!isDelivered) {
         pending++;
+      } else {
+        deliveredCount++;
       }
     }
 
-    if (pending > 0) {
+    if (pending > 0 && deliveredCount === 0) {
       return {
         isDelivered: false,
+        deliveredCount: 0,
         pendingCount: pending,
         reason: `Faltan ${pending} de ${order.items.length} equipos por cambiar a «Entregado e Instalado» en Seguimiento de OC`,
       };
     }
 
-    return { isDelivered: true, pendingCount: 0 };
+    return { isDelivered: pending === 0, deliveredCount, pendingCount: pending };
   };
 
   const handleUpdateOrderStatus = (orderId: string, newStatus: SalesOrderStatus) => {
@@ -1330,6 +1340,24 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
 
           {/* Single primary button: Nueva Orden de Venta */}
           {!isReadOnly ? (
+            <>
+            <button
+              type="button"
+              onClick={() => {
+                const target = deduplicatedSalesOrders.find((o) => {
+                  if ((o.items?.length || 0) === 0) return false;
+                  if (o.status === 'Facturada' || o.invoicedStatus === 'Facturada Total') return false;
+                  const inv = computeOrderInvoicingData(o, salesInvoices);
+                  return !inv.isFullyInvoiced;
+                }) || null;
+                setSplitOrderModalTarget(target);
+              }}
+              className="px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40"
+              title="Dividir o Renovar Orden de Venta (OV) y Órdenes de Compra (OCs) por vencimiento de tiempo o equipos pendientes"
+            >
+              <GitFork className="w-4 h-4 text-purple-400" />
+              <span>Dividir / Renovar OV y OCs</span>
+            </button>
             <button
               onClick={() => {
                 setEditingOrder(null);
@@ -1348,6 +1376,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
               <Plus className="w-4 h-4" />
               <span>Nueva Orden de Venta</span>
             </button>
+            </>
           ) : (
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-xs font-semibold">
               <Lock className="w-3.5 h-3.5 text-amber-400" />
@@ -2048,6 +2077,16 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                                     {/* Acciones */}
                                     <td className="py-3 px-3 text-right">
                                       <div className="flex items-center justify-end gap-1">
+                                        {!invData.isFullyInvoiced && order.status !== 'Facturada' && (order.items?.length || 0) > 0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setSplitOrderModalTarget(order)}
+                                            className="p-1 rounded text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                                            title="Dividir OV / Trasladar equipos demorados a Nueva OV y OC"
+                                          >
+                                            <GitFork className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
                                         <button
                                           type="button"
                                           onClick={() => {
@@ -2521,10 +2560,16 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {filteredOrders.map((order) => {
-                      const { isDelivered } = isOrderEquipmentDeliveredInOC(order);
-                      const canInvoice = order.status === 'Facturada' || Boolean(order.invoiceNumber) || isDelivered;
+                      const { isDelivered, deliveredCount } = isOrderEquipmentDeliveredInOC(order);
+                      const canInvoice =
+                        order.status === 'Facturada' ||
+                        Boolean(order.invoiceNumber) ||
+                        Boolean(order.attachedInvoiceFile) ||
+                        isDelivered ||
+                        (deliveredCount !== undefined && deliveredCount > 0);
                       const originInfo = getOrderOriginInfo(order);
                       const OriginIcon = originInfo.icon;
+                      const invData = getOrderInvoicingData(order);
 
                       return (
                         <tr key={order.id} className="hover:bg-slate-800/40 transition-colors">
@@ -2831,6 +2876,16 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1">
+                              {!invData.isFullyInvoiced && order.status !== 'Facturada' && (order.items?.length || 0) > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSplitOrderModalTarget(order)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 cursor-pointer transition-colors"
+                                  title="Dividir OV / Trasladar equipos demorados a Nueva OV y OC"
+                                >
+                                  <GitFork className="w-4 h-4" />
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => {
@@ -3436,6 +3491,44 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           fileData={previewInvoiceDoc.fileData}
           fileType={previewInvoiceDoc.fileType}
           onDownload={previewInvoiceDoc.onDownload}
+        />
+      )}
+
+      {/* Modal para Dividir OV / Trasladar equipos demorados a Nueva OV y OC */}
+      {splitOrderModalTarget && (
+        <SplitSalesOrderModal
+          isOpen={true}
+          onClose={() => setSplitOrderModalTarget(null)}
+          sourceOrder={splitOrderModalTarget}
+          allOrders={salesOrders}
+          contracts={contracts}
+          salesInvoices={salesInvoices}
+          onConfirmSplit={(params) => {
+            const isCompleteTransfer = (() => {
+              const currentTotalUnits = (splitOrderModalTarget.items || []).reduce((s, it) => s + (it.quantityToDispatch || it.quantity || 1), 0);
+              const movingUnits = params.itemSplits.reduce((s, it) => s + it.quantityToMove, 0);
+              return movingUnits >= currentTotalUnits;
+            })();
+            const { updatedOrders, updatedContracts } = splitSalesOrderRecord(
+              params,
+              salesOrders,
+              contracts
+            );
+            saveStoredSalesOrders(updatedOrders);
+            if (onUpdateSalesOrders) {
+              onUpdateSalesOrders(updatedOrders);
+            }
+            if (onUpdateContracts) {
+              onUpdateContracts(updatedContracts);
+              saveStoredOCTrackingContracts(updatedContracts);
+            }
+            setSplitOrderModalTarget(null);
+            if (isCompleteTransfer) {
+              alert(`✓ Se trasladaron todos los equipos a la Nueva Orden de Venta ${params.newSalesOrderNumber}. La OV original (${splitOrderModalTarget.salesOrderNumber || splitOrderModalTarget.id}) quedó sin equipos y fue retirada del listado activo.`);
+            } else {
+              alert(`✓ Se trasladaron los equipos a la Nueva Orden de Venta ${params.newSalesOrderNumber} exitosamente.`);
+            }
+          }}
         />
       )}
     </div>

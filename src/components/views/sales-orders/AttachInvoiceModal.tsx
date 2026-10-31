@@ -259,23 +259,22 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       notes: notes.trim(),
       createdAt: invoiceToEdit?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      items: matchedSO?.items || invoiceToEdit?.items || [],
     };
 
-    // If an OV is linked, update it with this invoice info
+    // If an OV is linked, culminate it with this invoice info
     let updatedSO: SalesOrderRecord | undefined = undefined;
     if (matchedSO) {
-      const isFullyInvoicedNow = matchedSO.totalValueCOP > 0 ? totalAmountCOP >= matchedSO.totalValueCOP : true;
-
       updatedSO = {
         ...matchedSO,
         invoiceNumber: finalInvoice.invoiceNumber,
         invoiceId: finalInvoice.id,
-        invoiceIds: [finalInvoice.id],
+        invoiceIds: [finalInvoice.id, ...(matchedSO.invoiceIds || []).filter(id => id !== finalInvoice.id)],
         invoiceDate: finalInvoice.issueDate,
         totalInvoicedCOP: totalAmountCOP,
         attachedInvoiceFile: finalInvoice.attachedInvoiceFile || matchedSO.attachedInvoiceFile,
-        invoicedStatus: isFullyInvoicedNow ? 'Facturada Total' : 'Facturada Parcial',
-        status: isFullyInvoicedNow && matchedSO.status !== 'Cancelada' ? 'Facturada' : matchedSO.status,
+        invoicedStatus: 'Facturada Total',
+        status: matchedSO.status !== 'Cancelada' ? 'Facturada' : matchedSO.status,
         updatedAt: new Date().toISOString(),
       };
     }

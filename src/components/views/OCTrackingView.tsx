@@ -22,7 +22,8 @@ import {
   exportOCTrackingToExcel,
   autoRegisterSupplierIfNotExists,
 } from '../../utils/ocTrackingStorage';
-import { getStoredSalesOrders, saveStoredSalesOrders } from '../../utils/salesOrdersStorage';
+import { getStoredSalesOrders, saveStoredSalesOrders, splitSalesOrderRecord } from '../../utils/salesOrdersStorage';
+import { SplitSalesOrderModal } from './sales-orders/SplitSalesOrderModal';
 import {
   deleteOCTrackingContractFromFirestore,
   saveOCTrackingContractsToFirestore,
@@ -54,6 +55,7 @@ interface OCTrackingViewProps {
   onUpdateContracts: (updated: OCTrackingContract[]) => void;
   tenderClients?: TenderClientProject[];
   salesOrders?: SalesOrderRecord[];
+  onUpdateSalesOrders?: (orders: SalesOrderRecord[]) => void;
   equipments: MedicalEquipment[];
   allDocuments?: TechnicalDocument[];
   currentUser?: AuthUser | null;
@@ -71,6 +73,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
   onUpdateContracts,
   tenderClients = [],
   salesOrders = [],
+  onUpdateSalesOrders,
   equipments,
   allDocuments = [],
   currentUser,
@@ -126,6 +129,13 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
     ocNumber: string;
     invoices: SupplierInvoiceAttachment[];
   } | null>(null);
+
+  // State for Split Sales Order / Move delayed items to New OV & OC modal
+  const [splitModalState, setSplitModalState] = useState<{
+    isOpen: boolean;
+    sourceOrder?: SalesOrderRecord | null;
+    preselectedItemIds?: string[];
+  }>({ isOpen: false });
 
   // In-app delete confirm state (works reliably inside sandboxed iframes)
   const [deleteConfirmState, setDeleteConfirmState] = useState<{
@@ -203,6 +213,10 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
   const deduplicatedContracts = useMemo(() => {
     return deduplicateOCTrackingContracts(contracts);
   }, [contracts]);
+
+  const effectiveSalesOrders = useMemo(() => {
+    return salesOrders && salesOrders.length > 0 ? salesOrders : getStoredSalesOrders();
+  }, [salesOrders]);
 
   // Distinct suppliers collected across all contracts
   const distinctSuppliers = useMemo(() => {
@@ -557,6 +571,36 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
     });
   };
 
+  // Contracts passed to ContractHierarchyView keep full item list so ContractHierarchyView can match OVs accurately
+  const filteredContractsForHierarchy = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+    return deduplicatedContracts
+      .map((contract) => {
+        const matchesContractText =
+          !term ||
+          contract.contractNumber.toLowerCase().includes(term) ||
+          contract.clientName.toLowerCase().includes(term) ||
+          contract.nit.toLowerCase().includes(term) ||
+          (contract.supplier && contract.supplier.toLowerCase().includes(term)) ||
+          (contract.ocNumber && contract.ocNumber.toLowerCase().includes(term));
+
+        if (!matchesContractText) {
+          const hasMatchingItem = contract.items.some(
+            (it) =>
+              it.name.toLowerCase().includes(term) ||
+              it.brand.toLowerCase().includes(term) ||
+              it.model.toLowerCase().includes(term) ||
+              it.supplier.toLowerCase().includes(term) ||
+              it.ocNumber.toLowerCase().includes(term)
+          );
+          if (!hasMatchingItem) return null;
+        }
+
+        return contract;
+      })
+      .filter((c): c is OCTrackingContract => c !== null);
+  }, [deduplicatedContracts, searchTerm]);
+
   // Quick changes on item status / payment terms
   const handleQuickChangeItemStatus = (contractId: string, itemId: string, newStatus: OCStatus) => {
     let itemFoundInAnyContract = false;
@@ -579,6 +623,35 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
       if (targetSOItem) break;
     }
 
+    // Fallback: If not found by direct ID, locate item in contracts and match against SO items
+    if (!targetSOItem) {
+      for (const c of contracts) {
+        const it = c.items.find((item) => item.id === itemId);
+        if (it) {
+          for (const so of currentSalesOrders) {
+            for (const soIt of so.items || []) {
+              if (
+                (it.salesOrderItemId && soIt.id === it.salesOrderItemId) ||
+                (it.salesOrderId && so.id === it.salesOrderId && it.code === soIt.code) ||
+                (it.salesOrderId && so.id === it.salesOrderId && it.name === soIt.name) ||
+                (it.equipmentId && soIt.equipmentId && it.equipmentId === soIt.equipmentId) ||
+                (it.code && soIt.code && it.code.trim().toLowerCase() === soIt.code.trim().toLowerCase()) ||
+                (it.name && soIt.name && it.name.trim().toLowerCase() === soIt.name.trim().toLowerCase())
+              ) {
+                targetSOItem = { so, soIt };
+                break;
+              }
+            }
+            if (targetSOItem) break;
+          }
+          break;
+        }
+      }
+    }
+
+    const isNowDelivered =
+      newStatus === 'Entregado e Instalado' || newStatus === 'Cerrado / Concluido';
+
     const updated = contracts.map((c) => {
       if (c.id !== contractId) return c;
 
@@ -591,18 +664,17 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
           : it.id === itemId ||
             it.salesOrderItemId === itemId ||
             (it.equipmentId && String(it.equipmentId) === String(itemId)) ||
-            (targetSOItem && targetSOItem.soIt.id === it.salesOrderItemId);
+            (targetSOItem && targetSOItem.soIt.id === it.salesOrderItemId) ||
+            (targetSOItem && targetSOItem.soIt.code && it.code && targetSOItem.soIt.code === it.code);
 
         if (!isMatch) return it;
         matchedCount++;
         itemFoundInAnyContract = true;
 
-        const isNowDelivered =
-          newStatus === 'Entregado e Instalado' || newStatus === 'Cerrado / Concluido';
-
         return {
           ...it,
           status: newStatus,
+          paymentStatus: isNowDelivered ? 'Pagado al Proveedor' : it.paymentStatus,
           deliveryDate: isNowDelivered
             ? it.deliveryDate || new Date().toISOString().split('T')[0]
             : it.deliveryDate,
@@ -627,8 +699,6 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
       // If item was rendered on-the-fly from a Sales Order and not yet in c.items, append it!
       if (matchedCount === 0 && targetSOItem) {
         itemFoundInAnyContract = true;
-        const isNowDelivered =
-          newStatus === 'Entregado e Instalado' || newStatus === 'Cerrado / Concluido';
         const cost = Math.round(Number(targetSOItem.soIt.unitSalePriceCOP || 1000000) * 0.65);
         const qty = Number(targetSOItem.soIt.quantityToDispatch) || 1;
 
@@ -645,7 +715,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
           supplier: String(targetSOItem.soIt.supplier || targetSOItem.soIt.supplierName || 'Proveedor'),
           ocNumber: String(targetSOItem.soIt.supplierOCRef || targetSOItem.soIt.linkedSupplierOCNumber || ''),
           status: newStatus,
-          paymentStatus: 'Pendiente',
+          paymentStatus: isNowDelivered ? 'Pagado al Proveedor' : 'Pendiente',
           deliveryDate: isNowDelivered ? new Date().toISOString().split('T')[0] : undefined,
           installedDate: isNowDelivered ? new Date().toISOString().split('T')[0] : undefined,
           serialNumber: targetSOItem.soIt.serialNumber || targetSOItem.soIt.assignedSerialNumbers?.[0] || '',
@@ -676,7 +746,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
       };
     });
 
-    // Also sync sales orders in storage
+    // Also sync sales orders in storage and React state
     if (targetSOItem) {
       try {
         const updatedSOs = currentSalesOrders.map((so) => {
@@ -684,31 +754,158 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
           return {
             ...so,
             items: (so.items || []).map((it) => {
-              if (it.id !== targetSOItem.soIt.id) return it;
-              const eqSt =
-                newStatus === 'Entregado e Instalado' || newStatus === 'Cerrado / Concluido'
-                  ? 'Entregado al Cliente'
-                  : newStatus;
+              const isMatch =
+                it.id === targetSOItem.soIt.id ||
+                (it.code && targetSOItem.soIt.code && it.code === targetSOItem.soIt.code) ||
+                (it.name && targetSOItem.soIt.name && it.name === targetSOItem.soIt.name);
+              if (!isMatch) return it;
               return {
                 ...it,
-                equipmentStatus: eqSt,
+                equipmentStatus: newStatus,
                 status: newStatus,
-                actualDeliveryDate:
-                  newStatus === 'Entregado e Instalado'
-                    ? new Date().toISOString().split('T')[0]
-                    : (it as any).actualDeliveryDate,
+                actualDeliveryDate: isNowDelivered
+                  ? new Date().toISOString().split('T')[0]
+                  : (it as any).actualDeliveryDate,
               };
             }),
             updatedAt: new Date().toISOString(),
           };
         });
         saveStoredSalesOrders(updatedSOs);
-      } catch (e) {}
+        if (onUpdateSalesOrders) {
+          onUpdateSalesOrders(updatedSOs);
+        }
+      } catch (e) {
+        console.warn('Error updating sales orders:', e);
+      }
     }
 
     onUpdateContracts(updated);
     saveStoredOCTrackingContracts(updated);
-    showToast(`✓ Estado actualizado a "${newStatus}"`);
+    if (isNowDelivered) {
+      showToast(`✓ Equipo marcado como "${newStatus}" y archivado exitosamente`);
+    } else {
+      showToast(`✓ Estado actualizado a "${newStatus}"`);
+    }
+  };
+
+  // Batch changes for multiple equipment items at once
+  const handleBatchChangeItemStatus = (
+    itemsToUpdate: Array<{ contractId: string; itemId: string }>,
+    newStatus: OCStatus
+  ) => {
+    if (!itemsToUpdate || itemsToUpdate.length === 0) return;
+
+    const isNowDelivered =
+      newStatus === 'Entregado e Instalado' || newStatus === 'Cerrado / Concluido';
+
+    const currentSalesOrders = salesOrders && salesOrders.length > 0 ? salesOrders : getStoredSalesOrders();
+    const itemIdsSet = new Set(itemsToUpdate.map((it) => it.itemId));
+    const touchedSOCodes = new Set<string>();
+    const touchedSONames = new Set<string>();
+
+    const updatedContracts = contracts.map((c) => {
+      const itemsForThisContract = itemsToUpdate
+        .filter((it) => it.contractId === c.id)
+        .map((it) => it.itemId);
+
+      if (itemsForThisContract.length === 0) return c;
+
+      const updatedItems = c.items.map((it) => {
+        const isMatch =
+          itemsForThisContract.includes(it.id) ||
+          (it.salesOrderItemId && itemsForThisContract.includes(it.salesOrderItemId));
+
+        if (!isMatch) return it;
+
+        if (it.code) touchedSOCodes.add(it.code.trim().toLowerCase());
+        if (it.name) touchedSONames.add(it.name.trim().toLowerCase());
+
+        return {
+          ...it,
+          status: newStatus,
+          paymentStatus: isNowDelivered ? 'Pagado al Proveedor' : it.paymentStatus,
+          deliveryDate: isNowDelivered
+            ? it.deliveryDate || new Date().toISOString().split('T')[0]
+            : it.deliveryDate,
+          installedDate: isNowDelivered
+            ? it.installedDate || new Date().toISOString().split('T')[0]
+            : it.installedDate,
+          lastUpdatedAt: new Date().toISOString(),
+          history: [
+            ...(it.history || []),
+            {
+              id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+              timestamp: new Date().toISOString(),
+              previousStatus: it.status,
+              newStatus,
+              user: currentUser ? currentUser.name : 'Usuario SYD',
+              note: `Estado actualizado masivamente a "${newStatus}".`,
+            },
+          ],
+        };
+      });
+
+      return {
+        ...c,
+        items: updatedItems,
+        lastUpdatedAt: new Date().toISOString(),
+      };
+    });
+
+    // Update sales orders
+    try {
+      let soChanged = false;
+      const updatedSOs = currentSalesOrders.map((so) => {
+        let orderChanged = false;
+        const updatedItems = (so.items || []).map((it) => {
+          const isDirectMatch =
+            itemIdsSet.has(it.id) ||
+            itemIdsSet.has(`so-it-${so.id}-${it.id}`) ||
+            (it.code && touchedSOCodes.has(it.code.trim().toLowerCase())) ||
+            (it.name && touchedSONames.has(it.name.trim().toLowerCase()));
+
+          if (!isDirectMatch) return it;
+          orderChanged = true;
+          soChanged = true;
+
+          return {
+            ...it,
+            equipmentStatus: newStatus,
+            status: newStatus,
+            actualDeliveryDate: isNowDelivered
+              ? new Date().toISOString().split('T')[0]
+              : (it as any).actualDeliveryDate,
+          };
+        });
+
+        if (!orderChanged) return so;
+        return {
+          ...so,
+          items: updatedItems,
+          updatedAt: new Date().toISOString(),
+        };
+      });
+
+      if (soChanged) {
+        saveStoredSalesOrders(updatedSOs);
+        if (onUpdateSalesOrders) {
+          onUpdateSalesOrders(updatedSOs);
+        }
+      }
+    } catch (e) {
+      console.warn('Error updating sales orders in batch:', e);
+    }
+
+    onUpdateContracts(updatedContracts);
+    saveStoredOCTrackingContracts(updatedContracts);
+    saveOCTrackingContractsToFirestore(updatedContracts).catch(() => {});
+
+    showToast(
+      isNowDelivered
+        ? `✓ ${itemsToUpdate.length} equipos marcados como "${newStatus}" y listos para facturar`
+        : `✓ ${itemsToUpdate.length} equipos actualizados a "${newStatus}"`
+    );
   };
 
   const handleQuickChangeItemPaymentTerms = (
@@ -1331,7 +1528,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
       {/* Primary View: Hierarchical (Client Contract -> Supplier OCs -> Equipments) */}
       {viewMode === 'hierarchy' && (
         <ContractHierarchyView
-          contracts={filteredContracts}
+          contracts={filteredContractsForHierarchy}
           lifecycleTab={lifecycleTab}
           salesOrders={salesOrders && salesOrders.length > 0 ? salesOrders : getStoredSalesOrders()}
           expandedContractIds={expandedContractIds}
@@ -1348,6 +1545,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
           onOpenSerialsModal={(contract, item) => setSerialsModalState({ contract, item })}
           onOpenHistory={(contractName, item) => setHistoryModalItem({ contractName, item })}
           onQuickChangeItemStatus={handleQuickChangeItemStatus}
+          onBatchChangeItemStatus={handleBatchChangeItemStatus}
           onQuickChangeItemPaymentTerms={handleQuickChangeItemPaymentTerms}
           onQuickChangeItemPaymentStatus={handleQuickChangeItemPaymentStatus}
           onRequestDeleteContract={handleRequestDeleteContract}
@@ -1359,6 +1557,13 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
           onSaveSupplierInvoices={handleSaveSupplierInvoices}
           onNavigateToTab={onNavigateToTab}
           currentUser={currentUser}
+          onOpenSplitOrderModal={(preselectedItemIds, sourceOrder) => {
+            setSplitModalState({
+              isOpen: true,
+              sourceOrder: sourceOrder || null,
+              preselectedItemIds,
+            });
+          }}
         />
       )}
 
@@ -1624,6 +1829,38 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
               updatedInvoices
             );
             setSupplierInvoicesModalTarget(null);
+          }}
+        />
+      )}
+
+      {/* MODAL: SPLIT SALES ORDER / MOVE DELAYED EQUIPMENTS TO NEW OV & OC */}
+      {splitModalState.isOpen && (
+        <SplitSalesOrderModal
+          isOpen={true}
+          onClose={() => setSplitModalState({ isOpen: false })}
+          sourceOrder={splitModalState.sourceOrder}
+          allOrders={effectiveSalesOrders}
+          contracts={contracts}
+          preselectedItemIds={splitModalState.preselectedItemIds}
+          onConfirmSplit={(params) => {
+            const currentSOs = effectiveSalesOrders;
+            const { updatedOrders, updatedContracts } = splitSalesOrderRecord(
+              params,
+              currentSOs,
+              contracts
+            );
+
+            saveStoredSalesOrders(updatedOrders);
+            if (onUpdateSalesOrders) {
+              onUpdateSalesOrders(updatedOrders);
+            }
+
+            onUpdateContracts(updatedContracts);
+            saveStoredOCTrackingContracts(updatedContracts);
+            saveOCTrackingContractsToFirestore(updatedContracts).catch(() => {});
+
+            setSplitModalState({ isOpen: false });
+            showToast(`✓ Se trasladaron equipos a la Nueva OV ${params.newSalesOrderNumber}${params.newSupplierOCNumber ? ` (OC ${params.newSupplierOCNumber})` : ''} exitosamente`);
           }}
         />
       )}

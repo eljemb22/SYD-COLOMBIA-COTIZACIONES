@@ -429,13 +429,26 @@ export interface TenderClientProject {
 
 export type OCStatus =
   | 'Pendiente'
+  | 'Borrador / Solicitud'
+  | 'Emitida / Enviada al Proveedor'
+  | 'Confirmada por Proveedor'
+  | 'En Fabricación / Procesamiento'
+  | 'En Tránsito / Despachada'
   | 'En Tránsito'
   | 'En Aduana'
+  | 'En Aduana / Nacionalización'
   | 'Nacionalizado'
   | 'En Bodega SYD'
+  | 'Equipos en Bodega SYD'
+  | 'En Ingreso Técnico & Calidad'
+  | 'Listo para Despacho a Cliente'
+  | 'Despachado al Cliente'
   | 'Entregado a Cliente'
   | 'Entregado e Instalado'
-  | 'Cancelado';
+  | 'Cerrado / Concluido'
+  | 'Cancelado'
+  | 'Cancelada'
+  | (string & {});
 
 export type OCLogisticsStatus = OCStatus;
 export type OCPaymentTerms = 'Anticipo 50/50' | '100% Anticipado' | 'Contraentrega' | 'Crédito 30 días' | 'Crédito 60 días';
@@ -502,6 +515,11 @@ export interface OCTrackingItem {
   salesOrderItemId?: string;
   ocNumber?: string;
   notes?: string;
+  lastUpdatedAt?: string;
+  invoiceNumber?: string;
+  paymentStatus?: string;
+  paymentTerms?: string;
+  history?: any[];
 }
 
 export interface OCTrackingContract {
@@ -600,9 +618,13 @@ export interface SalesOrderItem {
   equipmentStatus: SalesOrderEquipmentStatus | string;
   supplierOCRef?: string;
   linkedSupplierOCNumber?: string;
+  supplier?: string;
+  preferredSupplier?: string;
   assignedSerialNumbers?: any[];
   serialNumbers?: string[];
   notes?: string;
+  transferredFromOV?: string;
+  transferredAt?: string;
 }
 
 export interface SalesOrderRecord {
@@ -635,6 +657,8 @@ export interface SalesOrderRecord {
   invoiceDate?: string;
   attachedInvoiceFile?: any;
   notes?: string;
+  renewedFromSalesOrderNumber?: string;
+  renewedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

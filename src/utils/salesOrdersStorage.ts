@@ -15,6 +15,7 @@ import {
 import {
   isSalesOrderDeleted,
   isSalesInvoiceDeleted,
+  markSalesOrderAsDeleted,
   unmarkSalesOrderAsDeleted,
   unmarkSalesInvoiceAsDeleted,
 } from './tombstones';
@@ -109,6 +110,11 @@ export function deduplicateSalesOrders(orders: SalesOrderRecord[]): SalesOrderRe
       seenItemKeys.add(itemKey);
       cleanItems.push(it);
     });
+
+    // Purge orders that have 0 items (e.g. from total split or empty residue)
+    if (cleanItems.length === 0) {
+      continue;
+    }
 
     const sanitizedOrder: SalesOrderRecord = {
       ...o,
@@ -1163,3 +1169,310 @@ export function reconcileAndSyncSalesOrdersWithOC(
     hasChanges: hasChanges || finalDeduped.length !== existingOrders.length,
   };
 }
+
+export interface ItemQuantitySplit {
+  itemId: string;
+  quantityToMove: number;
+}
+
+export interface SplitSalesOrderParams {
+  sourceOrderId: string;
+  itemSplits?: ItemQuantitySplit[];
+  itemIdsToMove?: string[];
+  newSalesOrderNumber: string;
+  createNewOC?: boolean;
+  ocMappings?: Record<string, string>;
+  supplierMappings?: Record<string, string>;
+  itemSupplierOverrides?: Record<string, string>;
+  itemOcOverrides?: Record<string, string>;
+  newSupplierOCNumber?: string;
+  orderDate?: string;
+  reason?: string;
+}
+
+/**
+ * Splits an existing Sales Order (OV) by moving designated items and quantities into a NEW Sales Order (and optional NEW OCs).
+ * Accurately updates both the original and new Sales Orders, recalculating totals and persisting across both
+ * sales orders storage and OC tracking contracts storage. Supports partial quantities (e.g. 3 delivered, 2 moved).
+ * If all items from the source OV are moved, the source OV is automatically deleted/purged.
+ */
+export function splitSalesOrderRecord(
+  params: SplitSalesOrderParams,
+  existingOrders: SalesOrderRecord[],
+  existingContracts: OCTrackingContract[]
+): {
+  updatedOrders: SalesOrderRecord[];
+  newOrder: SalesOrderRecord;
+  updatedContracts: OCTrackingContract[];
+} {
+  const now = new Date().toISOString();
+  const sourceOrder = existingOrders.find((o) => o.id === params.sourceOrderId);
+
+  if (!sourceOrder) {
+    throw new Error(`No se encontró la Orden de Venta de origen con ID: ${params.sourceOrderId}`);
+  }
+
+  // Build quantity to move map
+  const moveQtyMap = new Map<string, number>();
+  if (params.itemSplits && params.itemSplits.length > 0) {
+    params.itemSplits.forEach((s) => moveQtyMap.set(s.itemId, s.quantityToMove));
+  } else if (params.itemIdsToMove && params.itemIdsToMove.length > 0) {
+    params.itemIdsToMove.forEach((id) => moveQtyMap.set(id, 999999));
+  }
+
+  const cleanNewOV = params.newSalesOrderNumber.trim();
+  const newOrderId = `ov-${cleanNewOV}-${Date.now()}`;
+
+  const itemsToKeep: typeof sourceOrder.items = [];
+  const transformedMovedItems: typeof sourceOrder.items = [];
+  const itemSplitRecordMap = new Map<string, { actualMoveQty: number; totalQty: number; mappedOC: string; mappedSupplier?: string }>();
+
+  (sourceOrder.items || []).forEach((it, idx) => {
+    const totalQty = it.quantityToDispatch || it.quotedQuantity || 1;
+    const requestedMoveQty = moveQtyMap.get(it.id) ?? 0;
+    const actualMoveQty = Math.min(totalQty, Math.max(0, requestedMoveQty));
+    const keepQty = totalQty - actualMoveQty;
+
+    // Detect target new OC and supplier for this item
+    const currentOC = it.supplierOCRef || it.linkedSupplierOCNumber || '';
+    const currentSupplier = (it as any).supplier || (it as any).supplierName || '';
+
+    // Check item-level supplier override first, then OC-level mapping, then current supplier
+    const mappedSupplier =
+      (params.itemSupplierOverrides && params.itemSupplierOverrides[it.id]) ||
+      (params.supplierMappings && currentOC && params.supplierMappings[currentOC]) ||
+      (params.supplierMappings && currentSupplier && params.supplierMappings[currentSupplier]) ||
+      currentSupplier;
+
+    // Check item-level OC override first, then OC-level mapping, then fallback
+    const mappedOC =
+      (params.itemOcOverrides && params.itemOcOverrides[it.id]) ||
+      (params.ocMappings && currentOC && params.ocMappings[currentOC]) ||
+      (params.ocMappings && mappedSupplier && params.ocMappings[mappedSupplier]) ||
+      params.newSupplierOCNumber ||
+      currentOC;
+
+    itemSplitRecordMap.set(it.id, { actualMoveQty, totalQty, mappedOC, mappedSupplier });
+    if (it.code) {
+      itemSplitRecordMap.set(it.code.trim().toLowerCase(), { actualMoveQty, totalQty, mappedOC, mappedSupplier });
+    }
+
+    if (actualMoveQty === 0) {
+      // Kept 100% in original OV
+      itemsToKeep.push(it);
+    } else if (actualMoveQty >= totalQty) {
+      // Moved 100% to new OV
+      transformedMovedItems.push({
+        ...it,
+        id: `ov-item-${newOrderId}-${idx}`,
+        supplierOCRef: mappedOC,
+        linkedSupplierOCNumber: mappedOC,
+        supplier: mappedSupplier,
+        supplierName: mappedSupplier,
+        transferredFromOV: sourceOrder.salesOrderNumber || sourceOrder.id,
+        transferredAt: now,
+        notes: `${it.notes ? `${it.notes} • ` : ''}Trasladado desde OV ${sourceOrder.salesOrderNumber}${mappedSupplier && mappedSupplier !== currentSupplier ? ` (Nuevo Prov: ${mappedSupplier})` : ''}`,
+      });
+    } else {
+      // PARTIAL QUANTITY SPLIT (e.g. 3 kept, 2 moved)
+      itemsToKeep.push({
+        ...it,
+        quantityToDispatch: keepQty,
+        quotedQuantity: keepQty,
+        totalSalePriceCOP: (it.unitSalePriceCOP || 0) * keepQty,
+        notes: `${it.notes ? `${it.notes} • ` : ''}${actualMoveQty} unidades trasladadas a nueva OV ${cleanNewOV}`,
+      });
+
+      transformedMovedItems.push({
+        ...it,
+        id: `ov-item-${newOrderId}-${idx}`,
+        quantityToDispatch: actualMoveQty,
+        quotedQuantity: actualMoveQty,
+        totalSalePriceCOP: (it.unitSalePriceCOP || 0) * actualMoveQty,
+        supplierOCRef: mappedOC,
+        linkedSupplierOCNumber: mappedOC,
+        supplier: mappedSupplier,
+        supplierName: mappedSupplier,
+        transferredFromOV: sourceOrder.salesOrderNumber || sourceOrder.id,
+        transferredAt: now,
+        notes: `Trasladado (${actualMoveQty} de ${totalQty} uds) desde OV ${sourceOrder.salesOrderNumber}${mappedSupplier && mappedSupplier !== currentSupplier ? ` (Nuevo Prov: ${mappedSupplier})` : ''}`,
+      });
+    }
+  });
+
+  if (transformedMovedItems.length === 0) {
+    throw new Error('Debe indicar al menos una unidad para trasladar a la nueva Orden de Venta.');
+  }
+
+  const newTotalVal = transformedMovedItems.reduce((acc, it) => acc + (it.totalSalePriceCOP || 0), 0);
+  const remainingTotalVal = itemsToKeep.reduce((acc, it) => acc + (it.totalSalePriceCOP || 0), 0);
+
+  // Create the new Sales Order Record
+  const newOrder: SalesOrderRecord = {
+    id: newOrderId,
+    salesOrderNumber: cleanNewOV,
+    quoteId: sourceOrder.quoteId,
+    quoteNumber: sourceOrder.quoteNumber,
+    contractId: sourceOrder.contractId,
+    contractNumber: sourceOrder.contractNumber,
+    tenderClientId: sourceOrder.tenderClientId,
+    clientName: sourceOrder.clientName,
+    clientNit: sourceOrder.clientNit,
+    clientCity: sourceOrder.clientCity || sourceOrder.city,
+    orderDate: params.orderDate || now.split('T')[0],
+    estimatedDeliveryDate: sourceOrder.estimatedDeliveryDate || (sourceOrder as any).deliveryDate || '',
+    status: 'En Proceso',
+    invoicedStatus: 'No Facturada',
+    items: transformedMovedItems,
+    subtotalCOP: newTotalVal,
+    taxCOP: 0,
+    totalCOP: newTotalVal,
+    totalValueCOP: newTotalVal,
+    hasLinkedOC: transformedMovedItems.some((it) => Boolean(it.supplierOCRef || it.linkedSupplierOCNumber)),
+    ocContractId: sourceOrder.ocContractId,
+    renewedFromSalesOrderNumber: sourceOrder.salesOrderNumber || sourceOrder.id,
+    renewedAt: now,
+    createdAt: now,
+    updatedAt: now,
+    notes: `Creada por división y traslado de ${transformedMovedItems.length} líneas de equipos desde la OV ${sourceOrder.salesOrderNumber}. Motivo: ${params.reason || 'Vencimiento de vigencia en el sistema'}.`,
+  };
+
+  // Build updated sales orders list
+  const updatedOrdersList: SalesOrderRecord[] = [newOrder];
+
+  if (itemsToKeep.length > 0 && remainingTotalVal > 0) {
+    // Original OV still has remaining items: keep updated
+    const updatedSourceOrder: SalesOrderRecord = {
+      ...sourceOrder,
+      items: itemsToKeep,
+      subtotalCOP: remainingTotalVal,
+      totalCOP: remainingTotalVal,
+      totalValueCOP: remainingTotalVal,
+      updatedAt: now,
+      notes: `${sourceOrder.notes ? `${sourceOrder.notes}\n` : ''}[${new Date().toLocaleDateString('es-CO')}] Se trasladaron equipos a la nueva OV ${cleanNewOV}. Motivo: ${params.reason || 'Vencimiento de vigencia'}.`,
+    };
+    updatedOrdersList.push(updatedSourceOrder);
+  } else {
+    // 100% of equipment was moved to the new OV! The source OV has 0 items and MUST be deleted.
+    markSalesOrderAsDeleted(sourceOrder.id, sourceOrder.salesOrderNumber);
+  }
+
+  // Retain other existing orders, purging any empty residual orders (0 items)
+  for (const o of existingOrders) {
+    if (o.id !== sourceOrder.id) {
+      if ((o.items?.length || 0) > 0) {
+        updatedOrdersList.push(o);
+      }
+    }
+  }
+
+  const updatedOrders = deduplicateSalesOrders(updatedOrdersList);
+
+  // Synchronize OC Tracking Contracts (Ventana 5)
+  const updatedContracts = existingContracts
+    .map((contract) => {
+      let hasContractMatch = false;
+      const newItemsList: OCTrackingItem[] = [];
+
+      (contract.items || []).forEach((cIt) => {
+        // Find matching item in split record
+        let splitInfo = cIt.salesOrderItemId ? itemSplitRecordMap.get(cIt.salesOrderItemId) : undefined;
+        if (!splitInfo && cIt.code) {
+          splitInfo = itemSplitRecordMap.get(cIt.code.trim().toLowerCase());
+        }
+        if (!splitInfo && (cIt.salesOrderId === sourceOrder.id || cIt.salesOrderNumber === sourceOrder.salesOrderNumber)) {
+          for (const [key, val] of itemSplitRecordMap.entries()) {
+            if (cIt.name && cIt.name.trim().toLowerCase() === key) {
+              splitInfo = val;
+              break;
+            }
+          }
+        }
+
+        if (!splitInfo || splitInfo.actualMoveQty <= 0) {
+          newItemsList.push(cIt);
+          return;
+        }
+
+        hasContractMatch = true;
+        const totalOCQty = cIt.quantity || 1;
+        const moveQty = Math.min(totalOCQty, splitInfo.actualMoveQty);
+        const keepQty = totalOCQty - moveQty;
+        const targetOCNum = splitInfo.mappedOC || cIt.ocNumber;
+        const targetSupplier = splitInfo.mappedSupplier || cIt.supplier;
+
+        if (moveQty >= totalOCQty) {
+          // Full move in OC
+          newItemsList.push({
+            ...cIt,
+            salesOrderId: newOrderId,
+            salesOrderNumber: cleanNewOV,
+            ocNumber: targetOCNum,
+            supplier: targetSupplier,
+            lastUpdatedAt: now,
+            notes: `${cIt.notes ? `${cIt.notes} • ` : ''}Reasignado a OV ${cleanNewOV} (OC ${targetOCNum}${targetSupplier !== cIt.supplier ? ` - Prov: ${targetSupplier}` : ''})`,
+            history: [
+              ...((cIt as any).history || []),
+              {
+                id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                timestamp: now,
+                previousStatus: cIt.status,
+                newStatus: cIt.status,
+                user: 'Usuario SYD',
+                note: `Reasignado de OV ${sourceOrder.salesOrderNumber} a NUEVA OV ${cleanNewOV} (OC ${targetOCNum}${targetSupplier !== cIt.supplier ? ` - Proveedor cambiado de ${cIt.supplier} a ${targetSupplier}` : ''}) por vencimiento de vigencia.`,
+              },
+            ],
+          });
+        } else {
+          // PARTIAL SPLIT IN OC TRACKING (e.g. 3 kept in original OC, 2 moved to new OC)
+          newItemsList.push({
+            ...cIt,
+            quantity: keepQty,
+            totalCostCOP: (cIt.costPriceCOP || 0) * keepQty,
+            notes: `${cIt.notes ? `${cIt.notes} • ` : ''}${moveQty} uds trasladadas a OV ${cleanNewOV} (OC ${targetOCNum})`,
+            lastUpdatedAt: now,
+          });
+
+          newItemsList.push({
+            ...cIt,
+            id: `oc-it-${cIt.id}-split-${Date.now()}`,
+            quantity: moveQty,
+            totalCostCOP: (cIt.costPriceCOP || 0) * moveQty,
+            salesOrderId: newOrderId,
+            salesOrderNumber: cleanNewOV,
+            ocNumber: targetOCNum,
+            supplier: targetSupplier,
+            status: 'Borrador / Solicitud' as const,
+            lastUpdatedAt: now,
+            notes: `Trasladado (${moveQty} de ${totalOCQty} uds) desde OV ${sourceOrder.salesOrderNumber} a NUEVA OV ${cleanNewOV} (OC ${targetOCNum}${targetSupplier !== cIt.supplier ? ` - Prov: ${targetSupplier}` : ''})`,
+            history: [
+              {
+                id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                timestamp: now,
+                previousStatus: cIt.status,
+                newStatus: 'Borrador / Solicitud',
+                user: 'Usuario SYD',
+                note: `Trasladado desde OV ${sourceOrder.salesOrderNumber} a NUEVA OV ${cleanNewOV} (OC ${targetOCNum}${targetSupplier !== cIt.supplier ? ` - Proveedor: ${targetSupplier}` : ''}) por vencimiento de vigencia.`,
+              },
+            ],
+          });
+        }
+      });
+
+      if (!hasContractMatch) return contract;
+
+      return {
+        ...contract,
+        items: newItemsList,
+        lastUpdatedAt: now,
+      };
+    })
+    .filter((c) => (c.items?.length || 0) > 0);
+
+  return {
+    updatedOrders,
+    newOrder,
+    updatedContracts,
+  };
+}
+

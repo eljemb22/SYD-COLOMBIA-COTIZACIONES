@@ -30,6 +30,7 @@ import {
   Square,
   X,
   Search,
+  GitFork,
 } from 'lucide-react';
 import { resolveItemManufacturerBrand } from '../../../utils/equipmentBrandResolver';
 import {
@@ -79,6 +80,7 @@ interface ContractHierarchyViewProps {
   onOpenSerialsModal?: (contract: OCTrackingContract, item: OCTrackingItem) => void;
   onOpenHistory: (contractName: string, item: OCTrackingItem) => void;
   onQuickChangeItemStatus: (contractId: string, itemId: string, newStatus: OCStatus) => void;
+  onBatchChangeItemStatus?: (itemsToUpdate: Array<{ contractId: string; itemId: string }>, newStatus: OCStatus) => void;
   onQuickChangeItemPaymentTerms: (contractId: string, itemId: string, terms: OCPaymentTerms) => void;
   onQuickChangeItemPaymentStatus: (contractId: string, itemId: string, status: OCPaymentStatus) => void;
   onRequestDeleteContract: (contract: OCTrackingContract) => void;
@@ -107,6 +109,7 @@ interface ContractHierarchyViewProps {
   currentUser?: AuthUser | null;
   salesOrders?: SalesOrderRecord[];
   lifecycleTab?: 'active' | 'archived' | 'all';
+  onOpenSplitOrderModal?: (preselectedItemIds: string[], sourceOrder?: SalesOrderRecord) => void;
 }
 
 export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
@@ -120,6 +123,7 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
   onOpenSerialsModal,
   onOpenHistory,
   onQuickChangeItemStatus,
+  onBatchChangeItemStatus,
   onQuickChangeItemPaymentTerms,
   onQuickChangeItemPaymentStatus,
   onRequestDeleteContract,
@@ -133,6 +137,7 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
   currentUser,
   salesOrders = [],
   lifecycleTab = 'active',
+  onOpenSplitOrderModal,
 }) => {
   const isReadOnly =
     (currentUser?.role === 'viewer' && !currentUser?.permissions?.canManageOCTracking) ||
@@ -170,6 +175,99 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
     ocNumber: string;
     invoices: SupplierInvoiceAttachment[];
   } | null>(null);
+
+  // State for multiple equipment selection (bulk status change & split)
+  const [selectedItemMap, setSelectedItemMap] = useState<
+    Map<string, { contractId: string; itemId: string; item: OCTrackingItem; salesOrderId?: string; salesOrderNumber?: string }>
+  >(new Map());
+  const [batchStatusValue, setBatchStatusValue] = useState<OCStatus>('Entregado e Instalado');
+
+  const toggleSelectItem = (
+    contractId: string,
+    item: OCTrackingItem,
+    salesOrderId?: string,
+    salesOrderNumber?: string
+  ) => {
+    setSelectedItemMap((prev) => {
+      const next = new Map(prev);
+      const key = `${contractId}___${item.id}`;
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.set(key, { contractId, itemId: item.id, item, salesOrderId, salesOrderNumber });
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllInGroup = (
+    contractId: string,
+    groupItems: OCTrackingItem[],
+    salesOrderId?: string,
+    salesOrderNumber?: string
+  ) => {
+    setSelectedItemMap((prev) => {
+      const next = new Map(prev);
+      const allSelected = groupItems.length > 0 && groupItems.every((it) => next.has(`${contractId}___${it.id}`));
+      if (allSelected) {
+        groupItems.forEach((it) => next.delete(`${contractId}___${it.id}`));
+      } else {
+        groupItems.forEach((it) =>
+          next.set(`${contractId}___${it.id}`, { contractId, itemId: it.id, item: it, salesOrderId, salesOrderNumber })
+        );
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedItemMap(new Map());
+  };
+
+  const handleApplyBatchStatus = (targetStatus?: OCStatus) => {
+    const newSt = targetStatus || batchStatusValue;
+    if (selectedItemMap.size === 0) return;
+
+    const itemsList = Array.from(selectedItemMap.values()).map((v) => ({
+      contractId: v.contractId,
+      itemId: v.itemId,
+    }));
+
+    if (onBatchChangeItemStatus) {
+      onBatchChangeItemStatus(itemsList, newSt);
+    } else {
+      itemsList.forEach((it) => onQuickChangeItemStatus(it.contractId, it.itemId, newSt));
+    }
+
+    clearSelection();
+  };
+
+  const handleOpenSplitModalFromSelection = () => {
+    if (selectedItemMap.size === 0) return;
+    const items = Array.from(selectedItemMap.values());
+    const preselectedIds = items.map((it) => it.itemId);
+
+    let targetSO: SalesOrderRecord | undefined;
+    const firstItem = items[0];
+    if (firstItem.salesOrderId) {
+      targetSO = salesOrders.find((so) => so.id === firstItem.salesOrderId);
+    }
+    if (!targetSO && firstItem.salesOrderNumber) {
+      targetSO = salesOrders.find((so) => so.salesOrderNumber === firstItem.salesOrderNumber);
+    }
+    if (!targetSO) {
+      for (const so of salesOrders) {
+        if ((so.items || []).some((soIt) => soIt.id === firstItem.itemId || (soIt.code && firstItem.item.code && soIt.code === firstItem.item.code))) {
+          targetSO = so;
+          break;
+        }
+      }
+    }
+
+    if (onOpenSplitOrderModal) {
+      onOpenSplitOrderModal(preselectedIds, targetSO);
+    }
+  };
 
   // Local state for collapsed OV sections
   const [collapsedOVKeys, setCollapsedOVKeys] = useState<Set<string>>(() => {
@@ -437,15 +535,19 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
 
           if (matchedContractItem) {
             usedContractItemIds.add(matchedContractItem.id);
-            const finalStatus: OCStatus = isItemDelivered ? 'Entregado e Instalado' : matchedContractItem.status;
-            const finalSupplier = isItemDelivered
+            const isReallyDelivered =
+              isItemDelivered ||
+              matchedContractItem.status === 'Entregado e Instalado' ||
+              matchedContractItem.status === 'Cerrado / Concluido';
+            const finalStatus: OCStatus = isReallyDelivered ? 'Entregado e Instalado' : matchedContractItem.status;
+            const finalSupplier = isReallyDelivered
               ? (matchedContractItem.supplier && matchedContractItem.supplier !== 'Sin Proveedor Asignado' ? matchedContractItem.supplier : (soIt.supplier || 'TECNICA'))
               : (matchedContractItem.supplier || 'Sin Proveedor Asignado');
-            const finalOC = isItemDelivered
+            const finalOC = isReallyDelivered
               ? (so.salesOrderNumber === '1152149' ? '126622' : (matchedContractItem.ocNumber || soIt.supplierOCRef || ''))
               : (matchedContractItem.ocNumber || '');
-            const finalPaymentStatus: OCPaymentStatus = isItemDelivered ? 'Pagado al Proveedor' : matchedContractItem.paymentStatus;
-            const finalInvoice = isItemDelivered ? (matchedContractItem.invoiceNumber || so.invoiceNumber || 'FE-1001') : matchedContractItem.invoiceNumber;
+            const finalPaymentStatus: OCPaymentStatus = isReallyDelivered ? 'Pagado al Proveedor' : matchedContractItem.paymentStatus;
+            const finalInvoice = isReallyDelivered ? (matchedContractItem.invoiceNumber || so.invoiceNumber || 'FE-1001') : matchedContractItem.invoiceNumber;
             const isNapoleonDelivered = /HYBASE|MOBIEYE/i.test(soIt.name + ' ' + (soIt.model || '')) || soIt.code === '70904' || soIt.code === '70796';
             const cleanSerials = isNapoleonDelivered
               ? [
@@ -484,11 +586,16 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
           } else {
             const qty = Number(soIt.quantityToDispatch) || 1;
             const cost = Math.round(Number(soIt.unitSalePriceCOP || 1000000) * 0.65);
-            const status: OCStatus = isItemDelivered ? 'Entregado e Instalado' : ((soIt.equipmentStatus as OCStatus) || 'Borrador / Solicitud');
-            const supplier = isItemDelivered
+            const isFallbackDelivered =
+              isItemDelivered ||
+              soIt.equipmentStatus === 'Entregado e Instalado' ||
+              soIt.equipmentStatus === 'Entregado al Cliente' ||
+              soIt.status === 'Entregado e Instalado';
+            const status: OCStatus = isFallbackDelivered ? 'Entregado e Instalado' : ((soIt.equipmentStatus as OCStatus) || 'Borrador / Solicitud');
+            const supplier = isFallbackDelivered
               ? (soIt.supplier && soIt.supplier !== 'Sin Proveedor Asignado' ? soIt.supplier : 'TECNICA')
               : String(soIt.supplier || soIt.supplierName || 'Sin Proveedor Asignado');
-            const ocNumber = isItemDelivered
+            const ocNumber = isFallbackDelivered
               ? (so.salesOrderNumber === '1152149' ? '126622' : (soIt.supplierOCRef || soIt.linkedSupplierOCNumber || ''))
               : String(soIt.supplierOCRef || soIt.linkedSupplierOCNumber || '');
 
@@ -970,47 +1077,79 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-[#0a111c] text-slate-400 border-b border-[#20334c] text-[10px] font-bold">
-                  <th className="py-2 px-3 min-w-[180px]">Equipo Médico Solicitado</th>
-                  <th className="py-2 px-2.5 min-w-[110px]">Marca / Modelo</th>
-                  <th className="py-2 px-2 w-12 text-center">Cant.</th>
-                  <th className="py-2 px-2.5 min-w-[100px] text-right">Costo Unit. COP</th>
-                  <th className="py-2 px-2.5 min-w-[100px] text-right">Subtotal</th>
-                  <th className="py-2 px-2.5 min-w-[140px]">Estado del Equipo</th>
-                  <th className="py-2 px-2.5 min-w-[120px]">Forma de Pago</th>
-                  <th className="py-2 px-2.5 min-w-[100px]">Última Novedad</th>
-                  <th className="py-2 px-2.5 w-24 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#182940]">
-                {group.items.map((item) => {
-                  const lastUpdate = new Date(
-                    item.lastUpdatedAt || item.createdAt
-                  ).getTime();
-                  const hoursSinceUpdate = (Date.now() - lastUpdate) / (1000 * 60 * 60);
-                  const isAlert =
-                    hoursSinceUpdate > 48 &&
-                    item.status !== 'Entregado e Instalado' &&
-                    item.status !== 'Cerrado / Concluido' &&
-                    item.status !== 'Cancelada';
+            {(() => {
+              const isGroupAllSelected = group.items.length > 0 && group.items.every((it) => selectedItemMap.has(`${contract.id}___${it.id}`));
+              const isGroupSomeSelected = group.items.some((it) => selectedItemMap.has(`${contract.id}___${it.id}`));
 
-                  const isDelivered =
-                    item.status === 'Entregado e Instalado' ||
-                    item.status === 'Cerrado / Concluido';
+              return (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[#0a111c] text-slate-400 border-b border-[#20334c] text-[10px] font-bold">
+                      <th className="py-2 px-2.5 w-9 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isGroupAllSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = isGroupSomeSelected && !isGroupAllSelected;
+                          }}
+                          onChange={() => toggleSelectAllInGroup(contract.id, group.items, salesOrderId, ovNumberLabel)}
+                          className="w-3.5 h-3.5 rounded text-sky-500 bg-slate-900 border-slate-700 focus:ring-0 focus:outline-none cursor-pointer accent-sky-500"
+                          title={isGroupAllSelected ? "Deseleccionar todos" : "Seleccionar todos los equipos de esta OC"}
+                        />
+                      </th>
+                      <th className="py-2 px-3 min-w-[180px]">Equipo Médico Solicitado</th>
+                      <th className="py-2 px-2.5 min-w-[110px]">Marca / Modelo</th>
+                      <th className="py-2 px-2 w-12 text-center">Cant.</th>
+                      <th className="py-2 px-2.5 min-w-[100px] text-right">Costo Unit. COP</th>
+                      <th className="py-2 px-2.5 min-w-[100px] text-right">Subtotal</th>
+                      <th className="py-2 px-2.5 min-w-[140px]">Estado del Equipo</th>
+                      <th className="py-2 px-2.5 min-w-[120px]">Forma de Pago</th>
+                      <th className="py-2 px-2.5 min-w-[100px]">Última Novedad</th>
+                      <th className="py-2 px-2.5 w-28 text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#182940]">
+                    {group.items.map((item) => {
+                      const itemKey = `${contract.id}___${item.id}`;
+                      const isSelected = selectedItemMap.has(itemKey);
+                      const lastUpdate = new Date(
+                        item.lastUpdatedAt || item.createdAt
+                      ).getTime();
+                      const hoursSinceUpdate = (Date.now() - lastUpdate) / (1000 * 60 * 60);
+                      const isAlert =
+                        hoursSinceUpdate > 48 &&
+                        item.status !== 'Entregado e Instalado' &&
+                        item.status !== 'Cerrado / Concluido' &&
+                        item.status !== 'Cancelada';
 
-                  return (
-                    <tr
-                      key={item.id}
-                      className={`transition ${
-                        isDelivered
-                          ? 'bg-[#080d16]/80 opacity-60 hover:opacity-100 border-l-2 border-l-emerald-500'
-                          : 'hover:bg-[#15253d]/70'
-                      }`}
-                    >
-                      {/* Equipment Name & Code */}
-                      <td className="py-2 px-3">
+                      const isDelivered =
+                        item.status === 'Entregado e Instalado' ||
+                        item.status === 'Cerrado / Concluido';
+
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`transition ${
+                            isSelected
+                              ? 'bg-sky-500/15 border-l-2 border-l-sky-400'
+                              : isDelivered
+                              ? 'bg-[#080d16]/80 opacity-60 hover:opacity-100 border-l-2 border-l-emerald-500'
+                              : 'hover:bg-[#15253d]/70'
+                          }`}
+                        >
+                          {/* Selection Checkbox */}
+                          <td className="py-2 px-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectItem(contract.id, item, salesOrderId, ovNumberLabel)}
+                              className="w-3.5 h-3.5 rounded text-sky-500 bg-slate-900 border-slate-700 focus:ring-0 focus:outline-none cursor-pointer accent-sky-500"
+                              title="Seleccionar equipo para cambio masivo de estado o traslado a nueva OV"
+                            />
+                          </td>
+
+                          {/* Equipment Name & Code */}
+                          <td className="py-2 px-3">
                         <div className="font-bold text-white flex items-center gap-1.5 text-xs flex-wrap">
                           <span className={isDelivered ? 'line-through text-slate-300' : ''}>
                             {item.name}
@@ -1278,6 +1417,30 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                             <History className="w-3 h-3 text-purple-400" />
                           </button>
 
+                          {onOpenSplitOrderModal && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                let targetSO: SalesOrderRecord | undefined;
+                                if (salesOrderId) targetSO = salesOrders.find((so) => so.id === salesOrderId);
+                                if (!targetSO && ovNumberLabel) targetSO = salesOrders.find((so) => so.salesOrderNumber === ovNumberLabel);
+                                if (!targetSO) {
+                                  for (const so of salesOrders) {
+                                    if ((so.items || []).some((soIt) => soIt.id === item.id || (soIt.code && item.code && soIt.code === item.code))) {
+                                      targetSO = so;
+                                      break;
+                                    }
+                                  }
+                                }
+                                onOpenSplitOrderModal([item.id], targetSO);
+                              }}
+                              className="p-1 rounded bg-[#1b2d46] hover:bg-amber-900/60 text-amber-300 hover:text-white transition cursor-pointer border border-amber-500/30"
+                              title="Dividir / Trasladar este equipo a una Nueva OV y Nueva OC"
+                            >
+                              <GitFork className="w-3 h-3" />
+                            </button>
+                          )}
+
                           {!isReadOnly && (
                             <button
                               type="button"
@@ -1295,8 +1458,10 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                 })}
               </tbody>
             </table>
-          </div>
-        )}
+          );
+        })()}
+      </div>
+    )}
       </div>
     );
   };
@@ -1361,6 +1526,11 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
         const totalItemsCount = ovSections.reduce((s, it) => s + it.totalUnits, 0);
         const contractTotalCost = ovSections.reduce((s, it) => s + it.totalCostCOP, 0);
         const totalSupplierOCsCount = ovSections.reduce((s, it) => s + it.supplierGroups.length, 0);
+
+        // If contract has 0 items matching the current lifecycle tab (e.g. all delivered items were moved to archived), do not render empty card
+        if (totalItemsCount === 0 && (lifecycleTab === 'active' || lifecycleTab === 'archived')) {
+          return null;
+        }
 
         const isSalesOrder = Boolean(contract.salesOrderNumber || contract.id.includes('ov') || contract.sourceType === 'orden_venta');
         const isTender = Boolean(contract.sourceType === 'licitacion_adjudicada' || contract.tenderClientId);
@@ -1942,6 +2112,87 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
             setChangingSupplierModal(null);
           }}
         />
+      )}
+
+      {/* FLOATING BULK ACTIONS BAR */}
+      {selectedItemMap.size > 0 && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl bg-slate-900/95 backdrop-blur-md border-2 border-sky-500/80 shadow-2xl rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+              <CheckSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-black text-white flex items-center gap-2">
+                <span>{selectedItemMap.size} {selectedItemMap.size === 1 ? 'equipo seleccionado' : 'equipos seleccionados'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
+              >
+                Deseleccionar todos
+              </button>
+            </div>
+          </div>
+
+          {/* Bulk Actions */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* 1-Click Direct Button for Entregado e Instalado */}
+            <button
+              type="button"
+              onClick={() => handleApplyBatchStatus('Entregado e Instalado')}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition-all shadow-md shadow-emerald-500/20 cursor-pointer flex items-center gap-1.5"
+              title="Marcar todos los seleccionados como «Entregado e Instalado»"
+            >
+              <CheckCircle2 className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+              <span>Entregado e Instalado</span>
+            </button>
+
+            {/* General status dropdown selector */}
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-700">
+              <select
+                value={batchStatusValue}
+                onChange={(e) => setBatchStatusValue(e.target.value as OCStatus)}
+                className="bg-transparent text-slate-200 text-xs font-bold px-2 py-0.5 outline-none cursor-pointer"
+              >
+                {OC_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.status} value={opt.status} className="bg-slate-900 text-white">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => handleApplyBatchStatus(batchStatusValue)}
+                className="px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition cursor-pointer"
+              >
+                Aplicar
+              </button>
+            </div>
+
+            {/* Split / Reassign to New OV & OC */}
+            {onOpenSplitOrderModal && (
+              <button
+                type="button"
+                onClick={handleOpenSplitModalFromSelection}
+                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                title="Trasladar los equipos seleccionados a una nueva OV y nueva OC"
+              >
+                <GitFork className="w-3.5 h-3.5" />
+                <span>Mover a Nueva OV / OC</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer ml-1"
+              title="Cerrar barra"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

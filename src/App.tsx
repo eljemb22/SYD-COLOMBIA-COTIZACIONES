@@ -580,6 +580,9 @@ export default function App() {
     saveStoredSalesInvoices(invoices);
   }, []);
 
+  const handleClearInitialQuoteToConvert = useCallback(() => setInitialQuoteToConvert(null), []);
+  const handleClearInitialTenderToConvert = useCallback(() => setInitialTenderToConvert(null), []);
+
   // Handlers for Documents
   const handleOpenNewDocumentModal = useCallback(
     (equipmentId?: string, docType?: string, equipmentData?: any, contractContext?: any) => {
@@ -960,6 +963,7 @@ export default function App() {
               onUpdateContracts={handleUpdateContracts}
               tenderClients={tenderClients}
               salesOrders={salesOrders}
+              onUpdateSalesOrders={handleUpdateSalesOrders}
               equipments={equipments}
               allDocuments={documents}
               currentUser={currentUser}
@@ -982,9 +986,9 @@ export default function App() {
               onNavigateToTab={(tab) => setActiveTab(tab as ActiveTab)}
               customLetterheadUrl={customLetterheadUrl}
               initialQuoteToConvert={initialQuoteToConvert}
-              onClearInitialQuoteToConvert={() => setInitialQuoteToConvert(null)}
+              onClearInitialQuoteToConvert={handleClearInitialQuoteToConvert}
               initialTenderToConvert={initialTenderToConvert}
-              onClearInitialTenderToConvert={() => setInitialTenderToConvert(null)}
+              onClearInitialTenderToConvert={handleClearInitialTenderToConvert}
             />
           )}
 

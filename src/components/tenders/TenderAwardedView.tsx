@@ -473,15 +473,19 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
         if (foundSO) break;
       }
 
-      // 3. Search for linked invoice specifically matching this tender item
+      // 3. Search for linked invoice specifically matching this tender item or its Sales Order
       let matchingInvoice: SalesInvoiceRecord | undefined;
       const validInvoices = linkedInvoices.filter((inv) => {
-        if (!inv.items || inv.items.length === 0) return false;
-        return inv.items.some((invIt) => matchesTenderItemWithTarget(tIt, invIt));
+        if (inv.items && inv.items.length > 0) {
+          return inv.items.some((invIt) => matchesTenderItemWithTarget(tIt, invIt));
+        }
+        if (foundSO && inv.salesOrderId && inv.salesOrderId === foundSO.parentOrder.id) return true;
+        if (foundSO && inv.salesOrderNumber && cleanRef(inv.salesOrderNumber) === cleanRef(foundSO.parentOrder.salesOrderNumber)) return true;
+        return false;
       });
 
       if (foundSO) {
-        matchingInvoice = validInvoices.find(
+        matchingInvoice = linkedInvoices.find(
           (inv) =>
             inv.salesOrderId === foundSO!.parentOrder.id ||
             (foundSO!.parentOrder.salesOrderNumber &&
@@ -489,9 +493,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
         );
       }
       if (!matchingInvoice && validInvoices.length > 0) {
-        matchingInvoice = validInvoices.find((inv) =>
-          inv.items?.some((invIt) => matchesTenderItemWithTarget(tIt, invIt))
-        );
+        matchingInvoice = validInvoices[0];
       }
 
       const ocRef =
@@ -505,18 +507,17 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
       const invRef =
         matchingInvoice?.invoiceNumber ||
         foundOC?.invoiceNumber ||
-        (foundSO && (foundSO.parentOrder.status === 'Facturada' || foundSO.parentOrder.invoicedStatus === 'Facturada Total' || foundSO.parentOrder.salesOrderNumber === '1152149')
+        (foundSO && (foundSO.parentOrder.invoiceNumber || ((foundSO.parentOrder.status === 'Facturada' || foundSO.parentOrder.invoicedStatus === 'Facturada Total') ? 'FE-1001' : ''))
           ? (foundSO.parentOrder.invoiceNumber || 'FE-1001')
           : '');
 
       const hasOC = Boolean(foundOC) || Boolean(ocRef);
       const hasOV = Boolean(foundSO) || Boolean(ovRef);
       const isInvoiced = Boolean(
-        invRef && (
-          matchingInvoice ||
-          foundOC?.invoiceNumber ||
-          (foundSO && (foundSO.parentOrder.status === 'Facturada' || foundSO.parentOrder.invoicedStatus === 'Facturada Total' || foundSO.parentOrder.salesOrderNumber === '1152149'))
-        )
+        invRef ||
+        matchingInvoice ||
+        foundOC?.invoiceNumber ||
+        (foundSO && (Boolean(foundSO.parentOrder.invoiceNumber) || Boolean(foundSO.parentOrder.attachedInvoiceFile) || foundSO.parentOrder.status === 'Facturada' || foundSO.parentOrder.invoicedStatus === 'Facturada Total'))
       );
 
       // Check if invoiced
@@ -1319,12 +1320,14 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                   const rowTotalConIVA = Math.round(rowSubtotalSinIVA * (1 + itemTaxRate));
                   const itemDelivery = getItemDeliveryStatus(item);
 
-                   return (
+                    return (
                     <tr
                       key={item.id}
                       className={`transition ${
-                        itemDelivery.isDelivered
-                          ? "bg-[#0a1422]/80 opacity-75 hover:opacity-100 border-l-2 border-l-emerald-500"
+                        itemDelivery.isInvoiced
+                          ? "bg-[#09121d]/90 opacity-70 hover:opacity-100 border-l-2 border-l-purple-500"
+                          : itemDelivery.isDelivered
+                          ? "bg-[#0a1422]/80 opacity-90 hover:opacity-100 border-l-2 border-l-emerald-500"
                           : itemDelivery.isInTransit
                           ? "bg-[#0c1c2e]/60 hover:bg-[#15253d] border-l-2 border-l-sky-500"
                           : itemDelivery.hasOC
@@ -1334,28 +1337,19 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                     >
                       <td className="p-2.5 text-center font-mono font-bold text-purple-300">{idx + 1}</td>
                       <td className="p-2.5 font-mono text-[11px] font-bold whitespace-nowrap">
-                        <span className={itemDelivery.isDelivered ? "line-through text-slate-400" : "text-[#38bdf8]"}>
+                        <span className={itemDelivery.isInvoiced ? "line-through text-slate-500 decoration-rose-400/80 decoration-2 font-semibold" : "text-[#38bdf8]"}>
                           {item.code}
                         </span>
                       </td>
                       <td className="p-2.5 font-bold text-white">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span
-                            className={itemDelivery.isDelivered ? "line-through text-slate-300" : "text-white"}
+                            className={itemDelivery.isInvoiced ? "line-through text-slate-400 decoration-rose-400/80 decoration-2 font-normal" : "text-white"}
                             title={item.name}
                           >
                             {item.name}
                           </span>
                           {renderItemDeliveryBadge(itemDelivery)}
-                          {itemDelivery.invoiceNumber && (
-                            <span
-                              className="inline-flex items-center gap-0.5 text-[8.5px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-1 py-0.2 rounded shrink-0 font-mono"
-                              title={`Factura asociada: ${itemDelivery.invoiceNumber}`}
-                            >
-                              <Receipt className="w-2 h-2" />
-                              <span>{itemDelivery.invoiceNumber}</span>
-                            </span>
-                          )}
                         </div>
                         {item.observations && (
                           <span className="text-[10px] text-slate-400 block font-normal truncate max-w-xs">
@@ -1364,7 +1358,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                         )}
                       </td>
                       <td className="p-2.5 text-slate-300">
-                        <div className={`font-semibold truncate ${itemDelivery.isDelivered ? 'line-through text-slate-400' : 'text-slate-200'}`}>
+                        <div className={`font-semibold truncate ${itemDelivery.isInvoiced ? 'line-through text-slate-500 decoration-rose-400/80' : 'text-slate-200'}`}>
                           {item.brand}
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono truncate">{item.model}</div>
@@ -1402,11 +1396,11 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                         </div>
                       </td>
                       {/* Subtotal sin IVA */}
-                      <td className={`p-2.5 text-right font-mono font-semibold whitespace-nowrap ${itemDelivery.isDelivered ? 'line-through text-slate-400' : 'text-slate-200'}`}>
+                      <td className={`p-2.5 text-right font-mono font-semibold whitespace-nowrap ${itemDelivery.isInvoiced ? 'line-through text-slate-500 decoration-rose-400/80' : 'text-slate-200'}`}>
                         {formatCOP(rowSubtotalSinIVA)}
                       </td>
                       {/* Total con IVA */}
-                      <td className={`p-2.5 text-right font-mono font-bold whitespace-nowrap ${itemDelivery.isDelivered ? 'line-through text-emerald-500/70 bg-emerald-950/5' : 'text-emerald-300 bg-emerald-950/10'}`}>
+                      <td className={`p-2.5 text-right font-mono font-bold whitespace-nowrap ${itemDelivery.isInvoiced ? 'line-through text-slate-500 decoration-rose-400/80 bg-slate-950/20' : 'text-emerald-300 bg-emerald-950/10'}`}>
                         {formatCOP(rowTotalConIVA)}
                       </td>
                       {/* Especificaciones */}
