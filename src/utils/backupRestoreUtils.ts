@@ -22,6 +22,7 @@ import { FULL_ADMIN_PERMISSIONS, DEFAULT_VIEWER_PERMISSIONS } from '../data/auth
 import { unifyAllDuplicateSuppliers } from './supplierDeduplication';
 import { isContractDeleted, isSalesOrderDeleted, isSalesInvoiceDeleted } from './tombstones';
 import { deduplicateTenderProjects } from './tenderDeduplication';
+import { capContractItemsToAwardedQuantities } from './ocTrackingStorage';
 
 export interface AppBackupMetadata {
   version: string;
@@ -2073,7 +2074,11 @@ export async function restoreBackupToSystem(
       if (selected.equipments) localStorage.setItem('syd_equipments_catalog', JSON.stringify(finalEquipments));
       if (selected.quotes) localStorage.setItem('syd_saved_quotes_database_v2', JSON.stringify(finalQuotes));
       if (selected.tenderProjects) localStorage.setItem('syd_tender_clients_v2', JSON.stringify(finalTenders));
-      if (selected.ocContracts) localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(finalOCs));
+      if (selected.ocContracts) {
+        // Never restore duplicated awarded items: cap them to the awarded quantities.
+        finalOCs = capContractItemsToAwardedQuantities(finalOCs);
+        localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(finalOCs));
+      }
       if (selected.technicalDocuments) localStorage.setItem('syd_technical_documents_v3', JSON.stringify(finalDocs));
       if (selected.systemUsers) {
         localStorage.setItem('syd_registered_system_users_v3', JSON.stringify(finalUsers));

@@ -477,6 +477,66 @@ export const OC_STATUS_OPTIONS: { status: OCStatus; label: string; badgeColor: s
 // Starts empty as requested - user will enter real contracts or sync awarded tenders
 const INITIAL_DEMO_OC_CONTRACTS: OCTrackingContract[] = [];
 
+/**
+ * Splits and normalizes Sales Order (OV) numbers.
+ *
+ * Historical merges concatenated values like "1142830, 1142794" into a single string,
+ * which broke the per-OV duplicate detection and made the same awarded item appear
+ * several times (once per OV). This helper always returns a flat, unique list of
+ * clean OV numbers so each item can be matched against its real sales order.
+ */
+export function normalizeSalesOrderNumbers(values: Array<string | undefined | null>): string[] {
+  const seen = new Map<string, string>();
+  values.forEach((value) => {
+    if (!value) return;
+    String(value)
+      .split(/[,;/|]+/)
+      .forEach((part) => {
+        const trimmed = part.trim().replace(/^ov:\s*/i, '').trim();
+        if (!trimmed) return;
+        const norm = trimmed.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!norm || ['na', 'sinov', 'ov', 'global'].includes(norm)) return;
+        if (!seen.has(norm)) seen.set(norm, trimmed);
+      });
+  });
+  return Array.from(seen.values());
+}
+
+/** Returns the primary (first) OV number of an item, normalized. */
+const primarySalesOrderNumber = (item: {
+  salesOrderNumber?: string;
+  salesOrderId?: string;
+}): string =>
+  normalizeSalesOrderNumbers([item.salesOrderNumber])[0] ||
+  String(item.salesOrderId || '').trim().toLowerCase();
+
+/**
+ * Removes nested "OV: 123 (OV: 456 (CTO ...))" wrappers, keeping the innermost
+ * contract/process reference so labels do not grow with every sync.
+ */
+function cleanContractReference(value?: string): string {
+  let result = String(value || '').trim();
+  for (let i = 0; i < 5; i += 1) {
+    const match = result.match(/^OV:\s*[A-Za-z0-9-]+\s*\((.*)\)$/i);
+    if (!match) break;
+    result = match[1].trim();
+  }
+  return result;
+}
+
+/**
+ * Rebuilds a contract label as "OV: <number> (<process>)" using the innermost
+ * process reference. This keeps labels stable even when a polluted OV number
+ * was previously wrapped several times by successive syncs.
+ */
+function normalizeContractNumberLabel(value?: string, salesOrderNumber?: string): string {
+  const inner = cleanContractReference(value);
+  const number = String(salesOrderNumber || '').trim();
+  if (!inner) return number ? `OV: ${number}` : '';
+  if (number && !/^OV:/i.test(inner)) return `OV: ${number} (${inner})`;
+  return inner;
+}
+
 export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]): OCTrackingContract[] {
   if (!Array.isArray(contracts)) return [];
 
@@ -536,8 +596,14 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
     }
 
     if (!map.has(key)) {
+      const initialSONumbers = normalizeSalesOrderNumbers([
+        ...(c.salesOrderNumbers || []),
+        c.salesOrderNumber,
+      ]);
       map.set(key, {
         ...c,
+        salesOrderNumber: initialSONumbers[0] || '',
+        salesOrderNumbers: initialSONumbers,
         items: [...(c.items || [])],
       });
     } else {
@@ -552,19 +618,18 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
       ]);
       existing.salesOrderIds = Array.from(allSOIds).filter(Boolean);
 
-      const allSONumbers = new Set<string>([
-        ...(existing.salesOrderNumbers || []).map((x) => String(x || '')),
-        ...(existing.salesOrderNumber ? [String(existing.salesOrderNumber)] : []),
-        ...(c.salesOrderNumbers || []).map((x) => String(x || '')),
-        ...(c.salesOrderNumber ? [String(c.salesOrderNumber)] : []),
+      const mergedSONumbers = normalizeSalesOrderNumbers([
+        ...(existing.salesOrderNumbers || []),
+        existing.salesOrderNumber,
+        ...(c.salesOrderNumbers || []),
+        c.salesOrderNumber,
       ]);
-      existing.salesOrderNumbers = Array.from(allSONumbers).filter(Boolean);
+      existing.salesOrderNumbers = mergedSONumbers;
+      // Never concatenate OV numbers into one string: keep one clean primary OV
+      // so each item can still be matched against its own sales order.
+      existing.salesOrderNumber = mergedSONumbers[0] || '';
 
       if (!existing.salesOrderId && c.salesOrderId) existing.salesOrderId = String(c.salesOrderId);
-      if (!existing.salesOrderNumber && c.salesOrderNumber) existing.salesOrderNumber = String(c.salesOrderNumber);
-      if (c.salesOrderNumber && existing.salesOrderNumber && !String(existing.salesOrderNumber).includes(String(c.salesOrderNumber))) {
-        existing.salesOrderNumber = `${existing.salesOrderNumber}, ${c.salesOrderNumber}`;
-      }
       if (!existing.quoteId && c.quoteId) existing.quoteId = c.quoteId;
       if (!existing.quoteNumber && c.quoteNumber) existing.quoteNumber = c.quoteNumber;
       if (!existing.tenderClientId && c.tenderClientId) existing.tenderClientId = c.tenderClientId;
@@ -583,16 +648,18 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
           const newItem = {
             ...rawNewItem,
             salesOrderId: rawNewItem.salesOrderId || c.salesOrderId,
-            salesOrderNumber: rawNewItem.salesOrderNumber || c.salesOrderNumber,
+            salesOrderNumber:
+              primarySalesOrderNumber(rawNewItem) ||
+              normalizeSalesOrderNumbers([c.salesOrderNumber, ...(c.salesOrderNumbers || [])])[0],
           };
 
           const itemCode = String(newItem.code || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
           const itemName = String(newItem.name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
           const itemBrand = String(newItem.brand || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-          const newItemSO = String(newItem.salesOrderNumber || newItem.salesOrderId || '');
+          const newItemSO = primarySalesOrderNumber(newItem);
 
           const duplicateIdx = existing.items.findIndex((existingItem) => {
-            const existingSO = String(existingItem.salesOrderNumber || existingItem.salesOrderId || '');
+            const existingSO = primarySalesOrderNumber(existingItem);
             // Items belonging to distinct Sales Orders (OVs) are NOT duplicates!
             if (newItemSO && existingSO && newItemSO !== existingSO) {
               return false;
@@ -617,7 +684,10 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
           });
 
           if (duplicateIdx === -1) {
-            existing.items.push({ ...newItem });
+            existing.items.push({
+              ...newItem,
+              salesOrderNumber: newItemSO || newItem.salesOrderNumber,
+            });
           } else {
             const existingItem = existing.items[duplicateIdx];
             if (!existingItem.salesOrderId && newItem.salesOrderId) existingItem.salesOrderId = newItem.salesOrderId;
@@ -694,7 +764,7 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
     const cleanItems: OCTrackingItem[] = [];
 
     contract.items.forEach((it) => {
-      const soKey = String(it.salesOrderId || it.salesOrderNumber || 'global');
+      const soKey = String(it.salesOrderId || '').trim() || primarySalesOrderNumber(it) || 'global';
       const itCode = String(it.code || '').trim().toLowerCase();
       const itName = String(it.name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       const itEqId = it.equipmentId ? String(it.equipmentId) : '';
@@ -890,8 +960,8 @@ export function segregateOCTrackingContractsBySalesOrder(
         salesOrderNumber: linkedSO.salesOrderNumber,
         salesOrderIds: [linkedSO.id],
         salesOrderNumbers: linkedSO.salesOrderNumber ? [linkedSO.salesOrderNumber] : [],
-        contractNumber: linkedSO.contractNumber
-          ? `OV: ${linkedSO.salesOrderNumber} (${linkedSO.contractNumber})`
+        contractNumber: cleanContractReference(linkedSO.contractNumber)
+          ? `OV: ${linkedSO.salesOrderNumber} (${cleanContractReference(linkedSO.contractNumber)})`
           : `OV: ${linkedSO.salesOrderNumber}`,
         clientName: linkedSO.clientName || contract.clientName,
         nit: linkedSO.clientNit || contract.nit,
@@ -935,6 +1005,19 @@ export function segregateOCTrackingContractsBySalesOrder(
   });
 
   // Ensure every Sales Order that has items gets its own tracking contract if missing
+  // Reuse already tracked items so user edits (history, supplier, serials, status)
+  // are never lost when a contract is rebuilt from its sales orders.
+  const existingItemsBySoItemId = new Map<string, OCTrackingItem>();
+  const existingItemsBySoAndCode = new Map<string, OCTrackingItem>();
+  contracts.forEach((c) => {
+    (c.items || []).forEach((it) => {
+      if (it.salesOrderItemId) existingItemsBySoItemId.set(String(it.salesOrderItemId), it);
+      const soNumber = normalizeSalesOrderNumbers([it.salesOrderNumber])[0];
+      const code = String(it.code || '').trim().toLowerCase();
+      if (soNumber && code) existingItemsBySoAndCode.set(`${soNumber}::${code}`, it);
+    });
+  });
+
   salesOrders.forEach((so) => {
     if (processedSOIds.has(so.id) || !so.items || so.items.length === 0) return;
     const exists = resultContracts.find(
@@ -949,6 +1032,24 @@ export function segregateOCTrackingContractsBySalesOrder(
 
     if (!exists) {
       const ocItems: OCTrackingItem[] = (so.items || []).map((item, idx) => {
+        const existingItem =
+          (item.id && existingItemsBySoItemId.get(String(item.id))) ||
+          (so.salesOrderNumber &&
+            item.code &&
+            existingItemsBySoAndCode.get(
+              `${so.salesOrderNumber}::${String(item.code).trim().toLowerCase()}`
+            ));
+
+        if (existingItem) {
+          return {
+            ...existingItem,
+            id: existingItem.id || `oc-item-${so.id}-${item.id || idx}-${Date.now()}`,
+            salesOrderId: so.id,
+            salesOrderNumber: so.salesOrderNumber,
+            salesOrderItemId: item.id || existingItem.salesOrderItemId,
+          };
+        }
+
         const qty = Number(item.quantityToDispatch) || 1;
         const cost = Math.round(Number(item.unitSalePriceCOP || 1000000) * 0.65);
         const isDelivered =
@@ -1015,8 +1116,8 @@ export function segregateOCTrackingContractsBySalesOrder(
         quoteId: so.quoteId,
         quoteNumber: so.quoteNumber,
         sourceType: so.contractId ? 'licitacion_adjudicada' : 'cotizacion_aprobada',
-        contractNumber: so.contractNumber
-          ? `OV: ${so.salesOrderNumber} (${so.contractNumber})`
+        contractNumber: cleanContractReference(so.contractNumber)
+          ? `OV: ${so.salesOrderNumber} (${cleanContractReference(so.contractNumber)})`
           : `OV: ${so.salesOrderNumber}`,
         clientName: so.clientName,
         nit: so.clientNit,
@@ -1036,6 +1137,218 @@ export function segregateOCTrackingContractsBySalesOrder(
   });
 
   return deduplicateOCTrackingContracts(resultContracts);
+}
+
+/**
+ * Caps the quantities of each contract item to the quantities awarded in its tender.
+ *
+ * When several OVs are generated for the same awarded tender, the same item can end up
+ * repeated (e.g. TALLIMETRO 12 + 12 when the tender only awarded 12). This function:
+ *  - groups contract items by awarded item (code, or name when there is no code),
+ *  - keeps first the items that really exist in their referenced sales order (this
+ *    discards stale leftovers created when an OV was split or re-generated),
+ *  - never lets the accumulated quantity exceed the awarded quantity,
+ *  - leaves untouched any item that is not part of the awarded tender.
+ */
+function capContractItemsToAwardedQuantitiesInner(
+  contracts: OCTrackingContract[]
+): OCTrackingContract[] {
+  if (!Array.isArray(contracts) || contracts.length === 0) return contracts;
+
+  let tenders: TenderClientProject[] = [];
+  let salesOrders: SalesOrderRecord[] = [];
+  try {
+    const rawTenders = localStorage.getItem('syd_tender_clients_v2');
+    const parsedTenders = rawTenders ? JSON.parse(rawTenders) : null;
+    if (Array.isArray(parsedTenders)) tenders = parsedTenders;
+  } catch {}
+  try {
+    const rawSO = localStorage.getItem('syd_sales_orders_v1');
+    const parsedSO = rawSO ? JSON.parse(rawSO) : null;
+    if (Array.isArray(parsedSO)) salesOrders = parsedSO;
+  } catch {}
+
+  if (tenders.length === 0) return contracts;
+
+  const tenderById = new Map<string, TenderClientProject>();
+  tenders.forEach((tender) => {
+    if (tender && tender.id) tenderById.set(String(tender.id), tender);
+  });
+
+  const normalizeCode = (value?: string): string =>
+    String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalizeName = (value?: string): string =>
+    String(value || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+
+  const getAwardedKey = (item: { code?: string; name?: string }): string => {
+    const code = normalizeCode(item.code);
+    if (code.length >= 2) return `code:${code}`;
+    const name = normalizeName(item.name);
+    return name ? `name:${name}` : '';
+  };
+
+  const findSalesOrder = (item: OCTrackingItem): SalesOrderRecord | undefined => {
+    if (item.salesOrderId) {
+      const byId = salesOrders.find((so) => String(so.id) === String(item.salesOrderId));
+      if (byId) return byId;
+    }
+    const number = primarySalesOrderNumber(item).replace(/[^a-z0-9]/g, '');
+    if (!number) return undefined;
+    return salesOrders.find((so) => {
+      const soNumber = normalizeSalesOrderNumbers([so.salesOrderNumber])[0] || '';
+      return soNumber.toLowerCase().replace(/[^a-z0-9]/g, '') === number;
+    });
+  };
+
+  const matchesSalesOrderItem = (item: OCTrackingItem, so: SalesOrderRecord): boolean => {
+    if (!Array.isArray(so.items)) return false;
+    const itemCode = normalizeCode(item.code);
+    const itemName = normalizeName(item.name);
+    return so.items.some((soItem) => {
+      const typedSoItem = soItem as unknown as { id?: string; code?: string; name?: string };
+      if (item.salesOrderItemId && typedSoItem.id && String(typedSoItem.id) === String(item.salesOrderItemId)) {
+        return true;
+      }
+      const soCode = normalizeCode(typedSoItem.code);
+      if (itemCode && soCode && itemCode === soCode) return true;
+      const soName = normalizeName(typedSoItem.name);
+      return Boolean(itemName && soName && itemName === soName);
+    });
+  };
+
+  const isAnchoredInSalesOrder = (item: OCTrackingItem): boolean => {
+    const so = findSalesOrder(item);
+    return Boolean(so && matchesSalesOrderItem(item, so));
+  };
+
+  /**
+   * An item is a stale leftover ("ghost") when it points to a Sales Order that
+   * still exists but no longer contains that item. This happens when an OV is
+   * split or regenerated: the old copies keep the OV number but their
+   * salesOrderItemId/code no longer exist in it. They must be discarded, not
+   * just deprioritized, otherwise they reappear whenever there is still room
+   * under the awarded quantity.
+   */
+  const isGhostItem = (item: OCTrackingItem): boolean => {
+    const so = findSalesOrder(item);
+    if (!so || !Array.isArray(so.items) || so.items.length === 0) return false;
+    return !matchesSalesOrderItem(item, so);
+  };
+
+  return contracts.map((contract) => {
+    if (!contract || !contract.tenderClientId) return contract;
+    const tender = tenderById.get(String(contract.tenderClientId));
+    if (!tender || !Array.isArray(tender.items) || tender.items.length === 0) return contract;
+
+    // Awarded quantity per item (summed in case the tender repeats a code).
+    const awarded = new Map<string, number>();
+    tender.items.forEach((tenderItem) => {
+      const key = getAwardedKey(tenderItem);
+      if (!key) return;
+      const qty = Number(tenderItem.quantity);
+      awarded.set(key, (awarded.get(key) || 0) + (Number.isFinite(qty) && qty > 0 ? qty : 1));
+    });
+
+    const items = contract.items || [];
+    const groups = new Map<string, number[]>();
+    items.forEach((item, index) => {
+      const key = getAwardedKey(item);
+      if (!key || !awarded.has(key)) return;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(index);
+    });
+
+    // Nothing to cap for this contract.
+    if (groups.size === 0) return contract;
+
+    const keep = new Set<number>();
+    const quantityOverride = new Map<number, number>();
+
+    groups.forEach((indices, key) => {
+      let remaining = awarded.get(key) || 0;
+      if (remaining <= 0) return;
+
+      // Drop stale leftovers. An item that points to an existing Sales Order
+      // which no longer contains it is a leftover from a split/regenerated OV,
+      // so it must never count towards the awarded quantity.
+      const candidates = indices.filter((index) => !isGhostItem(items[index]));
+
+      // Prefer items that truly exist in their sales order; this discards stale
+      // leftovers created when an OV was split or re-generated.
+      const ordered = candidates.sort((a, b) => {
+        const anchoredA = isAnchoredInSalesOrder(items[a]) ? 0 : 1;
+        const anchoredB = isAnchoredInSalesOrder(items[b]) ? 0 : 1;
+        if (anchoredA !== anchoredB) return anchoredA - anchoredB;
+        return a - b;
+      });
+
+      for (const index of ordered) {
+        if (remaining <= 0) break;
+        const rawQty = Number(items[index].quantity);
+        const qty = Number.isFinite(rawQty) && rawQty > 0 ? rawQty : 1;
+        if (qty <= remaining) {
+          keep.add(index);
+          remaining -= qty;
+        } else {
+          // Clamp instead of dropping a partially valid item.
+          keep.add(index);
+          quantityOverride.set(index, remaining);
+          remaining = 0;
+        }
+      }
+    });
+
+    const groupedIndices = new Set<number>();
+    groups.forEach((indices) => indices.forEach((index) => groupedIndices.add(index)));
+
+    const cappedItems: OCTrackingItem[] = [];
+    items.forEach((item, index) => {
+      if (groupedIndices.has(index) && !keep.has(index)) return;
+      const overridden = quantityOverride.get(index);
+      cappedItems.push(overridden === undefined ? item : { ...item, quantity: overridden });
+    });
+
+    if (cappedItems.length === items.length && quantityOverride.size === 0) return contract;
+
+    const totalCost = cappedItems.reduce((sum, item) => {
+      const unitCost =
+        Number(item.costPriceCOP) ||
+        (item.totalCostCOP && item.quantity ? Number(item.totalCostCOP) / Number(item.quantity) : 0);
+      return sum + unitCost * (Number(item.quantity) || 1);
+    }, 0);
+
+    return { ...contract, items: cappedItems, totalCostCOP: totalCost };
+  });
+}
+
+/**
+ * Applies the awarded-quantity cap and also normalizes each contract label so
+ * nested "OV: X (OV: Y (...))" references do not survive a cloud sync.
+ */
+export function capContractItemsToAwardedQuantities(
+  contracts: OCTrackingContract[]
+): OCTrackingContract[] {
+  if (!Array.isArray(contracts)) return [];
+  let capped: OCTrackingContract[];
+  try {
+    capped = capContractItemsToAwardedQuantitiesInner(contracts);
+  } catch (error) {
+    console.error('Error capping OC contract quantities:', error);
+    capped = contracts;
+  }
+  return capped.map((contract) => {
+    if (!contract) return contract;
+    const primaryNumber =
+      normalizeSalesOrderNumbers([contract.salesOrderNumber])[0] || '';
+    const contractNumber = normalizeContractNumberLabel(contract.contractNumber, primaryNumber);
+    if (contractNumber === contract.contractNumber) return contract;
+    return { ...contract, contractNumber };
+  });
 }
 
 export const DEFAULT_NAPOLEON_OC_CONTRACT: OCTrackingContract = {
@@ -1127,7 +1440,9 @@ export const getStoredOCTrackingContracts = (): OCTrackingContract[] => {
     const parsed: OCTrackingContract[] = JSON.parse(raw);
     // Remove any leftover demo items
     const clean = parsed.filter((c) => !c.id.includes('demo'));
-    const segregated = segregateOCTrackingContractsBySalesOrder(clean);
+    const segregated = capContractItemsToAwardedQuantities(
+      segregateOCTrackingContractsBySalesOrder(clean)
+    );
     let hasNapoleon = false;
     const reconciled = segregated.map((c) => {
       const isNapoleon = /NAPOLEON|HOSPITAL\s+INFANTIL|CASA\s+DEL\s+NI[ÑN]O|HBOC0000000640/i.test(
@@ -1238,7 +1553,7 @@ export const saveStoredOCTrackingContracts = (contracts: OCTrackingContract[]): 
     if (!hasNapoleon) {
       list.push(DEFAULT_NAPOLEON_OC_CONTRACT);
     }
-    const deduped = deduplicateOCTrackingContracts(list);
+    const deduped = capContractItemsToAwardedQuantities(deduplicateOCTrackingContracts(list));
     localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(deduped));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('syd-oc-tracking-updated'));

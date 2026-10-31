@@ -49,6 +49,7 @@ import {
   getStoredOCTrackingContracts,
   getStoredSupplierProfiles,
   deduplicateOCTrackingContracts,
+  capContractItemsToAwardedQuantities,
   DEFAULT_NAPOLEON_OC_CONTRACT,
 } from '../utils/ocTrackingStorage';
 import { getStoredClients } from '../utils/clientStorage';
@@ -85,6 +86,25 @@ import {
   mergeCloudTombstones,
   CloudTombstonesPayload,
 } from '../utils/tombstones';
+
+/**
+ * Caps OC contract items to the quantities awarded in their tender before they
+ * are stored or sent to the cloud.
+ *
+ * The same awarded item used to be duplicated every time an OV was generated or
+ * split (e.g. 12 + 12 units when the tender only awarded 12). Applying the cap on
+ * every write path keeps the cloud clean so no other device or tab can
+ * re-introduce the duplicates.
+ */
+function capOCContractsForStorage(contracts: OCTrackingContract[]): OCTrackingContract[] {
+  if (!Array.isArray(contracts)) return [];
+  try {
+    return capContractItemsToAwardedQuantities(contracts);
+  } catch (error) {
+    console.error('Error capping OC contract quantities:', error);
+    return contracts;
+  }
+}
 
 export type SyncConnectionStatus = 'connecting' | 'connected' | 'syncing' | 'offline' | 'error';
 
@@ -1211,39 +1231,42 @@ export async function saveTenderClientsToFirestore(tenders: TenderClientProject[
 
 export async function saveSingleOCTrackingContractToFirestore(contract: OCTrackingContract): Promise<void> {
   if (!contract || !contract.id) return;
-  unmarkContractAsDeleted(contract.id, contract.contractNumber, contract.salesOrderNumber, contract.tenderClientId);
+  const [sanitizedContract] = capOCContractsForStorage([contract]);
+  const contractToSave = sanitizedContract || contract;
+  unmarkContractAsDeleted(contractToSave.id, contractToSave.contractNumber, contractToSave.salesOrderNumber, contractToSave.tenderClientId);
   try {
-    const safeId = toSafeDocId(contract.id, 'oc');
+    const safeId = toSafeDocId(contractToSave.id, 'oc');
     const docRef = doc(db, 'oc_contracts', safeId);
-    await setDoc(docRef, sanitizeForFirestore({ ...contract, id: safeId, _updatedAt: new Date().toISOString() }));
+    await setDoc(docRef, sanitizeForFirestore({ ...contractToSave, id: safeId, _updatedAt: new Date().toISOString() }));
 
     // Broadcast update across open tabs immediately
     try {
       const stored = getStoredOCTrackingContracts();
-      const idx = stored.findIndex((c) => c.id === contract.id);
+      const idx = stored.findIndex((c) => c.id === contractToSave.id);
       let nextStored: OCTrackingContract[];
       if (idx >= 0) {
         nextStored = [...stored];
-        nextStored[idx] = { ...nextStored[idx], ...contract };
+        nextStored[idx] = { ...nextStored[idx], ...contractToSave };
       } else {
-        nextStored = [contract, ...stored];
+        nextStored = [contractToSave, ...stored];
       }
       localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(nextStored));
     } catch (_) {}
 
     broadcastLocalDataSync({ type: 'OC_SYNC', contracts: getStoredOCTrackingContracts() });
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `oc_contracts/${contract.id}`);
+    handleFirestoreError(err, OperationType.WRITE, `oc_contracts/${contractToSave.id}`);
     throw err;
   }
 }
 
 export async function saveOCTrackingContractsToFirestore(contracts: OCTrackingContract[]): Promise<void> {
   if (isSyncingFromRemote) return;
-  broadcastLocalDataSync({ type: 'OC_SYNC', contracts });
+  const sanitizedContracts = capOCContractsForStorage(contracts);
+  broadcastLocalDataSync({ type: 'OC_SYNC', contracts: sanitizedContracts });
   debounceWrite('batch_oc', 400, async () => {
     try {
-      await writeInChunks('oc_contracts', contracts);
+      await writeInChunks('oc_contracts', sanitizedContracts);
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'oc_contracts');
     }
@@ -1753,7 +1776,9 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
           saveSingleOCTrackingContractToFirestore(DEFAULT_NAPOLEON_OC_CONTRACT).catch(console.warn);
         }
 
-        const resolvedOC = deduplicateOCTrackingContracts(remoteList);
+        const resolvedOC = capContractItemsToAwardedQuantities(
+          deduplicateOCTrackingContracts(remoteList)
+        );
 
         try {
           localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(resolvedOC));
@@ -2182,7 +2207,11 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
               } catch (e) {}
               callbacks.onEquipmentsChange?.(cleanEq);
             } else if (msg.type === 'OC_SYNC' && Array.isArray(msg.contracts)) {
-              const cleanOC = msg.contracts.filter((c: any) => c && !isContractDeleted(c.id));
+              const cleanOC = capContractItemsToAwardedQuantities(
+                deduplicateOCTrackingContracts(
+                  msg.contracts.filter((c: any) => c && !isContractDeleted(c.id))
+                )
+              );
               try {
                 localStorage.setItem('syd_oc_tracking_contracts_v3', JSON.stringify(cleanOC));
               } catch (e) {}

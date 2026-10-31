@@ -318,6 +318,25 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
     return Array.from(set).filter((c) => c.length >= 3);
   }, [activeClient]);
 
+  /**
+   * A contract/OV is "orphaned" when its tenderClientId no longer matches any
+   * existing tender project (e.g. an old process that was re-created). Only in
+   * that case we fall back to matching by client name; records that belong to
+   * another existing tender must never leak into this tender's delivery status.
+   */
+  const isOrphanTenderLink = useCallback((tenderClientId?: string): boolean => {
+    if (!tenderClientId) return true;
+    try {
+      const raw = localStorage.getItem('syd_tender_clients_v2');
+      if (!raw) return true;
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list)) return true;
+      return !list.some((t) => t && String(t.id) === String(tenderClientId));
+    } catch {
+      return true;
+    }
+  }, []);
+
   // 1. Verify equipment delivery in Seguimiento de OC (strictly for this specific tender/contract)
   const linkedContracts = useMemo(() => {
     return (contracts || []).filter((c) => {
@@ -345,12 +364,15 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
       if (activeClient.linkedQuoteNumber && c.quoteNumber && normalizeClean(c.quoteNumber) === normalizeClean(activeClient.linkedQuoteNumber)) return true;
       if (activeClient.linkedQuoteId && c.quoteId === activeClient.linkedQuoteId) return true;
 
-      if (isSameClientEntity(c.clientName, activeClient.clientName)) {
+      // Only fall back to client-name matching for contracts that are not linked
+      // to another existing tender. Otherwise an OC from a different tender of
+      // the same client would contaminate this tender's delivery statuses.
+      if (isOrphanTenderLink(c.tenderClientId) && isSameClientEntity(c.clientName, activeClient.clientName)) {
         return true;
       }
       return false;
     });
-  }, [contracts, activeClient, tenderCodes, salesOrders]);
+  }, [contracts, activeClient, tenderCodes, salesOrders, isOrphanTenderLink]);
 
   // 2. Verify invoicing & invoice attachment in Órdenes de Venta & Facturas (strictly for this tender project)
   const linkedOrders = useMemo(() => {
@@ -371,12 +393,14 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
       if (activeClient.linkedQuoteId && so.quoteId === activeClient.linkedQuoteId) return true;
       if (so.ocContractId && linkedContracts.some((c) => c.id === so.ocContractId)) return true;
 
-      if (isSameClientEntity(so.clientName, activeClient.clientName)) {
+      // Same rule as contracts: do not pull OVs from a different existing tender
+      // of the same client when they belong to another tender project.
+      if (isOrphanTenderLink(so.tenderClientId) && isSameClientEntity(so.clientName, activeClient.clientName)) {
         return true;
       }
       return false;
     });
-  }, [salesOrders, activeClient, tenderCodes, linkedContracts]);
+  }, [salesOrders, activeClient, tenderCodes, linkedContracts, isOrphanTenderLink]);
 
   // 3. Match relevant sales invoices for this tender project
   const linkedInvoices = useMemo(() => {
@@ -397,7 +421,9 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
         invCodes.some((invCode) => invCode === tCode || (invCode.length >= 4 && (invCode.includes(tCode) || tCode.includes(invCode))))
       );
       if (hasCodeMatch) return true;
-      if (isSameClientEntity(inv.clientName, activeClient.clientName)) return true;
+      // Only fall back to client-name matching when the invoice is not already
+      // attached to a specific contract/tender.
+      if (!inv.contractId && isSameClientEntity(inv.clientName, activeClient.clientName)) return true;
 
       return false;
     });
