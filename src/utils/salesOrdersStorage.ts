@@ -21,6 +21,7 @@ import {
 import { resolveItemManufacturerBrand } from './equipmentBrandResolver';
 import {
   autoRegisterSuppliersFromEquipments,
+  cleanContractReference,
   getStoredSupplierProfiles,
 } from './ocTrackingStorage';
 import backupSnapshot from '../../data_backup_snapshot.json';
@@ -283,8 +284,17 @@ export function getStoredSalesOrders(): SalesOrderRecord[] {
         if (!hasNapoleonOV) {
           normalizedFiltered.push(DEFAULT_NAPOLEON_FACTURADA_OV);
         }
-        const deduped = deduplicateSalesOrders(normalizedFiltered);
-        if (deduped.length !== parsed.length) {
+        // Repair polluted labels like "OV: 1142794 (CTO No. 324-2026)" so the
+        // OV keeps the real process reference and does not nest on every sync.
+        let contractNumberChanged = false;
+        const cleanedFiltered = normalizedFiltered.map((o: any) => {
+          const cleaned = cleanContractReference(o.contractNumber);
+          if (cleaned === o.contractNumber) return o;
+          contractNumberChanged = true;
+          return { ...o, contractNumber: cleaned };
+        });
+        const deduped = deduplicateSalesOrders(cleanedFiltered);
+        if (deduped.length !== parsed.length || contractNumberChanged) {
           localStorage.setItem(SALES_ORDERS_STORAGE_KEY, JSON.stringify(deduped));
         }
         return deduped;
@@ -301,7 +311,11 @@ export function saveStoredSalesOrders(orders: SalesOrderRecord[]): void {
     const filtered = (orders || []).filter(
       (o) => o && o.id && !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId)
     );
-    const deduped = deduplicateSalesOrders(filtered);
+    const cleaned = filtered.map((o) => {
+      const contractNumber = cleanContractReference(o.contractNumber);
+      return contractNumber === o.contractNumber ? o : { ...o, contractNumber };
+    });
+    const deduped = deduplicateSalesOrders(cleaned);
     try {
       localStorage.setItem(SALES_ORDERS_STORAGE_KEY, JSON.stringify(deduped));
     } catch (quotaErr) {

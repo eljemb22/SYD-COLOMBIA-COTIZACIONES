@@ -514,7 +514,7 @@ const primarySalesOrderNumber = (item: {
  * Removes nested "OV: 123 (OV: 456 (CTO ...))" wrappers, keeping the innermost
  * contract/process reference so labels do not grow with every sync.
  */
-function cleanContractReference(value?: string): string {
+export function cleanContractReference(value?: string): string {
   let result = String(value || '').trim();
   for (let i = 0; i < 5; i += 1) {
     const match = result.match(/^OV:\s*[A-Za-z0-9-]+\s*\((.*)\)$/i);
