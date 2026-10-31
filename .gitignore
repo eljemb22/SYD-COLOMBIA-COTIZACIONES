@@ -6,3 +6,8 @@ coverage/
 *.zip
 .env*
 !.env.example
+
+# Datos locales y credenciales: nunca versionar
+cookies.txt
+data_backup_snapshot.json
+data_backup_snapshot.backup.json
