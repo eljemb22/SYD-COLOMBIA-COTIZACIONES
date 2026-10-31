@@ -56,7 +56,7 @@ export function getFormattedSpanishDate(city: string = 'Barranquilla', d: Date =
   const monthName = SPANISH_MONTH_NAMES_LOWER[d.getMonth()];
   const year = d.getFullYear();
   const cityName = city && city.trim() ? city.trim() : 'Barranquilla';
-  return `${cityName}, ${day} ${monthName} de ${year}`;
+  return `${cityName}, ${day} de ${monthName} de ${year}`;
 }
 
 /**

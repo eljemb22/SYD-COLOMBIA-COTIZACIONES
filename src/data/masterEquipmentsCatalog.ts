@@ -257,7 +257,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -319,7 +319,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -381,7 +381,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -443,7 +443,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -505,7 +505,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -567,7 +567,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -629,7 +629,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -691,7 +691,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -753,7 +753,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -815,7 +815,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -877,7 +877,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -939,7 +939,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1001,7 +1001,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1063,7 +1063,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1125,7 +1125,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1187,7 +1187,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1249,7 +1249,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1311,7 +1311,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1373,7 +1373,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1435,7 +1435,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1497,7 +1497,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1559,7 +1559,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1621,7 +1621,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1683,7 +1683,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1745,7 +1745,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1807,7 +1807,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1869,7 +1869,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1931,7 +1931,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -1993,7 +1993,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2055,7 +2055,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2117,7 +2117,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2179,7 +2179,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2241,7 +2241,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2303,7 +2303,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2365,7 +2365,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2427,7 +2427,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2489,7 +2489,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2551,7 +2551,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2613,7 +2613,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2675,7 +2675,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2737,7 +2737,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2799,7 +2799,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2861,7 +2861,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2923,7 +2923,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -2985,7 +2985,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3047,7 +3047,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3109,7 +3109,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3171,7 +3171,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3233,7 +3233,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3295,7 +3295,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3357,7 +3357,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3419,7 +3419,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3476,7 +3476,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3538,7 +3538,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3600,7 +3600,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3662,7 +3662,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3724,7 +3724,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3786,7 +3786,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3848,7 +3848,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3910,7 +3910,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -3972,7 +3972,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4034,7 +4034,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4091,7 +4091,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4153,7 +4153,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4215,7 +4215,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4277,7 +4277,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4339,7 +4339,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4401,7 +4401,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4463,7 +4463,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4525,7 +4525,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4587,7 +4587,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4649,7 +4649,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4711,7 +4711,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4768,7 +4768,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4845,7 +4845,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4907,7 +4907,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -4969,7 +4969,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5031,7 +5031,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5088,7 +5088,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5150,7 +5150,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5212,7 +5212,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5274,7 +5274,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5331,7 +5331,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5388,7 +5388,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5450,7 +5450,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5507,7 +5507,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5569,7 +5569,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5631,7 +5631,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5698,7 +5698,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5760,7 +5760,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5822,7 +5822,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5884,7 +5884,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -5946,7 +5946,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de tasa de infusión ajustable de 0.1 a 1200.0 ml/h con incrementos de 0.01 ml/h en modo microinfusión y precisión superior a ±5%.",
       "Rango de volumen límite a infundir (VTBI) de 0.1 a 9999.9 ml con función de purga y bolo manual/programado.",
       "Sistema integral de detección de burbujas de aire por ultrasonido y sensor de oclusión dinámica aguas arriba y aguas abajo.",
-      "⭐ Biblioteca de fármacos con límites de dosis estrictos (Dose Error Reduction System - DERS) y capacidad de almacenamiento para más de 1000 fármacos."
+      "Biblioteca de fármacos con límites de dosis estrictos (Dose Error Reduction System - DERS) y capacidad de almacenamiento para más de 1000 fármacos."
     ],
     "standardAccessories": [
       {
@@ -6006,7 +6006,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6068,7 +6068,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6130,7 +6130,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6192,7 +6192,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6254,7 +6254,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6316,7 +6316,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6378,7 +6378,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6440,7 +6440,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6502,7 +6502,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6564,7 +6564,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6621,7 +6621,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6686,7 +6686,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -6747,7 +6747,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6809,7 +6809,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6871,7 +6871,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -6936,7 +6936,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -7007,7 +7007,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7069,7 +7069,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7131,7 +7131,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7193,7 +7193,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7255,7 +7255,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7320,7 +7320,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -7391,7 +7391,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7453,7 +7453,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7515,7 +7515,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7605,7 +7605,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -7679,7 +7679,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -7740,7 +7740,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7802,7 +7802,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7859,7 +7859,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7921,7 +7921,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -7983,7 +7983,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8045,7 +8045,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8107,7 +8107,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8169,7 +8169,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8231,7 +8231,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8293,7 +8293,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8355,7 +8355,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8417,7 +8417,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8484,7 +8484,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8546,7 +8546,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8608,7 +8608,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8670,7 +8670,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8732,7 +8732,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8794,7 +8794,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8856,7 +8856,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -8916,7 +8916,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -8990,7 +8990,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -9061,7 +9061,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9123,7 +9123,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9187,7 +9187,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de ajuste de PEEP electrónica integrada de 0 a 35 cmH2O con estabilidad continua de presión alveolar.",
       "Rango de suministro de flujo de gases medicinales de 0.1 a 15.0 L/min con mezclador digital y flujómetros virtuales.",
       "Modos de ventilación integrados: VCV, PCV, PCV-VG, PSV con apnea backup, SIMV-VC, SIMV-PC y ventilación manual/espontánea.",
-      "⭐ Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
+      "Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
       "Canister de cal sodada con sistema de bypass que permite el reemplazo en caliente durante la cirugía sin interrupción de gas fresco."
     ],
     "standardAccessories": [
@@ -9263,7 +9263,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9325,7 +9325,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9387,7 +9387,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9454,7 +9454,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de energía de desfibrilación bifásica exponencial truncada programable de 1 a 360 Joules con tiempo de carga a máxima energía inferior a 5 segundos.",
       "Rango de frecuencia cardíaca de 15 a 300 lpm con marcapasos transcutáneo no invasivo de 40 a 180 ppm y corriente de 0 a 200 mA.",
       "Pantalla médica a color no inferior a 8.4 pulgadas con visualización de 3 a 4 curvas y guía visual de RCP en tiempo real.",
-      "⭐ Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
+      "Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
       "Batería recargable con capacidad para al menos 200 descargas a máxima energía (360J) o 5 horas continuas de monitoreo."
     ],
     "standardAccessories": [
@@ -9520,7 +9520,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9582,7 +9582,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9644,7 +9644,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9706,7 +9706,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9763,7 +9763,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9820,7 +9820,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -9882,7 +9882,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de energía de desfibrilación bifásica exponencial truncada programable de 1 a 360 Joules con tiempo de carga a máxima energía inferior a 5 segundos.",
       "Rango de frecuencia cardíaca de 15 a 300 lpm con marcapasos transcutáneo no invasivo de 40 a 180 ppm y corriente de 0 a 200 mA.",
       "Pantalla médica a color no inferior a 8.4 pulgadas con visualización de 3 a 4 curvas y guía visual de RCP en tiempo real.",
-      "⭐ Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
+      "Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
       "Batería recargable con capacidad para al menos 200 descargas a máxima energía (360J) o 5 horas continuas de monitoreo."
     ],
     "standardAccessories": [
@@ -9948,7 +9948,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -10010,7 +10010,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -10072,7 +10072,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -10134,7 +10134,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de energía de desfibrilación bifásica exponencial truncada programable de 1 a 360 Joules con tiempo de carga a máxima energía inferior a 5 segundos.",
       "Rango de frecuencia cardíaca de 15 a 300 lpm con marcapasos transcutáneo no invasivo de 40 a 180 ppm y corriente de 0 a 200 mA.",
       "Pantalla médica a color no inferior a 8.4 pulgadas con visualización de 3 a 4 curvas y guía visual de RCP en tiempo real.",
-      "⭐ Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
+      "Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
       "Batería recargable con capacidad para al menos 200 descargas a máxima energía (360J) o 5 horas continuas de monitoreo."
     ],
     "standardAccessories": [
@@ -10202,7 +10202,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de ajuste de PEEP electrónica integrada de 0 a 35 cmH2O con estabilidad continua de presión alveolar.",
       "Rango de suministro de flujo de gases medicinales de 0.1 a 15.0 L/min con mezclador digital y flujómetros virtuales.",
       "Modos de ventilación integrados: VCV, PCV, PCV-VG, PSV con apnea backup, SIMV-VC, SIMV-PC y ventilación manual/espontánea.",
-      "⭐ Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
+      "Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
       "Canister de cal sodada con sistema de bypass que permite el reemplazo en caliente durante la cirugía sin interrupción de gas fresco."
     ],
     "standardAccessories": [
@@ -10278,7 +10278,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -10345,7 +10345,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -10410,7 +10410,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -10481,7 +10481,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -10543,7 +10543,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de energía de desfibrilación bifásica exponencial truncada programable de 1 a 360 Joules con tiempo de carga a máxima energía inferior a 5 segundos.",
       "Rango de frecuencia cardíaca de 15 a 300 lpm con marcapasos transcutáneo no invasivo de 40 a 180 ppm y corriente de 0 a 200 mA.",
       "Pantalla médica a color no inferior a 8.4 pulgadas con visualización de 3 a 4 curvas y guía visual de RCP en tiempo real.",
-      "⭐ Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
+      "Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
       "Batería recargable con capacidad para al menos 200 descargas a máxima energía (360J) o 5 horas continuas de monitoreo."
     ],
     "standardAccessories": [
@@ -10609,7 +10609,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -10669,7 +10669,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -10730,7 +10730,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -10828,7 +10828,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -10889,7 +10889,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -10951,7 +10951,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11013,7 +11013,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11078,7 +11078,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -11151,7 +11151,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de ajuste de PEEP electrónica integrada de 0 a 35 cmH2O con estabilidad continua de presión alveolar.",
       "Rango de suministro de flujo de gases medicinales de 0.1 a 15.0 L/min con mezclador digital y flujómetros virtuales.",
       "Modos de ventilación integrados: VCV, PCV, PCV-VG, PSV con apnea backup, SIMV-VC, SIMV-PC y ventilación manual/espontánea.",
-      "⭐ Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
+      "Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
       "Canister de cal sodada con sistema de bypass que permite el reemplazo en caliente durante la cirugía sin interrupción de gas fresco."
     ],
     "standardAccessories": [
@@ -11227,7 +11227,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11287,7 +11287,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -11358,7 +11358,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11415,7 +11415,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11479,7 +11479,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de ajuste de PEEP electrónica integrada de 0 a 35 cmH2O con estabilidad continua de presión alveolar.",
       "Rango de suministro de flujo de gases medicinales de 0.1 a 15.0 L/min con mezclador digital y flujómetros virtuales.",
       "Modos de ventilación integrados: VCV, PCV, PCV-VG, PSV con apnea backup, SIMV-VC, SIMV-PC y ventilación manual/espontánea.",
-      "⭐ Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
+      "Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
       "Canister de cal sodada con sistema de bypass que permite el reemplazo en caliente durante la cirugía sin interrupción de gas fresco."
     ],
     "standardAccessories": [
@@ -11550,7 +11550,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11612,7 +11612,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11674,7 +11674,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11739,7 +11739,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -11810,7 +11810,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11867,7 +11867,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11929,7 +11929,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -11991,7 +11991,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12053,7 +12053,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12118,7 +12118,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -12189,7 +12189,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12251,7 +12251,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12313,7 +12313,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12375,7 +12375,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12437,7 +12437,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12499,7 +12499,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12561,7 +12561,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12623,7 +12623,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12685,7 +12685,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12750,7 +12750,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -12821,7 +12821,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12878,7 +12878,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12935,7 +12935,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -12997,7 +12997,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13059,7 +13059,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13116,7 +13116,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13178,7 +13178,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13240,7 +13240,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13302,7 +13302,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13364,7 +13364,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13426,7 +13426,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13491,7 +13491,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -13565,7 +13565,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -13636,7 +13636,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13698,7 +13698,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de tasa de infusión ajustable de 0.1 a 1200.0 ml/h con incrementos de 0.01 ml/h en modo microinfusión y precisión superior a ±5%.",
       "Rango de volumen límite a infundir (VTBI) de 0.1 a 9999.9 ml con función de purga y bolo manual/programado.",
       "Sistema integral de detección de burbujas de aire por ultrasonido y sensor de oclusión dinámica aguas arriba y aguas abajo.",
-      "⭐ Biblioteca de fármacos con límites de dosis estrictos (Dose Error Reduction System - DERS) y capacidad de almacenamiento para más de 1000 fármacos."
+      "Biblioteca de fármacos con límites de dosis estrictos (Dose Error Reduction System - DERS) y capacidad de almacenamiento para más de 1000 fármacos."
     ],
     "standardAccessories": [
       {
@@ -13758,7 +13758,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de tasa de infusión ajustable de 0.1 a 1200.0 ml/h con incrementos de 0.01 ml/h en modo microinfusión y precisión superior a ±5%.",
       "Rango de volumen límite a infundir (VTBI) de 0.1 a 9999.9 ml con función de purga y bolo manual/programado.",
       "Sistema integral de detección de burbujas de aire por ultrasonido y sensor de oclusión dinámica aguas arriba y aguas abajo.",
-      "⭐ Biblioteca de fármacos con límites de dosis estrictos (Dose Error Reduction System - DERS) y capacidad de almacenamiento para más de 1000 fármacos."
+      "Biblioteca de fármacos con límites de dosis estrictos (Dose Error Reduction System - DERS) y capacidad de almacenamiento para más de 1000 fármacos."
     ],
     "standardAccessories": [
       {
@@ -13818,7 +13818,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13875,7 +13875,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13937,7 +13937,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -13999,7 +13999,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14061,7 +14061,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14118,7 +14118,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14180,7 +14180,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14242,7 +14242,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14307,7 +14307,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -14371,7 +14371,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -14442,7 +14442,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14499,7 +14499,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14561,7 +14561,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14625,7 +14625,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de ajuste de PEEP electrónica integrada de 0 a 35 cmH2O con estabilidad continua de presión alveolar.",
       "Rango de suministro de flujo de gases medicinales de 0.1 a 15.0 L/min con mezclador digital y flujómetros virtuales.",
       "Modos de ventilación integrados: VCV, PCV, PCV-VG, PSV con apnea backup, SIMV-VC, SIMV-PC y ventilación manual/espontánea.",
-      "⭐ Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
+      "Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
       "Canister de cal sodada con sistema de bypass que permite el reemplazo en caliente durante la cirugía sin interrupción de gas fresco."
     ],
     "standardAccessories": [
@@ -14698,7 +14698,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de ajuste de PEEP electrónica integrada de 0 a 35 cmH2O con estabilidad continua de presión alveolar.",
       "Rango de suministro de flujo de gases medicinales de 0.1 a 15.0 L/min con mezclador digital y flujómetros virtuales.",
       "Modos de ventilación integrados: VCV, PCV, PCV-VG, PSV con apnea backup, SIMV-VC, SIMV-PC y ventilación manual/espontánea.",
-      "⭐ Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
+      "Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
       "Canister de cal sodada con sistema de bypass que permite el reemplazo en caliente durante la cirugía sin interrupción de gas fresco."
     ],
     "standardAccessories": [
@@ -14774,7 +14774,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14831,7 +14831,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14893,7 +14893,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -14953,7 +14953,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -15017,7 +15017,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -15088,7 +15088,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -15153,7 +15153,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -15227,7 +15227,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -15298,7 +15298,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -15362,7 +15362,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de ajuste de PEEP electrónica integrada de 0 a 35 cmH2O con estabilidad continua de presión alveolar.",
       "Rango de suministro de flujo de gases medicinales de 0.1 a 15.0 L/min con mezclador digital y flujómetros virtuales.",
       "Modos de ventilación integrados: VCV, PCV, PCV-VG, PSV con apnea backup, SIMV-VC, SIMV-PC y ventilación manual/espontánea.",
-      "⭐ Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
+      "Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
       "Canister de cal sodada con sistema de bypass que permite el reemplazo en caliente durante la cirugía sin interrupción de gas fresco."
     ],
     "standardAccessories": [
@@ -15436,7 +15436,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -15510,7 +15510,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -15584,7 +15584,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -15658,7 +15658,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -15729,7 +15729,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de energía de desfibrilación bifásica exponencial truncada programable de 1 a 360 Joules con tiempo de carga a máxima energía inferior a 5 segundos.",
       "Rango de frecuencia cardíaca de 15 a 300 lpm con marcapasos transcutáneo no invasivo de 40 a 180 ppm y corriente de 0 a 200 mA.",
       "Pantalla médica a color no inferior a 8.4 pulgadas con visualización de 3 a 4 curvas y guía visual de RCP en tiempo real.",
-      "⭐ Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
+      "Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
       "Batería recargable con capacidad para al menos 200 descargas a máxima energía (360J) o 5 horas continuas de monitoreo."
     ],
     "standardAccessories": [
@@ -15797,7 +15797,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de ajuste de PEEP electrónica integrada de 0 a 35 cmH2O con estabilidad continua de presión alveolar.",
       "Rango de suministro de flujo de gases medicinales de 0.1 a 15.0 L/min con mezclador digital y flujómetros virtuales.",
       "Modos de ventilación integrados: VCV, PCV, PCV-VG, PSV con apnea backup, SIMV-VC, SIMV-PC y ventilación manual/espontánea.",
-      "⭐ Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
+      "Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
       "Canister de cal sodada con sistema de bypass que permite el reemplazo en caliente durante la cirugía sin interrupción de gas fresco."
     ],
     "standardAccessories": [
@@ -15868,7 +15868,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -15935,7 +15935,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -15997,7 +15997,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16060,7 +16060,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16122,7 +16122,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16189,7 +16189,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16246,7 +16246,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16303,7 +16303,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16368,7 +16368,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -16429,7 +16429,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16491,7 +16491,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16553,7 +16553,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16615,7 +16615,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16677,7 +16677,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16739,7 +16739,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16799,7 +16799,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -16870,7 +16870,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16932,7 +16932,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -16989,7 +16989,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17056,7 +17056,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de energía de desfibrilación bifásica exponencial truncada programable de 1 a 360 Joules con tiempo de carga a máxima energía inferior a 5 segundos.",
       "Rango de frecuencia cardíaca de 15 a 300 lpm con marcapasos transcutáneo no invasivo de 40 a 180 ppm y corriente de 0 a 200 mA.",
       "Pantalla médica a color no inferior a 8.4 pulgadas con visualización de 3 a 4 curvas y guía visual de RCP en tiempo real.",
-      "⭐ Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
+      "Algoritmo de retroalimentación de RCP en tiempo real con sensor de profundidad y frecuencia de compresiones.",
       "Batería recargable con capacidad para al menos 200 descargas a máxima energía (360J) o 5 horas continuas de monitoreo."
     ],
     "standardAccessories": [
@@ -17122,7 +17122,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17184,7 +17184,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17246,7 +17246,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17313,7 +17313,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17370,7 +17370,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17432,7 +17432,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17497,7 +17497,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -17568,7 +17568,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17630,7 +17630,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17687,7 +17687,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17751,7 +17751,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de ajuste de PEEP electrónica integrada de 0 a 35 cmH2O con estabilidad continua de presión alveolar.",
       "Rango de suministro de flujo de gases medicinales de 0.1 a 15.0 L/min con mezclador digital y flujómetros virtuales.",
       "Modos de ventilación integrados: VCV, PCV, PCV-VG, PSV con apnea backup, SIMV-VC, SIMV-PC y ventilación manual/espontánea.",
-      "⭐ Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
+      "Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
       "Canister de cal sodada con sistema de bypass que permite el reemplazo en caliente durante la cirugía sin interrupción de gas fresco."
     ],
     "standardAccessories": [
@@ -17827,7 +17827,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -17891,7 +17891,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de ajuste de PEEP electrónica integrada de 0 a 35 cmH2O con estabilidad continua de presión alveolar.",
       "Rango de suministro de flujo de gases medicinales de 0.1 a 15.0 L/min con mezclador digital y flujómetros virtuales.",
       "Modos de ventilación integrados: VCV, PCV, PCV-VG, PSV con apnea backup, SIMV-VC, SIMV-PC y ventilación manual/espontánea.",
-      "⭐ Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
+      "Mezclador digital electrónico de gases con flujómetros virtuales y compensación automática de distensibilidad del circuito sin fugas.",
       "Canister de cal sodada con sistema de bypass que permite el reemplazo en caliente durante la cirugía sin interrupción de gas fresco."
     ],
     "standardAccessories": [
@@ -17967,7 +17967,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18024,7 +18024,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de tasa de infusión ajustable de 0.1 a 1200.0 ml/h con incrementos de 0.01 ml/h en modo microinfusión y precisión superior a ±5%.",
       "Rango de volumen límite a infundir (VTBI) de 0.1 a 9999.9 ml con función de purga y bolo manual/programado.",
       "Sistema integral de detección de burbujas de aire por ultrasonido y sensor de oclusión dinámica aguas arriba y aguas abajo.",
-      "⭐ Biblioteca de fármacos con límites de dosis estrictos (Dose Error Reduction System - DERS) y capacidad de almacenamiento para más de 1000 fármacos."
+      "Biblioteca de fármacos con límites de dosis estrictos (Dose Error Reduction System - DERS) y capacidad de almacenamiento para más de 1000 fármacos."
     ],
     "standardAccessories": [
       {
@@ -18084,7 +18084,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de tasa de infusión ajustable de 0.1 a 1200.0 ml/h con incrementos de 0.01 ml/h en modo microinfusión y precisión superior a ±5%.",
       "Rango de volumen límite a infundir (VTBI) de 0.1 a 9999.9 ml con función de purga y bolo manual/programado.",
       "Sistema integral de detección de burbujas de aire por ultrasonido y sensor de oclusión dinámica aguas arriba y aguas abajo.",
-      "⭐ Biblioteca de fármacos con límites de dosis estrictos (Dose Error Reduction System - DERS) y capacidad de almacenamiento para más de 1000 fármacos."
+      "Biblioteca de fármacos con límites de dosis estrictos (Dose Error Reduction System - DERS) y capacidad de almacenamiento para más de 1000 fármacos."
     ],
     "standardAccessories": [
       {
@@ -18144,7 +18144,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18206,7 +18206,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18268,7 +18268,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18330,7 +18330,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18387,7 +18387,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18449,7 +18449,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18506,7 +18506,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18563,7 +18563,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18625,7 +18625,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18687,7 +18687,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18757,7 +18757,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Rango de saturación de oxígeno (SpO2) de 0 a 100% con tecnología anti-movimiento e indicación de índice de perfusión (PI).",
       "Rango de temperatura corporal continua dual (T1, T2) de 0.0 a 50.0 °C con cálculo automático de gradiente térmico Delta T.",
       "Batería recargable de iones de litio integrada con autonomía continua entre 2 a 5 horas e indicador visual en pantalla.",
-      "⭐ Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
+      "Algoritmo patentado multiderivación de análisis en tiempo real de 24 tipos de arritmias, análisis ST y detección de marcapasos.",
       "Conectividad de red Wi-Fi y cableada compatible con protocolo HL7 para integración a central de monitoreo e historia clínica electrónica."
     ],
     "standardAccessories": [
@@ -18818,7 +18818,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18885,7 +18885,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -18947,7 +18947,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -19009,7 +19009,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -19071,7 +19071,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -19133,7 +19133,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -19195,7 +19195,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -19257,7 +19257,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -19319,7 +19319,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],
@@ -19381,7 +19381,7 @@ export const MASTER_EQUIPMENTS_CATALOG: MedicalEquipment[] = [
       "Dispone de estructura y chasis de grado hospitalario con protección de ingreso IPX y materiales resistentes a desinfectantes clínicos hospitalarios.",
       "Pantalla médica digital de alta resolución para visualización de parámetros operativos y alarmas en tiempo real.",
       "Sistema de respaldo por batería recargable integrada con autonomía operativa continua no menor a 4 horas.",
-      "⭐ Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
+      "Tecnología de alta precisión calibrada en fábrica con arquitectura modular y autodiagnóstico continuo al encendido.",
       "Alimentación eléctrica hospitalaria de 110-120 VAC / 60 Hz con polo a tierra conforme a norma IEC 60601-1.",
       "Registro Sanitario INVIMA vigente para comercialización e importación en el territorio colombiano con garantía total de fábrica de 24 meses."
     ],

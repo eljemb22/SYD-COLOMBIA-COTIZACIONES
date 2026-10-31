@@ -188,6 +188,288 @@ export function getLiveDynamicSystemContext(
   };
 }
 
+export function cleanBotReplyText(rawText: string): string {
+  if (!rawText) return '';
+  let text = rawText;
+
+  // 1. Remove LaTeX block and inline math markers
+  text = text.replace(/\$\$\s*\\text\{([^}]+)\}\s*=\s*\\frac\{([^}]+)\}\{([^}]+)\}\s*\$\$/g, '$1 = $2 / $3');
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_match, p1) => {
+    return p1
+      .replace(/\\text\{([^}]+)\}/g, '$1')
+      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1 / $2')
+      .replace(/\\times/g, ' × ')
+      .replace(/\\circ/g, ' grados')
+      .replace(/\\%/g, '%')
+      .replace(/\\/g, '')
+      .replace(/[{}]/g, '')
+      .trim();
+  });
+
+  text = text.replace(/\$([^\$\n]+)\$/g, (_match, p1) => {
+    return p1
+      .replace(/\\text\{([^}]+)\}/g, '$1')
+      .replace(/\\circ/g, ' grados')
+      .replace(/\^\\circ/g, ' grados')
+      .replace(/\^circ/g, ' grados')
+      .replace(/\\times/g, ' × ')
+      .replace(/\\%/g, '%')
+      .replace(/\\_/g, '_')
+      .replace(/\\/g, '')
+      .replace(/[{}]/g, '')
+      .trim();
+  });
+
+  // 2. Remove Markdown header hashes (#, ##, ###, ####, etc.)
+  text = text.replace(/^#{1,6}\s+/gm, '');
+
+  // 3. Remove bold / italic markdown asterisks
+  text = text.replace(/\*\*\*([^*]+)\*\*\*/g, '$1');
+  text = text.replace(/\*\*([^*]+)\*\*/g, '$1');
+  text = text.replace(/\*([^*\n]+)\*/g, '$1');
+
+  // 4. Convert bullet asterisks at line starts to clean bullet or dash
+  text = text.replace(/^[\s]*\*\s+/gm, '• ');
+  text = text.replace(/^[\s]*-\s+/gm, '• ');
+
+  // 5. Remove any leftover isolated asterisks
+  text = text.replace(/(?<=\s)\*(?=\s)/g, '×');
+  text = text.replace(/\*/g, '');
+
+  // 6. Clean up LaTeX artifacts and backslashes
+  text = text.replace(/\\%/g, '%');
+  text = text.replace(/\\circ/g, ' grados');
+  text = text.replace(/\^circ/g, ' grados');
+  text = text.replace(/\^o/g, ' grados');
+
+  // 7. Remove markdown underscore formatting like __bold__ or _italic_
+  text = text.replace(/__([^_]+)__/g, '$1');
+  text = text.replace(/(^|\s)_([^_]+)_(\s|$)/g, '$1$2$3');
+
+  // 8. Normalize spacing and linebreaks
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  return text.trim();
+}
+
+function tryEvaluateMath(text: string): string | null {
+  const clean = text
+    .toLowerCase()
+    .replace(/cuanto\s+es/gi, '')
+    .replace(/cuánto\s+es/gi, '')
+    .replace(/calcula/gi, '')
+    .replace(/resultado\s+de/gi, '')
+    .replace(/por/g, '*')
+    .replace(/x/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/[^\d\+\-\*\/\.\(\)\s]/g, '')
+    .trim();
+
+  if (!clean || !/[\d]/.test(clean) || !/[\+\-\*\/]/.test(clean)) return null;
+
+  try {
+    if (/^[\d\s\+\-\*\/\.\(\)]+$/.test(clean)) {
+      // eslint-disable-next-line no-new-func
+      const result = Function(`'use strict'; return (${clean})`)();
+      if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+        const formatted = Number.isInteger(result)
+          ? result.toString()
+          : result.toLocaleString('es-CO', { maximumFractionDigits: 4 });
+        return `${clean.replace(/\*/g, ' × ')} es igual a ${formatted}. ¿En qué más te puedo ayudar?`;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+export interface TabNavigationTarget {
+  tab: ActiveTab;
+  tabNumber: string;
+  name: string;
+  description: string;
+}
+
+export function resolveNavigationIntent(query: string): TabNavigationTarget | null {
+  const q = query.toLowerCase().replace(/[¡!¿?.,:;]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Ventana 7: Documentación
+  if (
+    q.includes('ventana 7') ||
+    q.includes('pestaña 7') ||
+    q.includes('modulo 7') ||
+    q.includes('módulo 7') ||
+    q.includes('seccion 7') ||
+    q.includes('sección 7') ||
+    q.includes('a la 7') ||
+    q.includes('ir a 7') ||
+    q.includes('documentacion') ||
+    q.includes('documentación') ||
+    q.includes('manuales') ||
+    q.includes('fichas tecnicas') ||
+    q.includes('fichas técnicas')
+  ) {
+    return {
+      tab: 'documentacion',
+      tabNumber: '7',
+      name: 'Documentación',
+      description: 'Repositorio de manuales técnicos, guías y registros sanitarios INVIMA',
+    };
+  }
+
+  // Ventana 6: Órdenes de Venta y Facturación
+  if (
+    q.includes('ventana 6') ||
+    q.includes('pestaña 6') ||
+    q.includes('modulo 6') ||
+    q.includes('módulo 6') ||
+    q.includes('seccion 6') ||
+    q.includes('sección 6') ||
+    q.includes('a la 6') ||
+    q.includes('ir a 6') ||
+    q.includes('ordenes de venta') ||
+    q.includes('órdenes de venta') ||
+    q.includes('orden de venta') ||
+    q.includes('facturacion') ||
+    q.includes('facturación')
+  ) {
+    return {
+      tab: 'ordenes_venta',
+      tabNumber: '6',
+      name: 'Órdenes de Venta y Facturación',
+      description: 'Despachos hospitalarios, remisiones firmadas, radicación de facturas y control de cartera',
+    };
+  }
+
+  // Ventana 5.1: Conexión Gmail & OCs
+  if (
+    q.includes('5.1') ||
+    q.includes('ventana 5.1') ||
+    q.includes('pestaña 5.1') ||
+    q.includes('gmail') ||
+    q.includes('gmail compras') ||
+    q.includes('correo compras')
+  ) {
+    return {
+      tab: 'gmail_compras',
+      tabNumber: '5.1',
+      name: 'Conexión Gmail & OCs',
+      description: 'Bandeja de extracción y lectura inteligente de órdenes de compra recibidas',
+    };
+  }
+
+  // Ventana 5: Seguimiento de OC
+  if (
+    q.includes('ventana 5') ||
+    q.includes('pestaña 5') ||
+    q.includes('modulo 5') ||
+    q.includes('módulo 5') ||
+    q.includes('seccion 5') ||
+    q.includes('sección 5') ||
+    q.includes('a la 5') ||
+    q.includes('ir a 5') ||
+    q.includes('seguimiento oc') ||
+    q.includes('seguimiento de oc') ||
+    q.includes('trazabilidad oc')
+  ) {
+    return {
+      tab: 'seguimiento_oc',
+      tabNumber: '5',
+      name: 'Seguimiento de OC',
+      description: 'Trazabilidad de 11 estados logísticos, seriales, lotes y manifiestos aduaneros DIAN',
+    };
+  }
+
+  // Ventana 4: Licitaciones y Contratos
+  if (
+    q.includes('ventana 4') ||
+    q.includes('pestaña 4') ||
+    q.includes('modulo 4') ||
+    q.includes('módulo 4') ||
+    q.includes('seccion 4') ||
+    q.includes('sección 4') ||
+    q.includes('a la 4') ||
+    q.includes('ir a 4') ||
+    q.includes('licitaciones') ||
+    q.includes('contratos') ||
+    q.includes('secop')
+  ) {
+    return {
+      tab: 'licitaciones',
+      tabNumber: '4',
+      name: 'Licitaciones y Contratos',
+      description: 'Proyectos hospitalarios SECOP II y análisis de pliegos técnicos',
+    };
+  }
+
+  // Ventana 3: Creación Equipos / Catálogo
+  if (
+    q.includes('ventana 3') ||
+    q.includes('pestaña 3') ||
+    q.includes('modulo 3') ||
+    q.includes('módulo 3') ||
+    q.includes('seccion 3') ||
+    q.includes('sección 3') ||
+    q.includes('a la 3') ||
+    q.includes('ir a 3') ||
+    q.includes('creacion equipos') ||
+    q.includes('creación equipos') ||
+    q.includes('catalogo') ||
+    q.includes('catálogo')
+  ) {
+    return {
+      tab: 'catalogo',
+      tabNumber: '3',
+      name: 'Creación Equipos',
+      description: 'Catálogo multimarca de equipos biomédicos y registros sanitarios INVIMA',
+    };
+  }
+
+  // Ventana 2: Costos y Rentabilidad
+  if (
+    q.includes('ventana 2') ||
+    q.includes('pestaña 2') ||
+    q.includes('modulo 2') ||
+    q.includes('módulo 2') ||
+    q.includes('seccion 2') ||
+    q.includes('sección 2') ||
+    q.includes('a la 2') ||
+    q.includes('ir a 2') ||
+    q.includes('costos') ||
+    q.includes('rentabilidad')
+  ) {
+    return {
+      tab: 'costos',
+      tabNumber: '2',
+      name: 'Costos y Rentabilidad',
+      description: 'Gestor de costos base, TRM oficial cada 2 horas y márgenes de utilidad L1 a L8',
+    };
+  }
+
+  // Ventana 1: Cotizaciones
+  if (
+    q.includes('ventana 1') ||
+    q.includes('pestaña 1') ||
+    q.includes('modulo 1') ||
+    q.includes('módulo 1') ||
+    q.includes('seccion 1') ||
+    q.includes('sección 1') ||
+    q.includes('a la 1') ||
+    q.includes('ir a 1') ||
+    q.includes('cotizaciones') ||
+    q.includes('cotizador') ||
+    q.includes('ventas')
+  ) {
+    return {
+      tab: 'ventas',
+      tabNumber: '1',
+      name: 'Cotizaciones',
+      description: 'Cotizador comercial oficial, propuesta con membrete y descargas en Word o PDF',
+    };
+  }
+
+  return null;
+}
+
 /**
  * Intelligent Fallback & Rule-Based Mara Assistant Engine
  */
@@ -196,6 +478,153 @@ export function getIntelligentMaraFallbackReply(
   context: DynamicSystemContext
 ): { reply: string; actions: BotActionOption[] } {
   const q = query.toLowerCase().trim();
+  const cleanQ = q.replace(/[¡!¿?.,:;]/g, '').trim();
+
+  // -2. Navegación directa por número o nombre de ventana
+  const navTarget = resolveNavigationIntent(query);
+  if (navTarget) {
+    const userFirst = context.userName ? context.userName.split(' ')[0] : '';
+    const greeting = userFirst && userFirst !== 'Usuario' ? `Con gusto, ${userFirst}. ` : 'Con gusto. ';
+    return {
+      reply: cleanBotReplyText(`${greeting}Te dirijo de inmediato a la Ventana ${navTarget.tabNumber}: ${navTarget.name}. ¿En qué más te puedo colaborar hoy?`),
+      actions: [
+        { label: `Ir a ${navTarget.name}`, type: 'navigate', tab: navTarget.tab, primary: true },
+      ],
+    };
+  }
+
+  // 0. Saludos cortos y consultas sencillas (Respuestas breves, cálidas y al grano)
+  const shortGreetings = [
+    'hola',
+    'buenas',
+    'buen dia',
+    'buenos dias',
+    'buenos días',
+    'buenas tardes',
+    'buenas noches',
+    'que tal',
+    'qué tal',
+    'como estas',
+    'cómo estás',
+    'hey',
+    'saludos',
+    'hola mara',
+    'hola buenas',
+  ];
+  if (shortGreetings.includes(cleanQ) || (cleanQ.startsWith('hola') && cleanQ.length <= 15)) {
+    const firstName = context.userName ? context.userName.split(' ')[0] : '';
+    const greetingName = firstName && firstName !== 'Usuario' ? ` ${firstName}` : '';
+    return {
+      reply: cleanBotReplyText(`¡Hola${greetingName}! Con mucho gusto te colaboro hoy. ¿En qué te puedo ayudar o qué necesitas realizar?`),
+      actions: [
+        { label: 'Ir al Cotizador', type: 'navigate', tab: 'ventas', primary: true },
+        { label: 'Gestor de Costos', type: 'navigate', tab: 'costos' },
+        { label: 'Órdenes de Venta (OV)', type: 'navigate', tab: 'ordenes_venta' },
+      ],
+    };
+  }
+
+  // 0.1 Cortesías y confirmaciones simples
+  if (['gracias', 'muchas gracias', 'mil gracias', 'ok', 'vale', 'listo', 'entendido', 'perfecto'].includes(cleanQ)) {
+    return {
+      reply: cleanBotReplyText(`¡Con el mayor gusto! Aquí sigo a tu entera disposición. ¿Hay algo más en lo que te pueda colaborar?`),
+      actions: [
+        { label: 'Ir al Cotizador', type: 'navigate', tab: 'ventas', primary: true },
+        { label: 'Gestor de Costos', type: 'navigate', tab: 'costos' },
+      ],
+    };
+  }
+
+  // -1. Matemáticas y Cálculos Directos
+  const mathResult = tryEvaluateMath(query);
+  if (mathResult) {
+    return {
+      reply: cleanBotReplyText(mathResult),
+      actions: [
+        { label: 'Ir al Gestor de Costos', type: 'navigate', tab: 'costos', primary: true },
+        { label: 'Ir al Cotizador', type: 'navigate', tab: 'ventas' },
+      ],
+    };
+  }
+
+  // -0.5 Soluciones, Opiniones y Recomendaciones Estratégicas
+  if (
+    q.includes('que opinas') ||
+    q.includes('qué opinas') ||
+    q.includes('que piensas') ||
+    q.includes('qué piensas') ||
+    q.includes('que debo hacer') ||
+    q.includes('qué debo hacer') ||
+    q.includes('que me recomiendas') ||
+    q.includes('qué me recomiendas') ||
+    q.includes('que solucion') ||
+    q.includes('qué solución') ||
+    q.includes('consejo') ||
+    q.includes('que hago') ||
+    q.includes('qué hago')
+  ) {
+    return {
+      reply: cleanBotReplyText(`Como tu copiloto experta, mi recomendación estratégica y técnica es la siguiente:
+
+1. Diagnóstico y Prioridad: Evalúa primero el impacto comercial y operativo. Si es una cotización urgente, utiliza la opción "Cotizar Parte no creada" para no demorar la propuesta al cliente.
+2. Trazabilidad y Control: Si se trata de compras o despacho, asegúrate de vincular los seriales, lotes y manifiestos DIAN en el módulo de Seguimiento de OC antes de emitir la remisión de entrega.
+3. Protección del Margen: Para ofertas comerciales, utiliza listas de precios con margen mínimo del 25% (L2.5) o superior, considerando la TRM de seguridad recomendada ($${context.recommendedTRM.toLocaleString('es-CO')} COP).
+4. Próximo Paso Sugerido: Te aconsejo formalizar el requerimiento en el módulo correspondiente para que quede respaldado en la base de datos de la empresa.
+
+¿Deseas que te ayude a ejecutar alguno de estos pasos en este momento?`),
+      actions: [
+        { label: 'Ir a Cotizador', type: 'navigate', tab: 'ventas', primary: true },
+        { label: 'Gestor de Costos', type: 'navigate', tab: 'costos' },
+        { label: 'Órdenes de Venta (OV)', type: 'navigate', tab: 'ordenes_venta' },
+      ],
+    };
+  }
+
+  // 0. Cotizar Parte no creada (Requerimiento de Emergencia) & Empalme con Drive N-FCO-03
+  if (q.includes('no cread') || q.includes('emergencia') || q.includes('pendiente por crear') || q.includes('cotizar parte')) {
+    return {
+      reply: `La función **"Cotizar Parte no creada"** te permite cotizar de urgencia cualquier equipo médico que aún no exista en el Catálogo Maestro:\n\n1. **Ingreso Rápido con 5 Datos**: En el **Gestor de Costos**, haz clic en el botón naranja **"Cotizar Parte no creada"**. Solo te solicitará:\n   • **Nombre del Equipo**\n   • **Marca**\n   • **Modelo**\n   • **Cantidad**\n   • **Precio Costo Base**\n2. **Cálculo Inmediato de Venta**: El precio de venta se calcula de forma automática con los factores L1–L8 y la TRM vigente.\n3. **Pestaña "Pendientes por Crear"**: El equipo cotizado se envía a la subpestaña especial en el **Catálogo de Equipos**, donde podrás:\n   • **Crear en Catálogo**: Completar los datos finales (código de parte, proveedor, INVIMA).\n   • **Enlazar con Drive**: Empalmar directamente con el formato oficial N-FCO-03 de Google Drive para adoptarlo sin digitar todo de nuevo.\n   • **Eliminar**: Descartar el requerimiento si ya no es necesario.`,
+      actions: [
+        { label: 'Ir al Gestor de Costos', type: 'navigate', tab: 'costos', primary: true },
+        { label: 'Ver Catálogo de Equipos', type: 'navigate', tab: 'catalogo' },
+        { label: 'Ir a Cotizador', type: 'navigate', tab: 'ventas' },
+      ],
+    };
+  }
+
+  // 0.1 Empalme con Google Drive (N-FCO-03) & Partes Inactivadas
+  if (q.includes('empalmar') || q.includes('n-fco-03') || q.includes('enlazar con drive') || q.includes('reemplaz') || q.includes('inactiv')) {
+    return {
+      reply: `En la integración con **Google Drive & Formato N-FCO-03**:\n\n• **Empalmar con Drive**: Puedes asociar equipos cotizados de emergencia con las partes oficiales registradas en el libro N-FCO-03 de Google Drive. Al empalmar, la parte pasa automáticamente al Catálogo Maestro.\n• **Gestión de Partes Inactivadas**: Si una parte es dada de baja o reemplazada en la hoja de Drive (ej. 67292 reemplazada por 70999, o 63699 por 71003), el sistema te avisa y te permite actualizar el catálogo en 1 clic.\n• **Memoria Persistente de Resolución**: Una vez actualizadas o descartadas, el sistema guarda la confirmación de manera permanente para que no vuelva a pedirte la misma actualización cada vez que inicias sesión.`,
+      actions: [
+        { label: 'Abrir Google Workspace', type: 'modal', modalAction: 'google_workspace_modal', primary: true },
+        { label: 'Ver Catálogo de Equipos', type: 'navigate', tab: 'catalogo' },
+      ],
+    };
+  }
+
+  // 0.2 Selección de Equipos por Orden de Venta (OV) en Licitaciones Adjudicadas
+  if ((q.includes('orden de venta') || q.includes('ov')) && (q.includes('licitacion') || q.includes('contrato') || q.includes('seleccionar') || q.includes('particion') || q.includes('partición') || q.includes('despacho'))) {
+    return {
+      reply: `Para contratos de licitación adjudicados con múltiples entregas:\n\n1. **Selección Precisa de Equipos**: Al crear una **Nueva Orden de Venta (OV)** y elegir un Contrato Adjudicado, el sistema te permite seleccionar exactamente los equipos y cantidades que corresponden al lote o despacho que vas a realizar.\n2. **Exclusión Automática de Equipos ya Despachados**: Una vez generada la OV, los equipos y unidades ya vinculadas no volverán a aparecer para ese contrato al hacer otra OV subsecuente.\n3. **Trazabilidad de Entregas Parciales**: Puedes hacer tantas OVs como requiera el cronograma del hospital hasta completar la totalidad de equipos adjudicados.`,
+      actions: [
+        { label: 'Ir a Órdenes de Venta (OV)', type: 'navigate', tab: 'ordenes_venta', primary: true },
+        { label: 'Ver Licitaciones', type: 'navigate', tab: 'licitaciones' },
+        { label: 'Seguimiento de OC', type: 'navigate', tab: 'seguimiento_oc' },
+      ],
+    };
+  }
+
+  // 0.3 Buscador de Fotos e Imágenes Biomédicas de Alta Resolución
+  if (q.includes('foto') || q.includes('imagen') || q.includes('fotografia') || q.includes('fotos') || q.includes('imagenes') || q.includes('alta resolucion') || q.includes('alta resolución')) {
+    return {
+      reply: `El sistema cuenta con un **Buscador Inteligente de Fotografías Biomédicas**:\n\n• **Búsqueda Automatizada**: Puedes buscar imágenes usando el **Nombre, Marca y Modelo** del equipo (ej: Mindray Digieye 350, Edan Sonotrax II Pro, David HKN-9010).\n• **Resolución Hospitalaria**: Prioriza imágenes de alta resolución sobre fondos limpios o fondo neutro hospitalario.\n• **Inclusión en Cotizaciones & Word/PDF**: Las imágenes se incorporan en la ficha visual de la oferta comercial y se optimizan en tamaño para no generar páginas en blanco innecesarias.`,
+      actions: [
+        { label: 'Ir al Cotizador', type: 'navigate', tab: 'ventas', primary: true },
+        { label: 'Ver Catálogo', type: 'navigate', tab: 'catalogo' },
+      ],
+    };
+  }
 
   // 1. Órdenes de Venta (OV) y Facturación
   if (q.includes('orden de venta') || q.includes('órdenes de venta') || q.includes('ov') || q.includes('factur') || q.includes('remision') || q.includes('remisión') || q.includes('despacho') || q.includes('radicacion') || q.includes('radicación') || q.includes('cartera')) {
@@ -359,15 +788,16 @@ export function getIntelligentMaraFallbackReply(
     };
   }
 
-  // Default Comprehensive Advice
+  // Default Advice
+  const userFirst = context.userName ? context.userName.split(' ')[0] : '';
+  const greeting = userFirst && userFirst !== 'Usuario' ? `Hola ${userFirst}, ` : '¡Hola! ';
   return {
-    reply: `Hola ${context.userName.split(' ')[0] || ''}, soy **Mara**, tu Copiloto Biomédica y Asistente Oficial de SYD Colombia. Estoy sincronizada en tiempo real con todas las herramientas de la plataforma:\n\n• **Órdenes de Venta (OV) & Facturación**: Despachos, remisiones de entrega firmadas, radicación de facturas y cartera (${context.totalSalesOrders} OVs registradas).\n• **Cotizador Comercial & PDF**: Ofertas con IVA, márgenes y membretes (${context.totalQuotes} cotizaciones).\n• **Seguimiento de OC & Seriales**: Trazabilidad de 11 estados logísticos, alertas 48h y manifiestos DIAN.\n• **Consola Relacional & Analítica SQL**: Consultas protegidas para administradores.\n• **Base de Datos & Excel**: Exportación .xlsx y copias de seguridad continuas.\n• **Gestor de Costos & TRM**: TRM actualizada automáticamente cada 2 horas ($${context.liveTRM.toLocaleString('es-CO')} COP spot / $${context.recommendedTRM.toLocaleString('es-CO')} COP recomendada).\n• **Catálogo Biomédico & INVIMA**: ${context.totalEquipments} equipos registrados con IA.\n\n¿En qué te puedo colaborar en este momento?`,
+    reply: cleanBotReplyText(`${greeting}soy Mara, tu Asistente Biomédica y Copiloto de SYD Colombia. Estoy a tu disposición para ayudarte con cotizaciones, cálculo de costos y TRM, seguimiento de OCs, licitaciones o cualquier requerimiento operativo.\n\n¿En qué te puedo colaborar en este momento?`),
     actions: [
       { label: 'Ir al Cotizador', type: 'navigate', tab: 'ventas', primary: true },
+      { label: 'Gestor de Costos', type: 'navigate', tab: 'costos' },
       { label: 'Órdenes de Venta (OV)', type: 'navigate', tab: 'ordenes_venta' },
       { label: 'Seguimiento de OC', type: 'navigate', tab: 'seguimiento_oc' },
-      { label: 'Base de Datos & Excel', type: 'modal', modalAction: 'backup_modal' },
-      { label: 'Licitaciones SECOP II', type: 'navigate', tab: 'licitaciones' },
     ],
   };
 }

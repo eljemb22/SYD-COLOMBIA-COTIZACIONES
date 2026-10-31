@@ -246,6 +246,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
       headerMarginTop: quote.marginSettings?.subirBajar || 154,
       sidePadding: quote.marginSettings?.izqDer || 78,
       companyLetterheadUrl: quote.letterheadUrl || undefined,
+      formatStyle: (quote as any).formatStyle || header.formatStyle || 'standard',
     });
 
     confetti({

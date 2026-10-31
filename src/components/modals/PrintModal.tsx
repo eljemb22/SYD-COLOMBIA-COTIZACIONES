@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Printer, X, FileDown, Download, Loader2 } from 'lucide-react';
+import { Printer, X, FileDown, Download, Loader2, Image as ImageIcon, LayoutList } from 'lucide-react';
 import { QuoteHeader, QuoteItem } from '../../types';
 import { formatCOP, numberToSpanishWords } from '../../utils/formatters';
 import { exportQuoteToWord } from '../../utils/exportUtils';
 import { exportQuoteToPdf, printQuoteDocument } from '../../utils/pdfAndPrintUtils';
 import { DefaultDocumentSignature } from '../common/SyDLetterhead';
 import { getOfficialSyDLetterheadDataUrl, OFFICIAL_SYD_LETTERHEAD_SVG_PATH } from '../../utils/sydDefaultLetterhead';
+import { generateClinicalEquipmentGraphicDataUrl } from '../../utils/clinicalEquipmentGraphic';
 
 interface PrintModalProps {
   isOpen: boolean;
@@ -30,6 +31,9 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   marginSettings,
 }) => {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [formatStyle, setFormatStyle] = useState<'standard' | 'with-images'>(
+    quoteHeader.formatStyle || 'standard'
+  );
 
   // Handle ESC key press to close modal
   useEffect(() => {
@@ -58,6 +62,18 @@ export const PrintModal: React.FC<PrintModalProps> = ({
   const padTop = marginSettings?.subirBajar ?? (effectiveLetterheadUrl ? 154 : 50);
   const padSide = marginSettings?.izqDer ?? 78;
 
+  const canFitConditionsOnSameSheet =
+    (formatStyle === 'with-images' && quoteItems.length <= 1) ||
+    (formatStyle === 'standard' && quoteItems.length <= 3);
+
+  const getSafeDisplayImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('data:') || url.startsWith('/') || url.startsWith('http://localhost') || url.startsWith('blob:')) {
+      return url;
+    }
+    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+  };
+
   const handlePrint = () => {
     printQuoteDocument();
   };
@@ -85,11 +101,40 @@ export const PrintModal: React.FC<PrintModalProps> = ({
       }}
     >
       <div className="bg-[#112237] border border-[#223d60] rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-6 space-y-4 shadow-2xl animate-scaleUp max-h-[92vh] overflow-y-auto my-auto">
-        <div className="flex items-center justify-between pb-3 border-b border-[#223d60] no-print">
+        <div className="flex items-center justify-between pb-3 border-b border-[#223d60] no-print flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Printer className="w-5 h-5 text-[#38bdf8]" />
-            <h3 className="text-sm sm:text-base font-bold text-white">Vista Previa de Impresión Oficial (3 Hojas)</h3>
+            <h3 className="text-sm sm:text-base font-bold text-white">Vista Previa de Impresión Oficial</h3>
           </div>
+
+          {/* Toggle Formato Estándar vs Con Imágenes */}
+          <div className="flex items-center bg-[#0a1526] p-0.5 rounded-lg border border-[#223d60]">
+            <button
+              type="button"
+              onClick={() => setFormatStyle('standard')}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
+                formatStyle === 'standard'
+                  ? 'bg-[#0284c7] text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+              <span>Estándar</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormatStyle('with-images')}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
+                formatStyle === 'with-images'
+                  ? 'bg-[#0284c7] text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>Con Imágenes</span>
+            </button>
+          </div>
+
           <div className="flex items-center gap-2">
             <button
               onClick={() =>
@@ -97,6 +142,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                   headerMarginTop: marginSettings?.subirBajar ?? 154,
                   sidePadding: marginSettings?.izqDer ?? 78,
                   companyLetterheadUrl: customLetterheadUrl || undefined,
+                  formatStyle: formatStyle,
                 })
               }
               className="inline-flex items-center gap-1 bg-[#15253d] hover:bg-[#1f375b] text-slate-200 border border-[#223d60] text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg cursor-pointer"
@@ -200,7 +246,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
           </div>
 
           {/* ==================== HOJA 2: TABLA DE EQUIPOS ==================== */}
-          <div className="bg-white text-slate-900 rounded-sm shadow-xl font-sans relative overflow-hidden min-h-[1050px] flex flex-col justify-between print:shadow-none print:m-0 print:break-after-page">
+          <div className={`bg-white text-slate-900 rounded-sm shadow-xl font-sans relative overflow-hidden ${canFitConditionsOnSameSheet ? 'min-h-[1050px]' : 'min-h-[1050px] flex flex-col justify-between'} print:shadow-none print:m-0 print:break-after-page`}>
             {effectiveLetterheadUrl ? (
               <img
                 src={effectiveLetterheadUrl}
@@ -209,7 +255,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               />
             ) : null}
             <div
-              className="relative z-10 space-y-5 flex-1 flex flex-col justify-between"
+              className={`relative z-10 ${canFitConditionsOnSameSheet ? 'space-y-4' : 'space-y-5 flex-1 flex flex-col justify-between'}`}
               style={{
                 paddingTop: `${padTop}px`,
                 paddingLeft: `${padSide}px`,
@@ -260,44 +306,133 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                         const itemIva = Math.round(itemSubtotal * itemTaxRate);
                         const itemTotal = itemSubtotal + itemIva;
 
+                        const { cleanName, accessoriesText, hasAccessories } = extractEquipmentAndAccessories(item.name, item.accessories);
+                        const heuristicSpecs = getBiomedicalHeuristicSpecs(cleanName || item.name, item.brand, item.model);
+
+                        let cleanDesc = item.briefDescription;
+                        if (!cleanDesc || isGenericFiller(cleanDesc)) {
+                          cleanDesc = heuristicSpecs.description;
+                        }
+
+                        let rawSpecs = item.technicalFeatures;
+                        const hasGenericFeatures = Array.isArray(rawSpecs) && rawSpecs.some((f) => isGenericFiller(f));
+                        if (!rawSpecs || rawSpecs.length === 0 || hasGenericFeatures) {
+                          rawSpecs = heuristicSpecs.features;
+                        }
+
+                        const displaySpecs = (rawSpecs || [])
+                          .map((s) => s.trim())
+                          .filter(
+                            (s) =>
+                              s.length > 0 &&
+                              !s.toLowerCase().includes('invima') &&
+                              !s.toLowerCase().includes('garantía') &&
+                              !s.toLowerCase().includes('garantia') &&
+                              !isGenericFiller(s)
+                          )
+                          .slice(0, 7);
+
                         return (
-                          <tr
-                            key={item.id}
-                            className={`border-b border-slate-200 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}`}
-                          >
-                            <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
-                              {index + 1}
-                            </td>
-                            <td className="p-2 border-r border-black">
-                              <strong className="text-slate-900 block uppercase font-normal">{item.name.toUpperCase()}</strong>
-                              {item.accessories && item.accessories.length > 0 && (
-                                <span className="text-[10px] text-slate-600 font-sans block mt-0.5">
-                                  <strong>Accesorios:</strong> {item.accessories.map((a) => `${a.name.toUpperCase()}${a.quantity > 1 ? ` (X${a.quantity})` : ''}`).join(', ')}
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-2 font-normal text-slate-900 border-r border-black uppercase">
-                              {item.brand.toUpperCase()}
-                            </td>
-                            <td className="p-2 font-normal text-slate-900 border-r border-black uppercase">
-                              {item.model.toUpperCase()}
-                            </td>
-                            <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
-                              {item.quantity}
-                            </td>
-                            <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
-                              {formatCOP(item.unitSalePrice)}
-                            </td>
-                            <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
-                              {formatCOP(itemSubtotal)}
-                            </td>
-                            <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
-                              {itemIva > 0 ? formatCOP(itemIva) : '$ -'}
-                            </td>
-                            <td className="p-2 text-center font-normal text-slate-900">
-                              {formatCOP(itemTotal)}
-                            </td>
-                          </tr>
+                          <React.Fragment key={item.id}>
+                            <tr
+                              className={`border-b border-black ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}`}
+                            >
+                              <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
+                                {index + 1}
+                              </td>
+                              <td className="p-2 border-r border-black">
+                                <strong className="text-slate-900 block uppercase font-normal">
+                                  {(formatStyle === 'with-images' ? cleanName : item.name).toUpperCase()}
+                                </strong>
+                                {formatStyle !== 'with-images' && hasAccessories && (
+                                  <span className="text-[10px] text-slate-600 font-sans block mt-0.5">
+                                    <strong>Accesorios:</strong> {accessoriesText}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-2 font-normal text-slate-900 border-r border-black uppercase">
+                                {item.brand.toUpperCase()}
+                              </td>
+                              <td className="p-2 font-normal text-slate-900 border-r border-black uppercase">
+                                {item.model.toUpperCase()}
+                              </td>
+                              <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
+                                {item.quantity}
+                              </td>
+                              <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
+                                {formatCOP(item.unitSalePrice)}
+                              </td>
+                              <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
+                                {formatCOP(itemSubtotal)}
+                              </td>
+                              <td className="p-2 text-center font-normal text-slate-900 border-r border-black">
+                                {itemIva > 0 ? formatCOP(itemIva) : '$ -'}
+                              </td>
+                              <td className="p-2 text-center font-normal text-slate-900">
+                                {formatCOP(itemTotal)}
+                              </td>
+                            </tr>
+                            {formatStyle === 'with-images' && (
+                              <tr className="border-b border-black bg-white">
+                                <td className="border-r border-black bg-white"></td>
+                                <td colSpan={3} className="p-2 border-r border-black text-center align-middle bg-white">
+                                  {(() => {
+                                    const fallbackGraphic = generateClinicalEquipmentGraphicDataUrl(cleanName || item.name, item.brand, item.model);
+                                    const rawImg = item.imageUrl ? getSafeDisplayImageUrl(item.imageUrl) : '';
+                                    const displayImgUrl = rawImg || fallbackGraphic;
+
+                                    return (
+                                      <div className="w-full h-full min-h-[190px] max-h-[250px] flex items-center justify-center p-1">
+                                        <img
+                                          src={displayImgUrl}
+                                          alt={cleanName}
+                                          onError={(e) => {
+                                            const target = e.currentTarget;
+                                            if (target.src !== fallbackGraphic) {
+                                              target.src = fallbackGraphic;
+                                            }
+                                          }}
+                                          className="max-h-[235px] max-w-full w-auto h-auto object-contain mx-auto"
+                                        />
+                                      </div>
+                                    );
+                                  })()}
+                                </td>
+                                <td colSpan={5} className="p-3 align-middle text-left text-slate-900 bg-white">
+                                  <div className="mb-2">
+                                    <span className="text-[10px] font-bold text-[#0f2744] uppercase block mb-0.5">
+                                      DESCRIPCIÓN Y FUNCIONALIDAD:
+                                    </span>
+                                    <p className="text-[9.5px] text-slate-800 leading-snug">
+                                      {cleanDesc}
+                                    </p>
+                                  </div>
+                                  {displaySpecs.length > 0 && (
+                                    <div>
+                                      <span className="text-[10px] font-bold text-[#0f2744] uppercase block mb-0.5">
+                                        CARACTERÍSTICAS PRINCIPALES:
+                                      </span>
+                                      <ul className="text-[9px] text-slate-700 space-y-0.5 pl-3 list-disc">
+                                        {displaySpecs.map((feat, fIdx) => (
+                                          <li key={fIdx}>{feat.replace(/^[•\-\*]\s*/, '')}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  {hasAccessories && (
+                                    <div className="mt-2.5 pt-2 border-t border-slate-200">
+                                      <span className="text-[10px] font-bold text-[#0f2744] uppercase block mb-0.5">
+                                        ACCESORIOS INCLUIDOS:
+                                      </span>
+                                      <p className="text-[9px] text-slate-700 leading-snug uppercase">
+                                        {accessoriesText}
+                                      </p>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
                         );
                       })
                     )}
@@ -337,87 +472,153 @@ export const PrintModal: React.FC<PrintModalProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* EMBEDDED CONDICIONES Y FIRMAS WHEN TABLE FITS ON SAME SHEET */}
+              {canFitConditionsOnSameSheet && (
+                <div className="pt-3 border-t border-slate-300 space-y-3.5 text-slate-900 leading-relaxed text-[12.5px]">
+                  <div className="font-extrabold text-slate-950 text-sm tracking-wide uppercase mb-2">
+                    CONDICIONES COMERCIALES
+                  </div>
+
+                  <div>
+                    <strong>Forma de pago:</strong> {quoteHeader.paymentTerms || '50% Anticipo y 50% Contra-entrega.'}
+                  </div>
+
+                  <div className="text-justify leading-relaxed">
+                    <strong>Tiempo de entrega estimado:</strong> {quoteHeader.deliveryTime || '90D'}. El tiempo de entrega será confirmado al momento de suscribir el contrato o recibir el anticipo, teniendo en cuenta la disponibilidad de fábrica de los equipos contados a partir de la aceptación de la propuesta en mención. El tiempo de entrega será prorrogable por mutuo acuerdo entre las partes, o en caso de que se presente alguna eventualidad en la entrega por parte del fabricante.
+                  </div>
+
+                  <div>
+                    <strong>Capacitación:</strong> {quoteHeader.trainingTerms || 'Un (1) día en la ubicación del equipo. Las fechas de las visitas serán acordadas entre las partes.'}
+                  </div>
+
+                  <div className="text-justify leading-relaxed">
+                    <strong>Mantenimiento:</strong> {quoteHeader.maintenanceTerms || 'SYD COLOMBIA S.A. realizara un (1) mantenimiento preventivo por parte del Servicio Técnico de Nuestra Empresa por parte de un personal altamente calificado y entrenado, en apoyo de la marca para instalar y dar mantenimiento a esta clase de equipos.'}
+                  </div>
+
+                  <div className="space-y-1 pt-0.5">
+                    <div>
+                      <strong>Garantía:</strong> {quoteHeader.warrantyTerms || 'Doce (12) meses contados a partir de la fecha de instalación del equipo.'}
+                    </div>
+                    <div>
+                      Quedan exceptuados de esta garantía los siguientes casos:
+                    </div>
+                    <ul className="list-disc list-inside pl-3 space-y-0.5 text-slate-850">
+                      <li>Daños generados por la incorrecta operación, manipulación o cuidado de los sistemas.</li>
+                      <li>Mal uso o abuso.</li>
+                      <li>Omisión al seguir las instrucciones de operación del equipo.</li>
+                      <li>Las anormalidades de energía eléctrica, instalación eléctrica inadecuada.</li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-0.5">
+                    <strong>Transporte:</strong> SYD COLOMBIA asume los gastos del envío de los equipos adquiridos adjudicados en la oferta
+                  </div>
+
+                  <div>
+                    <strong>Validez De La Oferta:</strong> Treinta {quoteHeader.validityDays || 30} días calendario a partir de la fecha de entrega de la oferta
+                  </div>
+
+                  <div className="pt-2 text-slate-900">
+                    Atentamente,
+                  </div>
+
+                  <div className="pt-1">
+                    <div className="h-16 flex items-center">
+                      <DefaultDocumentSignature className="h-14" />
+                    </div>
+                    <div className="font-bold text-slate-950 text-xs uppercase tracking-tight mt-1">
+                      SUMINISTROS Y DOTACIONES COLOMBIA S.A.
+                    </div>
+                    <div className="font-bold text-slate-900 text-xs">
+                      Dpto. Mercadeo y Ventas
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* ==================== HOJA 3: CONDICIONES Y FIRMAS ==================== */}
-          <div className="bg-white text-slate-900 rounded-sm shadow-xl font-sans relative overflow-hidden min-h-[1050px] flex flex-col justify-between print:shadow-none print:m-0">
-            {effectiveLetterheadUrl ? (
-              <img
-                src={effectiveLetterheadUrl}
-                alt="Membrete Oficial SyD Colombia"
-                className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
-              />
-            ) : null}
-            <div
-              className="relative z-10 space-y-4 text-slate-900 leading-relaxed text-[12.5px] flex-1 flex flex-col justify-between"
-              style={{
-                paddingTop: `${padTop}px`,
-                paddingLeft: `${padSide}px`,
-                paddingRight: `${padSide}px`,
-                paddingBottom: '60px',
-              }}
-            >
-              <div className="font-extrabold text-slate-950 text-sm tracking-wide uppercase mb-3">
-                CONDICIONES COMERCIALES
-              </div>
+          {/* ==================== HOJA 3: CONDICIONES Y FIRMAS (ONLY IF CANNOT FIT ON HOJA 2) ==================== */}
+          {!canFitConditionsOnSameSheet && (
+            <div className="bg-white text-slate-900 rounded-sm shadow-xl font-sans relative overflow-hidden min-h-[1050px] flex flex-col justify-between print:shadow-none print:m-0">
+              {effectiveLetterheadUrl ? (
+                <img
+                  src={effectiveLetterheadUrl}
+                  alt="Membrete Oficial SyD Colombia"
+                  className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0 select-none print:w-full print:h-full"
+                />
+              ) : null}
+              <div
+                className="relative z-10 space-y-4 text-slate-900 leading-relaxed text-[12.5px] flex-1 flex flex-col justify-between"
+                style={{
+                  paddingTop: `${padTop}px`,
+                  paddingLeft: `${padSide}px`,
+                  paddingRight: `${padSide}px`,
+                  paddingBottom: '60px',
+                }}
+              >
+                <div className="font-extrabold text-slate-950 text-sm tracking-wide uppercase mb-3">
+                  CONDICIONES COMERCIALES
+                </div>
 
-              <div>
-                <strong>Forma de pago:</strong> {quoteHeader.paymentTerms || '50% Anticipo y 50% Contra-entrega.'}
-              </div>
-
-              <div className="text-justify leading-relaxed">
-                <strong>Tiempo de entrega estimado:</strong> {quoteHeader.deliveryTime || '90D'}. El tiempo de entrega será confirmado al momento de suscribir el contrato o recibir el anticipo, teniendo en cuenta la disponibilidad de fábrica de los equipos contados a partir de la aceptación de la propuesta en mención. El tiempo de entrega será prorrogable por mutuo acuerdo entre las partes, o en caso de que se presente alguna eventualidad en la entrega por parte del fabricante.
-              </div>
-
-              <div>
-                <strong>Capacitación:</strong> {quoteHeader.trainingTerms || 'Un (1) día en la ubicación del equipo. Las fechas de las visitas serán acordadas entre las partes.'}
-              </div>
-
-              <div className="text-justify leading-relaxed">
-                <strong>Mantenimiento:</strong> {quoteHeader.maintenanceTerms || 'SYD COLOMBIA S.A. realizara un (1) mantenimiento preventivo por parte del Servicio Técnico de Nuestra Empresa por parte de un personal altamente calificado y entrenado, en apoyo de la marca para instalar y dar mantenimiento a esta clase de equipos.'}
-              </div>
-
-              <div className="space-y-1.5 pt-1">
                 <div>
-                  <strong>Garantía:</strong> {quoteHeader.warrantyTerms || 'Doce (12) meses contados a partir de la fecha de instalación del equipo.'}
+                  <strong>Forma de pago:</strong> {quoteHeader.paymentTerms || '50% Anticipo y 50% Contra-entrega.'}
                 </div>
+
+                <div className="text-justify leading-relaxed">
+                  <strong>Tiempo de entrega estimado:</strong> {quoteHeader.deliveryTime || '90D'}. El tiempo de entrega será confirmado al momento de suscribir el contrato o recibir el anticipo, teniendo en cuenta la disponibilidad de fábrica de los equipos contados a partir de la aceptación de la propuesta en mención. El tiempo de entrega será prorrogable por mutuo acuerdo entre las partes, o en caso de que se presente alguna eventualidad en la entrega por parte del fabricante.
+                </div>
+
                 <div>
-                  Quedan exceptuados de esta garantía los siguientes casos:
+                  <strong>Capacitación:</strong> {quoteHeader.trainingTerms || 'Un (1) día en la ubicación del equipo. Las fechas de las visitas serán acordadas entre las partes.'}
                 </div>
-                <ul className="list-disc list-inside pl-3 space-y-1 text-slate-850">
-                  <li>Daños generados por la incorrecta operación, manipulación o cuidado de los sistemas.</li>
-                  <li>Mal uso o abuso.</li>
-                  <li>Omisión al seguir las instrucciones de operación del equipo.</li>
-                  <li>Las anormalidades de energía eléctrica, instalación eléctrica inadecuada.</li>
-                </ul>
-              </div>
 
-              <div className="pt-1">
-                <strong>Transporte:</strong> SYD COLOMBIA asume los gastos del envío de los equipos adquiridos adjudicados en la oferta
-              </div>
-
-              <div>
-                <strong>Validez De La Oferta:</strong> Treinta {quoteHeader.validityDays || 30} días calendario a partir de la fecha de entrega de la oferta
-              </div>
-
-              <div className="pt-3 text-slate-900">
-                Atentamente,
-              </div>
-
-              <div className="pt-2">
-                <div className="h-20 flex items-center">
-                  <DefaultDocumentSignature className="h-16" />
+                <div className="text-justify leading-relaxed">
+                  <strong>Mantenimiento:</strong> {quoteHeader.maintenanceTerms || 'SYD COLOMBIA S.A. realizara un (1) mantenimiento preventivo por parte del Servicio Técnico de Nuestra Empresa por parte de un personal altamente calificado y entrenado, en apoyo de la marca para instalar y dar mantenimiento a esta clase de equipos.'}
                 </div>
-                <div className="font-bold text-slate-950 text-xs uppercase tracking-tight mt-1">
-                  SUMINISTROS Y DOTACIONES COLOMBIA S.A.
+
+                <div className="space-y-1.5 pt-1">
+                  <div>
+                    <strong>Garantía:</strong> {quoteHeader.warrantyTerms || 'Doce (12) meses contados a partir de la fecha de instalación del equipo.'}
+                  </div>
+                  <div>
+                    Quedan exceptuados de esta garantía los siguientes casos:
+                  </div>
+                  <ul className="list-disc list-inside pl-3 space-y-1 text-slate-850">
+                    <li>Daños generados por la incorrecta operación, manipulación o cuidado de los sistemas.</li>
+                    <li>Mal uso o abuso.</li>
+                    <li>Omisión al seguir las instrucciones de operación del equipo.</li>
+                    <li>Las anormalidades de energía eléctrica, instalación eléctrica inadecuada.</li>
+                  </ul>
                 </div>
-                <div className="font-bold text-slate-900 text-xs">
-                  Dpto. Mercadeo y Ventas
+
+                <div className="pt-1">
+                  <strong>Transporte:</strong> SYD COLOMBIA asume los gastos del envío de los equipos adquiridos adjudicados en la oferta
+                </div>
+
+                <div>
+                  <strong>Validez De La Oferta:</strong> Treinta {quoteHeader.validityDays || 30} días calendario a partir de la fecha de entrega de la oferta
+                </div>
+
+                <div className="pt-3 text-slate-900">
+                  Atentamente,
+                </div>
+
+                <div className="pt-2">
+                  <div className="h-20 flex items-center">
+                    <DefaultDocumentSignature className="h-16" />
+                  </div>
+                  <div className="font-bold text-slate-950 text-xs uppercase tracking-tight mt-1">
+                    SUMINISTROS Y DOTACIONES COLOMBIA S.A.
+                  </div>
+                  <div className="font-bold text-slate-900 text-xs">
+                    Dpto. Mercadeo y Ventas
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>,

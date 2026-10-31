@@ -331,6 +331,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       canManageBackups: enableAll,
       canAccessSqlAnalytics: enableAll,
       canManageGmailPurchases: enableAll,
+      canManageGoogleWorkspace: enableAll,
+      canQuoteEmergencyParts: enableAll,
+      canSplitSalesOrders: enableAll,
     };
     setPermissions(newPerms);
 
@@ -535,6 +538,24 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       title: 'Bandeja Inteligente Gmail Compras & IA',
       description: 'Permite gestionar correos de compras, conectar cuentas de Gmail, enviar OCs y cotizaciones a proveedores.',
       badge: 'Gmail Compras',
+    },
+    {
+      key: 'canManageGoogleWorkspace',
+      title: 'Google Workspace & Formato N-FCO-03 de Drive',
+      description: 'Permite conectar Google Drive, explorar libros oficiales N-FCO-03, empalmar partes y sincronizar catálogos.',
+      badge: 'Google Drive',
+    },
+    {
+      key: 'canQuoteEmergencyParts',
+      title: 'Cotizar Partes no Creadas (Emergencia)',
+      description: 'Permite cotizar de urgencia equipos médicos no catalogados con 5 datos base y enviarlos a la lista de pendientes.',
+      badge: 'Emergencia',
+    },
+    {
+      key: 'canSplitSalesOrders',
+      title: 'Selección & Partición de Equipos por OV',
+      description: 'Permite seleccionar equipos específicos de licitaciones y contratos para armar órdenes de venta escalonadas sin repetir equipos.',
+      badge: 'Gestión OV',
     },
   ];
 

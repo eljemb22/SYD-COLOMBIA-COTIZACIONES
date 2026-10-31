@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { TechnicalDocument, TechnicalDocumentType, MedicalEquipment } from '../../types';
 import { UnifiedAttachmentSelector, AttachmentResult } from '../common/UnifiedAttachmentSelector';
+import { googleWorkspaceService } from '../../services/googleWorkspaceService';
 
 interface DocumentModalProps {
   isOpen: boolean;
@@ -222,7 +223,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
           invimaExpiryDate: initialEquipmentData.invimaExpiryDate || '2028-12-31',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        } as MedicalEquipment;
+        } as unknown as MedicalEquipment;
       }
       const existingSameTypeCount = existingDocuments.filter(
         (d) => d.equipmentId === selectedEqId && d.docType === targetType
@@ -327,30 +328,25 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
-  const currentEquipment = useMemo(() => {
-    let eq = equipments.find((e) => e.id === equipmentId);
-    if (!eq && initialEquipmentData && (!initialEquipmentId || equipmentId === initialEquipmentId)) {
-      eq = {
-        id: equipmentId || initialEquipmentData.id || `eq-${Date.now()}`,
-        code: initialEquipmentData.code || '',
-        name: initialEquipmentData.name || '',
-        brand: initialEquipmentData.brand || 'SYD',
-        model: initialEquipmentData.model || 'General',
-        category: 'Biomédico',
-        description: '',
-        technicalSpecs: [],
-        accessories: [],
-        commercialConditions: '',
-        invimaRecordNumber: initialEquipmentData.invimaRecordNumber || '',
-        invimaExpiryDate: initialEquipmentData.invimaExpiryDate || '2028-12-31',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } as MedicalEquipment;
-    }
-    return eq;
-  }, [equipments, equipmentId, initialEquipmentData, initialEquipmentId]);
+  let currentEquipment = equipments.find((e) => e.id === equipmentId);
+  if (!currentEquipment && initialEquipmentData && (!initialEquipmentId || equipmentId === initialEquipmentId)) {
+    currentEquipment = {
+      id: equipmentId || initialEquipmentData.id || `eq-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      code: initialEquipmentData.code || '',
+      name: initialEquipmentData.name || '',
+      brand: initialEquipmentData.brand || 'SYD',
+      model: initialEquipmentData.model || 'General',
+      category: 'Biomédico',
+      description: '',
+      technicalSpecs: [],
+      accessories: [],
+      commercialConditions: '',
+      invimaRecordNumber: initialEquipmentData.invimaRecordNumber || '',
+      invimaExpiryDate: initialEquipmentData.invimaExpiryDate || '2028-12-31',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as unknown as MedicalEquipment;
+  }
 
   const attachedForThisEq = existingDocuments.filter((d) => d.equipmentId === equipmentId);
 
@@ -463,13 +459,33 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
         ? customTypeName.trim()
         : selectedType;
 
-    const selectedEq = equipments.find((eq) => eq.id === equipmentId);
+    const selectedEq =
+      equipments.find((eq) => eq.id === equipmentId) ||
+      (initialEquipmentData?.code
+        ? equipments.find(
+            (eq) => eq.code && eq.code.trim().toLowerCase() === initialEquipmentData.code?.trim().toLowerCase()
+          )
+        : undefined) ||
+      (initialEquipmentData?.name
+        ? equipments.find(
+            (eq) => eq.name && eq.name.trim().toLowerCase() === initialEquipmentData.name?.trim().toLowerCase()
+          )
+        : undefined);
+
+    const docEquipmentId = equipmentId || selectedEq?.id || initialEquipmentData?.id;
+    const docEquipmentCode = initialEquipmentData?.code || selectedEq?.code;
+    const docEquipmentName = initialEquipmentData?.name || selectedEq?.name || 'General SYD';
+
+    const baseNotes = notes.trim() || `Documento ${effectiveDocType} adjuntado para ${docEquipmentName}.`;
+    const contractNotePrefix = contractContext?.processNumber
+      ? `[Contrato: ${contractContext.processNumber} - ${contractContext.clientName}] `
+      : '';
 
     const newDoc: TechnicalDocument = {
       id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-      equipmentId: selectedEq?.id,
-      equipmentCode: selectedEq?.code,
-      equipmentName: selectedEq ? `${selectedEq.name} (${selectedEq.brand})` : 'General SYD',
+      equipmentId: docEquipmentId,
+      equipmentCode: docEquipmentCode,
+      equipmentName: selectedEq ? `${selectedEq.name} (${selectedEq.brand})` : docEquipmentName,
       docType: effectiveDocType,
       title: title.trim(),
       fileName: (attachment?.fileName || fileName).trim(),
@@ -484,12 +500,66 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
       uploadDate: new Date().toISOString().split('T')[0],
       status,
       invimaNumber:
-        effectiveDocType === 'Registro INVIMA' ? invimaNumber.trim() || selectedEq?.invimaRecordNumber : undefined,
-      validUntil: effectiveDocType === 'Registro INVIMA' ? validUntil : undefined,
-      notes: notes.trim() || `Documento ${effectiveDocType} adjuntado para ${selectedEq?.name || 'equipo biomédico'}.`,
+        effectiveDocType === 'Registro INVIMA' ? invimaNumber.trim() || selectedEq?.invimaRecordNumber || initialEquipmentData?.invimaRecordNumber : undefined,
+      validUntil: effectiveDocType === 'Registro INVIMA' ? validUntil || initialEquipmentData?.invimaExpiryDate : undefined,
+      notes: `${contractNotePrefix}${baseNotes}`,
     };
 
     onSave(newDoc);
+
+    // Auto-sync to Base Maestra: When uploaded in contract, replicate to master equipment in Base Maestra
+    if (contractContext && selectedEq) {
+      const alreadyInMaster = (existingDocuments || []).some(
+        (d) =>
+          d.equipmentId === selectedEq.id &&
+          d.docType?.toLowerCase() === effectiveDocType.toLowerCase() &&
+          (!d.notes || !d.notes.toLowerCase().includes('contrato'))
+      );
+
+      if (!alreadyInMaster) {
+        const masterDoc: TechnicalDocument = {
+          ...newDoc,
+          id: `doc-master-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          equipmentId: selectedEq.id,
+          equipmentCode: selectedEq.code,
+          equipmentName: `${selectedEq.name} (${selectedEq.brand})`,
+          notes: `Documento ${effectiveDocType} sincronizado automáticamente en Base Maestra desde Contrato ${contractContext.processNumber}.`,
+        };
+        onSave(masterDoc);
+
+        // Ensure folder in DOCUMENTACION exists and copy file to master equipment folder
+        if (googleWorkspaceService.isConnected()) {
+          (async () => {
+            try {
+              const masterFolder = await googleWorkspaceService.findOrCreateMasterDocFolder('DOCUMENTACION');
+              const eqFolderName = [selectedEq.code, selectedEq.name, selectedEq.brand, selectedEq.model]
+                .filter(Boolean)
+                .join(' - ')
+                .replace(/[\\/:*?"<>|]/g, '-')
+                .trim() || `Equipo-${selectedEq.id}`;
+              const createdMasterFolder = await googleWorkspaceService.createDriveFolder(eqFolderName, masterFolder.id);
+
+              const rawF = localStorage.getItem('syd_equipment_drive_folders');
+              const fMap = rawF ? JSON.parse(rawF) : {};
+              if (selectedEq.id) fMap[`id_${selectedEq.id.toLowerCase()}`] = createdMasterFolder;
+              if (selectedEq.code) fMap[`code_${selectedEq.code.toLowerCase()}`] = createdMasterFolder;
+              fMap[selectedEq.id.toLowerCase()] = createdMasterFolder;
+              localStorage.setItem('syd_equipment_drive_folders', JSON.stringify(fMap));
+
+              if (newDoc.driveFileId) {
+                await googleWorkspaceService.copyDriveFile(
+                  newDoc.driveFileId,
+                  createdMasterFolder.id,
+                  newDoc.fileName
+                );
+              }
+            } catch (err) {
+              console.warn('Auto master sync warning:', err);
+            }
+          })();
+        }
+      }
+    }
 
     if (closeAfter) {
       onClose();
@@ -519,7 +589,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
     performSaveDocument(true);
   };
 
-  if (typeof document === 'undefined') return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   return createPortal(
     <div
@@ -726,6 +796,40 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Notice if this document type is already attached for this equipment */}
+          {(() => {
+            const alreadySameDoc = attachedForThisEq.find(
+              (d) => d.docType?.toLowerCase() === selectedType.toLowerCase()
+            );
+            if (!alreadySameDoc) return null;
+            return (
+              <div className="p-3 bg-emerald-950/70 border border-emerald-500/50 rounded-xl flex items-center justify-between gap-3 text-xs text-emerald-200 shadow-sm animate-fadeIn">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-bold text-white block truncate">
+                      Ya existe un {selectedType}: "{alreadySameDoc.title || alreadySameDoc.fileName}"
+                    </span>
+                    <span className="text-[11px] text-emerald-300/80 block mt-0.5">
+                      Adjuntado el {alreadySameDoc.uploadDate || 'recientemente'}. Puedes previsualizarlo o reemplazarlo seleccionando un nuevo archivo abajo.
+                    </span>
+                  </div>
+                </div>
+                {(alreadySameDoc.fileUrl || alreadySameDoc.downloadUrl || alreadySameDoc.fileData) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (alreadySameDoc.fileUrl) window.open(alreadySameDoc.fileUrl, '_blank');
+                    }}
+                    className="px-3 py-1.5 bg-emerald-500/25 hover:bg-emerald-500/40 text-emerald-300 hover:text-white rounded-lg font-bold text-xs transition cursor-pointer shrink-0 border border-emerald-500/40"
+                  >
+                    Ver archivo actual
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Unified File / Cloud Link / Drive Selector */}
           <UnifiedAttachmentSelector

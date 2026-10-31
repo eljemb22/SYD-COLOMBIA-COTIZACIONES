@@ -21,6 +21,8 @@ import {
   ClipboardList,
   HardDrive,
   RefreshCw,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import {
   TechnicalDocument,
@@ -163,6 +165,8 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [isLoadingDrivePreview, setIsLoadingDrivePreview] = useState<boolean>(false);
   const [drivePreviewError, setDrivePreviewError] = useState<string | null>(null);
+  const [isFullscreenPreview, setIsFullscreenPreview] = useState<boolean>(false);
+  const [previewSourceMode, setPreviewSourceMode] = useState<'canvas' | 'drive_iframe'>('canvas');
 
   // Generate object URL and binary Blob whenever previewDoc changes
   useEffect(() => {
@@ -220,6 +224,21 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
 
       if (driveId) {
         setIsLoadingDrivePreview(true);
+
+        // Real-time check: Verify if the file is still present and not deleted in Google Drive
+        if (googleWorkspaceService.isConnected()) {
+          try {
+            const exists = await googleWorkspaceService.checkFileOrFolderExists(driveId);
+            if (!exists) {
+              if (active) {
+                setDrivePreviewError(`⚠️ El archivo "${previewDoc.title || previewDoc.fileName}" fue eliminado en Google Drive y ha sido desvinculado.`);
+                setIsLoadingDrivePreview(false);
+                onDeleteDocument(previewDoc.id);
+              }
+              return;
+            }
+          } catch (_) {}
+        }
 
         // Check local disk cache on server first (/api/documents/cached/:driveId)
         try {
@@ -719,7 +738,13 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
           }}
           className="fixed inset-0 z-[100] bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fadeIn"
         >
-          <div className="bg-[#14233c] border border-cyan-500/40 rounded-2xl max-w-5xl w-full p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] animate-scaleUp max-h-[92vh] flex flex-col my-auto">
+          <div
+            className={`transition-all duration-200 flex flex-col ${
+              isFullscreenPreview
+                ? 'fixed inset-0 z-[110] bg-[#14233c] w-screen h-screen max-w-none max-h-none rounded-none p-3 sm:p-5'
+                : 'bg-[#14233c] border border-cyan-500/40 rounded-2xl max-w-5xl w-full p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] animate-scaleUp max-h-[94vh] my-auto'
+            }`}
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#334d6e] pb-3 gap-3 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -736,18 +761,29 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreenPreview(!isFullscreenPreview)}
+                  className="p-2 text-slate-400 hover:text-cyan-300 rounded-lg hover:bg-[#15253d] transition cursor-pointer"
+                  title={isFullscreenPreview ? 'Restaurar ventana' : 'Pantalla completa'}
+                >
+                  {isFullscreenPreview ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </button>
                 <button
                   type="button"
                   onClick={() => handleOpenInNewTab(previewDoc)}
                   className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-[#15253d] transition cursor-pointer"
-                  title="Abrir en ventana completa"
+                  title="Abrir en pestaña nueva"
                 >
                   <ExternalLink className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPreviewDoc(null)}
+                  onClick={() => {
+                    setPreviewDoc(null);
+                    setIsFullscreenPreview(false);
+                  }}
                   className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-[#15253d] transition cursor-pointer"
                   title="Cerrar (Esc)"
                 >
@@ -757,23 +793,52 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
             </div>
 
             {/* Modal Body */}
-            <div className="py-4 space-y-4 overflow-y-auto flex-1 pr-1">
+            <div className="py-3 space-y-3 overflow-y-auto flex-1 pr-1">
               {/* PDF VIEWER */}
               {getDocFileCategory(previewDoc) === 'pdf' && (
-                <div className="bg-[#111c2e] rounded-xl border border-[#334d6e] p-2 sm:p-3 space-y-2.5">
-                  <div className="flex items-center justify-between px-3 py-2 bg-[#15253d] rounded-lg border border-[#334d6e] text-xs flex-wrap gap-2">
+                <div className="bg-[#111c2e] rounded-xl border border-[#334d6e] p-2 sm:p-3 space-y-2.5 flex-1 flex flex-col">
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-[#15253d] rounded-lg border border-[#334d6e] text-xs flex-wrap gap-2">
                     <span className="font-bold text-slate-300 flex items-center gap-1.5">
                       <FileType className="w-4 h-4 text-rose-400" />
-                      <span>Visor Integrado de PDF ({previewDoc.fileName})</span>
+                      <span>Visor de PDF ({previewDoc.fileName})</span>
                     </span>
+
+                    {/* Mode switcher if it's a Drive file */}
+                    {(previewDoc.driveFileId || (previewDoc.fileUrl && previewDoc.fileUrl.includes('drive.google.com'))) && (
+                      <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-700 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewSourceMode('canvas')}
+                          className={`px-2 py-0.5 rounded font-bold transition cursor-pointer ${
+                            previewSourceMode === 'canvas'
+                              ? 'bg-cyan-500 text-slate-950 shadow-xs'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Visor Canvas HD
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewSourceMode('drive_iframe')}
+                          className={`px-2 py-0.5 rounded font-bold transition cursor-pointer ${
+                            previewSourceMode === 'drive_iframe'
+                              ? 'bg-cyan-500 text-slate-950 shadow-xs'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Visor Google Drive
+                        </button>
+                      </div>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => handleOpenInNewTab(previewDoc)}
-                      className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 transition cursor-pointer px-2 py-1 hover:bg-[#111c2e] rounded-lg"
+                      className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 transition cursor-pointer px-2 py-1 hover:bg-[#111c2e] rounded-lg text-xs"
                       title="Abrir a pantalla completa en una nueva pestaña"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Pantalla completa</span>
+                      <span>Pestaña nueva</span>
                     </button>
                   </div>
 
@@ -785,9 +850,18 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
                     </div>
                   )}
 
-                  <div className="w-full min-h-[540px] rounded-lg overflow-hidden bg-slate-900 border border-[#334d6e] relative">
-                    {isLoadingDrivePreview ? (
-                      <div className="flex flex-col items-center justify-center h-[540px] p-8 text-center text-slate-300 space-y-3 bg-slate-950">
+                  <div className={`w-full rounded-lg overflow-hidden bg-slate-900 border border-[#334d6e] relative ${
+                    isFullscreenPreview ? 'flex-1 min-h-[70vh]' : 'min-h-[580px] h-[640px] sm:h-[700px] max-h-[75vh]'
+                  }`}>
+                    {previewSourceMode === 'drive_iframe' && (previewDoc.driveFileId || extractGoogleDriveId(previewDoc.fileUrl || '')) ? (
+                      <iframe
+                        src={`https://drive.google.com/file/d/${previewDoc.driveFileId || extractGoogleDriveId(previewDoc.fileUrl || '')}/preview`}
+                        className="w-full h-full border-0 bg-slate-950"
+                        title={`Visor Google Drive: ${previewDoc.fileName}`}
+                        allow="autoplay"
+                      />
+                    ) : isLoadingDrivePreview ? (
+                      <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-300 space-y-3 bg-slate-950">
                         <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
                         <p className="font-bold text-white text-sm">
                           Conectando con Google Drive y preparando el visor de PDF...
@@ -797,7 +871,7 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
                         </p>
                       </div>
                     ) : previewBlob ? (
-                      <div className="w-full h-[540px] overflow-hidden bg-slate-950 flex flex-col">
+                      <div className="w-full h-full overflow-hidden bg-slate-950 flex flex-col">
                         <PdfCanvasViewer
                           blob={previewBlob}
                           filename={previewDoc.fileName || previewDoc.title}

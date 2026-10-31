@@ -386,20 +386,34 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
     existing: { equipmentId?: string; code?: string; name?: string; model?: string }
   ): boolean => {
     // 1. Direct equipment ID match
-    if (target.equipmentId && existing.equipmentId && target.equipmentId === existing.equipmentId) {
-      return true;
+    if (target.equipmentId && existing.equipmentId) {
+      if (target.equipmentId === existing.equipmentId) return true;
+      return false; // Different catalog equipment IDs
     }
 
     const normTargetCode = cleanNorm(target.code);
     const normExistingCode = cleanNorm(existing.code);
+    const isGenericCode = (c: string) =>
+      !c || ['eqmanual', 'eq', 'item', 'eq1', 'eq2', 'eq3', 'pendiente', 'sinasignar'].includes(c);
+
     // 2. Direct code match (excluding generic defaults)
+    if (!isGenericCode(normTargetCode) && !isGenericCode(normExistingCode)) {
+      if (normTargetCode === normExistingCode) return true;
+      return false; // Different specific part codes (e.g. 70491 vs 70493). Cannot be the same equipment!
+    }
+
+    // Prevent different specific models from matching (e.g. DIGIEYE 350 vs MOBIEYE 700)
+    const normTargetModel = cleanNorm(target.model);
+    const normExistingModel = cleanNorm(existing.model);
     if (
-      normTargetCode &&
-      normExistingCode &&
-      normTargetCode === normExistingCode &&
-      !['eqmanual', 'eq', 'item', 'eq1', 'eq2', 'eq3', 'pendiente', 'sinasignar'].includes(normTargetCode)
+      normTargetModel &&
+      normExistingModel &&
+      !['na', 'sinmodelo', 'estandar', 'generico', 'noaplica'].includes(normTargetModel) &&
+      !['na', 'sinmodelo', 'estandar', 'generico', 'noaplica'].includes(normExistingModel)
     ) {
-      return true;
+      if (normTargetModel !== normExistingModel && !normTargetModel.includes(normExistingModel) && !normExistingModel.includes(normTargetModel)) {
+        return false;
+      }
     }
 
     const normTargetName = cleanNorm(target.name);
@@ -410,7 +424,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
     if (normTargetName === normExistingName) return true;
 
     // 4. Substring containment if sufficiently long (e.g. "equipo de rayos portatil x con flat panel" vs "equipo de rayos portatil x")
-    if (normTargetName.length >= 5 && normExistingName.length >= 5) {
+    if (normTargetName.length >= 6 && normExistingName.length >= 6) {
       if (normTargetName.includes(normExistingName) || normExistingName.includes(normTargetName)) {
         return true;
       }
@@ -421,7 +435,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
     const existingTokens = extractTokens(existing.name);
     if (targetTokens.length > 0 && existingTokens.length > 0) {
       const common = targetTokens.filter((t) => existingTokens.includes(t));
-      if (common.length >= 2 || (targetTokens.length === 1 && common.length === 1 && common[0].length >= 5)) {
+      if (common.length >= 2) {
         return true;
       }
     }
@@ -479,14 +493,11 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
         (normClient === ovClient || ovClient.includes(normClient) || normClient.includes(ovClient))
       );
 
-      // Associate orders belonging to this tender, process, contract, quote, or client
-      const isAssociatedOrder =
-        matchesTender ||
-        matchesProcess ||
-        matchesContract ||
-        matchesQuote ||
-        matchesQuoteNum ||
-        matchesClient;
+      // Prioritize specific contract / process / tender / quote when available to prevent cross-contract contamination
+      const hasSpecificContractRef = Boolean(tenderId || normProcess || contractId || quoteId || normQuote);
+      const isAssociatedOrder = hasSpecificContractRef
+        ? Boolean(matchesTender || matchesProcess || matchesContract || matchesQuote || matchesQuoteNum)
+        : matchesClient;
 
       if (isAssociatedOrder) {
         (ov.items || []).forEach((it) => {
@@ -504,6 +515,10 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
             const k2 = `name-${cleanNorm(it.name)}`;
             map.set(k2, (map.get(k2) || 0) + qty);
           }
+          if (it.model && cleanNorm(it.model) && !['na', 'sinmodelo'].includes(cleanNorm(it.model))) {
+            const km = `model-${cleanNorm(it.model)}`;
+            map.set(km, (map.get(km) || 0) + qty);
+          }
         });
       }
     });
@@ -511,15 +526,26 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
     // 2. Also scan OC Tracking Contracts (contracts) for items already assigned to an OV or supplier OC
     (contracts || []).forEach((c) => {
       if (!c) return;
+      // If this contract is already represented by an existing Sales Order in existingOrders, skip to avoid double counting!
+      const alreadyCoveredInOVs = (existingOrders || []).some(
+        (ov) =>
+          ov.id === c.salesOrderId ||
+          (ov.salesOrderNumber && c.salesOrderNumber && cleanNorm(ov.salesOrderNumber) === cleanNorm(c.salesOrderNumber))
+      );
+      if (alreadyCoveredInOVs) return;
+
       const cClient = cleanNorm(c.clientName);
       const cContractNum = cleanNorm(c.contractNumber);
       const cDigits = cContractNum ? cContractNum.replace(/[^0-9]/g, '') : '';
 
-      const isSameTarget =
-        Boolean(tenderId && c.tenderClientId === tenderId) ||
-        Boolean(contractId && c.id === contractId) ||
-        Boolean(normProcess && cContractNum && (normProcess === cContractNum || cContractNum.includes(normProcess) || normProcess.includes(cContractNum) || (processDigits.length >= 3 && cDigits.length >= 3 && processDigits === cDigits))) ||
-        Boolean(normClient && cClient && (normClient === cClient || cClient.includes(normClient) || normClient.includes(cClient)));
+      const hasSpecificContractTarget = Boolean(tenderId || contractId || normProcess);
+      const isSameTarget = hasSpecificContractTarget
+        ? Boolean(
+            (tenderId && c.tenderClientId === tenderId) ||
+            (contractId && c.id === contractId) ||
+            (normProcess && cContractNum && (normProcess === cContractNum || cContractNum.includes(normProcess) || normProcess.includes(cContractNum) || (processDigits.length >= 3 && cDigits.length >= 3 && processDigits === cDigits)))
+          )
+        : Boolean(normClient && cClient && (normClient === cClient || cClient.includes(normClient) || normClient.includes(cClient)));
 
       if (isSameTarget) {
         (c.items || []).forEach((cIt) => {
@@ -560,6 +586,10 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
               const k2 = `name-${cleanNorm(cIt.name)}`;
               map.set(k2, Math.max(map.get(k2) || 0, qty));
             }
+            if (cIt.model && cleanNorm(cIt.model) && !['na', 'sinmodelo'].includes(cleanNorm(cIt.model))) {
+              const km = `model-${cleanNorm(cIt.model)}`;
+              map.set(km, Math.max(map.get(km) || 0, qty));
+            }
           }
         });
       }
@@ -579,6 +609,9 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
     }
     if (it.code && cleanNorm(it.code) && tracker.map.has(`code-${cleanNorm(it.code)}`)) {
       count = Math.max(count, tracker.map.get(`code-${cleanNorm(it.code)}`) || 0);
+    }
+    if (it.model && cleanNorm(it.model) && !['na', 'sinmodelo'].includes(cleanNorm(it.model)) && tracker.map.has(`model-${cleanNorm(it.model)}`)) {
+      count = Math.max(count, tracker.map.get(`model-${cleanNorm(it.model)}`) || 0);
     }
     if (it.name && cleanNorm(it.name) && tracker.map.has(`name-${cleanNorm(it.name)}`)) {
       count = Math.max(count, tracker.map.get(`name-${cleanNorm(it.name)}`) || 0);
@@ -2151,6 +2184,27 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                       <>
                         <button
                           type="button"
+                          onClick={() => {
+                            const allSelected = itemDrafts.every((it) => it.isSelected);
+                            setItemDrafts((prev) => prev.map((it) => ({ ...it, isSelected: !allSelected })));
+                          }}
+                          className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer flex items-center gap-1.5 font-bold shadow-2xs ${
+                            itemDrafts.every((it) => it.isSelected)
+                              ? 'bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-200 border-emerald-500/50'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                          }`}
+                          title="Seleccionar o deseleccionar todos los equipos para esta Orden de Venta"
+                        >
+                          <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>
+                            {itemDrafts.every((it) => it.isSelected)
+                              ? 'Deseleccionar Todos'
+                              : `Seleccionar Todos (${itemDrafts.filter((it) => it.isSelected).length}/${itemDrafts.length})`}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => toggleAllItemsFold(areAllItemsFolded)}
                           className="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition cursor-pointer flex items-center gap-1 font-medium shadow-2xs"
                           title={areAllItemsFolded ? 'Desplegar detalles de todos los equipos' : 'Plegar detalles de todos los equipos'}
@@ -2303,8 +2357,8 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                           className="w-full px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white"
                         >
                           <option value="">-- Cargar desde catálogo --</option>
-                          {equipments.map((eq) => (
-                            <option key={eq.id} value={eq.id}>
+                          {equipments.map((eq, eqIdx) => (
+                            <option key={`so-eq-opt-${eq.id || eq.code || 'eq'}-${eqIdx}`} value={eq.id}>
                               {eq.name} ({eq.brand})
                             </option>
                           ))}
@@ -2392,7 +2446,20 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="border-b border-slate-800 bg-slate-900/90 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            <th className="py-2 px-2.5 w-7 text-center">#</th>
+                            <th className="py-2 px-2.5 w-14 text-center">
+                              <div className="flex items-center justify-center gap-1.5" title="Seleccionar / Deseleccionar todos">
+                                <input
+                                  type="checkbox"
+                                  checked={itemDrafts.length > 0 && itemDrafts.every((it) => it.isSelected)}
+                                  onChange={() => {
+                                    const allSel = itemDrafts.every((it) => it.isSelected);
+                                    setItemDrafts((prev) => prev.map((it) => ({ ...it, isSelected: !allSel })));
+                                  }}
+                                  className="w-4 h-4 text-emerald-500 rounded border-slate-700 bg-slate-900 focus:ring-emerald-500 cursor-pointer accent-emerald-500"
+                                />
+                                <span className="font-mono text-[9px] text-slate-500">#</span>
+                              </div>
+                            </th>
                             <th className="py-2 px-2.5">Equipo & Descripción</th>
                             <th className="py-2 px-2.5 w-44">Proveedor Asignado para OC</th>
                             <th className="py-2 px-2 w-16 text-center">Cant.</th>
@@ -2406,16 +2473,36 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                             const expanded = isItemExpanded(index, item.id);
                             return (
                               <React.Fragment key={item.id || index}>
-                                <tr className="hover:bg-slate-900/50 transition-colors group">
-                                  {/* Number */}
+                                <tr className={`transition-colors group ${item.isSelected ? 'hover:bg-slate-900/50' : 'bg-slate-950/60 opacity-60 hover:opacity-85'}`}>
+                                  {/* Checkbox & Number */}
                                   <td className="py-2 px-2.5 text-center font-bold text-slate-400">
-                                    {index + 1}
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(item.isSelected)}
+                                        onChange={() => {
+                                          setItemDrafts((prev) =>
+                                            prev.map((it, i) => (i === index ? { ...it, isSelected: !it.isSelected } : it))
+                                          );
+                                        }}
+                                        className="w-4 h-4 text-emerald-500 rounded border-slate-700 bg-slate-900 focus:ring-emerald-500 cursor-pointer accent-emerald-500"
+                                        title={item.isSelected ? 'Equipo incluido en esta OV (clic para excluir)' : 'Equipo excluido (clic para incluir)'}
+                                      />
+                                      <span className="font-mono text-[10px] text-slate-500">{index + 1}</span>
+                                    </div>
                                   </td>
 
                                   {/* Equipo Info */}
                                   <td className="py-2 px-2.5 min-w-[170px]">
-                                    <div className="font-semibold text-white truncate max-w-[200px] sm:max-w-[240px]">
-                                      {item.name}
+                                    <div className="flex items-center gap-2">
+                                      <div className={`font-semibold truncate max-w-[200px] sm:max-w-[240px] ${item.isSelected ? 'text-white' : 'text-slate-400'}`}>
+                                        {item.name}
+                                      </div>
+                                      {!item.isSelected && (
+                                        <span className="text-[9px] font-bold text-amber-400/90 bg-amber-950/50 px-1.5 py-0.2 rounded border border-amber-800/50 shrink-0">
+                                          No incluido en esta OV
+                                        </span>
+                                      )}
                                     </div>
                                     <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5 flex-wrap">
                                       {item.code && (
@@ -2520,7 +2607,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                                 {/* Collapsible Row Details */}
                                 {expanded && (
                                   <tr className="bg-slate-900/60 border-t border-slate-800/80">
-                                    <td colSpan={7} className="px-4 py-2.5">
+                                    <td colSpan={8} className="px-4 py-2.5">
                                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                                         <div>
                                           <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">
@@ -2585,16 +2672,17 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                 {/* Subtotal summary card inside right column */}
                 <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between text-xs">
                   <span className="text-slate-400">
-                    Equipos incluidos en esta Orden: <strong className="text-white">{itemDrafts.length}</strong>
-                    {itemDrafts.length > 0 && (
+                    Equipos seleccionados en esta Orden: <strong className="text-emerald-400 font-bold">{selectedItems.length}</strong>
+                    <span className="text-slate-500 ml-1">de {itemDrafts.length} disponibles</span>
+                    {selectedItems.length > 0 && (
                       <span className="text-slate-500 ml-2">
                         (Cant. Total:{' '}
-                        {itemDrafts.reduce((acc, it) => acc + (it.quantityToDispatch || 0), 0)})
+                        {selectedItems.reduce((acc, it) => acc + (it.quantityToDispatch || 0), 0)})
                       </span>
                     )}
                   </span>
                   <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block leading-none">Subtotal Equipos</span>
+                    <span className="text-[10px] text-slate-400 block leading-none">Subtotal Seleccionado</span>
                     <span className="text-sm sm:text-base font-black text-amber-400">
                       {formatCOP(totalSelectedValueCOP)}
                     </span>
@@ -2612,8 +2700,8 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
               <span className="text-base sm:text-lg font-black text-amber-400">
                 {formatCOP(totalSelectedValueCOP)}
               </span>
-              <span className="text-xs text-slate-500 hidden sm:inline">
-                • {itemDrafts.length} {itemDrafts.length === 1 ? 'equipo' : 'equipos'}
+              <span className="text-xs text-slate-400 hidden sm:inline">
+                • <strong className="text-emerald-400">{selectedItems.length}</strong> de {itemDrafts.length} {itemDrafts.length === 1 ? 'equipo seleccionado' : 'equipos seleccionados'}
               </span>
             </div>
 

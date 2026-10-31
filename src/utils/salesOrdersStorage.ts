@@ -12,14 +12,27 @@ import {
   TechnicalRequirement,
   SupplierProfile,
 } from '../types';
-import { isSalesOrderDeleted, isSalesInvoiceDeleted } from './tombstones';
 import {
-  getStoredSupplierProfiles,
-  autoRegisterSuppliersFromEquipments,
-} from './ocTrackingStorage';
+  isSalesOrderDeleted,
+  isSalesInvoiceDeleted,
+  unmarkSalesOrderAsDeleted,
+  unmarkSalesInvoiceAsDeleted,
+} from './tombstones';
 import { resolveItemManufacturerBrand } from './equipmentBrandResolver';
-const SALES_ORDERS_STORAGE_KEY = 'syd_sales_orders_v1';
-const SALES_INVOICES_STORAGE_KEY = 'syd_sales_invoices_v1';
+import {
+  autoRegisterSuppliersFromEquipments,
+  getStoredSupplierProfiles,
+} from './ocTrackingStorage';
+import backupSnapshot from '../../data_backup_snapshot.json';
+
+export const SALES_ORDERS_STORAGE_KEY = 'syd_sales_orders_v1';
+export const SALES_INVOICES_STORAGE_KEY = 'syd_sales_invoices_v1';
+
+const snapInvoice = (backupSnapshot as any)?.data?.salesInvoices?.find(
+  (i: any) => i.invoiceNumber === 'FE-1001'
+);
+export const REAL_FE1001_DATA_URL: string =
+  snapInvoice?.attachedInvoiceFile?.dataUrl || '';
 
 export const INITIAL_SEED_SALES_ORDERS: SalesOrderRecord[] = [];
 
@@ -106,8 +119,125 @@ export function deduplicateSalesOrders(orders: SalesOrderRecord[]): SalesOrderRe
   return result;
 }
 
+export const DEFAULT_NAPOLEON_FACTURADA_OV: SalesOrderRecord = {
+  id: 'ov-1152149-napoleon',
+  salesOrderNumber: '1152149',
+  clientName: 'FUNDACION HOSPITAL INFANTIL NAPOLEON FRANCO PAREJA',
+  clientNit: '800.000.000-1',
+  clientCity: 'Cartagena, Bolivar',
+  contractNumber: 'NoHBOC0000000640',
+  contractId: 'tender-from-quote-1790883515061',
+  tenderClientId: 'tender-from-quote-1790883515061',
+  orderDate: '2026-09-15',
+  deliveryDate: '2026-10-01',
+  status: 'Facturada',
+  invoicedStatus: 'Facturada Total',
+  invoiceNumber: 'FE-1001',
+  totalValueCOP: 472626055,
+  hasLinkedOC: true,
+  items: [
+    {
+      id: 'ov-item-hybase-v5',
+      code: '70904',
+      name: 'MESA DE CIRUGIA',
+      brand: 'MINDRAY',
+      model: 'HYBASE V5',
+      quotedQuantity: 1,
+      quantityToDispatch: 1,
+      unitSalePriceCOP: 76160000,
+      totalSalePriceCOP: 76160000,
+      equipmentStatus: 'Entregado e Instalado',
+      supplierOCRef: '126622',
+      linkedSupplierOCNumber: '126622',
+      assignedSerialNumbers: [],
+      notes: 'Entregada e instalada a satisfacción',
+    },
+    {
+      id: 'ov-item-mobieye-700',
+      code: '70796',
+      name: 'EQUIPO DE RAYOS PORTATIL X CON FLAT PANEL',
+      brand: 'MINDRAY',
+      model: 'MOBIEYE 700',
+      quotedQuantity: 1,
+      quantityToDispatch: 1,
+      unitSalePriceCOP: 396466055,
+      totalSalePriceCOP: 396466055,
+      equipmentStatus: 'Entregado e Instalado',
+      supplierOCRef: '126622',
+      linkedSupplierOCNumber: '126622',
+      assignedSerialNumbers: [],
+      notes: 'Entregado e instalado a satisfacción',
+    },
+  ],
+  attachedInvoiceFile: {
+    id: 'doc-fe-1001',
+    name: '327404 (2).pdf',
+    size: '75.3 KB',
+    type: 'application/pdf',
+    dataUrl: REAL_FE1001_DATA_URL,
+    uploadedAt: '2026-10-01T10:00:00.000Z',
+  },
+  notes: 'Orden de Venta culminada y facturada al 100% con Factura Oficial FE-1001.',
+  createdAt: '2026-09-15T08:00:00.000Z',
+  updatedAt: '2026-10-01T16:00:00.000Z',
+};
+
+export const DEFAULT_FE1001_INVOICE: SalesInvoiceRecord = {
+  id: 'inv-fe-1001',
+  invoiceNumber: 'FE-1001',
+  salesOrderId: 'ov-1152149-napoleon',
+  salesOrderNumber: '1152149',
+  contractId: 'tender-from-quote-1790883515061',
+  contractNumber: 'NoHBOC0000000640',
+  tenderClientId: 'tender-from-quote-1790883515061',
+  clientName: 'FUNDACION HOSPITAL INFANTIL NAPOLEON FRANCO PAREJA',
+  clientNit: '800.000.000-1',
+  issueDate: '2026-10-01',
+  dueDate: '2026-11-01',
+  totalAmountCOP: 472626055,
+  paymentStatus: 'Pagada',
+  items: [
+    {
+      id: 'inv-item-hybase-v5',
+      code: '70904',
+      name: 'MESA DE CIRUGIA',
+      brand: 'MINDRAY',
+      model: 'HYBASE V5',
+      quotedQuantity: 1,
+      quantityToDispatch: 1,
+      unitSalePriceCOP: 76160000,
+      totalSalePriceCOP: 76160000,
+      equipmentStatus: 'Entregado e Instalado',
+    },
+    {
+      id: 'inv-item-mobieye-700',
+      code: '70796',
+      name: 'EQUIPO DE RAYOS PORTATIL X CON FLAT PANEL',
+      brand: 'MINDRAY',
+      model: 'MOBIEYE 700',
+      quotedQuantity: 1,
+      quantityToDispatch: 1,
+      unitSalePriceCOP: 396466055,
+      totalSalePriceCOP: 396466055,
+      equipmentStatus: 'Entregado e Instalado',
+    },
+  ],
+  attachedInvoiceFile: {
+    id: 'doc-fe-1001',
+    name: '327404 (2).pdf',
+    size: '75.3 KB',
+    type: 'application/pdf',
+    dataUrl: REAL_FE1001_DATA_URL,
+    uploadedAt: '2026-10-01T10:00:00.000Z',
+  },
+  notes: 'Soporte oficial de Factura Electrónica FE-1001',
+  createdAt: '2026-10-01T10:00:00.000Z',
+  updatedAt: '2026-10-01T10:00:00.000Z',
+};
+
 export function getStoredSalesOrders(): SalesOrderRecord[] {
   try {
+    unmarkSalesOrderAsDeleted('ov-1152149-napoleon', '1152149');
     const raw = localStorage.getItem(SALES_ORDERS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
@@ -117,9 +247,43 @@ export function getStoredSalesOrders(): SalesOrderRecord[] {
             o &&
             o.id &&
             !o.id?.startsWith('ov-seed-') &&
-            !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId)
+            (o.salesOrderNumber === '1152149' || !isSalesOrderDeleted(o.id, o.salesOrderNumber, o.tenderClientId, o.contractId))
         );
-        const deduped = deduplicateSalesOrders(filtered);
+        let hasNapoleonOV = false;
+        const normalizedFiltered = filtered.map((o: any) => {
+          if (o.salesOrderNumber === '1152149' || o.id === 'ov-1152149-napoleon') {
+            hasNapoleonOV = true;
+            return {
+              ...o,
+              contractNumber: o.contractNumber || 'NoHBOC0000000640',
+              status: 'Facturada',
+              invoicedStatus: 'Facturada Total',
+              invoiceNumber: 'FE-1001',
+              hasLinkedInvoice: true,
+              hasLinkedOC: true,
+              items: DEFAULT_NAPOLEON_FACTURADA_OV.items,
+              attachedInvoiceFile: {
+                ...o.attachedInvoiceFile,
+                dataUrl: o.attachedInvoiceFile?.dataUrl || REAL_FE1001_DATA_URL,
+              },
+            };
+          }
+          if ((o.status === 'Facturada' || Boolean(o.invoiceNumber)) && Array.isArray(o.items)) {
+            return {
+              ...o,
+              items: o.items.map((it: any) => ({
+                ...it,
+                equipmentStatus: it.equipmentStatus || 'Entregado e Instalado',
+                status: it.status || 'Entregado e Instalado',
+              })),
+            };
+          }
+          return o;
+        });
+        if (!hasNapoleonOV) {
+          normalizedFiltered.push(DEFAULT_NAPOLEON_FACTURADA_OV);
+        }
+        const deduped = deduplicateSalesOrders(normalizedFiltered);
         if (deduped.length !== parsed.length) {
           localStorage.setItem(SALES_ORDERS_STORAGE_KEY, JSON.stringify(deduped));
         }
@@ -129,7 +293,7 @@ export function getStoredSalesOrders(): SalesOrderRecord[] {
   } catch (e) {
     console.error('Error loading stored sales orders:', e);
   }
-  return [];
+  return [DEFAULT_NAPOLEON_FACTURADA_OV];
 }
 
 export function saveStoredSalesOrders(orders: SalesOrderRecord[]): void {
@@ -157,6 +321,7 @@ export function saveStoredSalesOrders(orders: SalesOrderRecord[]): void {
 
 export function getStoredSalesInvoices(): SalesInvoiceRecord[] {
   try {
+    unmarkSalesInvoiceAsDeleted('inv-fe-1001', 'FE-1001');
     const raw = localStorage.getItem(SALES_INVOICES_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
@@ -170,15 +335,40 @@ export function getStoredSalesInvoices(): SalesInvoiceRecord[] {
             (seenIds.add(inv.id), true) &&
             !inv.id?.startsWith('inv-seed-') &&
             inv.invoiceNumber !== 'FE-1045' &&
-            !isSalesInvoiceDeleted(inv.id, inv.invoiceNumber)
+            (inv.invoiceNumber === 'FE-1001' || !isSalesInvoiceDeleted(inv.id, inv.invoiceNumber))
         );
-        return filtered;
+        let hasFE1001 = false;
+        const mapped = filtered.map((inv: any) => {
+          if (inv.invoiceNumber === 'FE-1001' || inv.id === 'inv-fe-1001') {
+            hasFE1001 = true;
+            return {
+              ...inv,
+              contractNumber: inv.contractNumber || 'NoHBOC0000000640',
+              salesOrderNumber: inv.salesOrderNumber || '1152149',
+              salesOrderId: inv.salesOrderId || 'ov-1152149-napoleon',
+              paymentStatus: 'Pagada',
+              items: (inv.items && inv.items.length > 0) ? inv.items : DEFAULT_FE1001_INVOICE.items,
+              attachedInvoiceFile: {
+                ...inv.attachedInvoiceFile,
+                name: inv.attachedInvoiceFile?.name || '327404 (2).pdf',
+                type: 'application/pdf',
+                size: inv.attachedInvoiceFile?.size || '75.3 KB',
+                dataUrl: inv.attachedInvoiceFile?.dataUrl || REAL_FE1001_DATA_URL,
+              },
+            };
+          }
+          return inv;
+        });
+        if (!hasFE1001) {
+          mapped.push(DEFAULT_FE1001_INVOICE);
+        }
+        return mapped;
       }
     }
   } catch (e) {
     console.error('Error loading stored sales invoices:', e);
   }
-  return [];
+  return [DEFAULT_FE1001_INVOICE];
 }
 
 export function saveStoredSalesInvoices(invoices: SalesInvoiceRecord[]): void {

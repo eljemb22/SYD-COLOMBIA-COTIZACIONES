@@ -282,6 +282,32 @@ export const CANVAS_THEME_MAP: Record<
     textSecondary: '#94a3b8',
     isLight: false,
   },
+  dark_original: {
+    name: 'Azul Marino SYD (Original / Default)',
+    description: 'Paleta corporativa predeterminada original de alta fidelidad clínica',
+    bodyBg: '#0f1a2e',
+    cardBg: '#15253d',
+    cardHover: '#192b45',
+    sidebarBg: '#111c2e',
+    headerBg: '#15253d',
+    borderColor: '#334d6e',
+    textPrimary: '#ffffff',
+    textSecondary: '#94a3b8',
+    isLight: false,
+  },
+  light_modern: {
+    name: 'Blanco Clínico Quirófano',
+    description: 'Modo claro de alta legibilidad para oficinas iluminadas',
+    bodyBg: '#f8fafc',
+    cardBg: '#ffffff',
+    cardHover: '#f1f5f9',
+    sidebarBg: '#ffffff',
+    headerBg: '#ffffff',
+    borderColor: '#cbd5e1',
+    textPrimary: '#0f172a',
+    textSecondary: '#475569',
+    isLight: true,
+  },
 };
 
 export const FONT_FAMILY_MAP: Record<FontFamilyKey, { name: string; family: string; category: string }> = {
@@ -316,6 +342,21 @@ export const FONT_FAMILY_MAP: Record<FontFamilyKey, { name: string; family: stri
     category: 'Ingeniería & Datos',
   },
   playfair: {
+    name: 'Playfair Display',
+    family: '"Playfair Display", Georgia, "Times New Roman", serif',
+    category: 'Serif Ejecutivo',
+  },
+  sans: {
+    name: 'Plus Jakarta Sans',
+    family: '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif',
+    category: 'Geométrica Médica (Recomendada)',
+  },
+  mono: {
+    name: 'JetBrains Mono',
+    family: '"JetBrains Mono", monospace',
+    category: 'Ingeniería & Datos',
+  },
+  serif: {
     name: 'Playfair Display',
     family: '"Playfair Display", Georgia, "Times New Roman", serif',
     category: 'Serif Ejecutivo',
@@ -374,6 +415,21 @@ export const TEXT_COLOR_MAP: Record<TextColorKey, { name: string; hex: string; d
     name: 'Color de Texto Personalizado',
     hex: '#ffffff',
     desc: 'Personalizado',
+  },
+  white: {
+    name: 'Blanco Puro Ultra Nítido',
+    hex: '#ffffff',
+    desc: 'Máximo contraste',
+  },
+  slate: {
+    name: 'Platino Suave / Plata',
+    hex: '#e2e8f0',
+    desc: 'Descansado y elegante',
+  },
+  cyan: {
+    name: 'Cian Glaciar Suave',
+    hex: '#bae6fd',
+    desc: 'Tinte médico azulado',
   },
 };
 
@@ -1014,7 +1070,7 @@ export const applyThemeToDOM = (settings: ThemeSettings): void => {
   // 3. Button Color
   const btnColor = settings.buttonColor === 'custom'
     ? settings.customButtonHex || accent.hex
-    : (ACCENT_COLOR_MAP[settings.buttonColor] || accent).hex;
+    : ((settings.buttonColor && ACCENT_COLOR_MAP[settings.buttonColor as AccentColorKey]) || accent).hex;
 
   // Button text contrast: calculate if button background is bright or dark
   const isBtnBright = isColorBright(btnColor);
@@ -1044,14 +1100,14 @@ export const applyThemeToDOM = (settings: ThemeSettings): void => {
   }
 
   // 7. Card Radius
-  const cardRadiusMap = {
+  const cardRadiusMap: Record<string, string> = {
     none: '0px',
     sm: '6px',
     md: '10px',
     lg: '16px',
     xl: '22px',
   };
-  const cardRadiusVal = cardRadiusMap[settings.cardRadius] || '16px';
+  const cardRadiusVal = (settings.cardRadius && cardRadiusMap[settings.cardRadius]) || '16px';
 
   // Apply CSS Variables directly on root
   root.style.setProperty('--syd-accent', accent.hex);

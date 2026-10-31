@@ -956,13 +956,13 @@ export const ItemSerialsDossierModal: React.FC<ItemSerialsDossierModalProps> = (
                   {/* List of uploaded docs for active serial */}
                   {activeSerial.documents && activeSerial.documents.length > 0 ? (
                     <div className="space-y-1.5">
-                      {activeSerial.documents.map((doc) => {
+                      {activeSerial.documents.map((doc, docIdx) => {
                         const isEditingThis = editingDocId === doc.id;
                         const isDian = doc.docType === 'dian_import';
 
                         return (
                           <div
-                            key={doc.id}
+                            key={`serial-doc-${doc.id || 'doc'}-${docIdx}`}
                             className="flex items-center justify-between p-2.5 bg-[#122033] border border-[#233a57] rounded-xl text-xs gap-2"
                           >
                             <div className="flex items-center gap-2.5 truncate flex-1 min-w-0">

@@ -25,6 +25,10 @@ import {
   UserCheck,
   PackageCheck,
   Trash2,
+  Wand2,
+  Image as ImageIcon,
+  LayoutList,
+  Globe,
 } from 'lucide-react';
 import { QuoteHeader, QuoteItem, MedicalEquipment, AuthUser, SavedQuote } from '../../types';
 import { formatCOP, numberToSpanishWords } from '../../utils/formatters';
@@ -37,15 +41,164 @@ import {
   setConsecutive,
   advanceFromCurrentQuoteNumber,
   getNextDailyQuoteNumber,
+  getFormattedSpanishDate,
 } from '../../utils/quoteConsecutive';
 import { getStoredClients, searchClientDirectory, ClientRecord, saveOrUpdateClientRecord } from '../../utils/clientStorage';
 import { getSavedQuotes } from '../../utils/quoteStorage';
 import { DefaultDocumentSignature } from '../common/SyDLetterhead';
 import { getOfficialSyDLetterheadDataUrl, OFFICIAL_SYD_LETTERHEAD_SVG_PATH } from '../../utils/sydDefaultLetterhead';
 import { ClientDirectoryModal } from '../modals/ClientDirectoryModal';
+import { InternetImageSearchModal } from '../modals/InternetImageSearchModal';
 import { chunkQuoteItemsForPages } from '../../utils/paginationUtils';
+import { findSpellingErrorsInText, ignoreWord, autoCorrectText } from '../../utils/spellChecker';
+import {
+  fetchEquipmentDescriptionAndFeatures,
+  getBiomedicalHeuristicSpecs,
+  isGenericFiller,
+  extractEquipmentAndAccessories,
+  sanitizeBiomedicalDescription,
+  sanitizeBiomedicalFeature,
+} from '../../services/geminiEquipmentService';
+import { getAutoEquipmentImageUrl } from '../../services/imageSearchService';
+import { generateClinicalEquipmentGraphicDataUrl } from '../../utils/clinicalEquipmentGraphic';
 import confetti from 'canvas-confetti';
 import { Lock, ShieldAlert, Users } from 'lucide-react';
+
+/**
+ * Interactive Document Field with exact word-level spell check
+ * The wavy red underline is rendered directly on the misspelled word itself (exact length, snug below).
+ * Clicking enables instant in-place editing; right-clicking opens the correction menu.
+ * Zero overlays, zero font drift, zero scrollbars.
+ */
+const SpellCheckedDocumentField: React.FC<{
+  value: string;
+  onChange: (val: string) => void;
+  isReadOnly?: boolean;
+  placeholder?: string;
+  className?: string;
+  inputClassName?: string;
+  id?: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
+}> = ({
+  value,
+  onChange,
+  isReadOnly,
+  placeholder = '',
+  className = '',
+  inputClassName = '',
+  id,
+  onFocus,
+  onBlur,
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [, setIgnoredVer] = useState(0);
+
+  useEffect(() => {
+    const handleChanged = () => setIgnoredVer((v) => v + 1);
+    window.addEventListener('spellcheck-ignored-changed', handleChanged);
+    return () => window.removeEventListener('spellcheck-ignored-changed', handleChanged);
+  }, []);
+
+  const errors = useMemo(() => findSpellingErrorsInText(value), [value]);
+
+  if (isEditing && !isReadOnly) {
+    return (
+      <input
+        id={id}
+        type="text"
+        autoFocus
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+        onBlur={() => {
+          setIsEditing(false);
+          onBlur?.();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            setIsEditing(false);
+            onBlur?.();
+          }
+        }}
+        className={`w-full rounded outline-none transition ${inputClassName || className}`}
+        placeholder={placeholder}
+        spellCheck="true"
+        lang="es"
+      />
+    );
+  }
+
+  // Display Mode: Renders real DOM text with underline directly on the misspelled word
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  if (!value) {
+    parts.push(
+      <span key="empty" className="text-slate-400 italic select-none">
+        {placeholder}
+      </span>
+    );
+  } else if (errors.length === 0) {
+    parts.push(value);
+  } else {
+    errors.forEach((err, idx) => {
+      if (err.start > lastIndex) {
+        parts.push(value.slice(lastIndex, err.start));
+      }
+      parts.push(
+        <span
+          key={`err-${idx}`}
+          className="underline decoration-wavy decoration-red-500 decoration-1 underline-offset-[2.5px] cursor-pointer"
+          title={`Error ortográfico: ${err.word}. Sugerencias: ${err.suggestions.join(', ')} (Clic derecho para corregir)`}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.dispatchEvent(
+              new CustomEvent('open-spellcheck-menu', {
+                detail: {
+                  x: e.clientX,
+                  y: e.clientY,
+                  word: err.word,
+                  start: err.start,
+                  end: err.end,
+                  suggestions: err.suggestions,
+                  onApply: (replacement: string) => {
+                    const newVal = value.slice(0, err.start) + replacement + value.slice(err.end);
+                    onChange(newVal);
+                  },
+                },
+              })
+            );
+          }}
+        >
+          {value.slice(err.start, err.end)}
+        </span>
+      );
+      lastIndex = err.end;
+    });
+
+    if (lastIndex < value.length) {
+      parts.push(value.slice(lastIndex));
+    }
+  }
+
+  return (
+    <div
+      id={id}
+      onClick={() => {
+        if (!isReadOnly) {
+          setIsEditing(true);
+          onFocus?.();
+        }
+      }}
+      className={`cursor-text select-text transition rounded ${className}`}
+      title={isReadOnly ? undefined : 'Clic para editar'}
+    >
+      {parts}
+    </div>
+  );
+};
 
 interface SalesViewProps {
   quoteHeader: QuoteHeader;
@@ -84,6 +237,8 @@ export const SalesView: React.FC<SalesViewProps> = ({
   marginSettings: marginSettingsProp,
   onUpdateMarginSettings,
   onUpdateHeader,
+  onUpdateItem,
+  onDeleteItem,
   onNavigateToCatalog,
   onNavigateToCostManager,
   onSaveQuote,
@@ -102,23 +257,32 @@ export const SalesView: React.FC<SalesViewProps> = ({
     return savedQuotesProp && savedQuotesProp.length > 0 ? savedQuotesProp : getSavedQuotes();
   }, [savedQuotesProp]);
 
-  // Margin / Calibration State (Defaults: 50px Top when blank without letterhead, 78px Lateral)
+  // Margin / Calibration State (Default standard values: 174px Top, 86px Lateral, 85% table scale matching official corporate stationery)
   const [localSubirBajar, setLocalSubirBajar] = useState<number>(() => {
-    if (marginSettingsProp?.subirBajar !== undefined) {
+    if (marginSettingsProp?.subirBajar && marginSettingsProp.subirBajar > 0) {
       return marginSettingsProp.subirBajar;
     }
-    // Clean blank sheet defaults to 50px top padding
-    return 50;
+    return 174;
   });
-  const [localIzqDer, setLocalIzqDer] = useState<number>(marginSettingsProp?.izqDer ?? 78);
-  const [localTableScale, setLocalTableScale] = useState<number>(marginSettingsProp?.tableScale ?? 85);
+  const [localIzqDer, setLocalIzqDer] = useState<number>(() => {
+    if (marginSettingsProp?.izqDer && marginSettingsProp.izqDer > 0) {
+      return marginSettingsProp.izqDer;
+    }
+    return 86;
+  });
+  const [localTableScale, setLocalTableScale] = useState<number>(() => {
+    if (marginSettingsProp?.tableScale && marginSettingsProp.tableScale >= 50) {
+      return marginSettingsProp.tableScale;
+    }
+    return 85;
+  });
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [pdfProgressMsg, setPdfProgressMsg] = useState<string | null>(null);
 
-  const subirBajar = marginSettingsProp ? marginSettingsProp.subirBajar : localSubirBajar;
-  const izqDer = marginSettingsProp ? marginSettingsProp.izqDer : localIzqDer;
-  const tableScale = marginSettingsProp ? marginSettingsProp.tableScale : localTableScale;
+  const subirBajar = (marginSettingsProp && marginSettingsProp.subirBajar > 0) ? marginSettingsProp.subirBajar : localSubirBajar;
+  const izqDer = (marginSettingsProp && marginSettingsProp.izqDer > 0) ? marginSettingsProp.izqDer : localIzqDer;
+  const tableScale = (marginSettingsProp && marginSettingsProp.tableScale >= 50) ? marginSettingsProp.tableScale : localTableScale;
 
   const setSubirBajar = (val: number | ((prev: number) => number)) => {
     const nextVal = typeof val === 'function' ? val(subirBajar) : val;
@@ -138,52 +302,67 @@ export const SalesView: React.FC<SalesViewProps> = ({
     onUpdateMarginSettings?.({ subirBajar, izqDer, tableScale: nextVal });
   };
 
-  // Unified Letterhead State (defaults to NULL: clean white sheet without letterhead)
+  // Unified Letterhead State (defaults to official SyD Colombia corporate stationery)
   const [localLetterheadUrl, setLocalLetterheadUrl] = useState<string | null>(() => {
     if (customLetterheadUrlProp !== undefined && customLetterheadUrlProp !== null) {
       if (customLetterheadUrlProp === 'none') return null;
-      return customLetterheadUrlProp;
+      if (customLetterheadUrlProp.length > 20) return customLetterheadUrlProp;
     }
     try {
       const savedManual = localStorage.getItem('syd_custom_manual_letterhead');
-      if (savedManual && savedManual.length > 20 && savedManual !== 'none' && !savedManual.includes('OFICIAL SYD COLOMBIA')) {
+      if (savedManual && savedManual.length > 20 && savedManual !== 'none') {
         return savedManual;
       }
       const saved = localStorage.getItem('syd_active_letterhead_url');
-      if (saved && saved.length > 20 && saved !== 'none' && !saved.includes('OFICIAL SYD COLOMBIA')) {
+      if (saved && saved.length > 20 && saved !== 'none') {
         return saved;
       }
     } catch {}
-    // Default to BLANK (no letterhead) - user must place it manually
-    return null;
+    return getOfficialSyDLetterheadDataUrl();
   });
-  const customLetterheadUrl = customLetterheadUrlProp !== undefined ? customLetterheadUrlProp : localLetterheadUrl;
+  const customLetterheadUrl = customLetterheadUrlProp !== undefined
+    ? (customLetterheadUrlProp === 'none' ? null : (customLetterheadUrlProp || getOfficialSyDLetterheadDataUrl()))
+    : localLetterheadUrl;
 
-  // The effective letterhead URL: NULL by default (hoja en blanco), only shows if manually placed
+  // The effective letterhead URL: always renders official corporate stationery unless explicitly removed
   const effectiveLetterhead = useMemo(() => {
-    if (!customLetterheadUrl || customLetterheadUrl === 'none' || customLetterheadUrl.trim() === '') {
+    if (customLetterheadUrl === 'none' || customLetterheadUrl === null) {
       return null;
     }
-    if (customLetterheadUrl.length > 20) {
+    if (customLetterheadUrl && customLetterheadUrl.length > 20) {
       return customLetterheadUrl;
     }
-    return null;
+    return getOfficialSyDLetterheadDataUrl();
   }, [customLetterheadUrl]);
+
+  // Ensure date, city and daily consecutive are always populated
+  useEffect(() => {
+    if (!isReadOnly && (!quoteHeader.date || !quoteHeader.quoteNumber || !quoteHeader.city)) {
+      const updates: Partial<QuoteHeader> = {};
+      const cityName = quoteHeader.city && quoteHeader.city.trim() ? quoteHeader.city.trim() : 'Barranquilla';
+      if (!quoteHeader.city) updates.city = cityName;
+      if (!quoteHeader.date) updates.date = getFormattedSpanishDate(cityName, new Date());
+      if (!quoteHeader.quoteNumber) {
+        const saved = getSavedQuotes();
+        updates.quoteNumber = getNextDailyQuoteNumber(saved);
+      }
+      onUpdateHeader(updates);
+    }
+  }, [isReadOnly, quoteHeader.date, quoteHeader.quoteNumber, quoteHeader.city, onUpdateHeader]);
 
   const setCustomLetterheadUrl = (url: string | null) => {
     setLocalLetterheadUrl(url);
     try {
-      if (url) {
+      if (url && url !== 'none') {
         localStorage.setItem('syd_custom_manual_letterhead', url);
         localStorage.setItem('syd_active_letterhead_url', url);
-        // If placing a letterhead and margin is low, calibrate up to standard 154px
+        // If placing a letterhead and margin is low, calibrate up to standard 174px
         if (subirBajar <= 80) {
-          setSubirBajar(154);
+          setSubirBajar(174);
         }
       } else {
         localStorage.setItem('syd_active_letterhead_url', 'none');
-        localStorage.removeItem('syd_custom_manual_letterhead');
-        localStorage.removeItem('syd_permanent_default_letterhead');
+        localStorage.setItem('syd_custom_manual_letterhead', 'none');
         // If removing letterhead, calibrate down to standard clean 50px
         if (subirBajar >= 130) {
           setSubirBajar(50);
@@ -196,7 +375,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
   };
 
   const handleRemoveLetterhead = () => {
-    setCustomLetterheadUrl(null);
+    setCustomLetterheadUrl('none');
     setSaveSuccessMsg('Membrete removido. La cotización está en blanco limpia sin membrete.');
     setTimeout(() => setSaveSuccessMsg(null), 3500);
   };
@@ -438,11 +617,139 @@ export const SalesView: React.FC<SalesViewProps> = ({
     onUpdateHeader({ quoteNumber: resetQuoteNum });
   };
 
+  const [autoAiLoadingMap, setAutoAiLoadingMap] = useState<Record<string, boolean>>({});
+  const autoGeneratedKeysRef = useRef<Record<string, string>>({});
+  const autoImageRequestedRef = useRef<Record<string, boolean>>({});
+  const [internetSearchItem, setInternetSearchItem] = useState<QuoteItem | null>(null);
+
+  const onUpdateItemRef = useRef(onUpdateItem);
+  onUpdateItemRef.current = onUpdateItem;
+
+  // Stable fingerprint for items that only changes when item identity/name/brand/model changes
+  const itemsIdentityKey = useMemo(() => {
+    return quoteItems
+      .map((i) => `${i.id}::${i.name || ''}::${i.brand || ''}::${i.model || ''}`)
+      .join('|||');
+  }, [quoteItems]);
+
+  // Fully automatic generation: instantly and automatically generates specific clinical description,
+  // 5 characteristics, and automatically retrieves the first matching equipment image from internet/catalog.
+  useEffect(() => {
+    if (quoteHeader.formatStyle !== 'with-images') return;
+
+    quoteItems.forEach((item) => {
+      const trimmedName = (item.name || '').trim();
+      if (!trimmedName) return;
+
+      const { cleanName } = extractEquipmentAndAccessories(trimmedName, item.accessories);
+      const currentKey = `${(cleanName || trimmedName).toLowerCase()}:::${(item.brand || '').trim().toLowerCase()}:::${(item.model || '').trim().toLowerCase()}`;
+      const lastKey = autoGeneratedKeysRef.current[item.id];
+
+      // Reset image auto-request if equipment changed
+      if (lastKey && lastKey !== currentKey) {
+        autoImageRequestedRef.current[item.id] = false;
+      }
+
+      // 1. Automatic Image Assignment: If item has no image, automatically retrieve the first best option
+      if (!item.imageUrl && !autoImageRequestedRef.current[item.id]) {
+        autoImageRequestedRef.current[item.id] = true;
+        getAutoEquipmentImageUrl(cleanName || trimmedName, item.brand, item.model)
+          .then((autoUrl) => {
+            if (autoUrl && onUpdateItemRef.current) {
+              onUpdateItemRef.current(item.id, { imageUrl: autoUrl });
+            }
+          })
+          .catch((err) => console.warn('Auto image fetch error:', err));
+      }
+
+      // Check if item already has valid user-provided description and technical features
+      const hasRealDesc = Boolean(item.briefDescription && !isGenericFiller(item.briefDescription));
+      const hasRealFeatures = Boolean(
+        Array.isArray(item.technicalFeatures) &&
+        item.technicalFeatures.length >= 4 &&
+        !item.technicalFeatures.some((f) => isGenericFiller(f))
+      );
+
+      // Check if item has mismatched description (e.g. fixed x-ray DigiEye having mobile Mobieye text)
+      const isMismatchedFixedXray =
+        ((cleanName || trimmedName).toLowerCase().includes('digieye') ||
+         (item.model || '').toLowerCase().includes('digieye') ||
+         (cleanName || trimmedName).toLowerCase().includes('fijo')) &&
+        (item.briefDescription || '').toLowerCase().includes('mobieye');
+
+      // If user already has real description and features, preserve them completely (unless mismatched)
+      if (hasRealDesc && hasRealFeatures && !isMismatchedFixedXray) {
+        autoGeneratedKeysRef.current[item.id] = currentKey;
+        return;
+      }
+
+      // If already processed for this specific key, do not generate again
+      if (lastKey === currentKey) return;
+
+      // 2. Instant local domain specs resolution (0ms latency, tailored to biomedical domain)
+      const localSpecs = getBiomedicalHeuristicSpecs(cleanName || trimmedName, item.brand, item.model);
+      autoGeneratedKeysRef.current[item.id] = currentKey;
+
+      const updates: Partial<QuoteItem> = {};
+      if (!hasRealDesc || isMismatchedFixedXray) {
+        updates.briefDescription = localSpecs.description;
+      }
+      if (!hasRealFeatures || isMismatchedFixedXray) {
+        updates.technicalFeatures = localSpecs.features;
+      }
+
+      if (Object.keys(updates).length > 0 && onUpdateItemRef.current) {
+        onUpdateItemRef.current(item.id, updates);
+      }
+
+      // 3. Concurrently attempt AI / Internet enrichment in background only if needed
+      if (!hasRealDesc || !hasRealFeatures) {
+        setAutoAiLoadingMap((prev) => ({ ...prev, [item.id]: true }));
+        fetchEquipmentDescriptionAndFeatures(cleanName || trimmedName, item.brand, item.model)
+          .then((result) => {
+            if (result && result.found && result.description && !isGenericFiller(result.description)) {
+              if (onUpdateItemRef.current) {
+                const aiUpdates: Partial<QuoteItem> = {};
+                if (!hasRealDesc) aiUpdates.briefDescription = result.description;
+                if (!hasRealFeatures && Array.isArray(result.features) && result.features.length >= 4) {
+                  aiUpdates.technicalFeatures = result.features;
+                }
+                if (Object.keys(aiUpdates).length > 0) {
+                  onUpdateItemRef.current(item.id, aiUpdates);
+                }
+              }
+            }
+          })
+          .catch((e) => {
+            console.warn('Auto AI equipment info error:', e);
+          })
+          .finally(() => {
+            setAutoAiLoadingMap((prev) => ({ ...prev, [item.id]: false }));
+          });
+      }
+    });
+  }, [quoteHeader.formatStyle, itemsIdentityKey]);
+
+  const handleImageUploadForItem = (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (loadEvt) => {
+      const base64 = loadEvt.target?.result as string;
+      if (base64 && onUpdateItem) {
+        onUpdateItem(itemId, { imageUrl: base64 });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleExportWord = async () => {
     await exportQuoteToWord(quoteHeader, quoteItems, {
       headerMarginTop: subirBajar,
       sidePadding: izqDer,
       companyLetterheadUrl: effectiveLetterhead || undefined,
+      formatStyle: quoteHeader.formatStyle || 'standard',
+      equipments,
     });
     confetti({
       particleCount: 50,
@@ -565,10 +872,11 @@ export const SalesView: React.FC<SalesViewProps> = ({
   const cellPaddingY = tableScale < 75 ? '4px' : tableScale < 90 ? '6px' : '8px';
   const cellPaddingX = tableScale < 75 ? '5px' : tableScale < 90 ? '7px' : '10px';
 
+  const isGraphicFormat = quoteHeader.formatStyle === 'with-images';
   // Dynamically paginate quote items into Letter-sized pages so the table never stretches the page
   const tablePages = useMemo(() => {
-    return chunkQuoteItemsForPages(quoteItems, subirBajar, Number(fontSize));
-  }, [quoteItems, subirBajar, fontSize]);
+    return chunkQuoteItemsForPages(quoteItems, subirBajar, Number(fontSize), isGraphicFormat);
+  }, [quoteItems, subirBajar, fontSize, isGraphicFormat]);
 
   const lastTableChunk = tablePages[tablePages.length - 1];
   const hasStandaloneConditionsPage = !lastTableChunk?.canFitConditions;
@@ -608,45 +916,12 @@ export const SalesView: React.FC<SalesViewProps> = ({
           </div>
         )}
 
-        {/* Banner for Quote Editing Mode */}
-        {editingQuoteId && !isReadOnly && (
-          <div className="mb-4 p-3 bg-amber-500/15 border border-amber-500/40 rounded-xl text-amber-200 text-xs font-semibold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-base">✏️</span>
-              <span>
-                <strong>Modo Modificación Activo:</strong> Editando la Cotización N° <span className="font-mono font-black text-amber-300 underline">{quoteHeader.quoteNumber}</span>. Al guardar cambios se actualizará esta cotización en la base de datos.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (onCancelEditQuote) onCancelEditQuote();
-                else if (onCreateNewQuote) onCreateNewQuote();
-              }}
-              className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 hover:text-white rounded-lg text-[11px] font-bold border border-amber-500/40 transition cursor-pointer shrink-0"
-              title="Salir de la edición de esta cotización y comenzar una nueva cotización en blanco"
-            >
-              Cancelar Edición / Nueva Cotización
-            </button>
-          </div>
-        )}
-
         <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-[#334d6e]">
           {/* GRUPO 1: GESTIÓN DE COTIZACIÓN Y CLIENTES */}
           <div className="flex items-center gap-2 flex-wrap">
             {!isReadOnly && (
               editingQuoteId ? (
                 <>
-                  <button
-                    id="btn-save-changes-quote"
-                    onClick={handleSaveOnlyChanges}
-                    title="Guardar los cambios efectuados a esta cotización en la base de datos"
-                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Guardar Cambios</span>
-                  </button>
-
                   <button
                     id="btn-save-changes-and-new-quote"
                     onClick={handleSaveCurrentQuote}
@@ -745,7 +1020,10 @@ export const SalesView: React.FC<SalesViewProps> = ({
                     onClick={() => {
                       const official = getOfficialSyDLetterheadDataUrl() || OFFICIAL_SYD_LETTERHEAD_SVG_PATH;
                       setCustomLetterheadUrl(official);
-                      setSaveSuccessMsg('Membrete oficial SYD colocado en la cotización.');
+                      setSubirBajar(174);
+                      setIzqDer(86);
+                      setTableScale(85);
+                      setSaveSuccessMsg('Membrete oficial SYD colocado y calibración restablecida (174px / 86px).');
                       setTimeout(() => setSaveSuccessMsg(null), 3500);
                     }}
                     title="Cargar el membrete oficial corporativo prediseñado de SYD Colombia"
@@ -758,8 +1036,38 @@ export const SalesView: React.FC<SalesViewProps> = ({
             </div>
           )}
 
-          {/* GRUPO 3: EXPORTACIÓN E IMPRESIÓN */}
+          {/* GRUPO 3: FORMATO, EXPORTACIÓN E IMPRESIÓN */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Selector de formato de cotización */}
+            <div className="flex items-center bg-[#0a1526] p-0.5 rounded-lg border border-[#223d60]">
+              <button
+                type="button"
+                onClick={() => onUpdateHeader({ formatStyle: 'standard' })}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
+                  (quoteHeader.formatStyle || 'standard') === 'standard'
+                    ? 'bg-[#0284c7] text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Formato de cotización clásico en cuadrícula compacta"
+              >
+                <LayoutList className="w-3.5 h-3.5" />
+                <span>Estándar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onUpdateHeader({ formatStyle: 'with-images' })}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
+                  quoteHeader.formatStyle === 'with-images'
+                    ? 'bg-[#0284c7] text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Formato con fotografía y ficha técnica resumida debajo de cada equipo"
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                <span>Con Imágenes</span>
+              </button>
+            </div>
+
             <button
               id="btn-export-word-main"
               onClick={handleExportWord}
@@ -945,14 +1253,14 @@ export const SalesView: React.FC<SalesViewProps> = ({
         <div className="mt-3 flex justify-end text-xs">
           <button
             onClick={() => {
-              setSubirBajar(154);
-              setIzqDer(78);
+              setSubirBajar(174);
+              setIzqDer(86);
               setTableScale(85);
             }}
             className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 hover:underline cursor-pointer"
           >
             <RotateCcw className="w-3 h-3" />
-            Restablecer valores predeterminados (154px / 78px)
+            Restablecer valores predeterminados (174px / 86px)
           </button>
         </div>
       </div>
@@ -994,14 +1302,20 @@ export const SalesView: React.FC<SalesViewProps> = ({
             <div
               className="relative z-1 font-sans text-[13.5px] leading-relaxed text-slate-900"
               style={{
-                paddingTop: `${subirBajar}px`,
-                paddingLeft: `${izqDer}px`,
-                paddingRight: `${izqDer}px`,
+                paddingTop: effectiveLetterhead
+                  ? `${Math.max(subirBajar, 115)}px`
+                  : `${subirBajar}px`,
+                paddingLeft: effectiveLetterhead
+                  ? `${Math.max(izqDer, 78)}px`
+                  : `${izqDer}px`,
+                paddingRight: effectiveLetterhead
+                  ? `${Math.max(izqDer, 45)}px`
+                  : `${izqDer}px`,
                 paddingBottom: '60px',
               }}
             >
               {/* Date */}
-              <div className="mb-6">
+              <div className="mb-10">
                 <input
                   type="text"
                   disabled={isReadOnly}
@@ -1017,25 +1331,31 @@ export const SalesView: React.FC<SalesViewProps> = ({
                 <p className="text-slate-700 font-semibold">Señor(es):</p>
 
                 <div className="relative">
-                  <input
+                  <SpellCheckedDocumentField
                     id="quote-client-name-input"
-                    type="text"
-                    disabled={isReadOnly}
                     value={quoteHeader.clientName}
-                    onFocus={() => setShowClientDropdown(true)}
-                    onChange={(e) => {
-                      onUpdateHeader({ clientName: e.target.value });
+                    onChange={(val) => {
+                      onUpdateHeader({ clientName: val });
                       setClientNameError(false);
                       setShowClientDropdown(true);
                     }}
+                    onFocus={() => setShowClientDropdown(true)}
+                    isReadOnly={isReadOnly}
+                    placeholder="NOMBRE DEL CLIENTE O INSTITUCIÓN"
                     className={`w-full font-bold text-[15px] uppercase tracking-wide text-slate-950 ${
+                      clientNameError
+                        ? 'bg-red-50 border-2 border-red-500 ring-2 ring-red-400/50 animate-pulse'
+                        : isReadOnly
+                        ? 'cursor-default'
+                        : 'hover:bg-slate-100/70'
+                    } px-1.5 py-0.5 border border-transparent`}
+                    inputClassName={`w-full font-bold text-[15px] uppercase tracking-wide text-slate-950 ${
                       clientNameError
                         ? 'bg-red-50 border-2 border-red-500 ring-2 ring-red-400/50 animate-pulse'
                         : isReadOnly
                         ? 'cursor-default bg-transparent'
                         : 'hover:bg-slate-100/70 focus:bg-white border border-transparent focus:border-sky-400'
-                    } px-1.5 py-0.5 rounded outline-none transition`}
-                    placeholder="NOMBRE DEL CLIENTE O INSTITUCIÓN"
+                    } px-1.5 py-0.5`}
                   />
 
                   {clientNameError && (
@@ -1136,33 +1456,35 @@ export const SalesView: React.FC<SalesViewProps> = ({
                   )}
                 </div>
 
-                <input
-                  type="text"
-                  disabled={isReadOnly}
-                  value={quoteHeader.city}
-                  onChange={(e) => onUpdateHeader({ city: e.target.value })}
-                  className={`w-full text-slate-700 ${isReadOnly ? 'cursor-default bg-transparent' : 'hover:bg-slate-100/70 focus:bg-white'} px-1.5 py-0.5 rounded outline-none transition`}
-                  placeholder="Ciudad, Departamento"
-                />
+                <div className="relative">
+                  <SpellCheckedDocumentField
+                    value={quoteHeader.city}
+                    onChange={(val) => onUpdateHeader({ city: val })}
+                    isReadOnly={isReadOnly}
+                    placeholder="Ciudad, Departamento"
+                    className={`w-full font-bold text-slate-800 ${isReadOnly ? 'cursor-default' : 'hover:bg-slate-100/70'} px-1.5 py-0.5 border border-transparent`}
+                    inputClassName={`w-full font-bold text-slate-800 ${isReadOnly ? 'cursor-default bg-transparent' : 'hover:bg-slate-100/70 focus:bg-white'} px-1.5 py-0.5 border border-transparent focus:border-sky-400`}
+                  />
+                </div>
               </div>
 
-              {/* Subject & Number (Exact matching style with smart consecutive buttons from image) */}
-              <div className="flex flex-col items-end mb-6">
-                <p className="font-bold text-slate-900 text-[14px] text-right mb-1">
-                  Asunto: Cotización Comercial
-                </p>
-                <div className="flex items-center justify-end gap-2 text-slate-900 font-bold">
-                  <span className="text-[15px] font-bold text-slate-900">N°:</span>
+              {/* Subject & Number (Aligned to the RIGHT side of the sheet, number centered beneath Asunto, matching reference image) */}
+              <div className="flex justify-end mb-6">
+                <div className="inline-flex flex-col items-center text-center">
+                  <p className="font-bold text-slate-900 text-[14px] whitespace-nowrap mb-0.5">
+                    Asunto: Cotización Comercial
+                  </p>
                   <input
                     type="text"
                     disabled={isReadOnly}
                     value={quoteHeader.quoteNumber}
                     onChange={(e) => onUpdateHeader({ quoteNumber: e.target.value })}
-                    className={`w-36 sm:w-40 font-bold text-center text-[15px] text-slate-950 bg-white ${isReadOnly ? 'cursor-default opacity-90' : 'hover:bg-slate-50 focus:bg-white'} px-2.5 py-1 rounded-md border border-slate-300 focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7] outline-none shadow-2xs tracking-tight transition`}
-                    placeholder="18082026-1"
+                    className={`w-full max-w-[210px] font-bold text-center text-[14.5px] text-slate-950 bg-transparent ${
+                      isReadOnly ? 'cursor-default' : 'hover:bg-slate-100/70 focus:bg-white focus:border focus:border-slate-300'
+                    } px-2 py-0.5 rounded outline-none tracking-tight transition`}
+                    placeholder="23102026-1"
                     title="Número consecutivo diario DDMMAAAA-N"
                   />
-                  {/* Consecutive is handled automatically */}
                 </div>
               </div>
 
@@ -1235,10 +1557,16 @@ export const SalesView: React.FC<SalesViewProps> = ({
                 <div
                   className="relative z-1 font-sans text-slate-900 flex-1 flex flex-col justify-start"
                   style={{
-                    paddingTop: `${subirBajar}px`,
-                    paddingLeft: `${izqDer}px`,
-                    paddingRight: `${izqDer}px`,
-                    paddingBottom: pageChunk.canFitConditions ? '40px' : '140px',
+                    paddingTop: effectiveLetterhead
+                      ? `${Math.max(subirBajar, 135)}px`
+                      : `${subirBajar}px`,
+                    paddingLeft: effectiveLetterhead
+                      ? `${Math.max(izqDer, 78)}px`
+                      : `${izqDer}px`,
+                    paddingRight: effectiveLetterhead
+                      ? `${Math.max(izqDer, 45)}px`
+                      : `${izqDer}px`,
+                    paddingBottom: effectiveLetterhead ? '180px' : (pageChunk.canFitConditions ? '40px' : '100px'),
                   }}
                 >
                   {/* Equipment Table */}
@@ -1372,97 +1700,248 @@ export const SalesView: React.FC<SalesViewProps> = ({
                               );
                             };
 
+                            const isGraphic = quoteHeader.formatStyle === 'with-images';
+                            const eq = equipments.find(
+                              (e) => e.id === item.equipmentId || (e.name && e.name.toLowerCase() === item.name.toLowerCase())
+                            );
+                            const imgUrl = item.imageUrl || eq?.imageUrl;
+                            const { cleanName, accessoriesText, hasAccessories } = extractEquipmentAndAccessories(item.name, item.accessories);
+                            const heuristicSpecs = getBiomedicalHeuristicSpecs(cleanName || item.name, item.brand, item.model);
+
+                            let cleanDesc = item.briefDescription;
+                            if (cleanDesc === undefined || isGenericFiller(cleanDesc)) {
+                              const eqDesc = eq?.description
+                                ? eq.description.replace(/(INVIMA|Registro Sanitario|Garantía|Garantia)[^.;\n]*[.;\n]?/gi, '').trim()
+                                : '';
+                              cleanDesc = eqDesc && !isGenericFiller(eqDesc) ? eqDesc : heuristicSpecs.description;
+                            }
+                            cleanDesc = sanitizeBiomedicalDescription(cleanDesc);
+
+                            let displaySpecs = item.technicalFeatures;
+                            const hasGenericFeatures =
+                              Array.isArray(displaySpecs) && displaySpecs.some((f) => isGenericFiller(f));
+                            if (!displaySpecs || displaySpecs.length === 0 || hasGenericFeatures) {
+                              const eqSpecs = (Array.isArray(eq?.technicalSpecs) ? eq.technicalSpecs : [])
+                                .map((s) => s.trim())
+                                .filter(
+                                  (s) =>
+                                    s.length > 0 &&
+                                    !s.toLowerCase().includes('invima') &&
+                                    !s.toLowerCase().includes('garantía') &&
+                                    !s.toLowerCase().includes('garantia') &&
+                                    !s.startsWith('código') &&
+                                    !s.startsWith('codigo') &&
+                                    !isGenericFiller(s)
+                                );
+                              displaySpecs = eqSpecs.length >= 4 ? eqSpecs : heuristicSpecs.features;
+                            }
+                            displaySpecs = (displaySpecs || []).map(sanitizeBiomedicalFeature).filter(Boolean);
+
                             return (
-                              <tr
-                                key={item.id}
-                                className="border-b border-black hover:bg-slate-50/70 transition"
-                              >
-                                <td
-                                  style={{ padding: `${cellPaddingY} 2px`, fontSize: `${fontSize}px` }}
-                                  className="text-center align-middle text-black border-r border-black font-normal"
-                                >
-                                  {itemNumber}
-                                </td>
-                                <td
-                                  style={{ padding: `${cellPaddingY} ${cellPaddingX}` }}
-                                  className="border-r border-black align-middle text-left text-black"
-                                >
-                                  <div className="text-black leading-tight font-normal uppercase break-words">
-                                    {item.name.toUpperCase()}
-                                  </div>
-                                  {item.accessories && item.accessories.length > 0 && (
-                                    <div
-                                      className="text-slate-600 mt-1 leading-snug uppercase break-words"
-                                      style={{ fontSize: `${subTextFontSize}px` }}
-                                    >
-                                      <strong>Accesorios:</strong>{' '}
-                                      {item.accessories
-                                        .map((a) => `${a.name.toUpperCase()}${a.quantity > 1 ? ` (X${a.quantity})` : ''}`)
-                                        .join(', ')}
+                              <React.Fragment key={item.id}>
+                                <tr className="border-b border-black hover:bg-slate-50/70 transition">
+                                  <td
+                                    style={{ padding: `${cellPaddingY} 2px`, fontSize: `${fontSize}px` }}
+                                    className="text-center align-middle text-black border-r border-black font-normal"
+                                  >
+                                    {itemNumber}
+                                  </td>
+                                  <td
+                                    style={{ padding: `${cellPaddingY} ${cellPaddingX}` }}
+                                    className="border-r border-black align-middle text-left text-black"
+                                  >
+                                    <div className="text-black leading-tight font-normal uppercase break-words">
+                                      {(isGraphic ? cleanName : item.name).toUpperCase()}
                                     </div>
-                                  )}
-                                </td>
-                                <td
-                                  style={{ padding: `${cellPaddingY} 2px` }}
-                                  className="text-center align-middle text-black border-r border-black font-normal leading-tight overflow-hidden"
-                                >
-                                  <div
-                                    className="w-full text-center uppercase leading-tight"
-                                    style={{
-                                      wordBreak: 'break-word',
-                                      overflowWrap: 'anywhere',
-                                      fontSize: `${fontSize}px`,
-                                    }}
+                                    {!isGraphic && hasAccessories && (
+                                      <div
+                                        className="text-slate-600 mt-1 leading-snug uppercase break-words"
+                                        style={{ fontSize: `${subTextFontSize}px` }}
+                                      >
+                                        <strong>Accesorios:</strong> {accessoriesText}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td
+                                    style={{ padding: `${cellPaddingY} 2px` }}
+                                    className="text-center align-middle text-black border-r border-black font-normal leading-tight overflow-hidden"
                                   >
-                                    {item.brand.toUpperCase()}
-                                  </div>
-                                </td>
-                                <td
-                                  style={{ padding: `${cellPaddingY} 2px` }}
-                                  className="text-center align-middle text-black border-r border-black font-normal leading-tight overflow-hidden"
-                                >
-                                  <div
-                                    className="w-full text-center uppercase leading-tight"
-                                    style={{
-                                      wordBreak: 'break-word',
-                                      overflowWrap: 'anywhere',
-                                      fontSize: `${fontSize}px`,
-                                    }}
+                                    <div
+                                      className="w-full text-center uppercase leading-tight"
+                                      style={{
+                                        wordBreak: 'break-word',
+                                        overflowWrap: 'anywhere',
+                                        fontSize: `${fontSize}px`,
+                                      }}
+                                    >
+                                      {item.brand.toUpperCase()}
+                                    </div>
+                                  </td>
+                                  <td
+                                    style={{ padding: `${cellPaddingY} 2px` }}
+                                    className="text-center align-middle text-black border-r border-black font-normal leading-tight overflow-hidden"
                                   >
-                                    {item.model.toUpperCase()}
-                                  </div>
-                                </td>
-                                <td
-                                  style={{ padding: `${cellPaddingY} 2px`, fontSize: `${fontSize}px` }}
-                                  className="text-center align-middle text-black border-r border-black whitespace-nowrap font-normal overflow-hidden"
-                                >
-                                  {item.quantity}
-                                </td>
-                                <td
-                                  style={{ padding: `${cellPaddingY} 2px` }}
-                                  className="text-center align-middle text-black border-r border-black font-normal overflow-hidden"
-                                >
-                                  {formatNumberCell(item.unitSalePrice)}
-                                </td>
-                                <td
-                                  style={{ padding: `${cellPaddingY} 2px` }}
-                                  className="text-center align-middle text-black border-r border-black font-normal overflow-hidden"
-                                >
-                                  {formatNumberCell(itemSubtotal)}
-                                </td>
-                                <td
-                                  style={{ padding: `${cellPaddingY} 2px` }}
-                                  className="text-center align-middle text-black border-r border-black font-normal overflow-hidden"
-                                >
-                                  {formatNumberCell(itemIva)}
-                                </td>
-                                <td
-                                  style={{ padding: `${cellPaddingY} 2px` }}
-                                  className="text-center align-middle text-black font-normal overflow-hidden"
-                                >
-                                  {formatNumberCell(itemTotal)}
-                                </td>
-                              </tr>
+                                    <div
+                                      className="w-full text-center uppercase leading-tight"
+                                      style={{
+                                        wordBreak: 'break-word',
+                                        overflowWrap: 'anywhere',
+                                        fontSize: `${fontSize}px`,
+                                      }}
+                                    >
+                                      {item.model.toUpperCase()}
+                                    </div>
+                                  </td>
+                                  <td
+                                    style={{ padding: `${cellPaddingY} 2px`, fontSize: `${fontSize}px` }}
+                                    className="text-center align-middle text-black border-r border-black whitespace-nowrap font-normal overflow-hidden"
+                                  >
+                                    {item.quantity}
+                                  </td>
+                                  <td
+                                    style={{ padding: `${cellPaddingY} 2px` }}
+                                    className="text-center align-middle text-black border-r border-black font-normal overflow-hidden"
+                                  >
+                                    {formatNumberCell(item.unitSalePrice)}
+                                  </td>
+                                  <td
+                                    style={{ padding: `${cellPaddingY} 2px` }}
+                                    className="text-center align-middle text-black border-r border-black font-normal overflow-hidden"
+                                  >
+                                    {formatNumberCell(itemSubtotal)}
+                                  </td>
+                                  <td
+                                    style={{ padding: `${cellPaddingY} 2px` }}
+                                    className="text-center align-middle text-black border-r border-black font-normal overflow-hidden"
+                                  >
+                                    {formatNumberCell(itemIva)}
+                                  </td>
+                                  <td
+                                    style={{ padding: `${cellPaddingY} 2px` }}
+                                    className="text-center align-middle text-black font-normal overflow-hidden"
+                                  >
+                                    {formatNumberCell(itemTotal)}
+                                  </td>
+                                </tr>
+
+                                {isGraphic && (
+                                  <tr className="border-b border-black bg-white">
+                                    <td className="border-r border-black bg-white"></td>
+                                    <td colSpan={3} className="p-2 border-r border-black text-center align-middle bg-white">
+                                      {(() => {
+                                        const fallbackGraphic = generateClinicalEquipmentGraphicDataUrl(cleanName || item.name, item.brand, item.model);
+                                        const getSafeDisplayImageUrl = (url?: string) => {
+                                          if (!url) return '';
+                                          if (url.startsWith('data:') || url.startsWith('/') || url.startsWith('http://localhost') || url.startsWith('blob:')) {
+                                            return url;
+                                          }
+                                          return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+                                        };
+                                        const displayImgUrl = imgUrl ? getSafeDisplayImageUrl(imgUrl) : fallbackGraphic;
+
+                                        return (
+                                          <div className="relative group w-full min-h-[190px] max-h-[260px] flex items-center justify-center p-1">
+                                            <img
+                                              src={displayImgUrl}
+                                              alt={cleanName}
+                                              onError={(e) => {
+                                                const target = e.currentTarget;
+                                                if (target.src !== fallbackGraphic) {
+                                                  target.src = fallbackGraphic;
+                                                }
+                                              }}
+                                              className="max-h-[245px] max-w-full w-auto h-auto object-contain mx-auto rounded transition-transform duration-200"
+                                            />
+                                          <div className="absolute inset-0 bg-slate-900/75 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1.5 p-2 rounded transition no-print backdrop-blur-[2px]">
+                                            <button
+                                              type="button"
+                                              onClick={() => setInternetSearchItem(item)}
+                                              className="px-2.5 py-1.5 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white text-[10.5px] font-bold rounded shadow flex items-center gap-1 transition cursor-pointer"
+                                            >
+                                              <Globe className="w-3.5 h-3.5" />
+                                              <span>Buscar imagen en internet</span>
+                                            </button>
+                                            <label className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white text-[10px] font-medium rounded cursor-pointer transition flex items-center gap-1">
+                                              <span>📁 Cambiar archivo</span>
+                                              <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => handleImageUploadForItem(item.id, e)}
+                                              />
+                                            </label>
+                                            <button
+                                              type="button"
+                                              onClick={() => onUpdateItem(item.id, { imageUrl: '' })}
+                                              className="text-[9.5px] text-rose-300 hover:text-rose-100 transition mt-0.5 underline cursor-pointer"
+                                            >
+                                              Quitar foto
+                                            </button>
+                                          </div>
+                                        </div>
+                                        );
+                                      })()}
+                                    </td>
+                                    <td colSpan={5} className="p-3 align-top text-left text-slate-900 bg-white">
+                                      <div className="mb-2">
+                                        <div className="flex items-center justify-between mb-1">
+                                          <span className="text-[10px] font-bold text-[#0f2744] uppercase tracking-wide">
+                                            DESCRIPCIÓN Y FUNCIONALIDAD:
+                                          </span>
+                                          {autoAiLoadingMap[item.id] && (
+                                            <span className="inline-flex items-center gap-1 text-[9px] text-sky-600 font-medium no-print">
+                                              <Loader2 className="w-2.5 h-2.5 animate-spin text-sky-600" />
+                                              <span>Generando...</span>
+                                            </span>
+                                          )}
+                                        </div>
+                                        <textarea
+                                          value={item.briefDescription !== undefined && !isGenericFiller(item.briefDescription) ? sanitizeBiomedicalDescription(item.briefDescription) : cleanDesc}
+                                          onChange={(e) => onUpdateItem(item.id, { briefDescription: e.target.value })}
+                                          rows={2}
+                                          className="w-full text-[9.5px] text-slate-800 p-1.5 border border-slate-200 rounded focus:border-blue-400 focus:outline-none resize-none leading-snug font-sans bg-slate-50/40 hover:bg-white focus:bg-white transition"
+                                          placeholder="Descripción clínica automática según nombre, marca y modelo del equipo..."
+                                        />
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                          <span className="text-[10px] font-bold text-[#0f2744] uppercase tracking-wide">
+                                            CARACTERÍSTICAS PRINCIPALES:
+                                          </span>
+                                        </div>
+                                        <div className="space-y-1">
+                                          {displaySpecs.map((spec, sIdx) => (
+                                            <div key={sIdx} className="flex items-center gap-1">
+                                              <span className="text-slate-400 text-[10px] select-none">•</span>
+                                              <input
+                                                type="text"
+                                                value={sanitizeBiomedicalFeature(spec)}
+                                                onChange={(e) => {
+                                                  const next = [...displaySpecs];
+                                                  next[sIdx] = sanitizeBiomedicalFeature(e.target.value);
+                                                  onUpdateItem(item.id, { technicalFeatures: next });
+                                                }}
+                                                className="flex-1 text-[9px] text-slate-800 px-1 py-0.5 border border-transparent hover:border-slate-300 focus:border-blue-400 rounded bg-transparent hover:bg-white focus:bg-white transition font-sans"
+                                                placeholder="Especificación técnica generada..."
+                                              />
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      {hasAccessories && (
+                                        <div className="mt-2.5 pt-2 border-t border-slate-200">
+                                          <span className="text-[10px] font-bold text-[#0f2744] uppercase tracking-wide block mb-1">
+                                            ACCESORIOS INCLUIDOS:
+                                          </span>
+                                          <div className="text-[9px] text-slate-800 font-sans leading-snug uppercase bg-slate-50/70 p-1.5 rounded border border-slate-200/80">
+                                            {accessoriesText}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
                             );
                           })
                         )}
@@ -1519,14 +1998,14 @@ export const SalesView: React.FC<SalesViewProps> = ({
                     </table>
                   </div>
 
-                  {/* Total in Words only on the last table page */}
+                  {/* Total in Words only on the last table page (no box/borders as requested) */}
                   {pageChunk.isLastTablePage && quoteItems.length > 0 && (
                     <div
-                      className="mt-2.5 p-2 bg-slate-50 border border-black rounded text-black"
+                      className="mt-2 text-black font-normal"
                       style={{ fontSize: `${subTextFontSize}px` }}
                     >
                       <strong className="text-black">VALOR TOTAL EN LETRAS (CON IVA 19%):</strong>{' '}
-                      <span className="font-medium uppercase">{totalWords}</span>
+                      <span className="font-bold uppercase">{totalWords}</span>
                     </div>
                   )}
 
@@ -1545,13 +2024,15 @@ export const SalesView: React.FC<SalesViewProps> = ({
                         {/* Payment Terms */}
                         <div>
                           <strong>Forma de pago:</strong>{' '}
-                          <input
-                            type="text"
-                            disabled={isReadOnly}
-                            value={quoteHeader.paymentTerms ?? '50% Anticipo y 50% Contra-entrega.'}
-                            onChange={(e) => onUpdateHeader({ paymentTerms: e.target.value })}
-                            className={`font-normal text-slate-900 ${isReadOnly ? 'cursor-default bg-transparent' : 'hover:bg-slate-100/70 focus:bg-white border-b border-transparent focus:border-slate-400'} px-1 rounded outline-none w-auto inline-block min-w-[260px]`}
-                          />
+                          <div className="inline-block min-w-[260px]">
+                            <SpellCheckedDocumentField
+                              value={quoteHeader.paymentTerms ?? '50% Anticipo y 50% Contra-entrega.'}
+                              onChange={(val) => onUpdateHeader({ paymentTerms: val })}
+                              isReadOnly={isReadOnly}
+                              className={`font-normal text-slate-900 ${isReadOnly ? 'cursor-default' : 'hover:bg-slate-100/70 border-b border-transparent'} px-1 rounded inline-block`}
+                              inputClassName={`font-normal text-slate-900 ${isReadOnly ? 'cursor-default bg-transparent' : 'hover:bg-slate-100/70 focus:bg-white border-b border-transparent focus:border-slate-400'} px-1 rounded`}
+                            />
+                          </div>
                         </div>
 
                         {/* Delivery Time */}
@@ -1681,13 +2162,15 @@ export const SalesView: React.FC<SalesViewProps> = ({
                   {/* Payment Terms */}
                   <div>
                     <strong>Forma de pago:</strong>{' '}
-                    <input
-                      type="text"
-                      disabled={isReadOnly}
-                      value={quoteHeader.paymentTerms ?? '50% Anticipo y 50% Contra-entrega.'}
-                      onChange={(e) => onUpdateHeader({ paymentTerms: e.target.value })}
-                      className={`font-normal text-slate-900 ${isReadOnly ? 'cursor-default bg-transparent' : 'hover:bg-slate-100/70 focus:bg-white border-b border-transparent focus:border-slate-400'} px-1 rounded outline-none w-auto inline-block min-w-[280px]`}
-                    />
+                    <div className="inline-block min-w-[280px]">
+                      <SpellCheckedDocumentField
+                        value={quoteHeader.paymentTerms ?? '50% Anticipo y 50% Contra-entrega.'}
+                        onChange={(val) => onUpdateHeader({ paymentTerms: val })}
+                        isReadOnly={isReadOnly}
+                        className={`font-normal text-slate-900 ${isReadOnly ? 'cursor-default' : 'hover:bg-slate-100/70 border-b border-transparent'} px-1 rounded inline-block`}
+                        inputClassName={`font-normal text-slate-900 ${isReadOnly ? 'cursor-default bg-transparent' : 'hover:bg-slate-100/70 focus:bg-white border-b border-transparent focus:border-slate-400'} px-1 rounded`}
+                      />
+                    </div>
                   </div>
 
                   {/* Delivery Time */}
@@ -1951,6 +2434,20 @@ export const SalesView: React.FC<SalesViewProps> = ({
           </div>,
           document.body
         )}
+
+      {internetSearchItem && (
+        <InternetImageSearchModal
+          isOpen={Boolean(internetSearchItem)}
+          onClose={() => setInternetSearchItem(null)}
+          equipmentName={internetSearchItem.name}
+          brand={internetSearchItem.brand}
+          model={internetSearchItem.model}
+          onSelectImage={(base64Url) => {
+            onUpdateItem(internetSearchItem.id, { imageUrl: base64Url });
+            setInternetSearchItem(null);
+          }}
+        />
+      )}
     </div>
   );
 };

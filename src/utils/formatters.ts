@@ -148,3 +148,15 @@ export function normalizeClean(str?: string | null): string {
     .replace(/[^a-z0-9]/g, '');
 }
 
+/**
+ * Strips prefixes (No, N°, CTO, Contrato, OV, OC, leading zeros in HBOC) to match contract/process/order numbers reliably
+ */
+export function cleanRef(str?: string | null): string {
+  if (!str) return '';
+  return normalizeClean(str)
+    .replace(/^(no|n°|nro|num|numero|cto|contrato|ov|oc)[\s.:_-]*/i, '')
+    .replace(/^hboc0*/i, 'hboc')
+    .replace(/^oc0*/i, 'oc')
+    .replace(/[^a-z0-9]/g, '');
+}
+

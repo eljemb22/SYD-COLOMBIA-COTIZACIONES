@@ -16,6 +16,7 @@ export interface CloudLinkInfo {
   previewUrl: string;
   downloadUrl?: string;
   embedUrl?: string;
+  suggestedFileName?: string;
 }
 
 /**

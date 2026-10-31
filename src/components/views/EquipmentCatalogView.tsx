@@ -29,8 +29,12 @@ import {
   Key,
   RotateCcw,
   ExternalLink,
+  Link2,
+  FileText,
+  CheckCircle2,
+  Zap,
 } from 'lucide-react';
-import { googleWorkspaceService } from '../../services/googleWorkspaceService';
+import { googleWorkspaceService, DetectedSheetPart } from '../../services/googleWorkspaceService';
 import { MedicalEquipment, AuthUser, TenderClientProject } from '../../types';
 import { formatCOP } from '../../utils/formatters';
 import { fetchLiveTRM, getCachedTRM, TrmData } from '../../utils/trmService';
@@ -38,6 +42,13 @@ import { CatalogExcelImportModal } from '../catalog/CatalogExcelImportModal';
 import { downloadCatalogEquipmentTemplate } from '../../utils/excelImportUtils';
 import { MASTER_EQUIPMENTS_CATALOG } from '../../data/masterEquipmentsCatalog';
 import { verifyAdminPassword } from '../../data/authData';
+import {
+  getPendingCatalogEquipments,
+  deletePendingCatalogEquipment,
+  markPendingAsCreated,
+  PendingCatalogEquipment,
+} from '../../utils/pendingEquipmentsStorage';
+import { autoRegisterSuppliersFromEquipments } from '../../utils/ocTrackingStorage';
 import {
   ExcelColumnConfig,
   ExcelColumnHeader,
@@ -142,6 +153,208 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [filterMissingCostOnly, setFilterMissingCostOnly] = useState(false);
   const [addedQuoteFeedback, setAddedQuoteFeedback] = useState<{ eqName: string } | null>(null);
+
+  // SubTab: Catálogo General vs Pendientes por Crear
+  const [catalogSubTab, setCatalogSubTab] = useState<'catalog' | 'pending'>('catalog');
+  const [pendingEquipments, setPendingEquipments] = useState<PendingCatalogEquipment[]>(() =>
+    getPendingCatalogEquipments()
+  );
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setPendingEquipments(getPendingCatalogEquipments());
+    };
+    window.addEventListener('syd-pending-equipments-updated', handleUpdate);
+    return () => window.removeEventListener('syd-pending-equipments-updated', handleUpdate);
+  }, []);
+
+  const [pendingSearchQuery, setPendingSearchQuery] = useState('');
+
+  const filteredPendingEquipments = useMemo(() => {
+    // ONLY show items that are still pending! Once created, they disappear from here and go to Catálogo Maestro
+    const pendingOnly = pendingEquipments.filter(
+      (p) => p.status !== 'creado' && p.status !== 'created' && p.status !== 'descartado'
+    );
+    if (!pendingSearchQuery.trim()) return pendingOnly;
+    const q = pendingSearchQuery.toLowerCase();
+    return pendingOnly.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.brand.toLowerCase().includes(q) ||
+        p.model.toLowerCase().includes(q) ||
+        (p.clientOrigin && p.clientOrigin.toLowerCase().includes(q)) ||
+        (p.quoteOrigin && p.quoteOrigin.toLowerCase().includes(q))
+    );
+  }, [pendingEquipments, pendingSearchQuery]);
+
+  // Drive N-FCO-03 Parts detection & linking
+  const [driveParts, setDriveParts] = useState<DetectedSheetPart[]>(() => {
+    try {
+      const raw = localStorage.getItem('syd_detected_sheet_parts_v1');
+      return raw ? JSON.parse(raw) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+
+  const [linkingPendingItem, setLinkingPendingItem] = useState<PendingCatalogEquipment | null>(null);
+  const [drivePartModalSearch, setDrivePartModalSearch] = useState('');
+  const [driveEmpalmeAlert, setDriveEmpalmeAlert] = useState<string | null>(null);
+
+  // Helper to find candidate matches in Drive N-FCO-03 (excluding already created parts)
+  const findDriveCandidatesForPending = (pending: PendingCatalogEquipment): DetectedSheetPart[] => {
+    if (!driveParts || driveParts.length === 0) return [];
+    const existingCodes = new Set(
+      equipments.map((e) => (e.code || '').trim().toLowerCase()).filter(Boolean)
+    );
+    let locallyCreatedCodes = new Set<string>();
+    try {
+      const raw = localStorage.getItem('syd_created_sheet_parts_v1');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          locallyCreatedCodes = new Set(arr.map((c: string) => String(c).trim().toLowerCase()));
+        }
+      }
+    } catch (_) {}
+
+    const cleanName = (pending.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const cleanModel = (pending.model || '').toLowerCase().trim();
+    const cleanBrand = (pending.brand || '').toLowerCase().trim();
+    const tokens = cleanName
+      .split(/\s+/)
+      .filter((t) => t.length >= 3 && !['para', 'con', 'del', 'los', 'las', 'una', 'equipo'].includes(t));
+
+    return driveParts.filter((dp) => {
+      const dpCode = (dp.code || '').trim().toLowerCase();
+      // Only exclude parts that are ALREADY created in Catálogo Maestro
+      if (!dpCode || existingCodes.has(dpCode) || locallyCreatedCodes.has(dpCode)) return false;
+
+      const dpDesc = (dp.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const dpModel = (dp.model || '').toLowerCase();
+      const dpBrand = (dp.brand || '').toLowerCase();
+
+      if (cleanModel && cleanModel.length >= 2 && (dpModel.includes(cleanModel) || dpDesc.includes(cleanModel))) return true;
+      if (cleanBrand && dpBrand.includes(cleanBrand) && tokens.some((t) => dpDesc.includes(t))) return true;
+      const matchedTokens = tokens.filter((t) => dpDesc.includes(t)).length;
+      if (tokens.length >= 2 && matchedTokens >= 2) return true;
+      return false;
+    });
+  };
+
+  const handleEmpalmarWithDrivePart = (pendingItem: PendingCatalogEquipment, drivePart: DetectedSheetPart) => {
+    try {
+      const finalCode = (drivePart.code || '').trim();
+      if (!finalCode) {
+        alert('La parte seleccionada no tiene código asignado en Drive.');
+        return;
+      }
+
+      const cleanSupplier = (drivePart.supplier || '').trim() || 'TECNICA';
+      const cleanBrand = (drivePart.brand || '').trim() || pendingItem.brand;
+      const cleanModel = (drivePart.model || '').trim() || pendingItem.model || 'Estándar';
+      const cleanName = (drivePart.name || '').trim() || pendingItem.name;
+      const cleanInvima = (drivePart.invimaRegister || '').trim() || 'No Aplica';
+      const costValue = drivePart.costCOP && drivePart.costCOP > 0 ? drivePart.costCOP : pendingItem.baseCostCOP;
+
+      const newEq: MedicalEquipment = {
+        id: `eq-drive-${finalCode.replace(/[^a-zA-Z0-9_-]/g, '_')}-${Date.now()}`,
+        code: finalCode,
+        name: cleanName,
+        brand: cleanBrand,
+        model: cleanModel,
+        supplier: cleanSupplier,
+        baseCostCOP: costValue,
+        category: (drivePart.category as any) || 'Diagnóstico',
+        productGroup: 'Equipos Médicos',
+        invimaRecordNumber: cleanInvima,
+        warrantyMonths: 24,
+        taxExempt: (drivePart.hasIVA || '').toLowerCase().includes('no') || (drivePart.hasIVA || '').toLowerCase().includes('0'),
+        originCountry: 'Colombia',
+        description: `Equipo biomédico oficial ${cleanName} (${cleanBrand} ${cleanModel}), empalmado y creado desde el formato N-FCO-03 de Drive para solicitud de cotización.`,
+        technicalSpecs: [
+          `Código de Parte Oficial: ${finalCode}`,
+          `Proveedor Oficial: ${cleanSupplier}`,
+          `Marca: ${cleanBrand}`,
+          `Modelo: ${cleanModel}`,
+          `Registro Sanitario INVIMA: ${cleanInvima}`,
+          `Origen: Empalmado con N-FCO-03 (Cotizado inicialmente para ${pendingItem.clientOrigin || 'cliente'})`,
+        ],
+        standardAccessories: [],
+        sourceOrigin: `pending-id:${pendingItem.id}`,
+      };
+
+      // 1. Auto-register supplier in Supplier Directory
+      autoRegisterSuppliersFromEquipments([newEq]);
+
+      // 2. Add to equipments catalog in localStorage and dispatch event
+      const stored = localStorage.getItem('syd_equipments_catalog');
+      let catalogList: MedicalEquipment[] = stored ? JSON.parse(stored) : [...equipments];
+      catalogList = [newEq, ...catalogList.filter((e) => (e.code || '').trim().toLowerCase() !== finalCode.toLowerCase())];
+      localStorage.setItem('syd_equipments_catalog', JSON.stringify(catalogList));
+      window.dispatchEvent(new CustomEvent('syd-catalog-updated', { detail: { catalog: catalogList } }));
+
+      // 3. Mark pending item as created
+      markPendingAsCreated(pendingItem.id, newEq.id, finalCode);
+
+      // 4. Update drive parts state and localStorage so it is marked as created
+      const updatedDriveParts = driveParts.map((dp) =>
+        (dp.code || '').trim().toLowerCase() === finalCode.toLowerCase()
+          ? { ...dp, status: 'creado', action: 'Creado' }
+          : dp
+      );
+      setDriveParts(updatedDriveParts);
+      try {
+        localStorage.setItem('syd_detected_sheet_parts_v1', JSON.stringify(updatedDriveParts));
+        const rawCodes = localStorage.getItem('syd_created_sheet_parts_v1');
+        const arrCodes: string[] = rawCodes ? JSON.parse(rawCodes) : [];
+        if (!arrCodes.includes(finalCode)) {
+          arrCodes.push(finalCode);
+          localStorage.setItem('syd_created_sheet_parts_v1', JSON.stringify(arrCodes));
+          window.dispatchEvent(new CustomEvent('syd-created-sheet-parts-updated', { detail: arrCodes }));
+        }
+      } catch (_) {}
+
+      // 5. Update UI
+      setPendingEquipments(getPendingCatalogEquipments());
+      setLinkingPendingItem(null);
+      setDriveEmpalmeAlert(`¡Equipo "${cleanName}" empalmado exitosamente con la Parte #${finalCode} de Drive y creado en el Catálogo Maestro!`);
+      setTimeout(() => setDriveEmpalmeAlert(null), 5000);
+    } catch (err: any) {
+      console.error('Error empalmando equipo con Drive:', err);
+      alert('Ocurrió un error al empalmar la parte con Drive.');
+    }
+  };
+
+  const handleCreateFromPending = (item: PendingCatalogEquipment) => {
+    const draft: MedicalEquipment = {
+      id: '',
+      code: '',
+      name: item.name,
+      brand: item.brand,
+      model: item.model,
+      category: 'Monitoreo',
+      baseCostCOP: item.baseCostCOP,
+      description: `Equipo ${item.name} (${item.brand} ${item.model}) cotizado de emergencia para ${item.clientOrigin || 'cliente'}.`,
+      technicalSpecs: [
+        `Marca: ${item.brand}`,
+        `Modelo: ${item.model}`,
+        `Origen: Cotización de emergencia (${item.quoteOrigin || 'Cotización'})`,
+      ],
+      standardAccessories: [],
+      originCountry: 'Colombia',
+      warrantyMonths: 12,
+      invimaRecordNumber: '',
+      sourceOrigin: `pending-id:${item.id}`,
+    };
+    onEditEquipment(draft);
+  };
+
+  const handleDeletePending = (id: string) => {
+    deletePendingCatalogEquipment(id);
+    setPendingEquipments(getPendingCatalogEquipments());
+  };
+
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importSuccessFeedback, setImportSuccessFeedback] = useState<{
     count: number;
@@ -457,8 +670,59 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
         </div>
       )}
 
-      {/* Unified Search, Filter & Action Bar */}
-      <div className="bg-[#1e314b]/95 backdrop-blur-md border border-[#334d6e] rounded-2xl p-3.5 sm:p-4 space-y-3.5 shadow-xl sticky top-0 z-20">
+      {/* SubTab Switcher: Catálogo Maestro vs Pendientes por Crear */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5 p-1 bg-[#15253d] border border-[#334d6e] rounded-2xl shadow-inner">
+          <button
+            type="button"
+            onClick={() => setCatalogSubTab('catalog')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer ${
+              catalogSubTab === 'catalog'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Catálogo Maestro ({equipments.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCatalogSubTab('pending')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer relative ${
+              catalogSubTab === 'pending'
+                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Sparkles className={`w-4 h-4 ${catalogSubTab === 'pending' ? 'text-slate-950' : 'text-amber-400'}`} />
+            <span>Pendientes por Crear</span>
+            {pendingEquipments.filter((p) => p.status === 'pending').length > 0 && (
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  catalogSubTab === 'pending'
+                    ? 'bg-slate-950 text-amber-300'
+                    : 'bg-amber-500 text-slate-950 animate-pulse'
+                }`}
+              >
+                {pendingEquipments.filter((p) => p.status === 'pending').length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {catalogSubTab === 'pending' && (
+          <div className="text-xs text-amber-300/90 font-bold flex items-center gap-1.5 bg-amber-950/40 px-3 py-1.5 rounded-xl border border-amber-500/40">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            <span>Equipos cotizados de emergencia para formalizar en catálogo</span>
+          </div>
+        )}
+      </div>
+
+      {/* RENDER CATALOG MAESTRO */}
+      {catalogSubTab === 'catalog' && (
+        <>
+          {/* Unified Search, Filter & Action Bar */}
+          <div className="bg-[#1e314b]/95 backdrop-blur-md border border-[#334d6e] rounded-2xl p-3.5 sm:p-4 space-y-3.5 shadow-xl sticky top-0 z-20">
         {/* Row 1: Search (Left) + Filters, View Switcher & TRM (Right) */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Search Input */}
@@ -1041,10 +1305,30 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                   return (
                     <tr key={`eq-row-${eq.id || eq.code || 'item'}-${idx}`} className="hover:bg-[#1e314b] transition">
                       <td className="p-3 font-mono font-bold text-[#38bdf8] whitespace-nowrap">
-                        {eq.code}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>{eq.code}</span>
+                          {eq.isInactive && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-950 text-rose-300 border border-rose-600/70 select-none">
+                              🚫 Inactiva N-FCO-03
+                            </span>
+                          )}
+                        </div>
+                        {eq.replacedPartCode && (
+                          <span className="text-[10px] text-cyan-300 block font-normal mt-0.5">
+                            ↳ Reemplaza: {eq.replacedPartCode}
+                          </span>
+                        )}
+                        {eq.replacementPartCode && (
+                          <span className="text-[10px] text-amber-300 block font-normal mt-0.5">
+                            ↳ Reemplazada por: {eq.replacementPartCode}
+                          </span>
+                        )}
                       </td>
                       <td className="p-3 max-w-xs">
                         <span className="font-bold text-white block">{eq.name}</span>
+                        {eq.isInactive && eq.inactivationReason && (
+                          <span className="text-[10px] text-rose-300 italic block">{eq.inactivationReason}</span>
+                        )}
                         <span className="text-[11px] text-slate-400 line-clamp-1">{eq.category} • {eq.originCountry}</span>
                       </td>
                       <td className="p-3 whitespace-nowrap">
@@ -1121,6 +1405,211 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                 }))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+        </>
+      )}
+
+      {/* RENDER PENDIENTES POR CREAR VIEW */}
+      {catalogSubTab === 'pending' && (
+        <div className="space-y-4 animate-fadeIn">
+          {/* Feedback banner when empalmado with Drive */}
+          {driveEmpalmeAlert && (
+            <div className="p-3 bg-emerald-950/90 border border-emerald-500 rounded-xl text-emerald-200 text-xs font-bold flex items-center justify-between gap-3 shadow-xl animate-scaleUp">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                <span>{driveEmpalmeAlert}</span>
+              </div>
+              <button
+                onClick={() => setDriveEmpalmeAlert(null)}
+                className="bg-emerald-900/50 hover:bg-emerald-900 text-emerald-200 px-2.5 py-1 rounded-lg text-xs font-black transition cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          )}
+
+          {/* Search bar & count */}
+          <div className="bg-[#1e314b]/95 backdrop-blur-md border border-[#334d6e] rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xl">
+            <div className="relative flex-1 min-w-[260px]">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
+              <input
+                type="text"
+                placeholder="Buscar por equipo, marca, modelo, cliente u origen..."
+                value={pendingSearchQuery}
+                onChange={(e) => setPendingSearchQuery(e.target.value)}
+                className="w-full bg-[#15253d] border border-[#334d6e] focus:border-amber-400 focus:ring-1 focus:ring-amber-400 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-400 outline-none font-medium transition"
+              />
+              {pendingSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setPendingSearchQuery('')}
+                  className="absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs p-0.5 cursor-pointer"
+                  title="Limpiar"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="text-xs text-slate-300 font-bold shrink-0 flex items-center gap-2">
+              <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl">
+                {filteredPendingEquipments.length} {filteredPendingEquipments.length === 1 ? 'Equipo' : 'Equipos'}
+              </span>
+            </div>
+          </div>
+
+          {/* Pending Table */}
+          <div className="bg-[#192b45] border border-[#334d6e] rounded-2xl overflow-hidden shadow-xl">
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-[#121f33] text-slate-300 font-bold border-b border-[#334d6e] text-[11px]">
+                    <th className="p-3 text-center w-12">#</th>
+                    <th className="p-3">Equipo Biomédico</th>
+                    <th className="p-3">Marca / Modelo</th>
+                    <th className="p-3 text-center">Cant.</th>
+                    <th className="p-3 text-right">Costo Unit. Base (COP)</th>
+                    <th className="p-3 text-right">P. Venta Sugerido (COP)</th>
+                    <th className="p-3">Origen / Cotización</th>
+                    <th className="p-3">Fecha</th>
+                    <th className="p-3 text-center">Estado</th>
+                    <th className="p-3 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#334d6e]/50">
+                  {filteredPendingEquipments.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="p-12 text-center text-slate-400">
+                        <Sparkles className="w-8 h-8 text-amber-400/50 mx-auto mb-2" />
+                        <p className="font-bold text-white text-sm">
+                          {pendingSearchQuery
+                            ? 'No se encontraron equipos pendientes con esa búsqueda'
+                            : 'No hay equipos cotizados de emergencia pendientes por crear'}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                          Cuando ingrese un requerimiento urgente desde la Cotización Comercial usando el botón <strong className="text-amber-300">"⚡ Cotizar No Creado (Emergencia)"</strong>, aparecerá listado aquí automáticamente para su formalización oficial.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPendingEquipments.map((p, idx) => {
+                      const isCreated = p.status === 'creado' || p.status === 'created';
+                      const isPending = !isCreated && p.status !== 'descartado';
+                      const driveCandidates = isPending ? findDriveCandidatesForPending(p) : [];
+                      const topDriveMatch = driveCandidates.length > 0 ? driveCandidates[0] : null;
+
+                      return (
+                        <tr key={p.id} className="hover:bg-[#1e314b] transition">
+                          <td className="p-3 text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
+                          <td className="p-3">
+                            <span className="font-bold text-white block text-sm">{p.name}</span>
+                            <span className="text-[10px] text-amber-400/90 font-medium">⚡ Equipo no catalogado</span>
+                            {topDriveMatch && isPending && (
+                              <div className="mt-1.5 flex items-center gap-1.5 flex-wrap animate-fadeIn">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-sky-950 text-sky-300 border border-sky-500/50">
+                                  <Link2 className="w-2.5 h-2.5 text-sky-400" />
+                                  <span>En Drive: Parte #{topDriveMatch.code} ({topDriveMatch.supplier || topDriveMatch.brand})</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleEmpalmarWithDrivePart(p, topDriveMatch)}
+                                  className="px-2 py-0.5 rounded text-[10px] font-black bg-sky-500 hover:bg-sky-400 text-slate-950 transition cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
+                                  title={`Empalmar inmediatamente con la Parte #${topDriveMatch.code} (${topDriveMatch.name}) del formato N-FCO-03 en Drive`}
+                                >
+                                  <Zap className="w-2.5 h-2.5 fill-current" />
+                                  <span>Empalmar ya</span>
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <span className="bg-blue-500/20 text-blue-300 font-bold px-2 py-0.5 rounded text-[10px] border border-blue-500/30">
+                              {p.brand}
+                            </span>
+                            <span className="block text-slate-300 text-xs mt-0.5">{p.model}</span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className="bg-slate-800 text-slate-200 font-bold px-2 py-1 rounded text-xs">
+                              {p.quantity} ud
+                            </span>
+                          </td>
+                          <td className="p-3 text-right font-mono font-bold text-slate-200">
+                            {formatCOP(p.baseCostCOP)}
+                          </td>
+                          <td className="p-3 text-right font-mono font-black text-emerald-400">
+                            {formatCOP(p.suggestedSellingPriceCOP || Math.round(p.baseCostCOP * 1.5874))}
+                          </td>
+                          <td className="p-3">
+                            <span className="text-slate-200 font-medium block">{p.clientOrigin || 'Cliente Directo'}</span>
+                            <span className="text-[10px] text-slate-400">{p.quoteOrigin || 'Cotización'}</span>
+                          </td>
+                          <td className="p-3 text-slate-400 text-[11px] whitespace-nowrap">
+                            {p.quotedAt ? new Date(p.quotedAt).toLocaleDateString('es-CO') : 'Hoy'}
+                          </td>
+                          <td className="p-3 text-center whitespace-nowrap">
+                            {isCreated ? (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-950 text-emerald-300 border border-emerald-600/70 inline-flex items-center gap-1">
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span>Creado ({p.createdEquipmentCode || 'Catálogo'})</span>
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-950 text-amber-300 border border-amber-600/70 inline-flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-amber-400" />
+                                <span>Pendiente por Crear</span>
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                              {isPending && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCreateFromPending(p)}
+                                    className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow transition cursor-pointer flex items-center gap-1.5 active:scale-95 whitespace-nowrap"
+                                    title="Abrir formulario oficial completo para ingresar proveedor, código de parte, INVIMA y archivarlo en el catálogo"
+                                  >
+                                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                                    <span>Crear en Catálogo</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setLinkingPendingItem(p);
+                                      setDrivePartModalSearch(p.model || p.brand || p.name);
+                                    }}
+                                    className="px-2.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl shadow transition cursor-pointer flex items-center gap-1.5 active:scale-95 whitespace-nowrap"
+                                    title="Buscar y enlazar con parte oficial en Google Drive (N-FCO-03)"
+                                  >
+                                    <Link2 className="w-3.5 h-3.5" />
+                                    <span>Enlazar con Drive</span>
+                                  </button>
+                                </>
+                              )}
+                              {isCreated && (
+                                <span className="text-[11px] font-bold text-emerald-400 px-2 py-1 bg-emerald-950/60 border border-emerald-500/40 rounded-lg">
+                                  ✓ En Catálogo Maestro
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePending(p.id)}
+                                className="p-1.5 text-rose-400 hover:text-rose-200 bg-rose-500/15 hover:bg-rose-500/30 rounded-lg border border-rose-500/30 cursor-pointer transition"
+                                title="Descartar este equipo pendiente"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1503,6 +1992,195 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL PARA ENLAZAR / EMPALMAR CON PARTE DE GOOGLE DRIVE (N-FCO-03) */}
+      {linkingPendingItem && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn">
+          <div className="bg-[#192b45] border border-sky-400/60 rounded-2xl max-w-4xl w-full p-5 space-y-4 shadow-2xl animate-scaleUp max-h-[90vh] h-[85vh] flex flex-col overflow-hidden my-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#334d6e] shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                  <Link2 className="w-5 h-5 text-sky-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <span>Empalmar con Parte en Google Drive (N-FCO-03)</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-500/50">
+                      Oficial SyD
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-300">
+                    Seleccione la parte creada en el formato N-FCO-03 para asociarla a <strong>"{linkingPendingItem.name}"</strong> ({linkingPendingItem.brand} - {linkingPendingItem.model})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLinkingPendingItem(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Item info pill */}
+            <div className="bg-[#121f33] p-3 rounded-xl border border-[#334d6e] flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div className="text-xs">
+                <span className="text-slate-400">Equipo Cotizado: </span>
+                <strong className="text-amber-300">{linkingPendingItem.name}</strong>
+                <span className="text-slate-400 ml-2">Marca: </span>
+                <strong className="text-white">{linkingPendingItem.brand}</strong>
+                <span className="text-slate-400 ml-2">Modelo: </span>
+                <strong className="text-white">{linkingPendingItem.model}</strong>
+                <span className="text-slate-400 ml-2">Costo Cotizado: </span>
+                <strong className="text-emerald-400 font-mono">{formatCOP(linkingPendingItem.baseCostCOP)}</strong>
+              </div>
+              <span className="text-[11px] text-slate-400">
+                Cliente: <strong>{linkingPendingItem.clientOrigin || 'Cliente Directo'}</strong>
+              </span>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative shrink-0">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                placeholder="Buscar parte en Drive por código (#), descripción, marca, modelo o proveedor..."
+                value={drivePartModalSearch}
+                onChange={(e) => setDrivePartModalSearch(e.target.value)}
+                className="w-full bg-[#15253d] border border-sky-500/50 focus:border-sky-400 rounded-xl pl-9 pr-8 py-2.5 text-xs text-white placeholder-slate-400 outline-none"
+              />
+              {drivePartModalSearch && (
+                <button
+                  type="button"
+                  onClick={() => setDrivePartModalSearch('')}
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs p-0.5 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Table of Drive Parts */}
+            <div className="flex-1 overflow-y-auto border border-[#334d6e] rounded-xl bg-[#15253d] scrollbar-thin">
+              {(() => {
+                const existingCodes = new Set(
+                  equipments.map((e) => (e.code || '').trim().toLowerCase()).filter(Boolean)
+                );
+                let locallyCreatedCodes = new Set<string>();
+                try {
+                  const raw = localStorage.getItem('syd_created_sheet_parts_v1');
+                  if (raw) {
+                    const arr = JSON.parse(raw);
+                    if (Array.isArray(arr)) {
+                      locallyCreatedCodes = new Set(arr.map((c: string) => String(c).trim().toLowerCase()));
+                    }
+                  }
+                } catch (_) {}
+
+                const query = drivePartModalSearch.toLowerCase().trim();
+                const filteredParts = driveParts.filter((dp) => {
+                  const dpCode = (dp.code || '').trim().toLowerCase();
+                  if (!dpCode) return false;
+                  // Only parts that are NOT yet created in the Catálogo Maestro
+                  if (existingCodes.has(dpCode) || locallyCreatedCodes.has(dpCode)) return false;
+
+                  if (!query) return true;
+                  return (
+                    dpCode.includes(query) ||
+                    (dp.name || '').toLowerCase().includes(query) ||
+                    (dp.brand || '').toLowerCase().includes(query) ||
+                    (dp.model || '').toLowerCase().includes(query) ||
+                    (dp.supplier || '').toLowerCase().includes(query) ||
+                    (dp.invimaRegister || '').toLowerCase().includes(query)
+                  );
+                });
+
+                if (filteredParts.length === 0) {
+                  return (
+                    <div className="p-8 text-center text-slate-400 space-y-2">
+                      <FileText className="w-8 h-8 text-slate-500 mx-auto" />
+                      <p className="text-sm font-bold text-white">No se encontraron partes en N-FCO-03 con ese filtro</p>
+                      <p className="text-xs text-slate-400">Intente con palabras clave como el modelo, marca o código de parte.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="sticky top-0 bg-[#121f33] text-slate-300 font-bold border-b border-[#334d6e] z-10 text-[11px]">
+                      <tr>
+                        <th className="p-2.5 text-center">Parte #</th>
+                        <th className="p-2.5">Descripción de la Parte</th>
+                        <th className="p-2.5">Marca / Modelo</th>
+                        <th className="p-2.5">Proveedor</th>
+                        <th className="p-2.5">Reg. INVIMA</th>
+                        <th className="p-2.5 text-right">Costo COP</th>
+                        <th className="p-2.5 text-center">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#334d6e]/50">
+                      {filteredParts.map((dp) => (
+                        <tr key={`${dp.code}-${dp.rowNumber}`} className="hover:bg-[#1e314b] transition">
+                          <td className="p-2.5 text-center font-mono font-black text-sky-300">
+                            #{dp.code}
+                          </td>
+                          <td className="p-2.5">
+                            <span className="font-bold text-white block">{dp.name}</span>
+                            <span className="text-[10px] text-slate-400">{dp.requestType || 'CREACION'}</span>
+                          </td>
+                          <td className="p-2.5">
+                            <span className="text-blue-300 font-bold text-[10px] bg-blue-500/20 px-1.5 py-0.5 rounded border border-blue-500/30">
+                              {dp.brand || 'N/A'}
+                            </span>
+                            <span className="block text-slate-300 text-xs mt-0.5">{dp.model || '-'}</span>
+                          </td>
+                          <td className="p-2.5 text-slate-300 font-medium">
+                            {dp.supplier || 'TECNICA'}
+                          </td>
+                          <td className="p-2.5 font-mono text-[11px] text-slate-300">
+                            {dp.invimaRegister || 'No Aplica'}
+                          </td>
+                          <td className="p-2.5 text-right font-mono font-bold text-emerald-400">
+                            {dp.costCOP && dp.costCOP > 0 ? formatCOP(dp.costCOP) : 'Consultar'}
+                          </td>
+                          <td className="p-2.5 text-center whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => handleEmpalmarWithDrivePart(linkingPendingItem, dp)}
+                              className="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs rounded-xl shadow transition cursor-pointer flex items-center gap-1 active:scale-95"
+                              title="Empalmar automáticamente con esta parte oficial de Drive"
+                            >
+                              <Zap className="w-3.5 h-3.5 fill-current" />
+                              <span>Empalmar</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-2 border-t border-[#334d6e] shrink-0">
+              <span className="text-xs text-slate-400">
+                Total partes oficiales detectadas en N-FCO-03: <strong className="text-sky-300">{driveParts.length}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setLinkingPendingItem(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-[#15253d] transition cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>,
         document.body

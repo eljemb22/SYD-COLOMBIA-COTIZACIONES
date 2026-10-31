@@ -771,9 +771,9 @@ export const SerializedEquipmentsDossierTab: React.FC<SerializedEquipmentsDossie
                       <td className="py-3 px-3.5 align-top">
                         {genDocsCount > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {u.matchedGeneralDocs.slice(0, 3).map((d) => (
+                            {u.matchedGeneralDocs.slice(0, 3).map((d, dIdx) => (
                               <span
-                                key={d.id}
+                                key={`gen-doc-${d.id || 'doc'}-${dIdx}`}
                                 className="bg-blue-950/70 text-blue-300 border border-blue-500/30 text-[9.5px] px-1.5 py-0.5 rounded font-medium"
                                 title={`${d.docType}: ${d.title}`}
                               >

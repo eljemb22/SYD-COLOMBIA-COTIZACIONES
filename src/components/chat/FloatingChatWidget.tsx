@@ -42,7 +42,15 @@ import {
   getUnreadMessagesCount,
   getStoredTeamMessages,
 } from '../../utils/chatStorage';
-import { getLiveDynamicSystemContext, getIntelligentMaraFallbackReply } from '../../utils/maraKnowledgeEngine';
+import {
+  getLiveDynamicSystemContext,
+  getIntelligentMaraFallbackReply,
+  cleanBotReplyText,
+  resolveNavigationIntent,
+} from '../../utils/maraKnowledgeEngine';
+
+export const CHAT_INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutos de inactividad
+export const MARA_LAST_ACTIVITY_KEY = 'syd_mara_last_chat_activity_ts';
 
 interface Coordinates {
   x: number;
@@ -51,8 +59,9 @@ interface Coordinates {
 
 interface FloatingChatWidgetProps {
   currentUser: AuthUser | null;
-  activeTab: ActiveTab;
-  setActiveTab: (tab: ActiveTab) => void;
+  activeTab?: ActiveTab;
+  setActiveTab?: (tab: ActiveTab) => void;
+  onNavigateTab?: (tab: ActiveTab) => void;
   equipmentsCount?: number;
   quotesCount?: number;
   tenderClientsCount?: number;
@@ -77,17 +86,13 @@ const INITIAL_BOT_MESSAGES: BotChatMessage[] = [
   {
     id: 'bot-welcome-mara',
     sender: 'bot',
-    text: '¡Hola! Soy **Mara**, tu Asistente Biomédica y Copiloto Oficial en SYD Colombia (v2.7.0).\n\nEstoy sincronizada en tiempo real con toda la operación:\n• **Google Workspace & Sheets (N-FCO-03)**: Creación de equipos validados, modificaciones ágiles y bloqueo automático de partes inactivadas.\n• **Gmail Compras**: Extracción inteligente de OCs en bandeja con almacenamiento optimizado sin errores de cuota.\n• **Órdenes de Venta (OV) & Facturación**: Despachos, remisiones firmadas, radicación de facturas y cartera.\n• **Cotizador & PDF Oficial**: Ofertas comerciales con IVA, márgenes L1-L8 y membrete.\n• **Gestor de Costos & TRM**: TRM actualizada automáticamente cada 2 horas.\n• **Catálogo Biomédico & INVIMA**: Redacción con IA, registros sanitarios y accesorios.\n• **Seguimiento de OC**: Trazabilidad de 11 estados logísticos y manifiestos DIAN.\n\n¿En qué te puedo colaborar hoy?',
+    text: '¡Hola! Soy Mara, tu Asistente Biomédica y Copiloto de SYD Colombia.\n\n¿En qué te puedo colaborar hoy?',
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     actions: [
       { label: 'Ir al Cotizador', type: 'navigate', tab: 'ventas', primary: true },
       { label: 'Órdenes de Venta (OV)', type: 'navigate', tab: 'ordenes_venta' },
-      { label: 'Google Workspace (Drive / Sheets)', type: 'modal', modalAction: 'google_workspace_modal' },
-      { label: 'Gmail Compras', type: 'navigate', tab: 'gmail_compras' },
-      { label: 'Seguimiento de OC', type: 'navigate', tab: 'seguimiento_oc' },
-      { label: 'Directorio de Proveedores', type: 'modal', modalAction: 'manage_suppliers' },
       { label: 'Gestor de Costos & TRM', type: 'navigate', tab: 'costos' },
-      { label: 'Licitaciones SECOP II', type: 'navigate', tab: 'licitaciones' },
+      { label: 'Seguimiento de OC', type: 'navigate', tab: 'seguimiento_oc' },
     ],
   },
 ];
@@ -107,8 +112,9 @@ const BOT_QUICK_PROMPTS = [
 
 export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   currentUser,
-  activeTab,
+  activeTab = 'inicio',
   setActiveTab,
+  onNavigateTab,
   equipmentsCount = 0,
   quotesCount = 0,
   tenderClientsCount = 0,
@@ -132,6 +138,27 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [chatMode, setChatMode] = useState<'bot' | 'team'>('bot');
 
+  // Safe navigation helper that handles setActiveTab, onNavigateTab, or custom event without errors
+  const safeNavigate = (tab: ActiveTab) => {
+    if (typeof setActiveTab === 'function') {
+      try {
+        setActiveTab(tab);
+      } catch (err) {
+        console.warn('setActiveTab error:', err);
+      }
+    }
+    if (typeof onNavigateTab === 'function') {
+      try {
+        onNavigateTab(tab);
+      } catch (err) {
+        console.warn('onNavigateTab error:', err);
+      }
+    }
+    try {
+      window.dispatchEvent(new CustomEvent('syd_navigate_tab', { detail: { tab } }));
+    } catch (_) {}
+  };
+
   // Custom persistent coordinates for smooth drag & drop
   const [customCoords, setCustomCoords] = useState<Coordinates | null>(() => {
     try {
@@ -148,14 +175,25 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   // AI Bot Mara state
   const [botMessages, setBotMessages] = useState<BotChatMessage[]>(() => {
-    const saved = localStorage.getItem('syd_ai_bot_chat_history_mara_v3');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {
-        console.error(e);
+    try {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        const lastActiveStr = localStorage.getItem(MARA_LAST_ACTIVITY_KEY);
+        if (lastActiveStr) {
+          const lastActive = parseInt(lastActiveStr, 10);
+          if (!isNaN(lastActive) && lastActive > 0 && Date.now() - lastActive >= CHAT_INACTIVITY_TIMEOUT_MS) {
+            localStorage.removeItem('syd_ai_bot_chat_history_mara_v3');
+            localStorage.setItem(MARA_LAST_ACTIVITY_KEY, Date.now().toString());
+            return INITIAL_BOT_MESSAGES;
+          }
+        }
+        const saved = localStorage.getItem('syd_ai_bot_chat_history_mara_v3');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
       }
+    } catch (e) {
+      console.error(e);
     }
     return INITIAL_BOT_MESSAGES;
   });
@@ -257,6 +295,30 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     }
   }, [botMessages]);
 
+  // Auto-clean Mara chat after 20 minutes of inactivity
+  useEffect(() => {
+    const checkAndClearIfInactive = () => {
+      try {
+        const lastActiveStr = localStorage.getItem(MARA_LAST_ACTIVITY_KEY);
+        if (lastActiveStr) {
+          const lastActive = parseInt(lastActiveStr, 10);
+          if (!isNaN(lastActive) && lastActive > 0 && Date.now() - lastActive >= CHAT_INACTIVITY_TIMEOUT_MS) {
+            handleClearBotHistory();
+          }
+        }
+      } catch (err) {
+        console.warn('Error checking inactivity:', err);
+      }
+    };
+
+    if (isOpen) {
+      checkAndClearIfInactive();
+    }
+
+    const interval = setInterval(checkAndClearIfInactive, 20000); // Check every 20 seconds
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
   // Auto-scroll messages to bottom
   useEffect(() => {
     if (isOpen) {
@@ -353,7 +415,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   const handleExecuteAction = (action: BotActionOption) => {
     if (action.type === 'navigate' || action.tab) {
       if (action.tab) {
-        setActiveTab(action.tab);
+        safeNavigate(action.tab);
       }
     } else if (action.type === 'modal' || action.modalAction) {
       switch (action.modalAction) {
@@ -376,7 +438,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
           onOpenPrintModal?.();
           break;
         case 'manage_suppliers':
-          setActiveTab('seguimiento_oc');
+          safeNavigate('seguimiento_oc');
           if (onOpenSuppliersModal) {
             onOpenSuppliersModal();
           } else {
@@ -384,7 +446,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
           }
           break;
         case 'new_oc':
-          setActiveTab('seguimiento_oc');
+          safeNavigate('seguimiento_oc');
           if (onOpenNewOCModal) {
             onOpenNewOCModal();
           } else {
@@ -460,6 +522,32 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     setBotMessages((prev) => [...prev, userMsg]);
     setBotInput('');
     setIsBotThinking(true);
+    try {
+      localStorage.setItem(MARA_LAST_ACTIVITY_KEY, Date.now().toString());
+    } catch (_) {}
+
+    // Direct fast-path for navigation commands (e.g. "llevame a la ventana 7")
+    const directNav = resolveNavigationIntent(textToSend);
+    if (directNav) {
+      const userFirst = currentUser?.name ? currentUser.name.split(' ')[0] : '';
+      const greeting = userFirst ? `Con gusto, ${userFirst}. ` : 'Con gusto. ';
+      const navReply: BotChatMessage = {
+        id: `bot-${Date.now()}`,
+        sender: 'bot',
+        text: cleanBotReplyText(`${greeting}Te dirijo de inmediato a la Ventana ${directNav.tabNumber}: ${directNav.name}. ¿En qué más te puedo colaborar hoy?`),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actions: [
+          { label: `Ir a ${directNav.name}`, type: 'navigate', tab: directNav.tab, primary: true },
+        ],
+      };
+      setBotMessages((prev) => [...prev, navReply]);
+      safeNavigate(directNav.tab);
+      setIsBotThinking(false);
+      try {
+        localStorage.setItem(MARA_LAST_ACTIVITY_KEY, Date.now().toString());
+      } catch (_) {}
+      return;
+    }
 
     const dynamicContext = getLiveDynamicSystemContext(activeTab, currentUser, {
       equipmentsCount,
@@ -490,28 +578,43 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
             ? [{ label: json.suggestedTabLabel || `Ir a ${json.suggestedTab.toUpperCase()}`, type: 'navigate', tab: json.suggestedTab, primary: true }]
             : [];
 
+        const rawReply = json.reply || 'He procesado tu consulta. ¿En qué más te puedo colaborar hoy?';
         const botReply: BotChatMessage = {
           id: `bot-${Date.now()}`,
           sender: 'bot',
-          text: json.reply || 'He procesado tu consulta. Te he dejado opciones y botones directos a continuación para continuar:',
+          text: cleanBotReplyText(rawReply),
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           actions: actionsList,
         };
         setBotMessages((prev) => [...prev, botReply]);
+        const navAction = actionsList.find((a) => a.type === 'navigate' && a.tab);
+        if (navAction?.tab && (textToSend.toLowerCase().includes('llev') || textToSend.toLowerCase().includes('llév') || textToSend.toLowerCase().includes('ir a') || textToSend.toLowerCase().includes('abre') || textToSend.toLowerCase().includes('abrir') || textToSend.toLowerCase().includes('ventana') || textToSend.toLowerCase().includes('pestaña'))) {
+          safeNavigate(navAction.tab);
+        }
+        try {
+          localStorage.setItem(MARA_LAST_ACTIVITY_KEY, Date.now().toString());
+        } catch (_) {}
       } else {
         throw new Error('Chat API response not ok');
       }
     } catch (err) {
       console.warn('Error calling Mara assistant, using intelligent local engine:', err);
       const fallbackResult = getIntelligentMaraFallbackReply(textToSend, dynamicContext);
-      const fallbackReply: BotChatMessage = {
+      const botReply: BotChatMessage = {
         id: `bot-${Date.now()}`,
         sender: 'bot',
-        text: fallbackResult.reply,
+        text: cleanBotReplyText(fallbackResult.reply),
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         actions: fallbackResult.actions,
       };
-      setBotMessages((prev) => [...prev, fallbackReply]);
+      setBotMessages((prev) => [...prev, botReply]);
+      const navAction = fallbackResult.actions?.find((a) => a.type === 'navigate' && a.tab);
+      if (navAction?.tab && (textToSend.toLowerCase().includes('llev') || textToSend.toLowerCase().includes('llév') || textToSend.toLowerCase().includes('ir a') || textToSend.toLowerCase().includes('abre') || textToSend.toLowerCase().includes('abrir') || textToSend.toLowerCase().includes('ventana') || textToSend.toLowerCase().includes('pestaña'))) {
+        safeNavigate(navAction.tab);
+      }
+      try {
+        localStorage.setItem(MARA_LAST_ACTIVITY_KEY, Date.now().toString());
+      } catch (_) {}
     } finally {
       setIsBotThinking(false);
     }
@@ -538,19 +641,19 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   };
 
   const handleClearBotHistory = () => {
+    const userFirst = currentUser?.name ? currentUser.name.split(' ')[0] : '';
+    const greeting = userFirst ? `¡Hola ${userFirst}! ` : '¡Hola! ';
     const freshMessages: BotChatMessage[] = [
       {
         id: `bot-welcome-mara-${Date.now()}`,
         sender: 'bot',
-        text: `¡Hola ${currentUser?.name ? currentUser.name.split(' ')[0] : ''}! Soy **Mara**, tu Asistente Biomédica y Copiloto de Inteligencia Artificial en SYD Colombia.\n\nConversación reiniciada. Puedo ayudarte con cotizaciones, cálculo de costos y TRM, seguimiento de Órdenes de Compra (OC) y licitaciones SECOP II.\n\n¿En qué te puedo asesorar o qué acción deseas ejecutar?`,
+        text: `${greeting}Soy Mara, tu Asistente Biomédica y Copiloto de SYD Colombia.\n\nConversación reiniciada. ¿En qué te puedo colaborar hoy?`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         actions: [
           { label: 'Ir al Cotizador', type: 'navigate', tab: 'ventas', primary: true },
-          { label: 'Seguimiento de OC', type: 'navigate', tab: 'seguimiento_oc' },
-          { label: 'Registrar Equipo Médico', type: 'modal', modalAction: 'new_equipment' },
+          { label: 'Órdenes de Venta (OV)', type: 'navigate', tab: 'ordenes_venta' },
           { label: 'Gestor de Costos & TRM', type: 'navigate', tab: 'costos' },
-          { label: 'Licitaciones SECOP II', type: 'navigate', tab: 'licitaciones' },
-          { label: 'Subir Ficha INVIMA', type: 'modal', modalAction: 'new_document' },
+          { label: 'Seguimiento de OC', type: 'navigate', tab: 'seguimiento_oc' },
         ],
       },
     ];
@@ -559,6 +662,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     setIsBotThinking(false);
     try {
       localStorage.setItem('syd_ai_bot_chat_history_mara_v3', JSON.stringify(freshMessages));
+      localStorage.setItem(MARA_LAST_ACTIVITY_KEY, Date.now().toString());
     } catch (e) {
       console.error(e);
     }
@@ -774,7 +878,9 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                               : 'bg-[#15243b] text-slate-200 border border-[#2c476f] rounded-tl-xs shadow-md'
                           }`}
                         >
-                          <div className="whitespace-pre-wrap select-text">{msg.text}</div>
+                          <div className="whitespace-pre-wrap select-text">
+                            {msg.sender === 'bot' ? cleanBotReplyText(msg.text) : msg.text}
+                          </div>
 
                           {/* Direct Action Buttons rendered under Mara's advice */}
                           {combinedActions.length > 0 && (

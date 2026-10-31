@@ -17,6 +17,9 @@ export const DEFAULT_VIEWER_PERMISSIONS: ViewerPermissions = {
   canManageBackups: false,
   canAccessSqlAnalytics: false,
   canManageGmailPurchases: false,
+  canManageGoogleWorkspace: false,
+  canQuoteEmergencyParts: false,
+  canSplitSalesOrders: false,
 };
 
 export const FULL_ADMIN_PERMISSIONS: ViewerPermissions = {
@@ -35,6 +38,9 @@ export const FULL_ADMIN_PERMISSIONS: ViewerPermissions = {
   canManageBackups: true,
   canAccessSqlAnalytics: true,
   canManageGmailPurchases: true,
+  canManageGoogleWorkspace: true,
+  canQuoteEmergencyParts: true,
+  canSplitSalesOrders: true,
 };
 
 export const INITIAL_SYSTEM_USERS: StoredUserAccount[] = [

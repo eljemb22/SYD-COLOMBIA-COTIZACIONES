@@ -65,7 +65,8 @@ export function estimateItemRowHeight(item: QuoteItem, baseFontSize: number = 10
 export function chunkQuoteItemsForPages(
   items: QuoteItem[],
   customTopMargin: number = 150,
-  fontSize: number = 10
+  fontSize: number = 10,
+  isGraphicFormat: boolean = false
 ): TablePageChunk[] {
   if (!items || items.length === 0) {
     return [
@@ -81,9 +82,9 @@ export function chunkQuoteItemsForPages(
     ];
   }
 
-  // Target bottom limit: 848px on a 1056px page leaves a comfortable, clean 18px safety buffer before Icontec/IQNet logos (~865px)
-  const footerSafetyY = 848;
-  const usableTotalHeight = Math.max(380, footerSafetyY - customTopMargin);
+  // Target bottom limit: 780px on a 1056px page leaves a clean safety buffer before Icontec/IQNet logos (~865px)
+  const footerSafetyY = 780;
+  const usableTotalHeight = Math.max(340, footerSafetyY - Math.max(160, customTopMargin));
   const tableHeaderHeight = 32;
   const totalsSectionHeight = 78; // Totals footer row + "VALOR TOTAL EN LETRAS" box
   const conditionsSectionHeight = 410; // "CONDICIONES COMERCIALES" block + warranty + signature
@@ -100,7 +101,11 @@ export function chunkQuoteItemsForPages(
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    const rowHeight = estimateItemRowHeight(item, fontSize);
+    const baseRowHeight = estimateItemRowHeight(item, fontSize);
+    // In graphic format with image + description + specs, item height is base row + card row (~240-270px)
+    const rowHeight = isGraphicFormat
+      ? Math.max(245, baseRowHeight + (item.technicalFeatures?.length || 5) * 22 + 110)
+      : baseRowHeight;
     const isLastItem = i === items.length - 1;
 
     // Determine current limit: if this item were the last item in the quote, check if totals fit
@@ -129,10 +134,15 @@ export function chunkQuoteItemsForPages(
   }
 
   if (currentChunk.length > 0) {
-    // Check if commercial conditions and signature can fit on this final table page
+    // Check if commercial conditions and signature can fit on this final table page.
+    // Fits cleanly on the same page for 1 item with image (eliminating bottom blank void)
+    // or <= 3 standard items, exactly matching the clean exported Word layout.
     const totalRequiredHeightWithConditions =
       tableHeaderHeight + currentChunkHeight + totalsSectionHeight + conditionsSectionHeight;
-    const canFit = totalRequiredHeightWithConditions <= usableTotalHeight;
+    const canFit =
+      (isGraphicFormat && items.length <= 1) ||
+      (!isGraphicFormat && items.length <= 3) ||
+      totalRequiredHeightWithConditions <= usableTotalHeight;
 
     pages.push({
       pageIndex: pages.length,

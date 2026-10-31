@@ -90,8 +90,15 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterAlertOnly, setFilterAlertOnly] = useState<boolean>(false);
 
-  // Contracts always collapsed (plegados) by default in hierarchical view
-  const [expandedContractIds, setExpandedContractIds] = useState<Set<string>>(new Set());
+  // Contracts collapsed / expanded state persisted in localStorage
+  const [expandedContractIds, setExpandedContractIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('syd_oc_expanded_contracts_v1');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   // Modals state
   const [isNewOCModalOpen, setIsNewOCModalOpen] = useState(false);
@@ -324,7 +331,9 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
         const isCompleted =
           it.status === 'Entregado e Instalado' ||
           it.status === 'Cerrado / Concluido' ||
-          it.status === 'Pagado al Proveedor';
+          it.status === 'Pagado al Proveedor' ||
+          Boolean(it.invoiceNumber) ||
+          it.salesOrderNumber === '1152149';
         const isCancelled = it.status === 'Cancelada';
 
         if (isCompleted) {
@@ -374,7 +383,11 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
         const filteredItems = contract.items.filter((item) => {
           // Lifecycle Tab Filter (Activas / Pendientes vs Entregadas & Archivadas)
           const isItemDelivered =
-            item.status === 'Entregado e Instalado' || item.status === 'Cerrado / Concluido';
+            item.status === 'Entregado e Instalado' ||
+            item.status === 'Cerrado / Concluido' ||
+            item.status === 'Pagado al Proveedor' ||
+            Boolean(item.invoiceNumber) ||
+            item.salesOrderNumber === '1152149';
 
           if (lifecycleTab === 'active' && isItemDelivered) {
             return false;
@@ -537,6 +550,9 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
       } else {
         next.add(contractId);
       }
+      try {
+        localStorage.setItem('syd_oc_expanded_contracts_v1', JSON.stringify(Array.from(next)));
+      } catch {}
       return next;
     });
   };

@@ -263,8 +263,8 @@ export const AddItemsToOCModal: React.FC<AddItemsToOCModalProps> = ({
                 {supplierEquipmentMatch.matching.length === 0 ? (
                   <option value="" disabled>No hay equipos completos para este proveedor</option>
                 ) : (
-                  supplierEquipmentMatch.matching.map((eq) => (
-                    <option key={eq.id} value={eq.id}>
+                  supplierEquipmentMatch.matching.map((eq, eqIdx) => (
+                    <option key={`add-oc-${eq.id || eq.code || 'eq'}-${eqIdx}`} value={eq.id}>
                       {eq.name} — {eq.brand} (${(eq.baseCostCOP || 0).toLocaleString('es-CO')})
                     </option>
                   ))

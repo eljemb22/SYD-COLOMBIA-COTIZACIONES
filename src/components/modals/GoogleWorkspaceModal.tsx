@@ -94,6 +94,7 @@ interface GoogleWorkspaceModalProps {
   onNavigateToBackup?: () => void;
   initialTab?: 'sheets' | 'drive';
   onAddEquipments?: (newEquipments: MedicalEquipment[]) => void;
+  onUpdateEntireCatalog?: (updatedCatalog: MedicalEquipment[]) => void;
   onNavigateToCatalog?: () => void;
 }
 
@@ -115,6 +116,7 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
   onNavigateToBackup,
   initialTab = 'sheets',
   onAddEquipments,
+  onUpdateEntireCatalog,
   onNavigateToCatalog,
 }) => {
   const [profile, setProfile] = useState<GoogleWorkspaceProfile | null>(() => googleWorkspaceService.getUserProfile());
@@ -258,41 +260,24 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
 
   const isPartAlreadyCreated = (code?: string, name?: string): boolean => {
     const cleanCode = (code || '').trim().toLowerCase();
-    const cleanName = (name || '').trim().toLowerCase();
-    if (!cleanCode && !cleanName) return false;
+    // New parts must be identified exclusively by their unique part number (code), never by equipment name
+    if (!cleanCode) return false;
 
     // 1. Check cloud real-time registry (synchronized across all devices/browsers/URLs)
-    if (cleanCode && cloudCreatedPartCodes.has(cleanCode)) return true;
+    if (cloudCreatedPartCodes.has(cleanCode)) return true;
 
     // 2. Check local created parts registry
-    if (cleanCode && createdPartCodes.has(cleanCode)) return true;
+    if (createdPartCodes.has(cleanCode)) return true;
 
-    // 3. Check active equipments catalog state
+    // 3. Check active equipments catalog state strictly by exact part code or ID
     const inEquipments = (equipments || []).some((eq) => {
       const eqCode = (eq.code || '').trim().toLowerCase();
-      const eqName = (eq.name || '').trim().toLowerCase();
       const eqId = (eq.id || '').trim().toLowerCase();
-      const eqSpecs = (eq.technicalSpecs || []).join(' ').toLowerCase();
-
-      const codeMatches =
-        cleanCode &&
-        (eqCode === cleanCode ||
-          eqCode.includes(cleanCode) ||
-          cleanCode.includes(eqCode) ||
-          eqId.includes(cleanCode) ||
-          eqSpecs.includes(cleanCode));
-
-      const nameMatches =
-        cleanName &&
-        (eqName === cleanName ||
-          (cleanName.length > 8 && eqName.includes(cleanName)) ||
-          (eqName.length > 8 && cleanName.includes(eqName)));
-
-      return Boolean(codeMatches || nameMatches);
+      return eqCode === cleanCode || eqId === cleanCode;
     });
     if (inEquipments) return true;
 
-    // 4. Check localStorage catalog cache directly
+    // 4. Check localStorage catalog cache directly strictly by exact part code or ID
     try {
       const stored = localStorage.getItem('syd_equipments_catalog');
       if (stored) {
@@ -300,25 +285,8 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
         if (Array.isArray(list)) {
           const inLocal = list.some((eq) => {
             const eqCode = (eq.code || '').trim().toLowerCase();
-            const eqName = (eq.name || '').trim().toLowerCase();
             const eqId = (eq.id || '').trim().toLowerCase();
-            const eqSpecs = (eq.technicalSpecs || []).join(' ').toLowerCase();
-
-            const codeMatches =
-              cleanCode &&
-              (eqCode === cleanCode ||
-                eqCode.includes(cleanCode) ||
-                cleanCode.includes(eqCode) ||
-                eqId.includes(cleanCode) ||
-                eqSpecs.includes(cleanCode));
-
-            const nameMatches =
-              cleanName &&
-              (eqName === cleanName ||
-                (cleanName.length > 8 && eqName.includes(cleanName)) ||
-                (eqName.length > 8 && cleanName.includes(eqName)));
-
-            return Boolean(codeMatches || nameMatches);
+            return eqCode === cleanCode || eqId === cleanCode;
           });
           if (inLocal) return true;
         }
@@ -383,6 +351,374 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
       `¡Equipo "${newEq.name}" (Parte: ${newEq.code}) creado exitosamente y disponible en la ventana de Creación de Equipos!`
     );
   };
+
+  // Helper to find replacement part for an inactivated part in previewData rows
+  const findReplacementForInactivatedPart = (
+    inactivatedCode: string,
+    inactivatedDesc: string
+  ): {
+    replacementCode: string;
+    replacementDesc: string;
+    rowIndex: number;
+    matchType: 'exact' | 'similar';
+    confidence?: number;
+  } | null => {
+    if (!previewData?.rows || !previewData?.headers) return null;
+
+    const normHeaders = previewData.headers.map((h) =>
+      (h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+    );
+    const parteColIdx = normHeaders.findIndex(
+      (h) => h === 'parte' || h === 'codigo' || h === 'codigo de parte' || h.startsWith('parte') || h.includes('codigo')
+    );
+    const descColIdx = normHeaders.findIndex(
+      (h) => h.includes('descripcion') || h.includes('nombre') || h.includes('equipo')
+    );
+    const tipoColIdx = normHeaders.findIndex(
+      (h) =>
+        h.includes('tipo de solicitud') ||
+        h.includes('tipo solicitud') ||
+        h.includes('solicitud') ||
+        h === 'tipo' ||
+        h.includes('movimiento') ||
+        h.includes('accion')
+    );
+    const refColIdx = normHeaders.findIndex(
+      (h) =>
+        h.includes('referencia') ||
+        h === 'ref' ||
+        h.includes('modelo') ||
+        h.includes('ref.') ||
+        h.includes('referencia / modelo')
+    );
+    const dateColIdx = normHeaders.findIndex(
+      (h) => h.includes('fecha') || h.includes('solicitud dd') || h.includes('date')
+    );
+    const grupoColIdx = normHeaders.findIndex(
+      (h) => h.includes('grupo') || h.includes('clase') || h.includes('categoria')
+    );
+
+    if (parteColIdx < 0 || descColIdx < 0) return null;
+
+    const cleanInactCode = inactivatedCode.trim().toLowerCase();
+    const inactRowIndex = previewData.rows.findIndex((r) => {
+      const code = String(r[parteColIdx] || '').trim().toLowerCase();
+      return code === cleanInactCode;
+    });
+    const inactRow = inactRowIndex >= 0 ? previewData.rows[inactRowIndex] : null;
+
+    // Get reference / model from row or catalog equipment
+    const catalogEq = (equipments || []).find(
+      (e) => (e.code || '').trim().toLowerCase() === cleanInactCode
+    );
+    const inactRowRef = inactRow && refColIdx >= 0 ? String(inactRow[refColIdx] || '').trim().toLowerCase() : '';
+    const catalogRef = (catalogEq?.model || (catalogEq as any)?.reference || '').trim().toLowerCase();
+    const targetRef = inactRowRef || catalogRef;
+
+    const inactDate = inactRow && dateColIdx >= 0 ? String(inactRow[dateColIdx] || '').trim().toLowerCase() : '';
+    const inactGrupo = inactRow && grupoColIdx >= 0 ? String(inactRow[grupoColIdx] || '').trim().toLowerCase() : '';
+
+    const cleanInactDesc = (inactivatedDesc || (inactRow && descColIdx >= 0 ? String(inactRow[descColIdx] || '') : ''))
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .trim();
+
+    // Extract alphanumeric reference tokens from description (e.g. H100B, LT-F20, V1, FM197B, 417, 213, etc.)
+    const alphanumericTokens = cleanInactDesc
+      .split(/\s+/)
+      .filter((w) => /[0-9]/.test(w) && w.length >= 2);
+
+    const inactTokens = cleanInactDesc
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !['para', 'con', 'del', 'las', 'los', 'una', 'uno', 'ref', 'de', 'por'].includes(w));
+
+    // Core medical keywords (e.g., "oximetro de pulso", "ventilador de transporte", "flujometro para oxigeno")
+    const coreMedicalKeywords = inactTokens.filter((w) =>
+      ['oximetro', 'pulso', 'ventilador', 'transporte', 'flujometro', 'oxigeno', 'monitor', 'signos', 'vitales', 'balanza', 'tallimetro', 'infantometro', 'camilla', 'lampara', 'cielitica', 'pielitica', 'autoclave', 'desfibrilador', 'ecografo', 'electrocardiografo', 'incubadora', 'succionador', 'tensimetro', 'fonendoscopio'].includes(w)
+    );
+
+    let bestMatch: {
+      replacementCode: string;
+      replacementDesc: string;
+      rowIndex: number;
+      matchType: 'exact' | 'similar';
+      confidence: number;
+    } | null = null;
+
+    for (let i = 0; i < previewData.rows.length; i++) {
+      const candidateRow = previewData.rows[i];
+      const candidateParte = String(candidateRow[parteColIdx] || '').trim();
+      const cleanCandidateParte = candidateParte.toLowerCase();
+      if (!candidateParte || cleanCandidateParte === cleanInactCode) continue;
+
+      const candidateTipo = tipoColIdx >= 0 ? String(candidateRow[tipoColIdx] || '').toUpperCase() : '';
+      const candidateCellsNorm = candidateRow.map((c) =>
+        String(c || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+      );
+      const isCreation =
+        candidateTipo.includes('CREAC') ||
+        candidateCellsNorm.some((c) => c === 'CREACION' || c.includes('CREAC') || c === 'NUEVO');
+
+      if (!isCreation) continue;
+
+      const candidateDesc = String(candidateRow[descColIdx] || '').trim();
+      const cleanCandidateDesc = candidateDesc
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .trim();
+
+      const candidateRef = refColIdx >= 0 ? String(candidateRow[refColIdx] || '').trim().toLowerCase() : '';
+      const candidateDate = dateColIdx >= 0 ? String(candidateRow[dateColIdx] || '').trim().toLowerCase() : '';
+      const candidateGrupo = grupoColIdx >= 0 ? String(candidateRow[grupoColIdx] || '').trim().toLowerCase() : '';
+      const rowDistance = inactRowIndex >= 0 ? Math.abs(inactRowIndex - i) : 999;
+
+      let score = 0;
+
+      // Check 1: Reference column exact match (e.g. same reference / model in sheet or catalog)
+      if (
+        (targetRef && candidateRef && targetRef === candidateRef && targetRef.length >= 2) ||
+        (inactRowRef && candidateRef && inactRowRef === candidateRef && inactRowRef.length >= 2)
+      ) {
+        score = Math.max(score, 100);
+      }
+
+      // Check 2: Model / reference token embedded in candidate row or cells (e.g. "H100B")
+      if (alphanumericTokens.length > 0) {
+        const candidateRowString = candidateRow.join(' ').toLowerCase();
+        if (alphanumericTokens.some((tok) => candidateRowString.includes(tok) || cleanCandidateDesc.includes(tok))) {
+          score = Math.max(score, 98);
+        }
+      }
+
+      // Check 3: Exact description match
+      if (cleanCandidateDesc === cleanInactDesc) {
+        score = Math.max(score, 95);
+      }
+
+      // Check 4: Matches all non-filler tokens
+      if (inactTokens.length > 0 && inactTokens.every((t) => cleanCandidateDesc.includes(t))) {
+        score = Math.max(score, 92);
+      }
+
+      // Check 5: Shared core biomedical device name (e.g. "oximetro" + "pulso")
+      const candidateTokens = cleanCandidateDesc.split(/\s+/);
+      const sharedCoreWords = coreMedicalKeywords.filter((w) => candidateTokens.includes(w) || cleanCandidateDesc.includes(w));
+      const sharedAllWords = inactTokens.filter((w) => candidateTokens.includes(w) || cleanCandidateDesc.includes(w));
+
+      if (sharedCoreWords.length >= 2 || (sharedCoreWords.length >= 1 && sharedAllWords.length >= 2)) {
+        // High confidence if same date, adjacent row, or same group
+        if (inactDate && candidateDate && inactDate === candidateDate) {
+          score = Math.max(score, 90);
+        } else if (rowDistance <= 3) {
+          score = Math.max(score, 88);
+        } else if (inactGrupo && candidateGrupo && inactGrupo === candidateGrupo) {
+          score = Math.max(score, 85);
+        } else {
+          score = Math.max(score, 80);
+        }
+      }
+
+      if (score >= 80 && (!bestMatch || score > bestMatch.confidence)) {
+        bestMatch = {
+          replacementCode: candidateParte,
+          replacementDesc: candidateDesc,
+          rowIndex: i + 1,
+          matchType: score >= 95 ? 'exact' : 'similar',
+          confidence: score,
+        };
+      }
+    }
+
+    return bestMatch;
+  };
+
+  const [resolvedInactivatedCodes, setResolvedInactivatedCodes] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('syd_resolved_inactivated_parts_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return new Set(parsed.map((c: string) => String(c).trim().toLowerCase()));
+        }
+      }
+    } catch (_) {}
+    return new Set<string>();
+  });
+
+  const markPartsAsResolved = (codes: string[]) => {
+    setResolvedInactivatedCodes((prev) => {
+      const next = new Set(prev);
+      codes.forEach((c) => {
+        if (c && c.trim()) next.add(c.trim().toLowerCase());
+      });
+      try {
+        localStorage.setItem('syd_resolved_inactivated_parts_v1', JSON.stringify(Array.from(next)));
+      } catch (_) {}
+      return next;
+    });
+  };
+
+  const handleReplacePartInCatalog = (oldPartCode: string, newPartCode: string, newDesc?: string) => {
+    try {
+      markPartsAsResolved([oldPartCode]);
+      const stored = localStorage.getItem('syd_equipments_catalog');
+      let list: MedicalEquipment[] = stored ? JSON.parse(stored) : [...(equipments || [])];
+      let updated = false;
+
+      list = list.map((eq) => {
+        const eqCode = (eq.code || '').trim().toLowerCase();
+        if (eqCode === oldPartCode.trim().toLowerCase()) {
+          updated = true;
+          return {
+            ...eq,
+            code: newPartCode.trim(),
+            replacedPartCode: oldPartCode.trim(),
+            isInactive: false,
+            inactivationReason: undefined,
+            name: newDesc && newDesc.trim().length > 3 ? newDesc.trim() : eq.name,
+          };
+        }
+        return eq;
+      });
+
+      if (updated) {
+        localStorage.setItem('syd_equipments_catalog', JSON.stringify(list));
+        window.dispatchEvent(new CustomEvent('syd-catalog-updated', { detail: { catalog: list } }));
+        if (onUpdateEntireCatalog) {
+          onUpdateEntireCatalog(list);
+        }
+        setSheetConnectionSuccess(
+          `¡Parte ${oldPartCode} actualizada exitosamente a la nueva parte ${newPartCode} en el Catálogo Maestro!`
+        );
+      } else {
+        setSheetConnectionError(`No se encontró el equipo con parte ${oldPartCode} en el catálogo activo.`);
+      }
+    } catch (e) {
+      console.error(e);
+      setSheetConnectionError(`Error al actualizar la parte ${oldPartCode} en el catálogo.`);
+    }
+  };
+
+  const handleDeactivatePartInCatalog = (partCode: string) => {
+    try {
+      markPartsAsResolved([partCode]);
+      const stored = localStorage.getItem('syd_equipments_catalog');
+      let list: MedicalEquipment[] = stored ? JSON.parse(stored) : [...(equipments || [])];
+      let updated = false;
+
+      list = list.map((eq) => {
+        const eqCode = (eq.code || '').trim().toLowerCase();
+        if (eqCode === partCode.trim().toLowerCase()) {
+          updated = true;
+          return {
+            ...eq,
+            isInactive: true,
+            inactivationReason: 'Inactivada / Descontinuada según solicitud en formato N-FCO-03 de Drive',
+          };
+        }
+        return eq;
+      });
+
+      if (updated) {
+        localStorage.setItem('syd_equipments_catalog', JSON.stringify(list));
+        window.dispatchEvent(new CustomEvent('syd-catalog-updated', { detail: { catalog: list } }));
+        if (onUpdateEntireCatalog) {
+          onUpdateEntireCatalog(list);
+        }
+        setSheetConnectionSuccess(
+          `¡Parte ${partCode} marcada como Desactivada en el catálogo! Ya no podrá seleccionarse para cotizaciones.`
+        );
+      } else {
+        setSheetConnectionError(`No se encontró el equipo con parte ${partCode} en el catálogo activo.`);
+      }
+    } catch (e) {
+      console.error(e);
+      setSheetConnectionError(`Error al desactivar la parte ${partCode} en el catálogo.`);
+    }
+  };
+
+  const inactiveCatalogMatches = useMemo(() => {
+    if (!previewData?.rows || !previewData?.headers) return [];
+    const normHeaders = previewData.headers.map((h) =>
+      (h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+    );
+    const parteColIdx = normHeaders.findIndex(
+      (h) => h === 'parte' || h === 'codigo' || h === 'codigo de parte' || h.startsWith('parte') || h.includes('codigo')
+    );
+    const descColIdx = normHeaders.findIndex(
+      (h) => h.includes('descripcion') || h.includes('nombre') || h.includes('equipo')
+    );
+    const tipoColIdx = normHeaders.findIndex(
+      (h) =>
+        h.includes('tipo de solicitud') ||
+        h.includes('tipo solicitud') ||
+        h.includes('solicitud') ||
+        h === 'tipo' ||
+        h.includes('movimiento') ||
+        h.includes('accion')
+    );
+
+    if (parteColIdx < 0) return [];
+
+    const matches: Array<{
+      oldCode: string;
+      oldDesc: string;
+      replacementCode?: string;
+      replacementDesc?: string;
+      catalogEquipment: MedicalEquipment;
+      isAlreadyReplaced: boolean;
+      isAlreadyInactive: boolean;
+    }> = [];
+
+    const seenCodes = new Set<string>();
+
+    previewData.rows.forEach((row) => {
+      const rawParte = String(row[parteColIdx] || '').trim();
+      if (!rawParte || seenCodes.has(rawParte.toLowerCase())) return;
+
+      const rawTipo = tipoColIdx >= 0 ? String(row[tipoColIdx] || '').toUpperCase() : '';
+      const rowNorm = row.map((c) =>
+        String(c || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+      );
+      const isInactive =
+        rawTipo.includes('INACTIV') ||
+        rowNorm.some((c) => c === 'INACTIVACION' || c.includes('INACTIV') || c === 'BAJA' || c === 'DESCONTINUADO');
+
+      if (!isInactive) return;
+      seenCodes.add(rawParte.toLowerCase());
+
+      // If user has already replaced or dismissed this inactivated part, NEVER ask again
+      if (resolvedInactivatedCodes.has(rawParte.toLowerCase())) return;
+
+      const rawDesc = descColIdx >= 0 ? String(row[descColIdx] || '').trim() : '';
+      const catalogEq = (equipments || []).find(
+        (eq) => (eq.code || '').trim().toLowerCase() === rawParte.toLowerCase()
+      );
+      const alreadyReplacedEq = (equipments || []).find(
+        (eq) => (eq.replacedPartCode || '').trim().toLowerCase() === rawParte.toLowerCase()
+      );
+
+      // Only include if the equipment is created in catalog, hasn't been replaced yet, and isn't already inactive
+      if (catalogEq && !alreadyReplacedEq && !catalogEq.isInactive) {
+        const replacement = findReplacementForInactivatedPart(rawParte, rawDesc);
+        matches.push({
+          oldCode: rawParte,
+          oldDesc: rawDesc || catalogEq.name || '',
+          replacementCode: replacement?.replacementCode,
+          replacementDesc: replacement?.replacementDesc,
+          catalogEquipment: catalogEq,
+          isAlreadyReplaced: false,
+          isAlreadyInactive: false,
+        });
+      }
+    });
+
+    return matches;
+  }, [previewData, equipments, resolvedInactivatedCodes]);
 
   const handleOpenCreateFromRow = (row: string[], rowIndex: number) => {
     if (!previewData?.headers) return;
@@ -576,8 +912,10 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
     try {
       const sheets = await googleWorkspaceService.listSpreadsheetsFromDrive();
       setExistingDriveSheets(sheets);
-    } catch (e) {
-      console.warn('Error al buscar hojas de Google Sheets en Drive:', e);
+    } catch (e: any) {
+      if (!e?.message?.includes('actualizar la autorización') && !e?.message?.includes('expir')) {
+        console.warn('Error al buscar hojas de Google Sheets en Drive:', e);
+      }
     } finally {
       setIsLoadingDriveSheets(false);
     }
@@ -761,9 +1099,17 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
         mimeTypeFilter: activeFilter,
         searchQuery: activeQuery,
       });
-      setDriveFiles(files);
+      const seen = new Set<string>();
+      const uniqueFiles = (files || []).filter((f) => {
+        if (!f || !f.id || seen.has(f.id)) return false;
+        seen.add(f.id);
+        return true;
+      });
+      setDriveFiles(uniqueFiles);
     } catch (e: any) {
-      console.warn('Error loading drive files:', e);
+      if (!e?.message?.includes('expir') && !e?.message?.includes('401') && !e?.message?.includes('autoriz')) {
+        console.warn('Error loading drive files:', e);
+      }
       setDriveError(e?.message || 'Error al consultar archivos de Google Drive.');
     } finally {
       setIsLoadingDriveFiles(false);
@@ -787,8 +1133,8 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
       if (!connectedSheet || connectedSheet.id === 'catalogo_maestro') {
         try {
           await handleSearchAndConnectNFCO03();
-        } catch (searchErr) {
-          console.warn('Auto search N-FCO-03 skipped:', searchErr);
+        } catch (_searchErr) {
+          // Silent fallback when not found
         }
       }
     } catch (err: any) {
@@ -1346,6 +1692,110 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                     </button>
                   </div>
 
+                  {/* COMPACT NOTIFICATION: INACTIVATED PARTS DETECTED IN N-FCO-03 */}
+                  {inactiveCatalogMatches.filter((m) => !m.isAlreadyReplaced).length > 0 && (
+                    <div className="py-2 px-3 rounded-xl bg-slate-900/95 border border-amber-500/60 shadow-lg animate-fadeIn text-white">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="p-1 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                              <AlertCircle className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
+                              Inactivación N-FCO-03
+                            </span>
+                            <span className="text-[11px] text-amber-300 font-bold">
+                              ({inactiveCatalogMatches.filter((m) => !m.isAlreadyReplaced).length} afectadas):
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+                            {inactiveCatalogMatches
+                              .filter((m) => !m.isAlreadyReplaced)
+                              .map((m) => (
+                                <div
+                                  key={m.oldCode}
+                                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-800/90 border border-slate-700/80 text-[11px]"
+                                  title={`${m.oldCode}: ${m.oldDesc}`}
+                                >
+                                  <span className="font-mono font-bold text-amber-300">{m.oldCode}</span>
+                                  <span className="text-slate-300 truncate max-w-[150px] sm:max-w-[200px]">({m.oldDesc})</span>
+                                  {m.replacementCode ? (
+                                    <span className="text-cyan-300 font-bold flex items-center gap-0.5">
+                                      <span>↳</span>
+                                      <span className="font-mono bg-cyan-950 px-1 py-0.2 rounded border border-cyan-500/50 text-cyan-200 font-black">
+                                        {m.replacementCode}
+                                      </span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-rose-400 text-[10px] italic">
+                                      (Sin reemplazo)
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center">
+                          {inactiveCatalogMatches.some((m) => !m.isAlreadyReplaced && m.replacementCode) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const codes = inactiveCatalogMatches
+                                  .filter((m) => !m.isAlreadyReplaced && m.replacementCode)
+                                  .map((m) => m.oldCode);
+                                inactiveCatalogMatches
+                                  .filter((m) => !m.isAlreadyReplaced && m.replacementCode)
+                                  .forEach((m) => {
+                                    handleReplacePartInCatalog(m.oldCode, m.replacementCode!, m.replacementDesc);
+                                  });
+                                markPartsAsResolved(codes);
+                              }}
+                              className="px-2.5 py-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-[11px] font-black rounded-lg shadow flex items-center gap-1 cursor-pointer transition active:scale-95"
+                              title="Actualizar automáticamente los códigos de parte en el Catálogo Maestro"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              <span>Actualizar Todas</span>
+                            </button>
+                          )}
+                          {inactiveCatalogMatches.some((m) => !m.isAlreadyReplaced && !m.replacementCode && !m.isAlreadyInactive) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const codes = inactiveCatalogMatches
+                                  .filter((m) => !m.isAlreadyReplaced && !m.replacementCode && !m.isAlreadyInactive)
+                                  .map((m) => m.oldCode);
+                                inactiveCatalogMatches
+                                  .filter((m) => !m.isAlreadyReplaced && !m.replacementCode && !m.isAlreadyInactive)
+                                  .forEach((m) => {
+                                    handleDeactivatePartInCatalog(m.oldCode);
+                                  });
+                                markPartsAsResolved(codes);
+                              }}
+                              className="px-2.5 py-1 bg-rose-800 hover:bg-rose-700 text-rose-100 text-[11px] font-bold rounded-lg border border-rose-600 shadow flex items-center gap-1 cursor-pointer transition active:scale-95"
+                              title="Desactivar las partes sin reemplazo en el Catálogo Maestro"
+                            >
+                              <Ban className="w-3 h-3" />
+                              <span>Desactivar sin Reemplazo</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              markPartsAsResolved(inactiveCatalogMatches.map((m) => m.oldCode));
+                              setSheetConnectionSuccess('Avisos de inactivación descartados. No se volverán a mostrar.');
+                            }}
+                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-bold rounded-lg border border-slate-700 transition cursor-pointer"
+                            title="Ocultar permanentemente estas advertencias de inactivación"
+                          >
+                            <span>Descartar Aviso</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* NOTIFICATION: NEWLY DETECTED PART(S) IN DRIVE */}
                   {newPartNotification && !newPartNotification.dismissed && (
                     <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-emerald-950/70 to-slate-900 border-2 border-emerald-500/80 shadow-2xl animate-fadeIn text-white">
@@ -1681,15 +2131,67 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                                   </div>
 
                                   <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                    {part.requestType?.toUpperCase().includes('INACTIV') || part.status === 'Inactivada' ? (
-                                      <div
-                                        className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-rose-950/80 text-rose-300 border border-rose-700/60 select-none shadow-sm cursor-not-allowed"
-                                        title="Esta parte se encuentra en solicitud de INACTIVACIÓN en el formato N-FCO-03 (dada de baja o descontinuada). Ya no se utilizará."
-                                      >
-                                        <Ban className="w-4 h-4 text-rose-400" />
-                                        <span>Inactivada (No Utilizable)</span>
-                                      </div>
-                                    ) : part.requestType?.toUpperCase().includes('MODIFIC') ? (
+                                    {part.requestType?.toUpperCase().includes('INACTIV') || part.status === 'Inactivada' ? (() => {
+                                      const replacement = findReplacementForInactivatedPart(part.code, part.name);
+                                      const cleanCode = (part.code || '').trim().toLowerCase();
+                                      const inCatalog = (equipments || []).some(
+                                        (eq) => (eq.code || '').trim().toLowerCase() === cleanCode
+                                      );
+                                      const isAlreadyReplaced = (equipments || []).some(
+                                        (eq) => (eq.replacedPartCode || '').trim().toLowerCase() === cleanCode
+                                      );
+
+                                      if (isAlreadyReplaced) {
+                                        return (
+                                          <div
+                                            className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-emerald-950/80 text-emerald-300 border border-emerald-600/70 select-none shadow-sm"
+                                            title="Esta parte ya fue actualizada y reemplazada en el catálogo"
+                                          >
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                            <span>✓ Reemplazada en Catálogo</span>
+                                          </div>
+                                        );
+                                      }
+
+                                      if (inCatalog && replacement) {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleReplacePartInCatalog(part.code, replacement.replacementCode, replacement.replacementDesc)}
+                                            className="px-3.5 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-md cursor-pointer transition active:scale-95 animate-pulse"
+                                            title={`Parte inactivada. Se detectó nueva parte: ${replacement.replacementCode}. Clic para actualizar en el Catálogo Maestro.`}
+                                          >
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                            <span>Actualizar a {replacement.replacementCode}</span>
+                                          </button>
+                                        );
+                                      }
+
+                                      if (inCatalog && !replacement) {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDeactivatePartInCatalog(part.code)}
+                                            className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 border border-rose-600/60 shadow cursor-pointer transition active:scale-95"
+                                            title="Esta parte está en su catálogo. Clic para marcarla como Desactivada en el catálogo."
+                                          >
+                                            <Ban className="w-4 h-4 text-rose-400" />
+                                            <span>Desactivar en Catálogo</span>
+                                          </button>
+                                        );
+                                      }
+
+                                      return (
+                                        <div
+                                          className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-rose-950/80 text-rose-300 border border-rose-700/60 select-none shadow-sm cursor-not-allowed"
+                                          title="Esta parte se encuentra en solicitud de INACTIVACIÓN en el formato N-FCO-03 (dada de baja o descontinuada). Ya no se utilizará."
+                                        >
+                                          <Ban className="w-4 h-4 text-rose-400" />
+                                          <span>Inactivada (No Utilizable)</span>
+                                        </div>
+                                      );
+                                    })()
+                                    : part.requestType?.toUpperCase().includes('MODIFIC') ? (
                                       <button
                                         type="button"
                                         onClick={() => handleOpenCreateEquipmentModal(part)}
@@ -1803,6 +2305,11 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
                                 <option value={300}>300</option>
+                                <option value={500}>500</option>
+                                <option value={1000}>1,000</option>
+                                <option value={2500}>2,500</option>
+                                <option value={5000}>5,000</option>
+                                <option value={100000}>Todas las filas</option>
                               </select>
                             </div>
 
@@ -1933,15 +2440,67 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                                               <span className="text-slate-600 font-bold">—</span>
                                               <span>Sin Parte</span>
                                             </span>
-                                          ) : isInactive ? (
-                                            <span
-                                              className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-700/60 inline-flex items-center gap-1 select-none"
-                                              title={`Esta parte (${rawParte}) tiene solicitud de INACTIVACIÓN en el formato N-FCO-03. Ha sido descontinuada o dada de baja y no se utilizará más.`}
-                                            >
-                                              <Ban className="w-3 h-3 text-rose-400" />
-                                              <span>Inactivada</span>
-                                            </span>
-                                          ) : isModification ? (
+                                          ) : isInactive ? (() => {
+                                            const replacement = findReplacementForInactivatedPart(rawParte, rawDesc);
+                                            const cleanParte = rawParte.toLowerCase();
+                                            const inCatalog = (equipments || []).some(
+                                              (eq) => (eq.code || '').trim().toLowerCase() === cleanParte
+                                            );
+                                            const isAlreadyReplaced = (equipments || []).some(
+                                              (eq) => (eq.replacedPartCode || '').trim().toLowerCase() === cleanParte
+                                            );
+
+                                            if (isAlreadyReplaced) {
+                                              return (
+                                                <span
+                                                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-600/70 inline-flex items-center gap-1 select-none"
+                                                  title={`Esta parte (${rawParte}) ya fue actualizada y reemplazada en el catálogo.`}
+                                                >
+                                                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                                  <span>✓ Reemplazada</span>
+                                                </span>
+                                              );
+                                            }
+
+                                            if (inCatalog && replacement) {
+                                              return (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleReplacePartInCatalog(rawParte, replacement.replacementCode, replacement.replacementDesc)}
+                                                  className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-cyan-400 hover:bg-cyan-300 text-slate-950 inline-flex items-center gap-1 shadow cursor-pointer transition active:scale-95 animate-pulse"
+                                                  title={`Inactivada en N-FCO-03. Se detectó nueva parte reemplazante: ${replacement.replacementCode}. Clic para actualizar en el Catálogo Maestro.`}
+                                                >
+                                                  <RefreshCw className="w-3 h-3" />
+                                                  <span>Actualizar a {replacement.replacementCode}</span>
+                                                </button>
+                                              );
+                                            }
+
+                                            if (inCatalog && !replacement) {
+                                              return (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleDeactivatePartInCatalog(rawParte)}
+                                                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-900/80 hover:bg-rose-800 text-rose-200 border border-rose-500/60 inline-flex items-center gap-1 shadow cursor-pointer transition active:scale-95"
+                                                  title={`Esta parte está creada en su catálogo pero tiene solicitud de INACTIVACIÓN en Drive. Clic para marcarla como Desactivada en el catálogo.`}
+                                                >
+                                                  <Ban className="w-3 h-3 text-rose-400" />
+                                                  <span>Desactivar en Catálogo</span>
+                                                </button>
+                                              );
+                                            }
+
+                                            return (
+                                              <span
+                                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-700/60 inline-flex items-center gap-1 select-none"
+                                                title={`Esta parte (${rawParte}) tiene solicitud de INACTIVACIÓN en el formato N-FCO-03. Ha sido descontinuada o dada de baja.`}
+                                              >
+                                                <Ban className="w-3 h-3 text-rose-400" />
+                                                <span>Inactivada</span>
+                                              </span>
+                                            );
+                                          })()
+                                          : isModification ? (
                                             <button
                                               type="button"
                                               onClick={() => handleOpenCreateFromRow(row, startIndex + rIdx)}
@@ -2535,7 +3094,7 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                       </div>
                     )
                   ) : (
-                    driveFiles.map((file) => {
+                    driveFiles.map((file, fileIdx) => {
                       const isSheet =
                         file.mimeType?.includes('spreadsheet') ||
                         file.mimeType?.includes('excel') ||
@@ -2547,7 +3106,7 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
 
                       return (
                         <div
-                          key={file.id}
+                          key={`gw-drive-file-${file.id || 'f'}-${fileIdx}`}
                           className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-800/40 transition text-xs"
                         >
                           <div className="flex items-center gap-3 min-w-0">

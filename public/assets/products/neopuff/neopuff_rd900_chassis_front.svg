@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450" width="600" height="450">
+  <defs>
+    <linearGradient id="cfBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="unitGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="15%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <filter id="shadowCf" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <rect width="600" height="450" rx="16" fill="url(#cfBg)"/>
+  
+  <!-- Neopuff Main Console Frontal -->
+  <g filter="url(#shadowCf)" transform="translate(130, 40)">
+    <!-- Chassis Outer Shell -->
+    <rect width="340" height="340" rx="28" fill="url(#unitGrad)" stroke="#38bdf8" stroke-width="2"/>
+    <!-- Medical White Front Face -->
+    <rect x="16" y="16" width="308" height="308" rx="20" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+
+    <!-- Header Logo -->
+    <text x="170" y="48" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="900" fill="#0369a1" text-anchor="middle" letter-spacing="1.5">Fisher &amp; Paykel</text>
+    <text x="170" y="66" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle" letter-spacing="3">HEALTHCARE</text>
+    <rect x="50" y="74" width="240" height="1.5" fill="#e2e8f0"/>
+
+    <!-- Precision Manometer Large Center (0 to 60 cmH2O) -->
+    <circle cx="170" cy="165" r="72" fill="#cbd5e1" stroke="#94a3b8" stroke-width="3"/>
+    <circle cx="170" cy="165" r="66" fill="#ffffff" stroke="#1e293b" stroke-width="2"/>
+
+    <!-- Colored Dial Arcs -->
+    <!-- Green Safe Zone 0-25 -->
+    <path d="M 115 190 A 56 56 0 0 1 170 109" fill="none" stroke="#16a34a" stroke-width="6"/>
+    <!-- Yellow Caution 25-40 -->
+    <path d="M 170 109 A 56 56 0 0 1 217 146" fill="none" stroke="#eab308" stroke-width="6"/>
+    <!-- Red Danger 40-60 -->
+    <path d="M 217 146 A 56 56 0 0 1 225 190" fill="none" stroke="#dc2626" stroke-width="6"/>
+
+    <!-- Gauge Calibration Numbers -->
+    <text x="116" y="196" font-family="monospace" font-size="10" font-weight="bold" fill="#1e293b">0</text>
+    <text x="122" y="148" font-family="monospace" font-size="10" font-weight="bold" fill="#1e293b">10</text>
+    <text x="162" y="126" font-family="monospace" font-size="11" font-weight="bold" fill="#1e293b">20</text>
+    <text x="202" y="148" font-family="monospace" font-size="10" font-weight="bold" fill="#1e293b">40</text>
+    <text x="216" y="196" font-family="monospace" font-size="10" font-weight="bold" fill="#1e293b">60</text>
+    <text x="170" y="192" font-family="system-ui, sans-serif" font-size="8.5" font-weight="bold" fill="#64748b" text-anchor="middle">mbar / cmH₂O</text>
+
+    <!-- Red Pointer Needle -->
+    <line x1="170" y1="165" x2="168" y2="120" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="170" cy="165" r="6" fill="#0f172a"/>
+    <circle cx="170" cy="165" r="2.5" fill="#ffffff"/>
+
+    <!-- Knobs and Ports -->
+    <!-- Left: Max Pressure Relief Knob -->
+    <g transform="translate(68, 268)">
+      <circle cx="0" cy="0" r="26" fill="#0284c7" stroke="#0369a1" stroke-width="2.5"/>
+      <circle cx="0" cy="0" r="20" fill="#38bdf8"/>
+      <rect x="-3" y="-18" width="6" height="36" rx="2" fill="#ffffff"/>
+      <text x="0" y="38" font-family="system-ui, sans-serif" font-size="8.5" font-weight="bold" fill="#0369a1" text-anchor="middle">MAX RELIEF</text>
+    </g>
+
+    <!-- Right: Peak Inspiratory Pressure (PIP) Knob -->
+    <g transform="translate(272, 268)">
+      <circle cx="0" cy="0" r="26" fill="#0284c7" stroke="#0369a1" stroke-width="2.5"/>
+      <circle cx="0" cy="0" r="20" fill="#38bdf8"/>
+      <rect x="-18" y="-3" width="36" height="6" rx="2" fill="#ffffff"/>
+      <text x="0" y="38" font-family="system-ui, sans-serif" font-size="8.5" font-weight="bold" fill="#0369a1" text-anchor="middle">PIP CONTROL</text>
+    </g>
+
+    <!-- Center Connectors -->
+    <g transform="translate(170, 275)">
+      <rect x="-32" y="0" width="26" height="24" rx="4" fill="#64748b"/>
+      <circle cx="-19" cy="12" r="6" fill="#334155"/>
+      <text x="-19" y="34" font-family="system-ui, sans-serif" font-size="7" font-weight="bold" fill="#475569" text-anchor="middle">GAS IN</text>
+
+      <rect x="6" y="0" width="26" height="24" rx="4" fill="#0284c7"/>
+      <circle cx="19" cy="12" r="6" fill="#0369a1"/>
+      <text x="19" y="34" font-family="system-ui, sans-serif" font-size="7" font-weight="bold" fill="#0284c7" text-anchor="middle">OUTLET</text>
+    </g>
+  </g>
+
+  <!-- Bottom Spec Label -->
+  <rect x="50" y="400" width="500" height="32" rx="6" fill="#1e293b" stroke="#334155"/>
+  <text x="300" y="421" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#38bdf8" text-anchor="middle">CONSOLA FRONTAL CON MANÓMETRO ANÁLOGO Y PERILLAS PIP / PEEP</text>
+</svg>

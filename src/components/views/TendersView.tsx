@@ -46,7 +46,8 @@ import {
   SalesInvoiceRecord,
 } from '../../types';
 import { downloadTenderEquipmentTemplate } from '../../utils/excelImportUtils';
-import { createTenderProjectFromQuote } from '../../utils/salesOrdersStorage';
+import { createTenderProjectFromQuote, getStoredSalesOrders, getStoredSalesInvoices } from '../../utils/salesOrdersStorage';
+import { getStoredOCTrackingContracts } from '../../utils/ocTrackingStorage';
 import { formatCOP } from '../../utils/formatters';
 import { isTenderProjectDirectOC, formatTenderProcessNumber } from '../../utils/tenderDeduplication';
 import {
@@ -204,6 +205,17 @@ export const TendersView: React.FC<TendersViewProps> = ({
   salesInvoices = [],
   onCreateSalesOrder,
 }) => {
+  const effectiveContracts = useMemo(() => {
+    return contracts && contracts.length > 0 ? contracts : getStoredOCTrackingContracts();
+  }, [contracts]);
+
+  const effectiveOrders = useMemo(() => {
+    return salesOrders && salesOrders.length > 0 ? salesOrders : getStoredSalesOrders();
+  }, [salesOrders]);
+
+  const effectiveInvoices = useMemo(() => {
+    return salesInvoices && salesInvoices.length > 0 ? salesInvoices : getStoredSalesInvoices();
+  }, [salesInvoices]);
   const handleCreateClientFn = onCreateTenderClient || onCreateClient;
   // Client selection state
   const [internalActiveClientId, setInternalActiveClientId] = useState<string | null>(null);
@@ -319,12 +331,16 @@ export const TendersView: React.FC<TendersViewProps> = ({
     if (baseClients.length > 0) {
       if (!activeClientId || !baseClients.find((c) => c.id === activeClientId)) {
         const firstId = baseClients[0].id;
-        if (onSelectClient) onSelectClient(firstId);
-        else setInternalActiveClientId(firstId);
+        if (activeClientId !== firstId) {
+          if (onSelectClient) onSelectClient(firstId);
+          else setInternalActiveClientId(firstId);
+        }
       }
     } else {
-      if (onSelectClient) onSelectClient('');
-      else setInternalActiveClientId(null);
+      if (activeClientId) {
+        if (onSelectClient) onSelectClient('');
+        else setInternalActiveClientId(null);
+      }
     }
   }, [baseClients, activeClientId, onSelectClient]);
 
@@ -1158,9 +1174,9 @@ export const TendersView: React.FC<TendersViewProps> = ({
                   }}
                   onNavigateToOCTracking={onNavigateToOCTracking}
                   isReadOnly={isReadOnly}
-                  contracts={contracts}
-                  salesOrders={salesOrders}
-                  salesInvoices={salesInvoices}
+                  contracts={effectiveContracts}
+                  salesOrders={effectiveOrders}
+                  salesInvoices={effectiveInvoices}
                   onCreateSalesOrder={onCreateSalesOrder}
                 />
               )}
@@ -1299,14 +1315,14 @@ export const TendersView: React.FC<TendersViewProps> = ({
                     eq.code.toLowerCase().includes(q)
                   );
                 })
-                .map((eq) => {
+                .map((eq, eqIdx) => {
                   const alreadyIn = activeClient.items?.some(
                     (it) => it.equipmentId === eq.id || it.code === eq.code
                   );
 
                   return (
                     <div
-                      key={eq.id}
+                      key={`tender-eq-${eq.id || eq.code || 'it'}-${eqIdx}`}
                       className="bg-[#111c2e] border border-[#334d6e] hover:border-purple-400/80 rounded-xl p-3 flex items-center justify-between gap-3 transition shadow-sm"
                     >
                       <div className="min-w-0 flex-1 space-y-0.5">

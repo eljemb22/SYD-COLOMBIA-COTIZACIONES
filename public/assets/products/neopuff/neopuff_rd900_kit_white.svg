@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450" width="600" height="450">
+  <defs>
+    <linearGradient id="bgGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="chassisGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="15%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="gaugeGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <linearGradient id="bezelGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="50%" stop-color="#cbd5e1"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <filter id="shadow1" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="3" dy="6" stdDeviation="6" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="450" rx="16" fill="url(#bgGrad1)"/>
+  
+  <!-- Subtle Grid Pattern -->
+  <path d="M0 75 H600 M0 150 H600 M0 225 H600 M0 300 H600 M0 375 H600 M100 0 V450 M200 0 V450 M300 0 V450 M400 0 V450 M500 0 V450" stroke="#e2e8f0" stroke-width="1" opacity="0.6"/>
+
+  <!-- Top Badge -->
+  <g transform="translate(30, 25)">
+    <rect width="260" height="28" rx="14" fill="#0284c7" fill-opacity="0.1"/>
+    <text x="14" y="19" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#0284c7">FISHER &amp; PAYKEL HEALTHCARE</text>
+  </g>
+  <text x="570" y="44" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#334155" text-anchor="end">NEOPUFF™ RD900</text>
+
+  <!-- Main Neopuff Unit Body -->
+  <g filter="url(#shadow1)" transform="translate(160, 80)">
+    <!-- Main Chassis Box -->
+    <rect width="280" height="270" rx="20" fill="url(#chassisGrad1)" stroke="#0369a1" stroke-width="2"/>
+    <rect x="12" y="12" width="256" height="246" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+
+    <!-- Top Branding Plate -->
+    <rect x="25" y="24" width="230" height="32" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="140" y="45" font-family="system-ui, sans-serif" font-size="14" font-weight="800" fill="#0369a1" text-anchor="middle" letter-spacing="1">Fisher &amp; Paykel</text>
+
+    <!-- Manometer Gauge Bezel & Face -->
+    <circle cx="140" cy="125" r="54" fill="url(#bezelGrad1)" filter="url(#shadow1)"/>
+    <circle cx="140" cy="125" r="48" fill="url(#gaugeGrad1)" stroke="#0f172a" stroke-width="1.5"/>
+
+    <!-- Pressure Arc (0 to 60 cmH2O) -->
+    <!-- Safe zone green (0-25) -->
+    <path d="M 98 145 A 42 42 0 0 1 140 83" fill="none" stroke="#22c55e" stroke-width="4.5"/>
+    <!-- Warning zone yellow (25-40) -->
+    <path d="M 140 83 A 42 42 0 0 1 176 112" fill="none" stroke="#eab308" stroke-width="4.5"/>
+    <!-- Danger zone red (40-60) -->
+    <path d="M 176 112 A 42 42 0 0 1 182 145" fill="none" stroke="#ef4444" stroke-width="4.5"/>
+
+    <!-- Gauge Markings -->
+    <text x="100" y="148" font-family="monospace" font-size="8" font-weight="bold" fill="#334155">0</text>
+    <text x="105" y="112" font-family="monospace" font-size="8" font-weight="bold" fill="#334155">10</text>
+    <text x="135" y="96" font-family="monospace" font-size="8" font-weight="bold" fill="#334155">20</text>
+    <text x="165" y="112" font-family="monospace" font-size="8" font-weight="bold" fill="#334155">40</text>
+    <text x="175" y="148" font-family="monospace" font-size="8" font-weight="bold" fill="#334155">60</text>
+    <text x="140" y="145" font-family="system-ui, sans-serif" font-size="7" font-weight="bold" fill="#64748b" text-anchor="middle">mbar / cmH₂O</text>
+
+    <!-- Gauge Needle (showing 20 mbar PIP) -->
+    <line x1="140" y1="125" x2="138" y2="92" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="140" cy="125" r="4.5" fill="#1e293b"/>
+    <circle cx="140" cy="125" r="2" fill="#ffffff"/>
+
+    <!-- Left Knob: Max Pressure Relief -->
+    <g transform="translate(60, 205)">
+      <circle cx="0" cy="0" r="22" fill="#0284c7" stroke="#0369a1" stroke-width="2"/>
+      <circle cx="0" cy="0" r="16" fill="#38bdf8"/>
+      <!-- Knob ridges -->
+      <line x1="0" y1="-14" x2="0" y2="14" stroke="#ffffff" stroke-width="2"/>
+      <text x="0" y="32" font-family="system-ui, sans-serif" font-size="7" font-weight="bold" fill="#0369a1" text-anchor="middle">MAX RELIEF</text>
+    </g>
+
+    <!-- Right Knob: PIP Control -->
+    <g transform="translate(220, 205)">
+      <circle cx="0" cy="0" r="22" fill="#0284c7" stroke="#0369a1" stroke-width="2"/>
+      <circle cx="0" cy="0" r="16" fill="#38bdf8"/>
+      <line x1="-14" y1="0" x2="14" y2="0" stroke="#ffffff" stroke-width="2"/>
+      <text x="0" y="32" font-family="system-ui, sans-serif" font-size="7" font-weight="bold" fill="#0369a1" text-anchor="middle">PIP CONTROL</text>
+    </g>
+
+    <!-- Center Ports at bottom -->
+    <g transform="translate(140, 218)">
+      <rect x="-35" y="0" width="22" height="18" rx="3" fill="#64748b"/>
+      <circle cx="-24" cy="9" r="5" fill="#334155"/>
+      <text x="-24" y="27" font-family="system-ui, sans-serif" font-size="6.5" font-weight="bold" fill="#64748b" text-anchor="middle">GAS IN</text>
+
+      <rect x="13" y="0" width="22" height="18" rx="3" fill="#0284c7"/>
+      <circle cx="24" cy="9" r="5" fill="#0369a1"/>
+      <text x="24" y="27" font-family="system-ui, sans-serif" font-size="6.5" font-weight="bold" fill="#0284c7" text-anchor="middle">PATIENT</text>
+    </g>
+  </g>
+
+  <!-- Attached T-Piece Circuit & Mask (Left/Bottom layout) -->
+  <g transform="translate(30, 240)">
+    <!-- Flexible corrugated hose -->
+    <path d="M 140 85 C 100 130, 50 110, 40 150" fill="none" stroke="#38bdf8" stroke-width="12" stroke-linecap="round" stroke-dasharray="2,3"/>
+    <path d="M 140 85 C 100 130, 50 110, 40 150" fill="none" stroke="#bae6fd" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- T-Piece Body -->
+    <g transform="translate(40, 150)">
+      <rect x="-8" y="-14" width="16" height="28" rx="4" fill="#0284c7"/>
+      <!-- Blue PEEP Cap dial on top -->
+      <rect x="-11" y="-22" width="22" height="9" rx="3" fill="#0369a1" stroke="#ffffff" stroke-width="1"/>
+      <!-- Occlusion port button -->
+      <circle cx="0" cy="-17" r="3.5" fill="#38bdf8"/>
+      <!-- Neonatal Round Mask -->
+      <ellipse cx="22" cy="18" rx="18" ry="14" fill="#ffffff" fill-opacity="0.85" stroke="#94a3b8" stroke-width="2"/>
+      <circle cx="22" cy="18" r="7" fill="#38bdf8" fill-opacity="0.6"/>
+      <text x="22" y="44" font-family="system-ui, sans-serif" font-size="9" font-weight="bold" fill="#0284c7" text-anchor="middle">Pieza en T &amp; Mascarilla</text>
+    </g>
+  </g>
+
+  <!-- Green Gas Supply Line (Right) -->
+  <g transform="translate(440, 260)">
+    <path d="M -160 47 C -80 60, -30 110, 50 120" fill="none" stroke="#16a34a" stroke-width="7" stroke-linecap="round"/>
+    <g transform="translate(50, 120)">
+      <rect x="-10" y="-8" width="20" height="16" rx="4" fill="#15803d"/>
+      <text x="0" y="22" font-family="system-ui, sans-serif" font-size="9" font-weight="bold" fill="#15803d" text-anchor="middle">Línea O₂ Hospitalaria</text>
+    </g>
+  </g>
+
+  <!-- Bottom Details Bar -->
+  <g transform="translate(30, 395)">
+    <rect width="540" height="35" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="20" y="22" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#0f172a">REANIMADOR INFANTIL NEOPUFF RD900</text>
+    <text x="350" y="22" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#0284c7">Manómetro 0-60 mbar · Control PIP / PEEP</text>
+  </g>
+</svg>

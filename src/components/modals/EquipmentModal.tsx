@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   BookOpen,
@@ -21,6 +21,7 @@ import {
   Loader2,
   Layers,
   ChevronDown,
+  Zap,
 } from 'lucide-react';
 import { MedicalEquipment, MarginListKey, SupplierProfile, ProductGroup } from '../../types';
 import { fetchLiveTRM, getCachedTRM, getRecommendedTRMRate, TrmData } from '../../utils/trmService';
@@ -31,6 +32,8 @@ import {
 } from '../../utils/ocTrackingStorage';
 import { detectProductGroup } from '../../utils/productGroupUtils';
 import { isRateLimitError, notifyRateLimit } from '../../utils/rateLimitHandler';
+import { markPendingAsCreated } from '../../utils/pendingEquipmentsStorage';
+import { DetectedSheetPart } from '../../services/googleWorkspaceService';
 
 interface EquipmentModalProps {
   isOpen: boolean;
@@ -129,7 +132,53 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
   const [accessories, setAccessories] = useState<{ name: string; costCOP: number; included: boolean }[]>([]);
   const [newAccName, setNewAccName] = useState('');
   const [newAccCost, setNewAccCost] = useState<number>(0);
-  const [newAccIncluded, setNewAccIncluded] = useState<boolean>(true);
+  const [partCodeError, setPartCodeError] = useState<string | null>(null);
+
+  const isFromPending = Boolean(equipmentToEdit?.sourceOrigin?.startsWith('pending-id:'));
+
+  // Drive Parts cache from N-FCO-03
+  const [driveParts] = useState<DetectedSheetPart[]>(() => {
+    try {
+      const raw = localStorage.getItem('syd_detected_sheet_parts_v1');
+      if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    return [];
+  });
+
+  // Candidate matching part from Drive N-FCO-03
+  const driveCandidate = useMemo(() => {
+    if (!driveParts || driveParts.length === 0) return null;
+    const cleanModel = (model || '').toLowerCase().trim();
+    const cleanBrand = (effectiveBrand || '').toLowerCase().trim();
+    const cleanName = (name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+    return driveParts.find((dp) => {
+      const dpModel = (dp.model || '').toLowerCase();
+      const dpBrand = (dp.brand || '').toLowerCase();
+      const dpName = (dp.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+      if (cleanModel && cleanModel.length >= 2 && (dpModel.includes(cleanModel) || dpName.includes(cleanModel))) return true;
+      if (cleanBrand && dpBrand.includes(cleanBrand) && cleanName && dpName.includes(cleanName.slice(0, 5))) return true;
+      return false;
+    }) || null;
+  }, [driveParts, model, effectiveBrand, name]);
+
+  const handleApplyDriveCandidate = (dp: DetectedSheetPart) => {
+    if (dp.code) setCode(dp.code);
+    if (dp.supplier) setSupplier(dp.supplier);
+    if (dp.invimaRegister && dp.invimaRegister.toLowerCase() !== 'no aplica') {
+      setRequiresInvima(true);
+      setInvimaRecordNumber(dp.invimaRegister);
+    }
+    if (dp.costCOP && dp.costCOP > 0) {
+      setBaseCostCOP(dp.costCOP);
+      const validTrm = trm > 0 ? trm : (trmData.analysis?.recommendedRoundRate || getRecommendedTRMRate(trmData.rate));
+      setBaseCostUSD(Math.round(dp.costCOP / validTrm));
+    }
+    if (dp.name) {
+      setDescription(`Equipo biomédico oficial ${dp.name} (${dp.brand || effectiveBrand} ${dp.model || model}), creado con datos de parte oficial N-FCO-03.`);
+    }
+  };
 
   // Refresh live TRM from internet
   const handleFetchLiveTRM = async (recalculateFrom: 'cop' | 'usd' | null = null) => {
@@ -503,9 +552,30 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
             ? `${effectiveBrand.substring(0, 3).toUpperCase()}-${model.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8)}`
             : `EQ-${Date.now().toString().slice(-4)}`);
 
+    // Prevent duplicate part numbers
+    const cleanFinalCode = finalCode.trim().toLowerCase();
+    const stored = localStorage.getItem('syd_equipments_catalog');
+    if (stored) {
+      try {
+        const catalogList: MedicalEquipment[] = JSON.parse(stored);
+        const duplicate = catalogList.find(
+          (eq) =>
+            (eq.code || '').trim().toLowerCase() === cleanFinalCode &&
+            eq.id !== equipmentToEdit?.id
+        );
+        if (duplicate) {
+          setPartCodeError(
+            `⚠️ Error: El código de parte "${finalCode}" ya está registrado en el Catálogo para el equipo "${duplicate.name}". No se permiten códigos de parte duplicados.`
+          );
+          return;
+        }
+      } catch (_) {}
+    }
+    setPartCodeError(null);
+
     const savedEq: MedicalEquipment = {
       ...(equipmentToEdit || {}),
-      id: equipmentToEdit?.id || `eq-${Date.now()}`,
+      id: equipmentToEdit?.id || `eq-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       code: finalCode,
       name: name.trim(),
       brand: effectiveBrand,
@@ -555,6 +625,12 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
     // Auto-register supplier in Directory (Ventana 5) immediately
     if (savedEq.supplier && savedEq.supplier.trim()) {
       autoRegisterSuppliersFromEquipments([savedEq]);
+    }
+
+    // If equipment was created from a pending emergency quote equipment, mark it as created
+    if (savedEq.sourceOrigin && savedEq.sourceOrigin.startsWith('pending-id:')) {
+      const pendingId = savedEq.sourceOrigin.replace('pending-id:', '').trim();
+      markPendingAsCreated(pendingId, savedEq.id, savedEq.code);
     }
 
     onSave(savedEq);
@@ -617,6 +693,40 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
         {/* Unified Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 space-y-4 text-xs pt-3 scrollbar-thin flex flex-col justify-between">
           <div className="space-y-4">
+            {partCodeError && (
+              <div className="p-3 bg-rose-950/90 border border-rose-500 rounded-xl text-rose-200 text-xs font-bold flex items-center justify-between gap-2 shadow-lg animate-fadeIn">
+                <span className="flex-1">{partCodeError}</span>
+                <button
+                  type="button"
+                  onClick={() => setPartCodeError(null)}
+                  className="p-1 hover:bg-rose-900 rounded text-rose-300 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            {isFromPending && (
+              <div className="p-3 bg-amber-500/15 border border-amber-500/50 rounded-xl text-amber-200 text-xs flex flex-wrap items-center justify-between gap-3 shadow-md animate-fadeIn">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    Formalizando requerimiento urgente: Ingrese <strong>Parte / Código</strong>, <strong>Proveedor</strong> y <strong>Registro INVIMA</strong> para archivar en el Catálogo Maestro.
+                  </span>
+                </div>
+                {driveCandidate && (
+                  <button
+                    type="button"
+                    onClick={() => handleApplyDriveCandidate(driveCandidate)}
+                    className="px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-[11px] transition cursor-pointer flex items-center gap-1 active:scale-95 shadow"
+                    title={`Cargar automáticamente Parte #${driveCandidate.code}, Proveedor: ${driveCandidate.supplier || 'TECNICA'} e INVIMA desde Drive`}
+                  >
+                    <Zap className="w-3 h-3 fill-current" />
+                    <span>Cargar datos desde Drive N-FCO-03 (Parte #{driveCandidate.code})</span>
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* SECTION 1: Datos Básicos, Marca, Modelo, Proveedor */}
             <div className="bg-[#15253d] p-4 rounded-xl border border-[#334d6e] space-y-3">
               <div className="flex items-center gap-2 text-white font-bold text-xs border-b border-[#334d6e]/60 pb-2">

@@ -119,6 +119,23 @@ export const CreateEquipmentFromPartModal: React.FC<CreateEquipmentFromPartModal
       return;
     }
 
+    // Check for duplicate part code in catalog
+    const stored = localStorage.getItem('syd_equipments_catalog');
+    if (stored) {
+      try {
+        const catalogList: MedicalEquipment[] = JSON.parse(stored);
+        const duplicate = catalogList.find(
+          (eq) => (eq.code || '').trim().toLowerCase() === cleanCode.toLowerCase()
+        );
+        if (duplicate) {
+          setErrorMsg(
+            `⚠️ Error: El código de parte "${cleanCode}" ya está registrado en el Catálogo para "${duplicate.name}". No se permiten códigos de parte duplicados.`
+          );
+          return;
+        }
+      } catch (_) {}
+    }
+
     const cleanSupplier = supplier.trim() || (cleanCode === '70904' ? 'TECNICA' : 'TECNICA');
     const cleanBrand = brand.trim() || 'MINDRAY';
     const cleanModel = model.trim() || (cleanCode === '70904' ? 'HYBASE V5' : '');

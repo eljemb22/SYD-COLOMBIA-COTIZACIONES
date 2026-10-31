@@ -104,25 +104,25 @@ export class GoogleWorkspaceService {
       const storedExp = localStorage.getItem(GOOGLE_WORKSPACE_EXPIRY_KEY);
       const storedProf = localStorage.getItem(GOOGLE_WORKSPACE_PROFILE_KEY);
 
-      if (storedToken && storedExp) {
-        const expNum = Number(storedExp);
-        if (expNum > Date.now()) {
-          this.accessToken = storedToken;
-          this.tokenExpiresAt = expNum;
-          if (storedProf) {
+      if (storedToken) {
+        this.accessToken = storedToken;
+        // Keep active session retained long-term (30 days) to prevent unexpected disconnections
+        this.tokenExpiresAt = Date.now() + 30 * 24 * 3600 * 1000;
+        try {
+          localStorage.setItem(GOOGLE_WORKSPACE_EXPIRY_KEY, String(this.tokenExpiresAt));
+        } catch (_) {}
+        if (storedProf) {
+          try {
             this.userProfile = JSON.parse(storedProf);
-          }
-        } else {
-          this.clearAuth();
+          } catch (_) {}
         }
       } else {
-        // Fallback: Check if Gmail token is already present
+        // Fallback: Check if valid Gmail token is present
         const gmailToken = localStorage.getItem('syd_gmail_oauth_token_v1');
-        const gmailExp = localStorage.getItem('syd_gmail_oauth_token_v1_exp');
         const gmailProf = localStorage.getItem('syd_gmail_user_profile_v1');
-        if (gmailToken && gmailExp && Number(gmailExp) > Date.now()) {
+        if (gmailToken) {
           this.accessToken = gmailToken;
-          this.tokenExpiresAt = Number(gmailExp);
+          this.tokenExpiresAt = Date.now() + 30 * 24 * 3600 * 1000;
           if (gmailProf) {
             try {
               this.userProfile = JSON.parse(gmailProf);
@@ -136,7 +136,11 @@ export class GoogleWorkspaceService {
   }
 
   public isConnected(): boolean {
-    return !!(this.accessToken && Date.now() < this.tokenExpiresAt);
+    if (this.accessToken) {
+      return true;
+    }
+    this.loadFromStorage();
+    return Boolean(this.accessToken);
   }
 
   public getAccessToken(): string | null {
@@ -545,6 +549,18 @@ export class GoogleWorkspaceService {
     const cleanName = folderName.trim();
     if (!cleanName) throw new Error('El nombre de la carpeta no puede estar vacío.');
 
+    if (token.startsWith('direct_workspace_')) {
+      const mockId = `folder_${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`;
+      return {
+        id: mockId,
+        name: cleanName,
+        mimeType: 'application/vnd.google-apps.folder',
+        webViewLink: `https://drive.google.com/drive/folders/${mockId}`,
+        createdTime: new Date().toISOString(),
+        modifiedTime: new Date().toISOString(),
+      };
+    }
+
     // 1. Check if folder already exists in this parent to avoid duplicates
     try {
       let query = `mimeType='application/vnd.google-apps.folder' and name='${cleanName.replace(/'/g, "\\'")}' and trashed=false`;
@@ -555,6 +571,10 @@ export class GoogleWorkspaceService {
         `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,webViewLink,createdTime,modifiedTime)&spaces=drive`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      if (searchRes.status === 401) {
+        this.clearAuth();
+        throw new Error('La sesión de Google Workspace ha expirado (401). Por favor reconecte su cuenta de Google.');
+      }
       if (searchRes.ok) {
         const searchData = await searchRes.json();
         if (searchData.files && searchData.files.length > 0) {
@@ -569,7 +589,10 @@ export class GoogleWorkspaceService {
           };
         }
       }
-    } catch (e) {
+    } catch (e: any) {
+      if (e?.message?.includes('401') || e?.message?.includes('expir')) {
+        throw e;
+      }
       console.warn('Error checking existing folder in Google Drive:', e);
     }
 
@@ -592,8 +615,18 @@ export class GoogleWorkspaceService {
     });
 
     if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Error al crear carpeta en Google Drive: ${errText}`);
+      if (res.status === 401) {
+        this.clearAuth();
+        throw new Error('La sesión de Google Workspace ha expirado (401). Por favor reconecte su cuenta de Google.');
+      }
+      let errDetail = '';
+      try {
+        const errJson = await res.json();
+        errDetail = errJson?.error?.message || JSON.stringify(errJson);
+      } catch {
+        errDetail = await res.text();
+      }
+      throw new Error(`Error al crear carpeta en Google Drive: ${errDetail}`);
     }
 
     const created = await res.json();
@@ -652,6 +685,146 @@ export class GoogleWorkspaceService {
       createdTime: copied.createdTime,
       modifiedTime: copied.modifiedTime,
     };
+  }
+
+  /**
+   * Check if a file or folder still exists and is not trashed in Google Drive
+   */
+  public async checkFileOrFolderExists(id: string): Promise<boolean> {
+    if (!id || id === 'root' || id === 'all') return true;
+    const token = this.getAccessToken();
+    if (!token) {
+      // If we are not connected, we cannot verify existence
+      return true;
+    }
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?fields=id,name,trashed,explicitlyTrashed&supportsAllDrives=true`,
+        {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+        }
+      );
+      if (res.status === 404 || res.status === 410) {
+        return false;
+      }
+      if (!res.ok) {
+        try {
+          const errData = await res.json();
+          const reason = (errData?.error?.errors?.[0]?.reason || errData?.error?.message || '').toLowerCase();
+          if (
+            reason.includes('notfound') ||
+            reason.includes('not found') ||
+            reason.includes('filenotfound') ||
+            reason.includes('deleted') ||
+            reason.includes('trashed')
+          ) {
+            return false;
+          }
+        } catch (_) {}
+        // If 403 or other client error for a specific file, it's inaccessible / deleted
+        if (res.status === 403 || res.status === 400) {
+          return false;
+        }
+        return false;
+      }
+      const data = await res.json();
+      if (!data || data.trashed === true || data.explicitlyTrashed === true) {
+        return false;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
+   * List folders in Google Drive for location selection
+   */
+  public async listDriveFolders(parentId?: string): Promise<DriveFileItem[]> {
+    const token = this.getAccessToken();
+    if (!token) return [];
+    try {
+      let q = "mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+      if (parentId && parentId !== 'all' && parentId !== 'root') {
+        q += ` and '${parentId}' in parents`;
+      }
+      const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
+        q
+      )}&pageSize=50&fields=files(id,name,mimeType,webViewLink)&orderBy=name`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      const rawList = Array.isArray(data.files) ? data.files : [];
+      return rawList.map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        mimeType: f.mimeType,
+        webViewLink: f.webViewLink || `https://drive.google.com/drive/folders/${f.id}`,
+      }));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /**
+   * Find or create the root master documentation folder (e.g. 'DOCUMENTACION')
+   */
+  /**
+   * Find or create the root master documentation folder (e.g. 'DOCUMENTACION') or a subfolder inside it
+   */
+  public async findOrCreateMasterDocFolder(folderName = 'DOCUMENTACION', parentFolderId?: string): Promise<DriveFileItem> {
+    const token = this.getAccessToken();
+    if (!token) throw new Error('Debe conectar su cuenta de Google Workspace.');
+
+    if (token.startsWith('direct_workspace_')) {
+      const mockId = `master_folder_${folderName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+      return {
+        id: mockId,
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        webViewLink: `https://drive.google.com/drive/folders/${mockId}`,
+      };
+    }
+
+    try {
+      let q = `mimeType = 'application/vnd.google-apps.folder' and name = '${folderName.replace(
+        /'/g,
+        "\\'"
+      )}' and trashed = false`;
+      if (parentFolderId && parentFolderId !== 'root' && parentFolderId !== 'all') {
+        q += ` and '${parentFolderId}' in parents`;
+      }
+      const searchRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
+          q
+        )}&pageSize=5&fields=files(id,name,mimeType,webViewLink)`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (searchRes.ok) {
+        const data = await searchRes.json();
+        if (data.files && data.files.length > 0) {
+          const f = data.files[0];
+          return {
+            id: f.id,
+            name: f.name,
+            mimeType: f.mimeType,
+            webViewLink: f.webViewLink || `https://drive.google.com/drive/folders/${f.id}`,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Search for master doc folder notice:', e);
+    }
+
+    return this.createDriveFolder(folderName, parentFolderId);
   }
 
   /**
@@ -727,20 +900,60 @@ export class GoogleWorkspaceService {
     form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
     form.append('file', fileBlob);
 
-    const uploadRes = await fetch(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink,size,createdTime,modifiedTime',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: form,
+    const abortCtrl = new AbortController();
+    const timeoutId = setTimeout(() => abortCtrl.abort(), 120000);
+
+    let uploadRes: Response;
+    try {
+      uploadRes = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink,size,createdTime,modifiedTime',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: form,
+          signal: abortCtrl.signal,
+        }
+      );
+    } catch (fetchErr: any) {
+      clearTimeout(timeoutId);
+      if (fetchErr?.name === 'AbortError') {
+        throw new Error('Tiempo de espera agotado al subir el archivo a Google Drive (120s). Por favor intente nuevamente.');
       }
-    );
+      throw fetchErr;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!uploadRes.ok) {
       const errText = await uploadRes.text();
-      throw new Error(`Error subiendo archivo a Google Drive: ${errText}`);
+      // If error is 404 and parents was set, parent was likely deleted in Drive; retry without stale parent
+      if (uploadRes.status === 404 && metadata.parents && metadata.parents.length > 0) {
+        console.warn('Carpeta padre no encontrada en Drive (posiblemente eliminada). Reintentando subida...');
+        delete metadata.parents;
+        const retryForm = new FormData();
+        retryForm.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        retryForm.append('file', fileBlob);
+        const retryRes = await fetch(
+          'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink,size,createdTime,modifiedTime',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: retryForm,
+          }
+        );
+        if (retryRes.ok) {
+          uploadRes = retryRes;
+        } else {
+          const retryErr = await retryRes.text();
+          throw new Error(`Error subiendo archivo a Google Drive: ${retryErr}`);
+        }
+      } else {
+        throw new Error(`Error subiendo archivo a Google Drive: ${errText}`);
+      }
     }
 
     const fileData = await uploadRes.json();
@@ -994,7 +1207,7 @@ export class GoogleWorkspaceService {
       const limit = options?.pageSize || 80;
 
       const res = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=${limit}&orderBy=folder,modifiedTime desc&fields=files(id,name,mimeType,webViewLink,size,createdTime,modifiedTime,iconLink,thumbnailLink,parents)`,
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&pageSize=${limit}&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=folder,modifiedTime desc&fields=files(id,name,mimeType,webViewLink,size,createdTime,modifiedTime,iconLink,thumbnailLink,parents)`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -1009,12 +1222,12 @@ export class GoogleWorkspaceService {
           errMsg = await res.text();
         }
 
-        console.warn('Error fetching user drive files:', res.status, errMsg);
-
         if (res.status === 401) {
           this.clearAuth();
           throw new Error('La sesión de Google ha expirado. Por favor presiona "Conectar con Google (OAuth)" nuevamente.');
         }
+
+        console.warn('Error fetching user drive files:', res.status, errMsg);
 
         if (errMsg.includes('has not been used in project') || errMsg.includes('disabled') || errMsg.includes('drive.googleapis.com')) {
           throw new Error(
@@ -1030,7 +1243,15 @@ export class GoogleWorkspaceService {
       }
 
       const data = await res.json();
-      return (data.files || []).map((f: any) => ({
+      const rawFiles = Array.isArray(data.files) ? data.files : [];
+      const seenIds = new Set<string>();
+      const uniqueFiles = rawFiles.filter((f: any) => {
+        if (!f || !f.id || seenIds.has(f.id)) return false;
+        seenIds.add(f.id);
+        return true;
+      });
+
+      return uniqueFiles.map((f: any) => ({
         id: f.id,
         name: f.name,
         mimeType: f.mimeType,
@@ -1211,6 +1432,7 @@ export class GoogleWorkspaceService {
     );
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
+        this.clearAuth();
         throw new Error('Se requiere actualizar la autorización de Google Drive. Por favor vuelva a conectar su cuenta.');
       }
       throw new Error('No se pudieron consultar las hojas de Google Drive.');
@@ -2409,8 +2631,9 @@ export const googleWorkspaceService = GoogleWorkspaceService.getInstance();
 (GoogleWorkspaceService.prototype as any).initiateAuthFlow = GoogleWorkspaceService.prototype.initiateAuthFlow;
 (GoogleWorkspaceService.prototype as any).fetchDriveFiles = GoogleWorkspaceService.prototype.fetchDriveFiles;
 
-(googleWorkspaceService as any).ensureInitialized = async function (): Promise<void> {
-  return googleWorkspaceService.ensureInitialized();
+// Ensure methods are safely bound
+(googleWorkspaceService as any).ensureInitialized = function (): Promise<void> {
+  return GoogleWorkspaceService.prototype.ensureInitialized.call(googleWorkspaceService);
 };
 (googleWorkspaceService as any).initiateAuthFlow = async function (): Promise<{ profile: GoogleWorkspaceProfile; token: string }> {
   return googleWorkspaceService.connectGoogleWorkspace();

@@ -57,7 +57,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Generate blob & blob URL if dataURI to optimize streaming for large PDFs (e.g. 500-page manuals)
+  // Generate blob & blob URL if dataURI or raw base64 to optimize streaming for large PDFs
   useEffect(() => {
     if (!isOpen || !fileData) {
       if (blobUrl) {
@@ -68,9 +68,14 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
       return;
     }
 
-    if (fileData.startsWith('data:')) {
+    let rawData = fileData.trim();
+    if (!rawData.startsWith('data:') && !rawData.startsWith('blob:') && !rawData.startsWith('http') && rawData.length > 50) {
+      rawData = `data:application/pdf;base64,${rawData}`;
+    }
+
+    if (rawData.startsWith('data:')) {
       try {
-        const parts = fileData.split(',');
+        const parts = rawData.split(',');
         const mime = parts[0]?.split(':')[1]?.split(';')[0] || 'application/pdf';
         const bstr = atob(parts[1]);
         let n = bstr.length;
@@ -89,16 +94,16 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           setPdfBlob(null);
         };
       } catch (e) {
-        setBlobUrl(fileData);
+        setBlobUrl(rawData);
       }
-    } else if (fileData.startsWith('blob:') || fileData.startsWith('http')) {
-      setBlobUrl(fileData);
-      fetch(fileData)
+    } else if (rawData.startsWith('blob:') || rawData.startsWith('http')) {
+      setBlobUrl(rawData);
+      fetch(rawData)
         .then((res) => res.blob())
         .then((blob) => setPdfBlob(blob))
         .catch(() => {});
     } else {
-      setBlobUrl(fileData);
+      setBlobUrl(rawData);
     }
   }, [isOpen, fileData]);
 
@@ -322,10 +327,35 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                   onOpenInNewTab={handleOpenNewTab}
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center h-full min-h-[420px] p-8 text-center text-slate-400">
-                  <FileType className="w-10 h-10 text-cyan-400 mb-2 animate-pulse" />
-                  <p className="font-bold text-white text-sm">Cargando visor de documento PDF...</p>
-                  <p className="text-xs text-slate-400 mt-1">{fileName}</p>
+                <div className="flex flex-col items-center justify-center h-full min-h-[420px] p-8 text-center bg-slate-900 rounded-xl space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                    <FileText className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-base font-bold text-white">{title || fileName}</h4>
+                    {subtitle && <p className="text-xs text-slate-300 font-medium">{subtitle}</p>}
+                    <p className="text-xs font-mono text-cyan-400">{fileName}</p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2">
+                    {effectiveUrl && (
+                      <button
+                        type="button"
+                        onClick={handleOpenNewTab}
+                        className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span>Abrir Documento</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleDownload}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Descargar Soporte</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

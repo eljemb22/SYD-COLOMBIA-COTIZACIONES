@@ -61,6 +61,8 @@ export interface AttachmentResult {
 }
 
 export interface EquipmentFolderData {
+  id?: string;
+  code?: string;
   partNumber?: string;
   name?: string; // Nombre del equipo (e.g. "Monitor de Signos Vitales ePM 12M")
   equipmentName?: string;
@@ -414,7 +416,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
 }) => {
   type ActiveMode = 'local' | 'cloud_link' | 'drive_picker';
   const [mode, setMode] = useState<ActiveMode>('local');
-  const [showAttachmentPreview, setShowAttachmentPreview] = useState<boolean>(true);
+  const [showAttachmentPreview, setShowAttachmentPreview] = useState<boolean>(false);
 
   // Local file state
   const [isDragging, setIsDragging] = useState(false);
@@ -520,37 +522,81 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
   const [knownEquipmentFolder, setKnownEquipmentFolder] = useState<DriveFileItem | null>(null);
   const hasAutoNavigatedRef = useRef<string | null>(null);
 
+  // Normalize strings for robust folder name comparison:
+  // - Normalizes unicode dashes (en-dash, em-dash, minus, etc.) to standard hyphen '-'
+  // - Removes diacritics/accents
+  // - Normalizes multiple spaces and punctuation
+  const normalizeFolderNameForMatch = (str?: string): string => {
+    if (!str) return '';
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-')
+      .replace(/[._/\\|:,;]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
   // Strict check if a folder name belongs to THIS equipment:
-  // Strictly avoids cross-contamination or loose substring matching (e.g. matching "Monitor" across different monitors)
+  // Strictly avoids cross-contamination or false negatives caused by dashes, encoding or partial names
   const isFolderMatchingThisEquipment = (folderName?: string): boolean => {
     if (!folderName) return false;
-    const cleanFName = folderName.toLowerCase().trim();
-    const cleanTarget = (targetFolderName || '').toLowerCase().trim();
-    const partNum = (equipmentData?.partNumber || equipmentData?.code || '').toLowerCase().trim();
-    const fullEqName = (displayEquipmentName || '').toLowerCase().trim();
-    const brand = (equipmentData?.brand || '').toLowerCase().trim();
-    const model = (equipmentData?.model || '').toLowerCase().trim();
+    const normFName = normalizeFolderNameForMatch(folderName);
+    const normTarget = normalizeFolderNameForMatch(targetFolderName);
+    const normPartNum = normalizeFolderNameForMatch(equipmentData?.partNumber || equipmentData?.code);
+    const normDisplayEqName = normalizeFolderNameForMatch(displayEquipmentName);
+    const normBrand = normalizeFolderNameForMatch(equipmentData?.brand);
+    const normModel = normalizeFolderNameForMatch(equipmentData?.model);
 
-    // 1. Exact match with target folder name
-    if (cleanTarget && cleanFName === cleanTarget) return true;
+    // 1. Match with normalized target folder name
+    if (normTarget && (normFName === normTarget || normFName.startsWith(normTarget) || normTarget.startsWith(normFName))) {
+      return true;
+    }
 
-    // 2. Exact match of code/partNumber if at least 2 characters (e.g. "EQ-01" or starts with "EQ-01 -")
-    if (partNum && partNum.length >= 2) {
+    // 2. Extract leading alphanumeric code/ID if present (e.g. "70904" from "70904 - MESA DE CIRUGIA...")
+    let effectiveCode = normPartNum;
+    if (!effectiveCode || effectiveCode.length < 2) {
+      const codeMatch = (normTarget || normDisplayEqName).match(/^([a-z0-9_-]{2,15})/i);
+      if (codeMatch) {
+        effectiveCode = codeMatch[1].toLowerCase();
+      }
+    }
+
+    // If we have an effective code of 2+ chars:
+    if (effectiveCode && effectiveCode.length >= 2) {
       if (
-        cleanFName === partNum ||
-        cleanFName.startsWith(partNum + ' -') ||
-        cleanFName.startsWith(partNum + ' ') ||
-        cleanFName.startsWith(`[${partNum}]`)
+        normFName === effectiveCode ||
+        normFName.startsWith(effectiveCode + ' -') ||
+        normFName.startsWith(effectiveCode + '-') ||
+        normFName.startsWith(effectiveCode + ' ') ||
+        normFName.startsWith(`[${effectiveCode}]`) ||
+        normFName.includes(`-${effectiveCode}-`)
       ) {
         return true;
       }
     }
 
-    // 3. Match full name + brand or model (never a single common word like "monitor" or "bomba")
-    if (fullEqName && fullEqName.length >= 6) {
-      const hasBrand = brand && cleanFName.includes(brand);
-      const hasModel = model && cleanFName.includes(model);
-      if (cleanFName.includes(fullEqName) && (hasBrand || hasModel || cleanFName === fullEqName)) {
+    // 3. Match normalized display name or keywords
+    if (normDisplayEqName && normDisplayEqName.length >= 6) {
+      if (normFName === normDisplayEqName || normFName.includes(normDisplayEqName)) {
+        return true;
+      }
+      const hasBrand = normBrand && normBrand.length >= 3 && normFName.includes(normBrand);
+      const hasModel = normModel && normModel.length >= 3 && normFName.includes(normModel);
+      if (hasBrand || hasModel) {
+        const eqWords = normDisplayEqName
+          .split(/[\s-]+/)
+          .filter((w) => w.length >= 4 && !['para', 'mesa', 'equipo', 'cirugia'].includes(w));
+        if (eqWords.some((w) => normFName.includes(w))) {
+          return true;
+        }
+      }
+    }
+
+    // 4. Overlap of distinctive tokens: if folder contains both brand and model
+    if (normBrand && normModel && normBrand.length >= 3 && normModel.length >= 3) {
+      if (normFName.includes(normBrand) && normFName.includes(normModel)) {
         return true;
       }
     }
@@ -568,7 +614,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
     return keys;
   }, [equipmentData?.id, equipmentData?.partNumber, equipmentData?.code, targetFolderName]);
 
-  // Sync known folder from localStorage on mount or equipment change
+  // Sync known folder from localStorage on mount or equipment change with Drive verification
   useEffect(() => {
     hasAutoNavigatedRef.current = null;
     // Always reset breadcrumbs to base when switching equipment
@@ -580,21 +626,50 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
     }
 
     try {
-      const raw = localStorage.getItem('syd_equipment_drive_folders');
       let matchedFolder: DriveFileItem | null = null;
-      if (raw) {
-        const map = JSON.parse(raw);
-        for (const k of candidateEquipmentKeys) {
-          if (map[k]) {
-            const candidate = map[k];
-            // Strict check: Ensure this folder name ACTUALLY belongs to this equipment
-            if (isFolderMatchingThisEquipment(candidate.name)) {
-              matchedFolder = candidate;
-              break;
-            } else {
-              // Purge cross-contaminated entry
-              delete map[k];
-              localStorage.setItem('syd_equipment_drive_folders', JSON.stringify(map));
+
+      // 1. If in a contract context, check the contract's equipment subfolder first!
+      if (contractContext?.processNumber) {
+        try {
+          const rawCF = localStorage.getItem('syd_contract_drive_folders');
+          if (rawCF) {
+            const cMap = JSON.parse(rawCF);
+            const pKey = contractContext.processNumber.toLowerCase().trim();
+            const cRecord = cMap[pKey] || cMap[contractContext.contractFolderName?.toLowerCase().trim() || ''];
+            if (cRecord?.equipmentSubfolders) {
+              for (const k of candidateEquipmentKeys) {
+                const sub = cRecord.equipmentSubfolders[k] || cRecord.equipmentSubfolders[k.toLowerCase()];
+                if (sub && sub.folderId) {
+                  matchedFolder = {
+                    id: sub.folderId,
+                    name: sub.folderName,
+                    mimeType: 'application/vnd.google-apps.folder',
+                    webViewLink: sub.webViewLink,
+                  };
+                  break;
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 2. If not found in contract context, check master equipment folders
+      if (!matchedFolder) {
+        const raw = localStorage.getItem('syd_equipment_drive_folders');
+        if (raw) {
+          const map = JSON.parse(raw);
+          for (const k of candidateEquipmentKeys) {
+            if (map[k]) {
+              const candidate = map[k];
+              // Strict check: Ensure this folder name ACTUALLY belongs to this equipment
+              if (isFolderMatchingThisEquipment(candidate.name)) {
+                matchedFolder = candidate;
+                break;
+              } else {
+                delete map[k];
+                localStorage.setItem('syd_equipment_drive_folders', JSON.stringify(map));
+              }
             }
           }
         }
@@ -603,11 +678,42 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
       setKnownEquipmentFolder(matchedFolder);
       if (matchedFolder) {
         setBreadcrumbs([...baseBreadcrumbs, { id: matchedFolder.id, name: matchedFolder.name }]);
+
+        // Active validation: check if folder was deleted/trashed in Google Drive
+        if (googleWorkspaceService.isConnected()) {
+          googleWorkspaceService
+            .checkFileOrFolderExists(matchedFolder.id)
+            .then((exists) => {
+              if (!exists) {
+                console.warn('Folder was deleted in Google Drive, unlinking stale folder:', matchedFolder?.name);
+                setKnownEquipmentFolder(null);
+                setBreadcrumbs(baseBreadcrumbs);
+                try {
+                  const raw = localStorage.getItem('syd_equipment_drive_folders');
+                  if (raw) {
+                    const map = JSON.parse(raw);
+                    for (const k of candidateEquipmentKeys) delete map[k];
+                    localStorage.setItem('syd_equipment_drive_folders', JSON.stringify(map));
+                  }
+                  const rawCF = localStorage.getItem('syd_contract_drive_folders');
+                  if (rawCF && contractContext?.processNumber) {
+                    const cMap = JSON.parse(rawCF);
+                    const pKey = contractContext.processNumber.toLowerCase().trim();
+                    if (cMap[pKey]?.equipmentSubfolders) {
+                      for (const k of candidateEquipmentKeys) delete cMap[pKey].equipmentSubfolders[k];
+                      localStorage.setItem('syd_contract_drive_folders', JSON.stringify(cMap));
+                    }
+                  }
+                } catch (_) {}
+              }
+            })
+            .catch(() => {});
+        }
       }
     } catch (_) {
       setKnownEquipmentFolder(null);
     }
-  }, [equipmentKey, targetFolderName, baseBreadcrumbs]);
+  }, [equipmentKey, targetFolderName, baseBreadcrumbs, contractContext?.processNumber]);
 
   // Resolve Google Drive file preview as local in-memory Blob URL to prevent Chrome iframe blocking
   useEffect(() => {
@@ -744,6 +850,40 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
     };
   }, [currentAttachment?.driveFileId, currentAttachment?.fileData]);
 
+  // Real-time verification for currentAttachment in Google Drive
+  useEffect(() => {
+    if (!currentAttachment?.driveFileId) return;
+    let isCancelled = false;
+
+    const checkCurrentAttachmentExists = async () => {
+      if (!googleWorkspaceService.isConnected() || !currentAttachment?.driveFileId) return;
+      try {
+        const exists = await googleWorkspaceService.checkFileOrFolderExists(currentAttachment.driveFileId);
+        if (!exists && !isCancelled) {
+          console.warn(`[RealTime] Document "${currentAttachment.fileName}" was deleted or trashed in Google Drive. Auto-unlinking.`);
+          setDriveError(`⚠️ El archivo "${currentAttachment.fileName}" fue eliminado en Google Drive y se desvinculó.`);
+          setTimeout(() => setDriveError(null), 5000);
+          handleRemoveCurrent();
+        }
+      } catch (_) {}
+    };
+
+    checkCurrentAttachmentExists();
+
+    const handleFocus = () => {
+      checkCurrentAttachmentExists();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    const interval = setInterval(checkCurrentAttachmentExists, 15000);
+
+    return () => {
+      isCancelled = true;
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [currentAttachment?.driveFileId]);
+
   // Helper to persist known equipment folder under all candidate keys
   const saveKnownFolder = (folder: DriveFileItem) => {
     setKnownEquipmentFolder(folder);
@@ -764,6 +904,12 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
     } catch (_) {}
   };
 
+  // Check if equipment folder already exists in the current folder listing or cache
+  const existingEquipmentFolder = useMemo(() => {
+    if (!targetFolderName && !equipmentKey) return null;
+    return driveFiles.find((f) => f.mimeType === 'application/vnd.google-apps.folder' && isFolderMatchingThisEquipment(f.name)) || null;
+  }, [driveFiles, targetFolderName, equipmentData, displayEquipmentName, equipmentKey]);
+
   // Check if current breadcrumbs/folder is already inside the equipment's folder
   const isInsideEquipmentFolder = useMemo(() => {
     if (currentFolder.id === 'all') return false;
@@ -771,7 +917,8 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
     if (contractContext?.contractFolderId && currentFolder.id === contractContext.contractFolderId) {
       return false;
     }
-    if (knownEquipmentFolder && (currentFolder.id === knownEquipmentFolder.id || breadcrumbs.some((b) => b.id === knownEquipmentFolder.id))) {
+    const targetFolderId = knownEquipmentFolder?.id || existingEquipmentFolder?.id;
+    if (targetFolderId && (currentFolder.id === targetFolderId || breadcrumbs.some((b) => b.id === targetFolderId))) {
       return true;
     }
     if (isFolderMatchingThisEquipment(currentFolder.name)) return true;
@@ -782,13 +929,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
       if (contractContext?.contractFolderId && b.id === contractContext.contractFolderId) return false;
       return isFolderMatchingThisEquipment(b.name);
     });
-  }, [targetFolderName, currentFolder, breadcrumbs, equipmentData, displayEquipmentName, knownEquipmentFolder, contractContext]);
-
-  // Check if equipment folder already exists in the current folder listing or cache
-  const existingEquipmentFolder = useMemo(() => {
-    if (!targetFolderName && !equipmentKey) return null;
-    return driveFiles.find((f) => f.mimeType === 'application/vnd.google-apps.folder' && isFolderMatchingThisEquipment(f.name)) || null;
-  }, [driveFiles, targetFolderName, equipmentData, displayEquipmentName, equipmentKey]);
+  }, [targetFolderName, currentFolder, breadcrumbs, equipmentData, displayEquipmentName, knownEquipmentFolder, existingEquipmentFolder, contractContext]);
 
   // Sync discovered folder from listing to storage
   useEffect(() => {
@@ -945,7 +1086,16 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
         }
       }
 
-      setDriveFiles(files || []);
+      // Deduplicate files by ID to prevent duplicate items or React key collisions
+      const rawList = files || [];
+      const seenFileIds = new Set<string>();
+      const uniqueDriveFiles = rawList.filter((f) => {
+        if (!f || !f.id || seenFileIds.has(f.id)) return false;
+        seenFileIds.add(f.id);
+        return true;
+      });
+
+      setDriveFiles(uniqueDriveFiles);
     } catch (err: any) {
       console.error('Error fetching Google Drive files:', err);
       setDriveError(err.message || 'No se pudieron cargar los archivos de Google Drive.');
@@ -985,10 +1135,22 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
     }
   };
 
-  // Navigate into a folder
+  // Navigate into a folder (strictly idempotent: never duplicate breadcrumbs or open nested in itself)
   const handleOpenFolder = (folder: DriveFileItem) => {
+    if (!folder || !folder.id) return;
     setDriveSearchQuery('');
-    setBreadcrumbs((prev) => [...prev, { id: folder.id, name: folder.name }]);
+    setBreadcrumbs((prev) => {
+      // If we are already currently in this folder, do not duplicate
+      if (prev.length > 0 && prev[prev.length - 1].id === folder.id) {
+        return prev;
+      }
+      // If folder already exists anywhere in the breadcrumbs trail, jump to it
+      const existingIdx = prev.findIndex((b) => b.id === folder.id);
+      if (existingIdx !== -1) {
+        return prev.slice(0, existingIdx + 1);
+      }
+      return [...prev, { id: folder.id, name: folder.name }];
+    });
   };
 
   // Jump to a specific breadcrumb
@@ -1239,20 +1401,15 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
       const partNum = equipmentData?.partNumber || '';
 
       if (pendingFile) {
-        // Resolve target folder: if in root ('all'), place into equipment's folder automatically
+        // Resolve target folder: prioritize active folder, existing/known equipment folder, or contract folder
         let parentId: string | undefined = currentFolder.id === 'all' ? undefined : currentFolder.id;
-        if (!parentId && targetFolderName) {
-          try {
-            if (existingEquipmentFolder?.id) {
-              parentId = existingEquipmentFolder.id;
-            } else {
-              const eqFolder = await googleWorkspaceService.createDriveFolder(targetFolderName.trim());
-              if (eqFolder?.id) {
-                parentId = eqFolder.id;
-              }
-            }
-          } catch (fErr) {
-            console.warn('Could not auto-resolve equipment folder in Drive:', fErr);
+        if (!parentId) {
+          if (existingEquipmentFolder?.id) {
+            parentId = existingEquipmentFolder.id;
+          } else if (knownEquipmentFolder?.id) {
+            parentId = knownEquipmentFolder.id;
+          } else if (contractContext?.contractFolderId) {
+            parentId = contractContext.contractFolderId;
           }
         }
 
@@ -1296,16 +1453,16 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
         );
         setTimeout(() => setDriveSuccess(null), 5000);
 
-        // Close modal and clear
+        // Close modal and clear immediately to prevent UI blocking
         setIsClassificationModalOpen(false);
         setPendingFile(null);
         setUploadPresetTag(null);
 
-        // Reload Drive files to display in current folder immediately
-        await loadDriveFiles(driveSearchQuery, currentFolder.id);
-
         // Auto-select as current attachment with preserved local base64
         handleSelectDriveItem(uploaded, false, selectedCategory, customInvimaNumber, localBase64);
+
+        // Reload Drive files in background without blocking
+        loadDriveFiles(driveSearchQuery, currentFolder.id).catch(() => {});
 
         // Notify parent callback if provided
         if (onDocumentClassified) {
@@ -1632,111 +1789,104 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
           </span>
         </div>
 
-        {/* EXPANDED PROMINENT ATTACHMENT CARD */}
+        {/* SLEEK, COMPACT ATTACHMENT ROW (Minimalist & space-saving) */}
         <div
-          className={`border-2 rounded-2xl p-4 sm:p-5 transition-all shadow-xl animate-fadeIn ${
+          className={`border rounded-xl px-3.5 py-2.5 transition-all shadow-sm animate-fadeIn ${
             isFolder
-              ? 'bg-gradient-to-r from-[#17253b] via-[#1f2e45] to-[#17253b] border-amber-400/70 shadow-amber-500/10'
+              ? 'bg-[#152338] border-amber-500/50 hover:border-amber-400'
               : isCloud
-              ? 'bg-gradient-to-r from-[#122238] via-[#182d49] to-[#122238] border-[#38bdf8]/70 shadow-sky-500/10'
-              : 'bg-gradient-to-r from-[#122424] via-[#163333] to-[#122424] border-emerald-500/70 shadow-emerald-500/10'
+              ? 'bg-[#122238] border-sky-500/50 hover:border-sky-400'
+              : 'bg-[#122525] border-emerald-500/50 hover:border-emerald-400'
           }`}
         >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             {/* Left: Icon & Title & Badges */}
-            <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div
-                className={`p-3.5 rounded-2xl border-2 shrink-0 shadow-inner ${
+                className={`p-1.5 rounded-lg border shrink-0 ${
                   isFolder
-                    ? 'bg-amber-500/20 border-amber-400/60 text-amber-300'
+                    ? 'bg-amber-500/20 border-amber-400/50 text-amber-300'
                     : isCloud
-                    ? 'bg-sky-500/20 border-sky-400/60 text-sky-300'
-                    : 'bg-emerald-500/20 border-emerald-400/60 text-emerald-300'
+                    ? 'bg-sky-500/20 border-sky-400/50 text-sky-300'
+                    : 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300'
                 }`}
               >
                 {isFolder ? (
-                  <Folder className="w-7 h-7 text-amber-400" />
+                  <Folder className="w-4 h-4 text-amber-400" />
                 ) : isCloud ? (
-                  <HardDrive className="w-7 h-7 text-sky-400" />
+                  <HardDrive className="w-4 h-4 text-sky-400" />
                 ) : (
-                  <FileText className="w-7 h-7 text-emerald-400" />
+                  <FileText className="w-4 h-4 text-emerald-400" />
                 )}
               </div>
 
               <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="font-black text-sm sm:text-base text-white truncate max-w-[280px] sm:max-w-lg">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-xs sm:text-sm text-white truncate max-w-[200px] sm:max-w-sm" title={currentAttachment.fileName}>
                     {currentAttachment.fileName}
                   </span>
 
                   {/* Classification Badge if present */}
                   {classificationBadge && (
                     <span
-                      className={`text-[11px] font-black px-2.5 py-0.5 rounded-lg border flex items-center gap-1 ${classificationBadge.badgeClass}`}
+                      className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded border flex items-center gap-0.5 ${classificationBadge.badgeClass}`}
                     >
                       <span>{classificationBadge.icon}</span>
                       <span>{classificationBadge.label}</span>
                     </span>
                   )}
 
+                  <span className="text-[9.5px] px-1.5 py-0.2 rounded font-medium bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
+                    {currentAttachment.fileSize || 'PDF'}
+                  </span>
+
                   {isFolder ? (
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40">
-                      📁 Carpeta Google Drive
+                    <span className="text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-400/30 shrink-0">
+                      Carpeta Drive
                     </span>
                   ) : isCloud ? (
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30">
-                      ☁️ {provider === 'google_drive' ? 'Google Drive' : 'Nube'}
+                    <span className="text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30 shrink-0">
+                      Google Drive
                     </span>
-                  ) : (
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                      💾 Archivo Local
-                    </span>
-                  )}
-                </div>
+                  ) : null}
 
-                <div className="flex items-center gap-3 text-xs text-slate-300 flex-wrap">
-                  <span>{currentAttachment.fileSize}</span>
                   {displayEquipmentName && (
-                    <span className="text-slate-400">
-                      • Equipo: <strong className="text-amber-300">{displayEquipmentName}</strong>
+                    <span className="text-[9.5px] text-slate-400 hidden md:inline truncate max-w-[150px]">
+                      • {displayEquipmentName}
                     </span>
-                  )}
-                  {effectiveUrl && (
-                    <a
-                      href={effectiveUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#38bdf8] hover:text-[#7dd3fc] inline-flex items-center gap-1 font-bold underline"
-                    >
-                      <span>Abrir en Google Drive</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Right: Actions */}
-            <div className="flex items-center gap-2 self-end sm:self-center shrink-0 flex-wrap">
+            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center flex-wrap">
               <button
                 type="button"
                 onClick={() => setShowAttachmentPreview(!showAttachmentPreview)}
-                className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 border border-slate-600 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                className={`h-7 px-2.5 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1 border ${
+                  showAttachmentPreview
+                    ? 'bg-cyan-500/25 text-cyan-200 border-cyan-400/60 shadow-xs'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 hover:border-slate-500'
+                }`}
                 title={showAttachmentPreview ? 'Ocultar vista previa del archivo' : 'Mostrar vista previa del archivo'}
               >
                 {showAttachmentPreview ? <EyeOff className="w-3.5 h-3.5 text-slate-400" /> : <Eye className="w-3.5 h-3.5 text-sky-400" />}
-                <span>{showAttachmentPreview ? 'Ocultar Vista Previa' : 'Ver Vista Previa'}</span>
+                <span>{showAttachmentPreview ? 'Ocultar' : 'Vista Previa'}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={handleRemoveCurrent}
-                className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 border border-blue-400/40 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
-                title="Cambiar o reemplazar este archivo por otro"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Cambiar</span>
-              </button>
+              {effectiveUrl && (
+                <a
+                  href={effectiveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-7 px-2 rounded-lg bg-sky-950/70 hover:bg-sky-900/70 text-sky-300 border border-sky-800 text-[11px] font-bold transition flex items-center gap-1"
+                  title="Abrir directamente en Google Drive"
+                >
+                  <ExternalLink className="w-3 h-3 text-sky-400" />
+                  <span className="hidden sm:inline">Drive</span>
+                </a>
+              )}
 
               {currentAttachment.driveFileId && (
                 <button
@@ -1749,22 +1899,31 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
                       webViewLink: currentAttachment.fileUrl,
                     });
                   }}
-                  className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/40 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="h-7 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-400/40 text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
                   title="Cambiar la clasificación (Ficha Técnica, INVIMA, etc.)"
                 >
-                  <Tag className="w-3.5 h-3.5" />
-                  <span>Clasificar</span>
+                  <Tag className="w-3 h-3" />
+                  <span className="hidden sm:inline">Clasificar</span>
                 </button>
               )}
 
               <button
                 type="button"
                 onClick={handleRemoveCurrent}
-                className="px-3 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 hover:text-rose-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                className="h-7 px-2 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-400/40 text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
+                title="Cambiar o reemplazar este archivo por otro"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Cambiar</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRemoveCurrent}
+                className="h-7 w-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 hover:text-rose-200 transition cursor-pointer flex items-center justify-center"
                 title="Quitar este archivo adjunto"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Quitar</span>
               </button>
             </div>
           </div>
@@ -2132,7 +2291,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
                   {breadcrumbs.map((crumb, idx) => {
                     const isLast = idx === breadcrumbs.length - 1;
                     return (
-                      <React.Fragment key={crumb.id || idx}>
+                      <React.Fragment key={`crumb-${crumb.id || 'c'}-${idx}`}>
                         {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
                         <button
                           type="button"
@@ -2223,62 +2382,6 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
                 </div>
               </div>
 
-              {/* QUICK DOCUMENT UPLOAD BAR (For Ficha Técnica, Registro INVIMA, Manual) */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#0d1726] px-3 py-2 rounded-xl border border-[#1f334d]">
-                <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
-                  <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Subir directamente a <strong>{currentFolder.name}</strong>:</span>
-                </span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* Ficha Técnica */}
-                  <button
-                    type="button"
-                    onClick={() => handleTriggerPresetUpload('Ficha Técnica')}
-                    className={`h-7 px-2.5 rounded-lg text-[11px] font-bold transition inline-flex items-center gap-1.5 cursor-pointer ${
-                      hasUploadedFT
-                        ? 'bg-emerald-500/25 hover:bg-emerald-500/35 border border-emerald-400 text-emerald-200 shadow-xs'
-                        : 'bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-300'
-                    }`}
-                    title={hasUploadedFT ? 'Ficha Técnica ya subida para este equipo. Haz clic para cambiarla o subir nueva versión.' : 'Subir Ficha Técnica a esta carpeta de Google Drive'}
-                  >
-                    {hasUploadedFT ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 shrink-0" /> : <FileCheck2 className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
-                    <span>{hasUploadedFT ? '✓ Ficha Técnica (Subido)' : '+ Ficha Técnica'}</span>
-                    {hasUploadedFT && <span className="text-[9px] px-1 py-0.2 bg-emerald-700/60 text-white rounded font-normal ml-0.5">Cambiar</span>}
-                  </button>
-
-                  {/* Registro INVIMA */}
-                  <button
-                    type="button"
-                    onClick={() => handleTriggerPresetUpload('Registro INVIMA')}
-                    className={`h-7 px-2.5 rounded-lg text-[11px] font-bold transition inline-flex items-center gap-1.5 cursor-pointer ${
-                      hasUploadedINVIMA
-                        ? 'bg-emerald-500/25 hover:bg-emerald-500/35 border border-emerald-400 text-emerald-200 shadow-xs'
-                        : 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300'
-                    }`}
-                    title={hasUploadedINVIMA ? 'Registro INVIMA ya subido para este equipo. Haz clic para cambiarlo o subir nueva versión.' : 'Subir Registro Sanitario INVIMA a esta carpeta de Google Drive'}
-                  >
-                    {hasUploadedINVIMA ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 shrink-0" /> : <ShieldAlert className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
-                    <span>{hasUploadedINVIMA ? '✓ INVIMA (Subido)' : '+ INVIMA'}</span>
-                    {hasUploadedINVIMA && <span className="text-[9px] px-1 py-0.2 bg-emerald-700/60 text-white rounded font-normal ml-0.5">Cambiar</span>}
-                  </button>
-
-                  {/* Manual de Usuario */}
-                  <button
-                    type="button"
-                    onClick={() => handleTriggerPresetUpload('Manual de Usuario')}
-                    className={`h-7 px-2.5 rounded-lg text-[11px] font-bold transition inline-flex items-center gap-1.5 cursor-pointer ${
-                      hasUploadedManual
-                        ? 'bg-emerald-500/25 hover:bg-emerald-500/35 border border-emerald-400 text-emerald-200 shadow-xs'
-                        : 'bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-300'
-                    }`}
-                    title={hasUploadedManual ? 'Manual ya subido para este equipo. Haz clic para cambiarlo o subir nueva versión.' : 'Subir Manual de Usuario o Servicio a esta carpeta de Google Drive'}
-                  >
-                    {hasUploadedManual ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 shrink-0" /> : <BookOpen className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
-                    <span>{hasUploadedManual ? '✓ Manual (Subido)' : '+ Manual'}</span>
-                    {hasUploadedManual && <span className="text-[9px] px-1 py-0.2 bg-emerald-700/60 text-white rounded font-normal ml-0.5">Cambiar</span>}
-                  </button>
-                </div>
-              </div>
 
               {/* Search Bar */}
               <div className="relative">
@@ -2414,7 +2517,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
                     </div>
                   </div>
                 ) : (
-                  driveFiles.map((file) => {
+                  driveFiles.map((file, fileIdx) => {
                     const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
                     const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.mimeType?.includes('pdf');
                     const isSheet = file.mimeType?.includes('spreadsheet') || file.name.toLowerCase().endsWith('.xlsx');
@@ -2427,7 +2530,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
 
                     return (
                       <div
-                        key={file.id}
+                        key={`drive-file-${file.id || 'f'}-${fileIdx}`}
                         className={`p-3 sm:px-4 sm:py-3.5 flex items-center justify-between gap-3 transition group ${
                           isFolder
                             ? 'hover:bg-amber-950/20 bg-slate-900/40 border-l-4 border-l-amber-400/80'

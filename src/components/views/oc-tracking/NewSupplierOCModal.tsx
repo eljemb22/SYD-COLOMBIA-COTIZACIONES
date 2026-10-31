@@ -791,8 +791,8 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                   {supplierEquipmentMatch.matching.length === 0 ? (
                     <option value="" disabled>No hay equipos con costo completo para este proveedor</option>
                   ) : (
-                    supplierEquipmentMatch.matching.map((eq) => (
-                      <option key={eq.id} value={eq.id}>
+                    supplierEquipmentMatch.matching.map((eq, eqIdx) => (
+                      <option key={`sup-match-${eq.id || eq.code || 'eq'}-${eqIdx}`} value={eq.id}>
                         {eq.name} — {eq.brand} ({eq.model}) • ${(eq.baseCostCOP || 0).toLocaleString('es-CO')}
                       </option>
                     ))

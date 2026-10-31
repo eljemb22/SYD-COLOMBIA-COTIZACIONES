@@ -1526,7 +1526,9 @@ export const MaintenanceScheduleManager: React.FC<MaintenanceScheduleManagerProp
         setSelectedContractId(contractsList[0].id);
       }
     } else {
-      setSelectedContractId('');
+      if (selectedContractId !== '') {
+        setSelectedContractId('');
+      }
     }
   }, [contractsList, selectedContractId]);
 

@@ -20,19 +20,24 @@ import {
   TextWrappingType,
   PageOrientation,
   VerticalAlign,
+  TableLayoutType,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { QuoteHeader, QuoteItem } from '../types';
 import { formatCOP, formatNumber, numberToSpanishWords } from './formatters';
 import { getFormattedSpanishDate } from './quoteConsecutive';
 import { getOfficialSyDLetterheadDataUrl } from './sydDefaultLetterhead';
+import { getBiomedicalHeuristicSpecs, isGenericFiller, extractEquipmentAndAccessories } from '../services/geminiEquipmentService';
+import { generateClinicalEquipmentGraphicDataUrl } from './clinicalEquipmentGraphic';
 
-interface ExportMargins {
+export interface ExportMargins {
   headerMarginTop?: number;
   sidePadding?: number;
   companyLogoUrl?: string;
   companyLetterheadUrl?: string;
   companyFooterUrl?: string;
+  formatStyle?: 'standard' | 'with-images';
+  equipments?: any[];
 }
 
 // Convert base64 data URL to Uint8Array and type for docx ImageRun
@@ -52,6 +57,26 @@ function dataUrlToImageInfo(dataUrl: string): { data: Uint8Array; type: 'png' | 
     return { data: uint8Array, type };
   } catch (e) {
     console.error('Error converting data URL for docx', e);
+    return null;
+  }
+}
+
+// Resolve any image URL (data: base64 or http URL) to binary Uint8Array for docx ImageRun
+async function resolveImageForDocx(url?: string): Promise<{ data: Uint8Array; type: 'png' | 'jpg' } | null> {
+  if (!url || typeof url !== 'string' || url.trim().length === 0) return null;
+  if (url.startsWith('data:')) {
+    return dataUrlToImageInfo(url);
+  }
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const type: 'png' | 'jpg' = blob.type.includes('jpeg') || blob.type.includes('jpg') ? 'jpg' : 'png';
+    return { data: uint8Array, type };
+  } catch (e) {
+    console.warn('Could not fetch image for docx export', url, e);
     return null;
   }
 }
@@ -117,38 +142,36 @@ export const exportQuoteToWord = async (
   const total = subtotal + iva;
   const totalWords = numberToSpanishWords(total);
 
-  // Standard crisp solid black borders matching preview
-  const cellBorder = {
-    top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
-    bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
-    left: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
-    right: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
-  };
+  // Unified table grid borders are configured at the Table level (size: 4 / 0.5pt)
+  // to ensure Word and its PDF export render clean, seamless vector joints without protruding or doubled lines.
 
-  // Precise cell margins for clean padding inside table cells
+  // Precise cell margins: top and bottom MUST be 0 to prevent Microsoft Word's PDF export engine
+  // from bleeding shaded cell backgrounds over table borders or drawing protruding border notches.
+  // Vertical spacing is provided cleanly via paragraph spacing.
   const cellMargins = {
-    top: 50,
-    bottom: 50,
-    left: 50,
-    right: 50,
+    top: 0,
+    bottom: 0,
+    left: 60,
+    right: 60,
   };
 
   // Column widths carefully balanced to sum exactly to 9,900 DXA (100% printable width of 8.5" page with 0.81" margins)
+  // item and qty have ample width (550 DXA) to prevent awkward word-wrapping ('Ite/m' and 'Cant/.')
   const colWidths = {
-    item: 400,       // 4.0%
-    desc: 2680,      // 27.0% (ample space for description + accessories)
+    item: 550,       // 5.5% (cleanly fits "Item" on 1 line)
+    desc: 2540,      // 25.7% (ample space for description + accessories)
     brand: 840,      // 8.5% (fits MINDRAY, STRYKER without breaking words)
-    model: 990,      // 10.0% (fits models without word cutting)
-    qty: 450,        // 4.5%
-    price: 1140,     // 11.5%
-    subtotal: 1140,  // 11.5%
-    iva: 1090,       // 11.0%
-    total: 1170,     // 12.0%
+    model: 970,      // 9.8% (fits models without word cutting)
+    qty: 550,        // 5.5% (cleanly fits "Cant." on 1 line)
+    price: 1120,     // 11.3%
+    subtotal: 1120,  // 11.3%
+    iva: 1060,       // 10.7%
+    total: 1150,     // 11.6%
   };
 
   // Standard table font constants for absolute uniformity
   const TABLE_FONT = 'Calibri';
-  const TABLE_FONT_SIZE = 18; // 9pt uniform size across all headers, cells, and totals in the table
+  const TABLE_FONT_SIZE = 16; // 8pt uniform size across all headers, cells, and totals in the table
   const TABLE_COLOR = '000000';
 
   // Build Table Header (Page 2) matching exact preview layout and colors
@@ -159,13 +182,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.item, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 50, after: 50 },
             children: [new TextRun({ text: 'Item', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -173,13 +194,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.desc, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 50, after: 50 },
             children: [new TextRun({ text: 'Descripción', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -187,13 +206,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.brand, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 50, after: 50 },
             children: [new TextRun({ text: 'Marca', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -201,13 +218,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.model, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 50, after: 50 },
             children: [new TextRun({ text: 'Modelo', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -215,13 +230,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.qty, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 50, after: 50 },
             children: [new TextRun({ text: 'Cant.', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -229,13 +242,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.price, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 50, after: 50 },
             children: [new TextRun({ text: 'Precio', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -243,13 +254,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.subtotal, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 50, after: 50 },
             children: [new TextRun({ text: 'Subtotal', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -257,13 +266,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.iva, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 50, after: 50 },
             children: [new TextRun({ text: 'Iva', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -271,13 +278,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.total, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 50, after: 50 },
             children: [new TextRun({ text: 'Total', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -286,31 +291,35 @@ export const exportQuoteToWord = async (
   });
 
   // Build Table Body Rows with uniform font, uniform size, and centered values
-  const tableItemRows = items.map((item, index) => {
+  const isGraphicFormat = margins?.formatStyle === 'with-images' || header.formatStyle === 'with-images';
+
+  const rowPromises = items.map(async (item, index) => {
     const itemSubtotal = item.totalSalePrice;
     const itemTaxRate = item.taxExempt ? 0 : (item.taxRate !== undefined ? item.taxRate : (header.taxRate ?? 0.19));
     const itemIva = Math.round(itemSubtotal * itemTaxRate);
     const itemTotal = itemSubtotal + itemIva;
 
+    const { cleanName, accessoriesText, hasAccessories } = extractEquipmentAndAccessories(item.name, item.accessories);
+
     const descriptionParagraphs: Paragraph[] = [
       new Paragraph({
+        keepNext: isGraphicFormat,
         alignment: AlignmentType.LEFT,
-        spacing: { before: 20, after: item.accessories && item.accessories.length > 0 ? 10 : 20, line: 240 },
-        children: [new TextRun({ text: item.name.toUpperCase(), size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
+        spacing: { before: 20, after: !isGraphicFormat && hasAccessories ? 10 : 20, line: 240 },
+        children: [new TextRun({ text: (isGraphicFormat ? cleanName : item.name).toUpperCase(), size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
       }),
     ];
 
-    if (item.accessories && item.accessories.length > 0) {
+    if (!isGraphicFormat && hasAccessories) {
       descriptionParagraphs.push(
         new Paragraph({
+          keepNext: isGraphicFormat,
           alignment: AlignmentType.LEFT,
           spacing: { before: 0, after: 20, line: 220 },
           children: [
             new TextRun({ text: 'ACCESORIOS: ', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: '334155' }),
             new TextRun({
-              text: item.accessories
-                .map((a) => `${a.name.toUpperCase()}${a.quantity > 1 ? ` (X${a.quantity})` : ''}`)
-                .join(', '),
+              text: accessoriesText,
               size: TABLE_FONT_SIZE,
               font: TABLE_FONT,
               color: '334155',
@@ -320,16 +329,15 @@ export const exportQuoteToWord = async (
       );
     }
 
-    return new TableRow({
+    const dataRow = new TableRow({
       cantSplit: true,
       children: [
         new TableCell({
           width: { size: colWidths.item, type: WidthType.DXA },
-          borders: cellBorder,
-          margins: cellMargins,
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
+              keepNext: isGraphicFormat,
               alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
               children: [new TextRun({ text: `${index + 1}`, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
@@ -338,18 +346,15 @@ export const exportQuoteToWord = async (
         }),
         new TableCell({
           width: { size: colWidths.desc, type: WidthType.DXA },
-          borders: cellBorder,
-          margins: cellMargins,
           verticalAlign: VerticalAlign.CENTER,
           children: descriptionParagraphs,
         }),
         new TableCell({
           width: { size: colWidths.brand, type: WidthType.DXA },
-          borders: cellBorder,
-          margins: cellMargins,
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
+              keepNext: isGraphicFormat,
               alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
               children: [
@@ -365,11 +370,10 @@ export const exportQuoteToWord = async (
         }),
         new TableCell({
           width: { size: colWidths.model, type: WidthType.DXA },
-          borders: cellBorder,
-          margins: cellMargins,
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
+              keepNext: isGraphicFormat,
               alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
               children: [
@@ -385,11 +389,10 @@ export const exportQuoteToWord = async (
         }),
         new TableCell({
           width: { size: colWidths.qty, type: WidthType.DXA },
-          borders: cellBorder,
-          margins: cellMargins,
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
+              keepNext: isGraphicFormat,
               alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
               children: [new TextRun({ text: `${item.quantity}`, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
@@ -398,11 +401,10 @@ export const exportQuoteToWord = async (
         }),
         new TableCell({
           width: { size: colWidths.price, type: WidthType.DXA },
-          borders: cellBorder,
-          margins: cellMargins,
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
+              keepNext: isGraphicFormat,
               alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
               children: [new TextRun({ text: `$\u00A0${formatNumber(item.unitSalePrice)}`, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
@@ -411,11 +413,10 @@ export const exportQuoteToWord = async (
         }),
         new TableCell({
           width: { size: colWidths.subtotal, type: WidthType.DXA },
-          borders: cellBorder,
-          margins: cellMargins,
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
+              keepNext: isGraphicFormat,
               alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
               children: [new TextRun({ text: `$\u00A0${formatNumber(itemSubtotal)}`, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
@@ -424,11 +425,10 @@ export const exportQuoteToWord = async (
         }),
         new TableCell({
           width: { size: colWidths.iva, type: WidthType.DXA },
-          borders: cellBorder,
-          margins: cellMargins,
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
+              keepNext: isGraphicFormat,
               alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
               children: [new TextRun({ text: itemIva > 0 ? `$\u00A0${formatNumber(itemIva)}` : '$ -', size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
@@ -437,11 +437,10 @@ export const exportQuoteToWord = async (
         }),
         new TableCell({
           width: { size: colWidths.total, type: WidthType.DXA },
-          borders: cellBorder,
-          margins: cellMargins,
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
+              keepNext: isGraphicFormat,
               alignment: AlignmentType.CENTER,
               spacing: { before: 25, after: 25, line: 240 },
               children: [new TextRun({ text: `$\u00A0${formatNumber(itemTotal)}`, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
@@ -450,52 +449,252 @@ export const exportQuoteToWord = async (
         }),
       ],
     });
+
+    if (!isGraphicFormat) {
+      return [dataRow];
+    }
+
+    // Lookup equipment details if provided
+    const eq = margins?.equipments?.find(
+      (e: any) => e.id === item.equipmentId || (e.name && e.name.toLowerCase() === item.name.toLowerCase())
+    );
+    const rawImg = item.imageUrl || eq?.imageUrl;
+    let imgInfo = rawImg ? await resolveImageForDocx(rawImg) : null;
+    if (!imgInfo) {
+      const fallbackUrl = generateClinicalEquipmentGraphicDataUrl(cleanName || item.name, item.brand, item.model);
+      if (fallbackUrl) {
+        imgInfo = await resolveImageForDocx(fallbackUrl);
+      }
+    }
+
+    const imgCellChildren: Paragraph[] = [];
+    if (imgInfo) {
+      imgCellChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 80, after: 80 },
+          children: [
+            new ImageRun({
+              data: imgInfo.data,
+              transformation: {
+                width: 215,
+                height: 175,
+              },
+            }),
+          ],
+        })
+      );
+    } else {
+      imgCellChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 90, after: 90 },
+          children: [
+            new TextRun({
+              text: '[ IMAGEN DEL EQUIPO ]',
+              bold: true,
+              size: 15,
+              font: TABLE_FONT,
+              color: '94A3B8',
+            }),
+          ],
+        })
+      );
+    }
+
+    const heuristicSpecs = getBiomedicalHeuristicSpecs(cleanName || item.name, item.brand, item.model);
+
+    // Build concise description & functionality (excluding warranty and invima as requested)
+    let cleanDesc = item.briefDescription;
+    if (cleanDesc === undefined || isGenericFiller(cleanDesc)) {
+      const eqDesc = eq?.description
+        ? eq.description.replace(/(INVIMA|Registro Sanitario|Garantía|Garantia)[^.;\n]*[.;\n]?/gi, '').trim()
+        : '';
+      cleanDesc = eqDesc && !isGenericFiller(eqDesc) ? eqDesc : heuristicSpecs.description;
+    }
+
+    // Extract specs / features (excluding invima / warranty as requested)
+    let rawSpecs = item.technicalFeatures;
+    const hasGenericFeatures = Array.isArray(rawSpecs) && rawSpecs.some((f: string) => isGenericFiller(f));
+    if (!rawSpecs || rawSpecs.length === 0 || hasGenericFeatures) {
+      const eqSpecs = (Array.isArray(eq?.technicalSpecs) && eq.technicalSpecs.length > 0 ? eq.technicalSpecs : [])
+        .map((s: string) => s.trim())
+        .filter(
+          (s: string) =>
+            s.length > 0 &&
+            !s.toLowerCase().includes('invima') &&
+            !s.toLowerCase().includes('garantía') &&
+            !s.toLowerCase().includes('garantia') &&
+            !s.startsWith('código') &&
+            !s.startsWith('codigo') &&
+            !isGenericFiller(s)
+        );
+      rawSpecs = eqSpecs.length >= 4 ? eqSpecs : heuristicSpecs.features;
+    }
+
+    const filteredSpecs = (rawSpecs || [])
+      .map((s: string) => s.trim())
+      .filter((s: string) => {
+        const lower = s.toLowerCase();
+        return (
+          s.length > 0 &&
+          !lower.includes('invima') &&
+          !lower.includes('garantía') &&
+          !lower.includes('garantia') &&
+          !lower.startsWith('código') &&
+          !lower.startsWith('codigo')
+        );
+      })
+      .slice(0, 7);
+
+    const descChildren: Paragraph[] = [
+      new Paragraph({
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 40, after: 15 },
+        children: [
+          new TextRun({
+            text: 'DESCRIPCIÓN Y FUNCIONALIDAD:',
+            bold: true,
+            size: 15,
+            font: TABLE_FONT,
+            color: '0F2744',
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 0, after: 25, line: 220 },
+        children: [
+          new TextRun({
+            text: cleanDesc,
+            size: 14,
+            font: TABLE_FONT,
+            color: '1E293B',
+          }),
+        ],
+      }),
+    ];
+
+    if (filteredSpecs.length > 0) {
+      descChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.LEFT,
+          spacing: { before: 15, after: 15 },
+          children: [
+            new TextRun({
+              text: 'CARACTERÍSTICAS PRINCIPALES:',
+              bold: true,
+              size: 15,
+              font: TABLE_FONT,
+              color: '0F2744',
+            }),
+          ],
+        })
+      );
+
+      filteredSpecs.forEach((specText: string) => {
+        descChildren.push(
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { before: 0, after: 10, line: 210 },
+            children: [
+              new TextRun({
+                text: `•  ${specText.replace(/^[•\-\*]\s*/, '')}`,
+                size: 14,
+                font: TABLE_FONT,
+                color: '334155',
+              }),
+            ],
+          })
+        );
+      });
+    }
+
+    if (hasAccessories) {
+      descChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.LEFT,
+          spacing: { before: 20, after: 8 },
+          children: [
+            new TextRun({
+              text: 'ACCESORIOS INCLUIDOS:',
+              bold: true,
+              size: 15,
+              font: TABLE_FONT,
+              color: '0F2744',
+            }),
+          ],
+        }),
+        new Paragraph({
+          alignment: AlignmentType.LEFT,
+          spacing: { before: 0, after: 15, line: 210 },
+          children: [
+            new TextRun({
+              text: accessoriesText,
+              size: 13,
+              font: TABLE_FONT,
+              color: '334155',
+            }),
+          ],
+        })
+      );
+    }
+
+    const graphicRow = new TableRow({
+      cantSplit: true,
+      children: [
+        new TableCell({
+          width: { size: colWidths.item, type: WidthType.DXA },
+          verticalAlign: VerticalAlign.CENTER,
+          children: [new Paragraph({ children: [] })],
+        }),
+        new TableCell({
+          columnSpan: 3,
+          width: { size: colWidths.desc + colWidths.brand + colWidths.model, type: WidthType.DXA }, // 4,350 DXA
+          verticalAlign: VerticalAlign.CENTER,
+          children: imgCellChildren,
+        }),
+        new TableCell({
+          columnSpan: 5,
+          width: { size: colWidths.qty + colWidths.price + colWidths.subtotal + colWidths.iva + colWidths.total, type: WidthType.DXA }, // 5,000 DXA
+          verticalAlign: VerticalAlign.CENTER,
+          children: descChildren,
+        }),
+      ],
+    });
+
+    return [dataRow, graphicRow];
   });
 
-  // Build Totales Row with uniform font, uniform size, and centered values
-  const mergedTotalsWidth = colWidths.item + colWidths.desc + colWidths.brand + colWidths.model + colWidths.qty; // 5,200 DXA
+  const resolvedItemRows = await Promise.all(rowPromises);
+  const tableItemRows = resolvedItemRows.flat();
+
+  // Build Totales Row with uniform 8pt font (Calibri) spanning exactly across the 6 columns up to Subtotal
+  const mergedTotalsWidth = colWidths.item + colWidths.desc + colWidths.brand + colWidths.model + colWidths.qty + colWidths.price; // 6,570 DXA
   const totalsRow = new TableRow({
     cantSplit: true,
     children: [
       new TableCell({
-        columnSpan: 5,
+        columnSpan: 6,
         width: { size: mergedTotalsWidth, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.RIGHT,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 40, after: 40, line: 240 },
             children: [new TextRun({ text: 'Totales', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
-          }),
-        ],
-      }),
-      new TableCell({
-        width: { size: colWidths.price, type: WidthType.DXA },
-        shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
-        verticalAlign: VerticalAlign.CENTER,
-        children: [
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
-            children: [new TextRun({ text: '', size: TABLE_FONT_SIZE, font: TABLE_FONT })],
           }),
         ],
       }),
       new TableCell({
         width: { size: colWidths.subtotal, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 40, after: 40, line: 240 },
             children: [new TextRun({ text: `$\u00A0${formatNumber(subtotal)}`, bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -503,13 +702,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.iva, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 40, after: 40, line: 240 },
             children: [new TextRun({ text: iva > 0 ? `$\u00A0${formatNumber(iva)}` : '$ -', bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -517,13 +714,11 @@ export const exportQuoteToWord = async (
       new TableCell({
         width: { size: colWidths.total, type: WidthType.DXA },
         shading: { fill: 'D9E2F3', type: ShadingType.CLEAR },
-        borders: cellBorder,
-        margins: cellMargins,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 30, after: 30 },
+            spacing: { before: 40, after: 40, line: 240 },
             children: [new TextRun({ text: `$\u00A0${formatNumber(total)}`, bold: true, size: TABLE_FONT_SIZE, font: TABLE_FONT, color: TABLE_COLOR })],
           }),
         ],
@@ -533,21 +728,48 @@ export const exportQuoteToWord = async (
 
   const equipmentTable = new Table({
     width: { size: 9900, type: WidthType.DXA },
+    columnWidths: [
+      colWidths.item,
+      colWidths.desc,
+      colWidths.brand,
+      colWidths.model,
+      colWidths.qty,
+      colWidths.price,
+      colWidths.subtotal,
+      colWidths.iva,
+      colWidths.total,
+    ],
+    margins: cellMargins,
+    layout: TableLayoutType.FIXED,
+    alignment: AlignmentType.CENTER,
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      left: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      right: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      insideVertical: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+    },
     rows: [tableHeaderRow, ...tableItemRows, totalsRow],
   });
 
   // Determine letterhead: prioritize active/permanent attached letterhead, then official SyD corporate letterhead
   let rawLetterheadUrl = margins?.companyLetterheadUrl;
-  if (!rawLetterheadUrl && typeof localStorage !== 'undefined') {
+  if (rawLetterheadUrl === 'none') {
+    rawLetterheadUrl = undefined;
+  } else if (!rawLetterheadUrl && typeof localStorage !== 'undefined') {
     const manual = localStorage.getItem('syd_custom_manual_letterhead');
-    if (manual && manual !== 'none' && manual.length > 20 && !manual.includes('OFICIAL SYD COLOMBIA')) {
+    if (manual && manual !== 'none' && manual.length > 20) {
       rawLetterheadUrl = manual;
     } else {
       const saved = localStorage.getItem('syd_active_letterhead_url');
-      if (saved && saved !== 'none' && saved.length > 20 && !saved.includes('OFICIAL SYD COLOMBIA')) {
+      if (saved && saved !== 'none' && saved.length > 20) {
         rawLetterheadUrl = saved;
       }
     }
+  }
+  if (!rawLetterheadUrl && margins?.companyLetterheadUrl !== 'none') {
+    rawLetterheadUrl = getOfficialSyDLetterheadDataUrl();
   }
   const letterheadInfo = rawLetterheadUrl ? dataUrlToImageInfo(rawLetterheadUrl) : null;
 
@@ -600,8 +822,8 @@ export const exportQuoteToWord = async (
     : undefined;
 
   // Standard body text constants for absolute uniformity
-  const DOC_BODY_FONT = 'Calibri';
-  const DOC_BODY_SIZE = 22; // 11pt standard body size across all paragraphs, conditions, and notes
+  const DOC_BODY_FONT = 'Calibri (Cuerpo)';
+  const DOC_BODY_SIZE = 24; // 12pt standard body size across all paragraphs, conditions, and notes
 
   // Build the complete modern DOCX document
   const doc = new Document({
@@ -609,12 +831,13 @@ export const exportQuoteToWord = async (
       default: {
         document: {
           run: {
-            font: DOC_BODY_FONT,
-            size: DOC_BODY_SIZE,
+            font: TABLE_FONT,
+            size: TABLE_FONT_SIZE, // 8pt default so entire table and all table cells/markers strictly stay 8pt Calibri
             color: '000000',
+            language: { value: 'es-CO' },
           },
           paragraph: {
-            spacing: { line: 276 },
+            spacing: { line: 240 },
           },
         },
       },
@@ -646,7 +869,7 @@ export const exportQuoteToWord = async (
         children: [
           // ==================== PÁGINA 1: CARTA DE PRESENTACIÓN ====================
           new Paragraph({
-            spacing: { after: 240 },
+            spacing: { after: 480 }, // Generous separation between Date and Señor(es)
             children: [
               new TextRun({
                 text: (() => {
@@ -660,7 +883,7 @@ export const exportQuoteToWord = async (
                 })(),
                 font: DOC_BODY_FONT,
                 size: DOC_BODY_SIZE,
-                color: '1E293B',
+                color: '000000',
               }),
             ],
           }),
@@ -671,7 +894,7 @@ export const exportQuoteToWord = async (
                 text: 'Señor(es):',
                 font: DOC_BODY_FONT,
                 size: DOC_BODY_SIZE,
-                color: '334155',
+                color: '000000',
               }),
             ],
           }),
@@ -688,22 +911,10 @@ export const exportQuoteToWord = async (
             ],
           }),
           new Paragraph({
-            spacing: { after: 200 },
+            spacing: { after: 180 },
             children: [
               new TextRun({
                 text: header.city || '',
-                font: DOC_BODY_FONT,
-                size: DOC_BODY_SIZE,
-                color: '334155',
-              }),
-            ],
-          }),
-          new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            spacing: { after: 40 },
-            children: [
-              new TextRun({
-                text: 'Asunto: Cotización Comercial',
                 bold: true,
                 font: DOC_BODY_FONT,
                 size: DOC_BODY_SIZE,
@@ -711,21 +922,64 @@ export const exportQuoteToWord = async (
               }),
             ],
           }),
-          new Paragraph({
+          // Right-aligned Subject and Quote Number (number centered directly below Asunto matching reference image)
+          new Table({
             alignment: AlignmentType.RIGHT,
-            spacing: { after: 220 },
-            children: [
-              new TextRun({
-                text: header.quoteNumber || '',
-                bold: true,
-                font: DOC_BODY_FONT,
-                size: DOC_BODY_SIZE,
-                color: '000000',
+            width: { size: 3600, type: WidthType.DXA },
+            borders: {
+              top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+              bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+              left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+              right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+              insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+              insideVertical: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    width: { size: 3600, type: WidthType.DXA },
+                    borders: {
+                      top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                      bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                      left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                      right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    },
+                    children: [
+                      new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        spacing: { before: 140, after: 30 },
+                        children: [
+                          new TextRun({
+                            text: 'Asunto: Cotización Comercial',
+                            bold: true,
+                            font: DOC_BODY_FONT,
+                            size: DOC_BODY_SIZE,
+                            color: '000000',
+                          }),
+                        ],
+                      }),
+                      new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        spacing: { before: 0, after: 200 },
+                        children: [
+                          new TextRun({
+                            text: header.quoteNumber || '',
+                            bold: true,
+                            font: DOC_BODY_FONT,
+                            size: DOC_BODY_SIZE,
+                            color: '000000',
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                ],
               }),
             ],
           }),
           new Paragraph({
-            spacing: { before: 140, after: 180 },
+            spacing: { before: 260, after: 220 },
             children: [
               new TextRun({
                 text: 'Cordial Saludo:',
@@ -738,7 +992,7 @@ export const exportQuoteToWord = async (
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 220, line: 300 },
+            spacing: { after: 300, line: 340 },
             children: [
               new TextRun({
                 text: 'SUMINISTROS Y DOTACIONES COLOMBIA S.A. ',
@@ -757,7 +1011,7 @@ export const exportQuoteToWord = async (
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 220, line: 300 },
+            spacing: { after: 300, line: 340 },
             children: [
               new TextRun({
                 text: 'SYD COLOMBIA S.A. ',
@@ -776,7 +1030,7 @@ export const exportQuoteToWord = async (
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 220, line: 300 },
+            spacing: { after: 300, line: 340 },
             children: [
               new TextRun({
                 text: 'Contamos con personal calificado para brindarle una asesoría integral en todas las etapas de su adquisición, de manera que usted pueda satisfacer sus necesidades. Disponemos además de personal técnico, cuyos conocimientos incluyen una excelente preparación teórica y experiencia en el campo, lo que nos permite brindar una oportuna atención a todos nuestros clientes.',
@@ -788,7 +1042,7 @@ export const exportQuoteToWord = async (
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 200, line: 300 },
+            spacing: { after: 200, line: 340 },
             children: [
               new TextRun({
                 text: 'En caso de optar por nuestra propuesta, podrá estar seguro de que tendrá todo el respaldo que da nuestra amplia trayectoria a nivel nacional, bajo un marco de honestidad, calidad y profesionalismo. La expedición de la orden de compra mediante la cual se acepta la presente oferta mercantil supone el conocimiento y aceptación expresa de las condiciones contempladas en ella.',
@@ -799,28 +1053,28 @@ export const exportQuoteToWord = async (
             ],
           }),
 
-          // SALTO DE PÁGINA A PÁGINA 2 (TABLA DE COTIZACIÓN)
+          // ==================== HOJA 2: TABLA DE EQUIPOS Y PRECIOS ====================
           new Paragraph({
             children: [new PageBreak()],
           }),
-
-          // ==================== PÁGINA 2: TABLA DE EQUIPOS Y PRECIOS ====================
           equipmentTable,
+
+          // "VALOR TOTAL EN LETRAS" with 8pt font (Calibri) without box/borders as requested
           new Paragraph({
-            spacing: { before: 120, after: 120 },
+            spacing: { before: 140, after: 180 },
             children: [
               new TextRun({
                 text: `VALOR TOTAL EN LETRAS (CON IVA ${Math.round((header.taxRate ?? 0.19) * 100)}%): `,
                 bold: true,
-                font: DOC_BODY_FONT,
-                size: DOC_BODY_SIZE,
+                font: TABLE_FONT,
+                size: TABLE_FONT_SIZE, // 8pt
                 color: '000000',
               }),
               new TextRun({
                 text: totalWords.toUpperCase(),
                 bold: true,
-                font: DOC_BODY_FONT,
-                size: DOC_BODY_SIZE,
+                font: TABLE_FONT,
+                size: TABLE_FONT_SIZE, // 8pt
                 color: '000000',
               }),
             ],
@@ -829,13 +1083,13 @@ export const exportQuoteToWord = async (
           // ==================== CONDICIONES COMERCIALES Y FIRMA ====================
           new Paragraph({
             keepNext: true,
-            spacing: { before: 180, after: 160 },
+            spacing: { before: 200, after: 140 },
             children: [
               new TextRun({
                 text: 'CONDICIONES COMERCIALES',
                 bold: true,
                 font: DOC_BODY_FONT,
-                size: DOC_BODY_SIZE,
+                size: DOC_BODY_SIZE, // 12pt
                 color: '000000',
               }),
             ],
@@ -1046,8 +1300,9 @@ export const exportQuoteToWord = async (
   });
 
   const blob = await Packer.toBlob(doc);
-  const clientClean = (header.clientName || 'Cliente').replace(/[^a-zA-Z0-9]/g, '_');
-  const fileName = `Cotizacion_${header.quoteNumber || '21082026-1'}_SYD_Colombia_${clientClean}.docx`;
+  const qNum = (header.quoteNumber || '29092026-1').trim().replace(/[/\\:*?"<>|]/g, '');
+  const clientClean = (header.clientName || 'CLIENTE').trim().replace(/[/\\:*?"<>|]/g, '');
+  const fileName = `${qNum} ${clientClean}.docx`;
   saveAs(blob, fileName);
 };
 

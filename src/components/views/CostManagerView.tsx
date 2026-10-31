@@ -34,10 +34,11 @@ import {
   Globe,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { QuoteItem, MarginListKey, MedicalEquipment, AuthUser, QuoteItemAccessory } from '../../types';
+import { QuoteItem, MarginListKey, MedicalEquipment, AuthUser, QuoteItemAccessory, QuoteHeader } from '../../types';
 import { MARGIN_LISTS } from '../../data/initialData';
 import { formatCOP } from '../../utils/formatters';
 import { fetchLiveTRM, getCachedTRM, TrmData } from '../../utils/trmService';
+import { addPendingCatalogEquipment } from '../../utils/pendingEquipmentsStorage';
 import {
   ExcelColumnConfig,
   ExcelColumnHeader,
@@ -235,10 +236,12 @@ interface CostManagerViewProps {
   quoteItems: QuoteItem[];
   equipments: MedicalEquipment[];
   taxRate: number;
+  quoteHeader?: QuoteHeader;
   onUpdateItem: (id: string, updates: Partial<QuoteItem>) => void;
   onDeleteItem: (id: string) => void;
   onNavigateToSales: () => void;
   onAddItemFromEquipment: (equipment: MedicalEquipment) => void;
+  onAddCustomQuoteItem?: (item: QuoteItem) => void;
   onUpdateEquipmentBaseCost?: (equipmentIdOrCode: string, newCost: number) => void;
   currentUser?: AuthUser | null;
 }
@@ -247,16 +250,27 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
   quoteItems,
   equipments,
   taxRate,
+  quoteHeader,
   onUpdateItem,
   onDeleteItem,
   onNavigateToSales,
   onAddItemFromEquipment,
+  onAddCustomQuoteItem,
   onUpdateEquipmentBaseCost,
   currentUser,
 }) => {
   const isReadOnly = currentUser?.role === 'viewer' && !currentUser?.permissions?.canEditCostManager;
   const [globalFactorType, setGlobalFactorType] = useState<MarginListKey>('L4');
   const [customGlobalFactorStr, setCustomGlobalFactorStr] = useState<string>('2.0000');
+
+  // Emergency uncreated equipment modal state (Cotización rápida de equipos no registrados)
+  const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+  const [emergencyName, setEmergencyName] = useState('');
+  const [emergencyBrand, setEmergencyBrand] = useState('');
+  const [emergencyModel, setEmergencyModel] = useState('');
+  const [emergencyQuantity, setEmergencyQuantity] = useState<number>(1);
+  const [emergencyCostCOP, setEmergencyCostCOP] = useState<number | ''>('');
+  const [emergencyFactorType, setEmergencyFactorType] = useState<MarginListKey>('L4');
   const [editingAccessoryId, setEditingAccessoryId] = useState<string | null>(null);
   const [openCeilingItemId, setOpenCeilingItemId] = useState<string | null>(null);
   const [factorInputStrings, setFactorInputStrings] = useState<Record<string, string>>({});
@@ -369,10 +383,116 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
     });
     setContextMenu(null);
     setActionAlert({
-      msg: `Columna "${COLUMN_LABELS[colKey]}" ocultada. Puede mostrarla de nuevo desde el botón "Columnas" o clic derecho en cualquier encabezado.`,
+      msg: `Columna "${COLUMN_LABELS[colKey]}" ocultada. Puede reactivarla en "Columnas".`,
       type: 'info',
     });
     setTimeout(() => setActionAlert(null), 3500);
+  };
+
+  const handleCreateEmergencyQuoteItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emergencyName.trim()) {
+      alert('Por favor ingrese el Nombre del equipo.');
+      return;
+    }
+    if (!emergencyBrand.trim()) {
+      alert('Por favor ingrese la Marca del equipo.');
+      return;
+    }
+    if (!emergencyModel.trim()) {
+      alert('Por favor ingrese el Modelo del equipo.');
+      return;
+    }
+    const cost = typeof emergencyCostCOP === 'number' ? emergencyCostCOP : 0;
+    if (cost <= 0) {
+      alert('Por favor ingrese un Precio costo mayor a cero.');
+      return;
+    }
+    const qty = Math.max(1, Number(emergencyQuantity) || 1);
+    const factorCfg = MARGIN_LISTS[emergencyFactorType] || MARGIN_LISTS.L4;
+    const factorMultiplier = factorCfg.multiplier;
+    const unitSalePrice = Math.round(cost * factorMultiplier);
+
+    // 1. Register in pending equipments storage for Ventana 3 (Catálogo)
+    const pendingRecord = addPendingCatalogEquipment({
+      name: emergencyName.trim(),
+      brand: emergencyBrand.trim(),
+      model: emergencyModel.trim(),
+      quantityQuoted: qty,
+      baseCostCOP: cost,
+      suggestedSalePriceCOP: unitSalePrice,
+      appliedFactorKey: emergencyFactorType,
+      quoteOrigin: quoteHeader?.quoteNumber ? `Cotización ${quoteHeader.quoteNumber}` : 'Cotización Comercial',
+      clientOrigin: quoteHeader?.clientName || 'Cliente en Cotización',
+      quotedDate: new Date().toISOString(),
+    });
+
+    // 2. Build QuoteItem with emergency uncreated flag
+    const newQuoteItem: QuoteItem = {
+      id: `emergency-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      code: 'PENDIENTE',
+      name: emergencyName.trim().toUpperCase(),
+      brand: emergencyBrand.trim().toUpperCase(),
+      model: emergencyModel.trim().toUpperCase(),
+      description: `Equipo cotizado de emergencia. Pendiente de registro oficial en Catálogo.`,
+      briefDescription: `Equipo cotizado de emergencia (${emergencyBrand.trim().toUpperCase()} ${emergencyModel.trim().toUpperCase()})`,
+      technicalFeatures: [
+        `Marca: ${emergencyBrand.trim().toUpperCase()}`,
+        `Modelo: ${emergencyModel.trim().toUpperCase()}`,
+        `Estado: Pendiente de Registro Oficial en Catálogo`,
+      ],
+      quantity: qty,
+      unitCostCOP: cost,
+      totalCost: cost * qty,
+      multiplier: factorMultiplier,
+      marginType: emergencyFactorType,
+      unitSalePrice: unitSalePrice,
+      totalSalePrice: unitSalePrice * qty,
+      taxExempt: false,
+      taxRate: taxRate,
+      warrantyMonths: 12,
+      isEmergencyUncreated: true,
+      pendingCatalogId: pendingRecord.id,
+      accessories: [],
+    };
+
+    if (onAddCustomQuoteItem) {
+      onAddCustomQuoteItem(newQuoteItem);
+    } else {
+      const tempEq: MedicalEquipment = {
+        id: `temp-${Date.now()}`,
+        code: 'PENDIENTE',
+        name: emergencyName.trim().toUpperCase(),
+        brand: emergencyBrand.trim().toUpperCase(),
+        model: emergencyModel.trim().toUpperCase(),
+        category: 'Equipos Médicos',
+        baseCostCOP: cost,
+        description: `Equipo cotizado de emergencia. Pendiente de registro oficial en Catálogo.`,
+        technicalSpecs: [],
+        standardAccessories: [],
+        originCountry: 'Colombia',
+        warrantyMonths: 12,
+      };
+      onAddItemFromEquipment(tempEq);
+    }
+
+    // Reset form & close
+    setEmergencyName('');
+    setEmergencyBrand('');
+    setEmergencyModel('');
+    setEmergencyQuantity(1);
+    setEmergencyCostCOP('');
+    setIsEmergencyModalOpen(false);
+
+    try {
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    } catch (_) {}
+
+    setActionAlert({
+      msg: `¡Equipo "${emergencyName.trim().toUpperCase()}" cotizado exitosamente y registrado en «Pendientes por Crear» de Catálogo!`,
+      type: 'success',
+    });
+    setTimeout(() => setActionAlert(null), 6000);
   };
 
   const handleShowAllColumns = () => {
@@ -804,7 +924,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
 
   // Handle Ceiling Price (Tope de Precio)
   const handleToggleCeilingPrice = (item: QuoteItem, enabled: boolean) => {
-    const accessoriesExtraCost = item.accessories
+    const accessoriesExtraCost = (item.accessories || [])
       .filter((a) => !a.includedInBase)
       .reduce((sum, a) => sum + (Number(a.unitCostCOP) || 0) * (Number(a.quantity) || 1), 0);
     const effectiveCost = item.unitCostCOP + accessoriesExtraCost;
@@ -860,7 +980,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
   // Apply the Ceiling Price as the exact Sale Price
   const handleApplyCeilingPriceAsSale = (item: QuoteItem) => {
     if (!item.ceilingPriceCOP) return;
-    const accessoriesExtraCost = item.accessories
+    const accessoriesExtraCost = (item.accessories || [])
       .filter((a) => !a.includedInBase)
       .reduce((sum, a) => sum + a.unitCostCOP * a.quantity, 0);
     const effectiveCost = item.unitCostCOP + accessoriesExtraCost;
@@ -1319,13 +1439,25 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
           </div>
 
           {!isReadOnly && (
-            <button
-              onClick={() => setIsAddEquipmentDrawerOpen(!isAddEquipmentDrawerOpen)}
-              className="inline-flex items-center gap-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs px-3 py-1 rounded-lg shadow-sm transition cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Agregar costo</span>
-            </button>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsEmergencyModalOpen(true)}
+                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs px-3 py-1 rounded-lg shadow-md transition cursor-pointer border border-amber-400/40"
+                title="Cotizar de emergencia un equipo que aún no está creado en el catálogo"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                <span>Cotizar Parte no creada</span>
+              </button>
+
+              <button
+                onClick={() => setIsAddEquipmentDrawerOpen(!isAddEquipmentDrawerOpen)}
+                className="inline-flex items-center gap-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs px-3 py-1 rounded-lg shadow-sm transition cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Agregar costo</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1372,6 +1504,24 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
 
             {/* Filter & Search Bar */}
             <div className="px-3.5 py-2.5 bg-[#111c2e] border-b border-[#334d6e] space-y-2 shrink-0">
+              {/* Emergency Quick Action Banner */}
+              <div className="bg-amber-950/40 border border-amber-500/40 rounded-xl p-2 px-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs text-amber-200 font-medium">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>¿El equipo que necesitas no existe en el catálogo todavía?</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddEquipmentDrawerOpen(false);
+                    setIsEmergencyModalOpen(true);
+                  }}
+                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-2.5 py-1 rounded-lg transition cursor-pointer shrink-0 shadow-sm flex items-center gap-1"
+                >
+                  <span>⚡ Cotizar de Emergencia</span>
+                </button>
+              </div>
+
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1438,13 +1588,13 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                   );
                 }
 
-                return filtered.map((eq) => {
+                return filtered.map((eq, eqIdx) => {
                   const existingItem = quoteItems.find((it) => it.equipmentId === eq.id || it.code === eq.code);
                   const costWithIva = eq.taxExempt ? eq.baseCostCOP : Math.round(eq.baseCostCOP * (1 + taxRate));
 
                   return (
                     <div
-                      key={eq.id}
+                      key={`search-eq-${eq.id || eq.code || 'item'}-${eqIdx}`}
                       className="bg-[#111c2e] border border-[#334d6e] hover:border-[#38bdf8]/60 rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-3 transition group shadow-sm"
                     >
                       <div className="space-y-0.5 flex-1 min-w-0">
@@ -1513,6 +1663,185 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
               <span className="text-[11px]">{equipments.length} equipos en catálogo</span>
               <span className="text-[11px] text-slate-500">Presione <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">ESC</kbd> o clic arriba para cerrar</span>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Emergency Uncreated Equipment Modal: Only 5 requested fields */}
+      {isEmergencyModalOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsEmergencyModalOpen(false);
+          }}
+        >
+          <div className="bg-[#192b45] border border-amber-500/60 rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden animate-scaleUp my-auto">
+            {/* Header */}
+            <div className="px-5 py-3.5 bg-gradient-to-r from-amber-950/80 to-[#15253d] border-b border-amber-500/40 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-white">
+                    Cotizar Equipo No Creado (Emergencia)
+                  </h3>
+                  <p className="text-[11px] text-amber-200/80">
+                    5 datos básicos para cotizar ya. Pasará a «Pendientes por Crear» en Catálogo.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEmergencyModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleCreateEmergencyQuoteItem} className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                {/* 1. Nombre del Equipo */}
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-200 mb-1">
+                    1. Nombre del Equipo Médico *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={emergencyName}
+                    onChange={(e) => setEmergencyName(e.target.value)}
+                    placeholder="Ej: ECÓGRAFO PORTÁTIL COLOR"
+                    className="w-full px-3 py-2 bg-[#111c2e] border border-[#334d6e] focus:border-amber-400 rounded-xl text-white font-medium outline-none"
+                    autoFocus
+                  />
+                </div>
+
+                {/* 2. Marca */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-200 mb-1">
+                    2. Marca *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={emergencyBrand}
+                    onChange={(e) => setEmergencyBrand(e.target.value)}
+                    placeholder="Ej: MINDRAY, SECA, BIOCARE..."
+                    className="w-full px-3 py-2 bg-[#111c2e] border border-[#334d6e] focus:border-amber-400 rounded-xl text-white font-medium outline-none uppercase"
+                  />
+                </div>
+
+                {/* 3. Modelo */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-200 mb-1">
+                    3. Modelo *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={emergencyModel}
+                    onChange={(e) => setEmergencyModel(e.target.value)}
+                    placeholder="Ej: M9, UMEC 100, 874+..."
+                    className="w-full px-3 py-2 bg-[#111c2e] border border-[#334d6e] focus:border-amber-400 rounded-xl text-white font-medium outline-none uppercase"
+                  />
+                </div>
+
+                {/* 4. Cantidad */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-200 mb-1">
+                    4. Cantidad *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={emergencyQuantity}
+                    onChange={(e) => setEmergencyQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full px-3 py-2 bg-[#111c2e] border border-[#334d6e] focus:border-amber-400 rounded-xl text-white font-bold text-center outline-none"
+                  />
+                </div>
+
+                {/* 5. Precio Costo */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-200 mb-1">
+                    5. Precio Costo (COP) *
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-cyan-400 font-mono font-bold">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      value={emergencyCostCOP}
+                      onChange={(e) => setEmergencyCostCOP(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full pl-7 pr-3 py-2 bg-[#111c2e] border border-cyan-500/50 focus:border-cyan-400 rounded-xl text-cyan-300 font-mono font-bold text-right outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Automatic Price Calculation Preview based on List factor */}
+              <div className="p-3.5 rounded-xl bg-[#111c2e] border border-[#334d6e] space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-medium">Lista de Precios Aplicada:</span>
+                  <select
+                    value={emergencyFactorType}
+                    onChange={(e) => setEmergencyFactorType(e.target.value as MarginListKey)}
+                    className="bg-[#192b45] border border-[#334d6e] rounded-lg px-2 py-1 text-xs font-bold text-amber-300 outline-none cursor-pointer"
+                  >
+                    {Object.entries(MARGIN_LISTS).map(([k, cfg]) => (
+                      <option key={k} value={k}>
+                        {cfg.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {typeof emergencyCostCOP === 'number' && emergencyCostCOP > 0 ? (
+                  <div className="pt-2 border-t border-slate-800 grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Precio Venta Unitario:</span>
+                      <strong className="text-sm font-mono text-emerald-400">
+                        {formatCOP(Math.round(emergencyCostCOP * (MARGIN_LISTS[emergencyFactorType]?.multiplier || 1.4)))}
+                      </strong>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block">Subtotal Propuesta:</span>
+                      <strong className="text-sm font-mono text-amber-300">
+                        {formatCOP(Math.round(emergencyCostCOP * (MARGIN_LISTS[emergencyFactorType]?.multiplier || 1.4) * emergencyQuantity))}
+                      </strong>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-500 italic">
+                    Ingrese el precio costo para previsualizar el cálculo automático del precio de venta según la lista seleccionada.
+                  </p>
+                )}
+              </div>
+
+              {/* Buttons */}
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEmergencyModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 transition shadow-lg shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>Incluir en Cotización</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>,
         document.body
@@ -1663,7 +1992,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
               </tr>
             ) : (
               filteredQuoteItems.map((item, index) => {
-                const accessoriesExtraCost = item.accessories
+                const accessoriesExtraCost = (item.accessories || [])
                   .filter((a) => !a.includedInBase)
                   .reduce((sum, a) => sum + (Number(a.unitCostCOP) || 0) * (Number(a.quantity) || 1), 0);
 
@@ -1702,7 +2031,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                     : item.multiplier.toFixed(4);
 
                 return (
-                  <React.Fragment key={item.id}>
+                  <React.Fragment key={`cost-item-${item.id || item.equipmentId || 'it'}-${index}`}>
                     <tr className="hover:bg-[#1f3555]/50 transition text-xs">
                       {/* # Index */}
                       {columnVisibility.index && (

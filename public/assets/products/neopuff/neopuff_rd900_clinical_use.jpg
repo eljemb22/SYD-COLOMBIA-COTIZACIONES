@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450" width="600" height="450">
+  <defs>
+    <linearGradient id="cuBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="450" rx="16" fill="url(#cuBg)"/>
+
+  <!-- Clinical Delivery Room Scene -->
+  <!-- Sterile Field Background -->
+  <rect x="40" y="60" width="520" height="320" rx="14" fill="#0b1329" stroke="#1e3a8a" stroke-width="2"/>
+
+  <!-- Neopuff RD900 Active Operating Panel -->
+  <g transform="translate(65, 90)">
+    <rect width="180" height="240" rx="16" fill="#0284c7" stroke="#38bdf8" stroke-width="2"/>
+    <rect x="10" y="10" width="160" height="220" rx="12" fill="#f8fafc"/>
+    <text x="90" y="32" font-family="system-ui, sans-serif" font-size="11" font-weight="900" fill="#0369a1" text-anchor="middle">Fisher &amp; Paykel</text>
+    <text x="90" y="45" font-family="system-ui, sans-serif" font-size="8" font-weight="bold" fill="#64748b" text-anchor="middle">NEOPUFF RD900</text>
+
+    <!-- Active Manometer showing PIP ventilation cycle -->
+    <circle cx="90" cy="115" r="48" fill="#e2e8f0" stroke="#0f172a" stroke-width="2"/>
+    <circle cx="90" cy="115" r="42" fill="#ffffff"/>
+    <path d="M 60 130 A 34 34 0 0 1 90 81" fill="none" stroke="#16a34a" stroke-width="4"/>
+    <path d="M 90 81 A 34 34 0 0 1 120 130" fill="none" stroke="#dc2626" stroke-width="4"/>
+    <!-- Needle animated to 20 cmH2O -->
+    <line x1="90" y1="115" x2="88" y2="84" stroke="#dc2626" stroke-width="3"/>
+    <circle cx="90" cy="115" r="5" fill="#1e293b"/>
+    <text x="90" y="132" font-family="system-ui, sans-serif" font-size="8" font-weight="bold" fill="#0284c7" text-anchor="middle">20 cmH₂O PIP</text>
+
+    <!-- Gas Out connection -->
+    <circle cx="130" cy="190" r="12" fill="#0284c7"/>
+  </g>
+
+  <!-- Connected T-Piece and Pediatric Manikin Model -->
+  <g transform="translate(260, 120)">
+    <!-- Patient Breathing Hose -->
+    <path d="M -50 160 C 20 200, 70 120, 120 150" fill="none" stroke="#38bdf8" stroke-width="12" stroke-linecap="round" stroke-dasharray="3,3"/>
+    <path d="M -50 160 C 20 200, 70 120, 120 150" fill="none" stroke="#bae6fd" stroke-width="7" stroke-linecap="round"/>
+
+    <!-- Ergonomic T-Piece Resuscitator Head -->
+    <g transform="translate(120, 150)">
+      <rect x="-10" y="-18" width="20" height="36" rx="5" fill="#0284c7" stroke="#ffffff" stroke-width="1.5"/>
+      <!-- Blue PEEP Cap Valve -->
+      <rect x="-14" y="-28" width="28" height="12" rx="3" fill="#0369a1"/>
+      <circle cx="0" cy="-22" r="4" fill="#38bdf8"/>
+      <text x="0" y="-32" font-family="system-ui, sans-serif" font-size="8" font-weight="bold" fill="#38bdf8" text-anchor="middle">PEEP +5</text>
+
+      <!-- Clear Cushion Neonatal Face Mask -->
+      <ellipse cx="28" cy="18" rx="24" ry="18" fill="#ffffff" fill-opacity="0.85" stroke="#38bdf8" stroke-width="2"/>
+      <ellipse cx="28" cy="18" rx="16" ry="11" fill="#7dd3fc" fill-opacity="0.4"/>
+
+      <!-- Simulated Baby Head & Face Seal -->
+      <ellipse cx="50" cy="22" rx="30" ry="24" fill="#fed7aa" fill-opacity="0.8"/>
+    </g>
+
+    <!-- Clinical Protocol Indicators -->
+    <g transform="translate(40, -10)">
+      <rect width="210" height="60" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1"/>
+      <text x="12" y="20" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#38bdf8">PROTOCOLO DE REANIMACIÓN NRP</text>
+      <text x="12" y="36" font-family="system-ui, sans-serif" font-size="9" fill="#e2e8f0">· Frecuencia: 40 a 60 ventilaciones/min</text>
+      <text x="12" y="50" font-family="system-ui, sans-serif" font-size="9" fill="#4ade80">· PIP Controlado: 20-25 | PEEP: 5 cmH₂O</text>
+    </g>
+  </g>
+
+  <!-- Bottom Label -->
+  <rect x="40" y="395" width="520" height="35" rx="8" fill="#0284c7"/>
+  <text x="300" y="417" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#ffffff" text-anchor="middle">APLICACIÓN CLÍNICA EN REANIMACIÓN NEONATAL Y SALA DE PARTOS</text>
+</svg>

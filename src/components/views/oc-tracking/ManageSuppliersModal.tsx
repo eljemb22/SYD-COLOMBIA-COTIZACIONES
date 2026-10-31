@@ -1398,7 +1398,7 @@ export const ManageSuppliersModal: React.FC<ManageSuppliersModalProps> = ({
 
                       return (
                         <div
-                          key={eq.id}
+                          key={`sup-card-${eq.id || eq.code || 'eq'}-${eqIdx}`}
                           className="bg-[#0f1b2c] border border-[#243c5a] hover:border-sky-500/50 rounded-xl p-3 transition flex flex-col justify-between gap-2.5 shadow-sm"
                         >
                           <div className="space-y-1.5">
