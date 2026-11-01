@@ -715,8 +715,9 @@ export const SalesView: React.FC<SalesViewProps> = ({
     reader.readAsDataURL(file);
   };
 
-  // Pegar imagen desde portapapeles (Ctrl+V) en el cuadro de imagen de un item
+  // Pegar imagen desde portapapeles (Ctrl+V) SOLO en el cuadro de imagen de un item
   const handleImagePasteForItem = async (itemId: string, e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.stopPropagation(); // Evita que el evento se propague a otros elementos (membrete, etc.)
     const items = e.clipboardData?.items;
     if (!items) return;
     for (let i = 0; i < items.length; i++) {
@@ -1867,8 +1868,10 @@ export const SalesView: React.FC<SalesViewProps> = ({
 
                                         return (
                                           <div
-                                            className="relative group w-full min-h-[190px] max-h-[260px] flex items-center justify-center p-1"
+                                            className="relative group w-full min-h-[190px] max-h-[260px] flex items-center justify-center p-1 cursor-default"
                                             tabIndex={0}
+                                            onFocus={() => setDragOverItemId(dragOverItemId === item.id ? null : item.id)}
+                                            onBlur={() => setDragOverItemId(null)}
                                             onPaste={(e) => handleImagePasteForItem(item.id, e)}
                                             onDragOver={(e) => handleImageDragOver(item.id, e)}
                                             onDragLeave={handleImageDragLeave}
