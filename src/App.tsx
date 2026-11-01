@@ -32,6 +32,8 @@ import {
   MedicalEquipment,
   SavedQuote,
   TenderClientProject,
+  TenderItem,
+  TechnicalRequirement,
   OCTrackingContract,
   SalesOrderRecord,
   SalesInvoiceRecord,
@@ -77,17 +79,50 @@ import {
   saveSingleTenderClientToFirestore,
   deleteTenderClientFromFirestore,
   saveSingleEquipmentToFirestore,
+  saveEquipmentsBatchToFirestore,
+  saveSingleSalesOrderToFirestore,
+  saveSingleOCTrackingContractToFirestore,
+  saveSingleTechnicalDocumentToFirestore,
+  deleteTechnicalDocumentFromFirestore,
   deleteEquipmentFromFirestore,
   saveOCTrackingContractsToFirestore,
   saveSingleSalesOrderToFirestore,
   SyncConnectionStatus,
 } from './services/realtimeSync';
+import { syncTenderItemToCatalog } from './utils/catalogSyncUtils';
 import { useIdleStandby } from './hooks/useIdleStandby';
 import { hydrateFromSnapshotIfEmpty } from './utils/hydrateInitialData';
 import { isValidEquipmentCode, isValidSupplierName } from './utils/formatters';
 
 // Hydrate local data on bundle evaluation
 hydrateFromSnapshotIfEmpty();
+
+function buildTenderItemFromEquipment(equipment: MedicalEquipment, itemNumber: number): TenderItem {
+  const requirements: TechnicalRequirement[] = (equipment.technicalSpecs || []).map((spec, idx) => ({
+    id: `req-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 5)}`,
+    requirement: spec,
+    offeredSpec: spec,
+    complies: true,
+  }));
+
+  return {
+    id: `tender-item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    itemNumber,
+    equipmentId: equipment.id,
+    code: equipment.code,
+    name: equipment.name,
+    description: equipment.description,
+    brand: equipment.brand,
+    model: equipment.model,
+    quantity: 1,
+    unitBudgetCOP: equipment.baseCostCOP,
+    totalBudgetCOP: equipment.baseCostCOP,
+    unitOfferCOP: equipment.baseCostCOP,
+    totalOfferCOP: equipment.baseCostCOP,
+    warrantyMonths: equipment.warrantyMonths,
+    requirements,
+  };
+}
 
 export default function App() {
   // Navigation & Active View Tab
@@ -258,7 +293,9 @@ export default function App() {
   });
 
   // Cross-view conversion states
+  // quote → OV (direct sale) and quote → tender (licitación) are distinct flows.
   const [initialQuoteToConvert, setInitialQuoteToConvert] = useState<SavedQuote | null>(null);
+  const [initialQuoteToLinkTender, setInitialQuoteToLinkTender] = useState<SavedQuote | null>(null);
   const [initialTenderToConvert, setInitialTenderToConvert] = useState<TenderClientProject | null>(null);
 
   // Modals state
@@ -792,6 +829,193 @@ export default function App() {
     saveSingleTenderClientToFirestore(newTender).catch(console.warn);
   }, []);
 
+  const persistTenderClients = useCallback(
+    (updater: (prev: TenderClientProject[]) => TenderClientProject[]) => {
+      setTenderClients((prev) => {
+        const updated = updater(prev);
+        try {
+          localStorage.setItem('syd_tender_clients_v2', JSON.stringify(updated));
+        } catch (_) {}
+        return updated;
+      });
+    },
+    []
+  );
+
+  // Applies a change to one tender and persists it locally and to Firestore.
+  const updateTenderRecord = useCallback(
+    (clientId: string, transform: (client: TenderClientProject) => TenderClientProject) => {
+      persistTenderClients((prev) =>
+        prev.map((tc) => {
+          if (tc.id !== clientId) return tc;
+          const updatedClient = { ...transform(tc), updatedAt: new Date().toISOString() };
+          saveSingleTenderClientToFirestore(updatedClient).catch(console.warn);
+          return updatedClient;
+        })
+      );
+    },
+    [persistTenderClients]
+  );
+
+  const handleUpdateTenderClient = useCallback(
+    (clientId: string, updates: Partial<TenderClientProject>) => {
+      updateTenderRecord(clientId, (tc) => ({ ...tc, ...updates }));
+    },
+    [updateTenderRecord]
+  );
+
+  const handleDeleteTenderClient = useCallback(
+    (clientId: string) => {
+      persistTenderClients((prev) => prev.filter((tc) => tc.id !== clientId));
+      deleteTenderClientFromFirestore(clientId).catch(console.warn);
+    },
+    [persistTenderClients]
+  );
+
+  const handleBatchCreateTenderClients = useCallback(
+    (newClients: TenderClientProject[]) => {
+      if (!newClients || newClients.length === 0) return;
+      persistTenderClients((prev) => {
+        const existingIds = new Set(prev.map((c) => c.id));
+        const toAdd = newClients.filter((c) => c && c.id && !existingIds.has(c.id));
+        return [...toAdd, ...prev];
+      });
+      newClients.forEach((c) => {
+        if (c && c.id) saveSingleTenderClientToFirestore(c).catch(console.warn);
+      });
+    },
+    [persistTenderClients]
+  );
+
+  const handleAddItemToClient = useCallback(
+    (clientId: string, equipment: MedicalEquipment) => {
+      updateTenderRecord(clientId, (tc) => {
+        const items = tc.items || [];
+        return { ...tc, items: [...items, buildTenderItemFromEquipment(equipment, items.length + 1)] };
+      });
+    },
+    [updateTenderRecord]
+  );
+
+  const handleUpdateTenderItem = useCallback(
+    (clientId: string, itemId: string, updates: Partial<TenderItem>) => {
+      updateTenderRecord(clientId, (tc) => ({
+        ...tc,
+        items: (tc.items || []).map((it) => (it.id === itemId ? { ...it, ...updates } : it)),
+      }));
+    },
+    [updateTenderRecord]
+  );
+
+  const handleDeleteTenderItem = useCallback(
+    (clientId: string, itemId: string) => {
+      updateTenderRecord(clientId, (tc) => ({
+        ...tc,
+        items: (tc.items || []).filter((it) => it.id !== itemId),
+      }));
+    },
+    [updateTenderRecord]
+  );
+
+  const handleAddRequirement = useCallback(
+    (clientId: string, itemId: string, requirement: TechnicalRequirement) => {
+      updateTenderRecord(clientId, (tc) => ({
+        ...tc,
+        items: (tc.items || []).map((it) =>
+          it.id === itemId
+            ? { ...it, requirements: [...(it.requirements || []), requirement] }
+            : it
+        ),
+      }));
+    },
+    [updateTenderRecord]
+  );
+
+  const handleUpdateRequirement = useCallback(
+    (clientId: string, itemId: string, requirementId: string, updates: Partial<TechnicalRequirement>) => {
+      updateTenderRecord(clientId, (tc) => ({
+        ...tc,
+        items: (tc.items || []).map((it) =>
+          it.id === itemId
+            ? {
+                ...it,
+                requirements: (it.requirements || []).map((r) =>
+                  r.id === requirementId ? { ...r, ...updates } : r
+                ),
+              }
+            : it
+        ),
+      }));
+    },
+    [updateTenderRecord]
+  );
+
+  const handleDeleteRequirement = useCallback(
+    (clientId: string, itemId: string, requirementId: string) => {
+      updateTenderRecord(clientId, (tc) => ({
+        ...tc,
+        items: (tc.items || []).map((it) =>
+          it.id === itemId
+            ? {
+                ...it,
+                requirements: (it.requirements || []).filter((r) => r.id !== requirementId),
+              }
+            : it
+        ),
+      }));
+    },
+    [updateTenderRecord]
+  );
+
+  const handleSyncTenderItemToCatalog = useCallback(
+    (item: TenderItem, createNewDuplicate?: boolean) => {
+      setEquipments((prev) => {
+        const { updatedEquipments } = syncTenderItemToCatalog(item, prev, {
+          createNewDuplicate: Boolean(createNewDuplicate),
+        });
+        try {
+          localStorage.setItem('syd_equipments_catalog', JSON.stringify(updatedEquipments));
+        } catch (_) {}
+        const added = updatedEquipments.filter((e) => !prev.some((p) => p.id === e.id));
+        if (added.length > 0) {
+          saveEquipmentsBatchToFirestore(added).catch(console.warn);
+        }
+        return updatedEquipments;
+      });
+    },
+    []
+  );
+
+  const handleBatchSyncTenderItemsToCatalog = useCallback(
+    (items: TenderItem[]) => {
+      if (!items || items.length === 0) return;
+      setEquipments((prev) => {
+        let working = prev;
+        items.forEach((item) => {
+          working = syncTenderItemToCatalog(item, working, {}).updatedEquipments;
+        });
+        try {
+          localStorage.setItem('syd_equipments_catalog', JSON.stringify(working));
+        } catch (_) {}
+        const changed = working.filter((e) => {
+          const before = prev.find((p) => p.id === e.id);
+          return !before || JSON.stringify(before) !== JSON.stringify(e);
+        });
+        if (changed.length > 0) {
+          saveEquipmentsBatchToFirestore(changed).catch(console.warn);
+        }
+        return working;
+      });
+    },
+    []
+  );
+
+  // Tender → OV: carries the awarded tender into Órdenes de Venta.
+  const handleCreateSalesOrderFromTender = useCallback((tender: TenderClientProject) => {
+    setInitialTenderToConvert(tender);
+    setActiveTab('ordenes_venta');
+  }, []);
+
   // Handlers for OC Contracts
   const handleUpdateContracts = useCallback((updated: OCTrackingContract[]) => {
     setOcContracts(updated);
@@ -860,6 +1084,80 @@ export default function App() {
   const handleClearInitialQuoteToConvert = useCallback(() => setInitialQuoteToConvert(null), []);
   const handleClearInitialTenderToConvert = useCallback(() => setInitialTenderToConvert(null), []);
 
+  /**
+   * Creates or synchronizes the OC Tracking contract for a Sales Order (Ventana 5).
+   * Existing contracts keep their real status, supplier, OC number and invoices;
+   * only missing items are added.
+   */
+  const handleGenerateOCTrackingFromOrder = useCallback(
+    (order: SalesOrderRecord) => {
+      if (!order || !order.id) return;
+
+      const created = createOCTrackingContractFromSalesOrder(order, equipments);
+      const existing = ocContracts.find(
+        (c) =>
+          c.salesOrderId === order.id ||
+          (order.salesOrderNumber && c.salesOrderNumber === order.salesOrderNumber) ||
+          (order.ocContractId && c.id === order.ocContractId) ||
+          (c.salesOrderIds || []).includes(order.id)
+      );
+
+      let updatedContracts: OCTrackingContract[];
+      let targetId: string;
+
+      if (existing) {
+        targetId = existing.id;
+        const mergedItems = [...(existing.items || [])];
+        created.items.forEach((newItem) => {
+          const idx = mergedItems.findIndex(
+            (it) =>
+              (newItem.salesOrderItemId && it.salesOrderItemId === newItem.salesOrderItemId) ||
+              (newItem.equipmentId && it.equipmentId && newItem.equipmentId === it.equipmentId) ||
+              (newItem.code && it.code && newItem.code === it.code && !it.salesOrderItemId)
+          );
+          if (idx >= 0) {
+            const current = mergedItems[idx];
+            mergedItems[idx] = {
+              ...current,
+              quantity: current.quantity || newItem.quantity,
+              supplier:
+                current.supplier && current.supplier !== 'Sin Proveedor Asignado'
+                  ? current.supplier
+                  : newItem.supplier,
+              ocNumber: current.ocNumber || newItem.ocNumber,
+              lastUpdatedAt: new Date().toISOString(),
+            };
+          } else {
+            mergedItems.push(newItem);
+          }
+        });
+        updatedContracts = ocContracts.map((c) =>
+          c.id === existing.id
+            ? { ...c, items: mergedItems, lastUpdatedAt: new Date().toISOString() }
+            : c
+        );
+      } else {
+        targetId = created.id;
+        updatedContracts = [created, ...ocContracts];
+      }
+
+      handleUpdateContracts(updatedContracts);
+
+      const target = updatedContracts.find((c) => c.id === targetId);
+      if (target) saveSingleOCTrackingContractToFirestore(target).catch(console.warn);
+
+      const updatedOrders = salesOrders.map((o) =>
+        o.id === order.id
+          ? { ...o, ocContractId: targetId, hasLinkedOC: true, updatedAt: new Date().toISOString() }
+          : o
+      );
+      handleUpdateSalesOrders(updatedOrders);
+      const linkedOrder = updatedOrders.find((o) => o.id === order.id);
+      if (linkedOrder) saveSingleSalesOrderToFirestore(linkedOrder).catch(console.warn);
+    },
+    [ocContracts, equipments, salesOrders, handleUpdateContracts, handleUpdateSalesOrders]
+  );
+
   // Handlers for Documents
   const handleOpenNewDocumentModal = useCallback(
     (equipmentId?: string, docType?: string, equipmentData?: any, contractContext?: any) => {
@@ -884,6 +1182,7 @@ export default function App() {
       } catch (_) {}
       return updated;
     });
+    saveSingleTechnicalDocumentToFirestore(newDoc).catch(console.warn);
   }, []);
 
   const handleDeleteDocument = useCallback((id: string) => {
@@ -894,6 +1193,7 @@ export default function App() {
       } catch (_) {}
       return updated;
     });
+    deleteTechnicalDocumentFromFirestore(id).catch(console.warn);
   }, []);
 
   // Conversions
@@ -903,7 +1203,7 @@ export default function App() {
   }, []);
 
   const handleConvertToTender = useCallback((quote: any) => {
-    setInitialTenderToConvert(quote);
+    setInitialQuoteToLinkTender(quote);
     setActiveTab('licitaciones');
   }, []);
 
@@ -1193,42 +1493,26 @@ export default function App() {
               contracts={ocContracts}
               salesOrders={salesOrders}
               salesInvoices={salesInvoices}
-              onCreateClient={handleCreateTenderClient}
               onCreateTenderClient={handleCreateTenderClient}
-              onUpdateClient={(clientId, updates) => {
-                setTenderClients((prev) => {
-                  const updated = prev.map((tc) => (tc.id === clientId ? { ...tc, ...updates } : tc));
-                  localStorage.setItem('syd_tender_clients_v2', JSON.stringify(updated));
-                  return updated;
-                });
-              }}
-              onUpdateTenderClient={(clientId, updates) => {
-                setTenderClients((prev) => {
-                  const updated = prev.map((tc) => (tc.id === clientId ? { ...tc, ...updates } : tc));
-                  localStorage.setItem('syd_tender_clients_v2', JSON.stringify(updated));
-                  return updated;
-                });
-              }}
-              onDeleteClient={(clientId) => {
-                setTenderClients((prev) => {
-                  const updated = prev.filter((tc) => tc.id !== clientId);
-                  localStorage.setItem('syd_tender_clients_v2', JSON.stringify(updated));
-                  return updated;
-                });
-                deleteTenderClientFromFirestore(clientId).catch(console.warn);
-              }}
-              onDeleteTenderClient={(clientId) => {
-                setTenderClients((prev) => {
-                  const updated = prev.filter((tc) => tc.id !== clientId);
-                  localStorage.setItem('syd_tender_clients_v2', JSON.stringify(updated));
-                  return updated;
-                });
-                deleteTenderClientFromFirestore(clientId).catch(console.warn);
-              }}
+              onBatchCreateClients={handleBatchCreateTenderClients}
+              onUpdateClient={handleUpdateTenderClient}
+              onUpdateTenderClient={handleUpdateTenderClient}
+              onDeleteClient={handleDeleteTenderClient}
+              onDeleteTenderClient={handleDeleteTenderClient}
+              onAddItemToClient={handleAddItemToClient}
+              onUpdateTenderItem={handleUpdateTenderItem}
+              onDeleteTenderItem={handleDeleteTenderItem}
+              onAddRequirement={handleAddRequirement}
+              onUpdateRequirement={handleUpdateRequirement}
+              onDeleteRequirement={handleDeleteRequirement}
+              onSyncTenderItemToCatalog={handleSyncTenderItemToCatalog}
+              onBatchSyncTenderItemsToCatalog={handleBatchSyncTenderItemsToCatalog}
+              onCreateSalesOrder={handleCreateSalesOrderFromTender}
               onNavigateToQuote={() => setActiveTab('ventas')}
               onNavigateToCatalog={() => setActiveTab('catalogo')}
               onNavigateToOCTracking={() => setActiveTab('seguimiento_oc')}
-              onOpenDocModal={handleOpenNewDocumentModal}
+              initialQuoteToLinkTender={initialQuoteToLinkTender}
+              onClearInitialQuoteToLinkTender={() => setInitialQuoteToLinkTender(null)}
             />
           )}
 
@@ -1273,10 +1557,12 @@ export default function App() {
               onUpdateContracts={handleUpdateContracts}
               savedQuotes={savedQuotes}
               tenderClients={tenderClients}
+              onUpdateTenderClient={handleUpdateTenderClient}
               equipments={equipments}
               currentUser={currentUser}
               onNavigateToTab={(tab) => setActiveTab(tab as ActiveTab)}
               customLetterheadUrl={customLetterheadUrl}
+              onGenerateOCTracking={handleGenerateOCTrackingFromOrder}
               initialQuoteToConvert={initialQuoteToConvert}
               onClearInitialQuoteToConvert={handleClearInitialQuoteToConvert}
               initialTenderToConvert={initialTenderToConvert}
@@ -1364,7 +1650,7 @@ export default function App() {
           initialEquipmentData={documentModalProps.equipmentData}
           contractContext={documentModalProps.contractContext}
           initialDocType={documentModalProps.docType}
-          onSaveDocument={(doc) => {
+          onSave={(doc) => {
             handleSaveDocument(doc);
             setIsDocumentModalOpen(false);
           }}

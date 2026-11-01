@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   FileSpreadsheet,
@@ -179,6 +179,8 @@ interface TendersViewProps {
   salesOrders?: SalesOrderRecord[];
   salesInvoices?: SalesInvoiceRecord[];
   onCreateSalesOrder?: (tender: TenderClientProject) => void;
+  initialQuoteToLinkTender?: SavedQuote | null;
+  onClearInitialQuoteToLinkTender?: () => void;
 }
 
 export const TendersView: React.FC<TendersViewProps> = ({
@@ -208,6 +210,8 @@ export const TendersView: React.FC<TendersViewProps> = ({
   salesOrders = [],
   salesInvoices = [],
   onCreateSalesOrder,
+  initialQuoteToLinkTender = null,
+  onClearInitialQuoteToLinkTender,
 }) => {
   const effectiveContracts = useMemo(() => {
     return contracts && contracts.length > 0 ? contracts : getStoredOCTrackingContracts();
@@ -474,6 +478,19 @@ export const TendersView: React.FC<TendersViewProps> = ({
     confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
     showToast(`✓ Licitación creada a partir de cotización ${quote.quoteNumber}`);
   };
+
+  // Consume a quote converted from Cotizaciones → Licitación
+  const consumedQuoteLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialQuoteToLinkTender) return;
+    const key =
+      initialQuoteToLinkTender.id || initialQuoteToLinkTender.quoteNumber || 'quote';
+    if (consumedQuoteLinkRef.current === key) return;
+    consumedQuoteLinkRef.current = key;
+    handleCreateTenderFromQuote(initialQuoteToLinkTender);
+    onClearInitialQuoteToLinkTender?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuoteToLinkTender]);
 
   // Link Quote to Current Active Tender
   const handleLinkQuoteToCurrentTender = (quote: SavedQuote, importItems: boolean) => {

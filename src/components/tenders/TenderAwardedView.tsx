@@ -39,6 +39,7 @@ import {
   MedicalEquipment,
 } from '../../types';
 import { formatCOP, normalizeClean } from '../../utils/formatters';
+import { computeOrderInvoicingData } from '../views/SalesOrdersView';
 import { formatTenderProcessNumber } from '../../utils/tenderDeduplication';
 import {
   ExcelColumnConfig,
@@ -557,28 +558,61 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
         if (foundSO) break;
       }
 
-      // 3. Search for linked invoice specifically matching this tender item or its Sales Order
-      let matchingInvoice: SalesInvoiceRecord | undefined;
-      const validInvoices = linkedInvoices.filter((inv) => {
-        if (inv.items && inv.items.length > 0) {
-          return inv.items.some((invIt) => matchesTenderItemWithTarget(tIt, invIt));
-        }
-        if (foundSO && inv.salesOrderId && inv.salesOrderId === foundSO.parentOrder.id) return true;
-        if (foundSO && inv.salesOrderNumber && cleanRef(inv.salesOrderNumber) === cleanRef(foundSO.parentOrder.salesOrderNumber)) return true;
-        return false;
-      });
+      // 3. Invoicing comes ONLY from real invoice allocations for this item.
+      //    Status flags (invoicedStatus / status) and OC supplier invoices are
+      //    never trusted as proof that the client invoice covers this equipment.
+      let itemInvoicedQty = 0;
+      let itemTotalQty = 0;
+      let itemInvoiceNumber = '';
+      let orderHasItemLevelInvoices = false;
+      let orderFullyInvoicedByValue = false;
+      let orderInvoiceNumbers = '';
 
       if (foundSO) {
-        matchingInvoice = linkedInvoices.find(
-          (inv) =>
-            inv.salesOrderId === foundSO!.parentOrder.id ||
-            (foundSO!.parentOrder.salesOrderNumber &&
-              cleanRef(inv.salesOrderNumber) === cleanRef(foundSO!.parentOrder.salesOrderNumber))
-        );
+        const order = foundSO.parentOrder;
+        const invData = computeOrderInvoicingData(order, linkedInvoices);
+        orderHasItemLevelInvoices = invData.hasItemLevelInvoices;
+        orderFullyInvoicedByValue = invData.isFullyInvoiced && !invData.hasItemLevelInvoices;
+        orderInvoiceNumbers = invData.invoiceNumbers;
+
+        const coverage =
+          invData.itemCoverage.find((c) => c.item.id && c.item.id === foundSO!.id) ||
+          invData.itemCoverage.find((c) => matchesTenderItemWithTarget(tIt, c.item));
+        if (coverage) {
+          itemInvoicedQty = coverage.invoicedQty;
+          itemTotalQty = coverage.quantity;
+        } else {
+          itemTotalQty =
+            Number(foundSO.quantityToDispatch ?? foundSO.quantity ?? 1) || 1;
+        }
+
+        if (itemInvoicedQty > 0) {
+          itemInvoiceNumber =
+            invData.orderInvoices
+              .filter((inv) =>
+                (inv.items || []).some(
+                  (alloc) =>
+                    alloc &&
+                    (alloc.salesOrderItemId === foundSO!.id ||
+                      matchesTenderItemWithTarget(tIt, alloc as any))
+                )
+              )
+              .map((inv) => inv.invoiceNumber)
+              .filter(Boolean)
+              .join(', ') || orderInvoiceNumbers;
+        }
       }
-      if (!matchingInvoice && validInvoices.length > 0) {
-        matchingInvoice = validInvoices[0];
-      }
+
+      const isInvoiced = Boolean(
+        foundSO &&
+          ((orderHasItemLevelInvoices &&
+            itemTotalQty > 0 &&
+            itemInvoicedQty >= itemTotalQty) ||
+            orderFullyInvoicedByValue)
+      );
+      const invRef = isInvoiced
+        ? itemInvoiceNumber || orderInvoiceNumbers
+        : '';
 
       const ocRef =
         foundOC?.contractOC ||
@@ -588,37 +622,8 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
         (foundOC?.ocNumber || '');
       const ovRef =
         foundSO?.parentOrder?.salesOrderNumber || foundOC?.salesOrderNumber || '';
-      const invRef =
-        matchingInvoice?.invoiceNumber ||
-        foundOC?.invoiceNumber ||
-        (foundSO && (foundSO.parentOrder.invoiceNumber || ((foundSO.parentOrder.status === 'Facturada' || foundSO.parentOrder.invoicedStatus === 'Facturada Total') ? 'FE-1001' : ''))
-          ? (foundSO.parentOrder.invoiceNumber || 'FE-1001')
-          : '');
-
       const hasOC = Boolean(foundOC) || Boolean(ocRef);
       const hasOV = Boolean(foundSO) || Boolean(ovRef);
-      const isInvoiced = Boolean(
-        invRef ||
-        matchingInvoice ||
-        foundOC?.invoiceNumber ||
-        (foundSO && (Boolean(foundSO.parentOrder.invoiceNumber) || Boolean(foundSO.parentOrder.attachedInvoiceFile) || foundSO.parentOrder.status === 'Facturada' || foundSO.parentOrder.invoicedStatus === 'Facturada Total'))
-      );
-
-      // Check if invoiced
-      if (isInvoiced) {
-        return {
-          isDelivered: true,
-          hasOC: hasOC,
-          hasOV: hasOV,
-          ovNumber: ovRef,
-          isInTransit: false,
-          isPendingOC: false,
-          isInvoiced: true,
-          status: 'Facturado',
-          ocNumber: ocRef,
-          invoiceNumber: invRef,
-        };
-      }
 
       // A. If found in OC Tracking:
       if (foundOC) {
@@ -631,16 +636,18 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
             ovNumber: ovRef,
             isInTransit: true,
             isPendingOC: false,
-            isInvoiced: false,
+            isInvoiced,
             status: foundOC.status || 'En Tránsito / Despachada',
             ocNumber: ocRef,
             invoiceNumber: invRef,
           };
         }
+        // Delivered only from a real manual item status / delivered quantity.
+        // A contract global status never marks equipment as delivered.
         const isDelivered =
           isStatusDelivered(foundOC.status) ||
-          (Boolean((foundOC as any).deliveredQuantity) && ((foundOC as any).deliveredQuantity || 0) >= (foundOC.quantity || 1)) ||
-          (foundOC.contractGlobalStatus === 'Cerrado / Concluido' && !inTransit);
+          (Boolean((foundOC as any).deliveredQuantity) &&
+            ((foundOC as any).deliveredQuantity || 0) >= (foundOC.quantity || 1));
         if (isDelivered) {
           return {
             isDelivered: true,
@@ -649,7 +656,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
             ovNumber: ovRef,
             isInTransit: false,
             isPendingOC: false,
-            isInvoiced: false,
+            isInvoiced,
             status: foundOC.status || 'Entregado e Instalado',
             ocNumber: ocRef,
             invoiceNumber: invRef,
@@ -664,7 +671,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
           ovNumber: ovRef,
           isInTransit: false,
           isPendingOC: false,
-          isInvoiced: false,
+          isInvoiced,
           status: foundOC.status || 'Borrador / Solicitud',
           ocNumber: ocRef,
           invoiceNumber: invRef,
@@ -684,7 +691,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
             ovNumber: order.salesOrderNumber,
             isInTransit: true,
             isPendingOC: !hasOC,
-            isInvoiced: false,
+            isInvoiced,
             status: soItemStatus || 'En Tránsito',
             ocNumber: ocRef,
             invoiceNumber: invRef,
@@ -699,7 +706,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
             ovNumber: order.salesOrderNumber,
             isInTransit: false,
             isPendingOC: !hasOC,
-            isInvoiced: false,
+            isInvoiced,
             status: soItemStatus || 'Entregado e Instalado',
             ocNumber: ocRef,
             invoiceNumber: invRef,
@@ -713,7 +720,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
           ovNumber: order.salesOrderNumber,
           isInTransit: false,
           isPendingOC: !hasOC,
-          isInvoiced: false,
+          isInvoiced,
           status: hasOC ? 'OC Generada' : 'OV Asignada',
           ocNumber: ocRef,
           invoiceNumber: invRef,
@@ -991,14 +998,15 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
   const isOrderBilledAndUploaded =
     hasOrders &&
     linkedOrders.every((so) => {
-      const isFacturada = so.status === 'Facturada' || so.invoicedStatus === 'Facturada Total';
-      const hasInvoiceNumber = Boolean(so.invoiceNumber && so.invoiceNumber.trim().length > 0);
+      // Full invoicing is required: a partial invoice, an invoice number or a
+      // loose file must never archive the tender.
+      const isFullyInvoiced = computeOrderInvoicingData(so, salesInvoices || []).isFullyInvoiced;
       const hasInvoiceFile = Boolean(
         so.attachedInvoiceFile?.dataUrl ||
         (salesInvoices || []).some((inv) => (inv.salesOrderId === so.id || (so.salesOrderNumber && inv.salesOrderNumber === so.salesOrderNumber)) && Boolean(inv.attachedInvoiceFile?.dataUrl)) ||
         linkedInvoices.some((inv) => inv.salesOrderId === so.id || (so.salesOrderNumber && cleanRef(inv.salesOrderNumber) === cleanRef(so.salesOrderNumber)))
       );
-      return isFacturada || hasInvoiceNumber || hasInvoiceFile;
+      return isFullyInvoiced && hasInvoiceFile;
     });
 
   // Ready to fulfill requirement: both OC equipments delivered and invoice uploaded
@@ -1013,14 +1021,18 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
     }
   }, [isReadyToFulfill, activeClient.id, activeClient.status, onUpdateClient]);
 
-  // Auto-revert if contract was prematurely marked as 'Cumplido / Archivado' but actually has items in transit or pending OC
+  // Auto-revert if contract was prematurely marked as 'Cumplido / Archivado' but actually has items in transit, pending OC or pending invoicing
   const autoRevertedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (activeClient.status === 'Cumplido / Archivado' && !allOCItemsDelivered && autoRevertedRef.current !== activeClient.id) {
+    if (
+      activeClient.status === 'Cumplido / Archivado' &&
+      (!allOCItemsDelivered || !allItemsInvoiced) &&
+      autoRevertedRef.current !== activeClient.id
+    ) {
       autoRevertedRef.current = activeClient.id;
       onUpdateClient(activeClient.id, { status: 'Adjudicada' });
     }
-  }, [activeClient.status, allOCItemsDelivered, activeClient.id, onUpdateClient]);
+  }, [activeClient.status, allOCItemsDelivered, allItemsInvoiced, activeClient.id, onUpdateClient]);
 
   const handleStatusChange = (newStatus: TenderClientProject['status']) => {
     onUpdateClient(activeClient.id, { status: newStatus });

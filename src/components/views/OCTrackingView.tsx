@@ -28,7 +28,7 @@ import {
   splitSalesOrderRecord,
   createOCTrackingContractFromSalesOrder,
 } from '../../utils/salesOrdersStorage';
-import { normalizeClean } from '../../utils/formatters';
+import { normalizeClean, isValidOCNumber } from '../../utils/formatters';
 import { SplitSalesOrderModal } from './sales-orders/SplitSalesOrderModal';
 import {
   deleteOCTrackingContractFromFirestore,
@@ -341,8 +341,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
 
         const isCompleted =
           it.status === 'Entregado e Instalado' ||
-          it.status === 'Cerrado / Concluido' ||
-          it.status === 'Pagado al Proveedor';
+          it.status === 'Cerrado / Concluido';
         const isCancelled = it.status === 'Cancelada';
 
         if (isCompleted) {
@@ -422,10 +421,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
         const entry = ocStatusMap.get(key)!;
         const isCompleted =
           it.status === 'Entregado e Instalado' ||
-          it.status === 'Cerrado / Concluido' ||
-          it.status === 'Pagado al Proveedor' ||
-          Boolean(it.invoiceNumber) ||
-          it.salesOrderNumber === '1152149';
+          it.status === 'Cerrado / Concluido';
         const isCancelled = it.status === 'Cancelada';
 
         if (isCompleted) {
@@ -476,10 +472,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
           // Lifecycle Tab Filter (Activas / Pendientes vs Entregadas & Archivadas)
           const isItemDelivered =
             item.status === 'Entregado e Instalado' ||
-            item.status === 'Cerrado / Concluido' ||
-            item.status === 'Pagado al Proveedor' ||
-            Boolean(item.invoiceNumber) ||
-            item.salesOrderNumber === '1152149';
+            item.status === 'Cerrado / Concluido';
 
           if (lifecycleTab === 'active' && isItemDelivered) {
             return false;
@@ -729,6 +722,30 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
 
     const isNowDelivered =
       newStatus === 'Entregado e Instalado' || newStatus === 'Cerrado / Concluido';
+
+    // A real OC number is mandatory before advancing an item beyond the initial draft.
+    const isAdvancedStatus = newStatus !== 'Borrador / Solicitud' && newStatus !== 'Cancelada';
+    if (isAdvancedStatus) {
+      const targetContract = contracts.find((c) => c.id === contractId);
+      const relatedItems = (targetContract?.items || []).filter(
+        (it) =>
+          it.id === itemId ||
+          it.salesOrderItemId === itemId ||
+          (targetSOItem && targetSOItem.soIt.id === it.salesOrderItemId) ||
+          (it.equipmentId && String(it.equipmentId) === String(itemId))
+      );
+      const ocCandidates = [
+        ...relatedItems.map((it) => it.ocNumber),
+        targetSOItem?.soIt?.supplierOCRef,
+        targetSOItem?.soIt?.linkedSupplierOCNumber,
+      ];
+      if (!ocCandidates.some((oc) => isValidOCNumber(oc))) {
+        alert(
+          '⛔ N° DE OC REQUERIDO:\n\nDebes registrar el número real de Orden de Compra del proveedor antes de cambiar el estado, proveedor, seriales o facturación de este equipo.\n\nEdita el ítem y guarda su N° de OC primero.'
+        );
+        return;
+      }
+    }
 
     const updated = contracts.map((c) => {
       if (c.id !== contractId) return c;
@@ -1146,6 +1163,14 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
     const cleanNewSup = newSupplier.trim();
     if (!cleanNewSup) return;
 
+    const targetOC = (newOCNumber || ocNumber || '').trim();
+    if (!isValidOCNumber(targetOC)) {
+      alert(
+        '⛔ N° DE OC REQUERIDO:\n\nNo se puede cambiar el proveedor de un equipo sin un número real de Orden de Compra. Registra primero el N° de OC.'
+      );
+      return;
+    }
+
     try {
       autoRegisterSupplierIfNotExists(cleanNewSup);
     } catch {}
@@ -1255,6 +1280,12 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
     ocNumber: string,
     invoices: SupplierInvoiceAttachment[]
   ) => {
+    if (!isValidOCNumber(ocNumber)) {
+      alert(
+        '⛔ N° DE OC REQUERIDO:\n\nDebes registrar el número real de Orden de Compra del proveedor antes de adjuntar facturas de proveedor.'
+      );
+      return;
+    }
     const updated = contracts.map((c) => {
       if (c.id !== contractId) return c;
 
@@ -1338,6 +1369,20 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
     if (!editingItemState) return;
 
     const { contractId, item } = editingItemState;
+    const finalOCNumber = String(updates.ocNumber || item.ocNumber || '').trim();
+    const touchesGatedFields =
+      updates.status !== undefined ||
+      updates.supplier !== undefined ||
+      updates.serialNumbers !== undefined ||
+      updates.serialNumber !== undefined ||
+      updates.invoiceNumber !== undefined;
+    if (touchesGatedFields && !isValidOCNumber(finalOCNumber)) {
+      alert(
+        '⛔ N° DE OC REQUERIDO:\n\nDebes registrar el número real de Orden de Compra del proveedor antes de modificar estado, proveedor, seriales o facturación de este equipo.'
+      );
+      return;
+    }
+
     const updated = contracts.map((c) => {
       if (c.id !== contractId) return c;
       return {

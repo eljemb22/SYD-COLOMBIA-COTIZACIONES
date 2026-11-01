@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import {
   SalesInvoiceRecord,
+  SalesInvoiceItemAllocation,
   SalesOrderRecord,
   SalesInvoicePaymentStatus,
   AttachedSalesDoc,
@@ -61,6 +62,8 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
   const [paymentStatus, setPaymentStatus] = useState<SalesInvoicePaymentStatus>('Pendiente de Pago');
   const [attachedInvoiceFile, setAttachedInvoiceFile] = useState<AttachedSalesDoc | undefined>(undefined);
   const [notes, setNotes] = useState('');
+  // Quantity of each OV item covered by this invoice (empty = value-only invoice).
+  const [allocations, setAllocations] = useState<Record<string, number>>({});
 
   // Find currently active sales order (either passed target or selected in dropdown)
   const currentSalesOrder = targetSalesOrder || salesOrders.find((o) => o.id === selectedSalesOrderId);
@@ -79,6 +82,84 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
   const orderTotalCOP = Number(currentSalesOrder?.totalValueCOP) || 0;
   const remainingBalanceCOP = Math.max(0, orderTotalCOP - previouslyInvoicedCOP);
 
+  // Build the default allocation for the units still pending to invoice.
+  const buildRemainingAllocations = (order?: SalesOrderRecord | null, excludeInvoiceId?: string): Record<string, number> => {
+    const result: Record<string, number> = {};
+    if (!order) return result;
+    const alreadyByItem: Record<string, number> = {};
+    existingInvoices
+      .filter(
+        (inv) =>
+          inv &&
+          inv.id !== excludeInvoiceId &&
+          (inv.salesOrderId === order.id ||
+            (order.salesOrderNumber && inv.salesOrderNumber === order.salesOrderNumber))
+      )
+      .forEach((inv) => {
+        (inv.items || []).forEach((al) => {
+          if (!al || !al.salesOrderItemId) return;
+          alreadyByItem[al.salesOrderItemId] =
+            (alreadyByItem[al.salesOrderItemId] || 0) + (Number(al.quantity) || 0);
+        });
+      });
+    (order.items || []).forEach((it) => {
+      const qty = Number(it.quantityToDispatch ?? it.quantity ?? 1) || 1;
+      const remaining = Math.max(0, qty - Math.min(qty, alreadyByItem[it.id] || 0));
+      if (remaining > 0) result[it.id] = remaining;
+    });
+    return result;
+  };
+
+  const orderItems = currentSalesOrder?.items || [];
+
+  const previouslyInvoicedQtyByItem: Record<string, number> = {};
+  otherLinkedInvoices.forEach((inv) => {
+    (inv.items || []).forEach((al) => {
+      if (!al || !al.salesOrderItemId) return;
+      previouslyInvoicedQtyByItem[al.salesOrderItemId] =
+        (previouslyInvoicedQtyByItem[al.salesOrderItemId] || 0) + (Number(al.quantity) || 0);
+    });
+  });
+
+  const itemRows = orderItems.map((it) => {
+    const quantity = Number(it.quantityToDispatch ?? it.quantity ?? 1) || 1;
+    const already = Math.min(quantity, previouslyInvoicedQtyByItem[it.id] || 0);
+    return {
+      item: it,
+      quantity,
+      already,
+      remaining: Math.max(0, quantity - already),
+      unitPrice: Number(it.unitSalePriceCOP) || 0,
+    };
+  });
+
+  const hasItemLevelOtherInvoices = otherLinkedInvoices.some((inv) => (inv.items || []).length > 0);
+  const hasAllocations = Object.values(allocations).some((q) => Number(q) > 0);
+  const allocatedTotalCOP = itemRows.reduce(
+    (sum, row) => sum + (Number(allocations[row.item.id]) || 0) * row.unitPrice,
+    0
+  );
+  const effectiveTotalCOP = hasAllocations ? allocatedTotalCOP : totalAmountCOP;
+  const allItemsCoveredNow =
+    itemRows.length > 0 &&
+    itemRows.every(
+      (row) => row.already + (Number(allocations[row.item.id]) || 0) >= row.quantity
+    );
+
+  const setAllocationForItem = (itemId: string, qty: number) => {
+    setAllocations((prev) => {
+      const next = { ...prev };
+      if (!qty || qty <= 0) delete next[itemId];
+      else next[itemId] = qty;
+      const newTotal = itemRows.reduce(
+        (sum, row) => sum + (Number(next[row.item.id]) || 0) * row.unitPrice,
+        0
+      );
+      if (Object.keys(next).length > 0) setTotalAmountCOP(newTotal);
+      return next;
+    });
+  };
+
   // Pre-fill fields when modal opens
   useEffect(() => {
     if (!isOpen) return;
@@ -94,6 +175,13 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       setPaymentStatus(invoiceToEdit.paymentStatus || 'Pendiente de Pago');
       setAttachedInvoiceFile(invoiceToEdit.attachedInvoiceFile);
       setNotes(invoiceToEdit.notes || '');
+      const existingAllocations: Record<string, number> = {};
+      (invoiceToEdit.items || []).forEach((al) => {
+        if (al && al.salesOrderItemId) {
+          existingAllocations[al.salesOrderItemId] = Number(al.quantity) || 0;
+        }
+      });
+      setAllocations(existingAllocations);
     } else if (targetSalesOrder) {
       const nextNum = generateNextInvoiceNumber(existingInvoices);
       const otherInvoices = existingInvoices.filter(
@@ -103,6 +191,11 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       );
       const prevSum = otherInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmountCOP) || 0), 0);
       const rem = Math.max(0, (targetSalesOrder.totalValueCOP || 0) - prevSum);
+      const defaultAllocations = buildRemainingAllocations(targetSalesOrder);
+      const allocatedTotal = (targetSalesOrder.items || []).reduce(
+        (sum, it) => sum + (Number(defaultAllocations[it.id]) || 0) * (Number(it.unitSalePriceCOP) || 0),
+        0
+      );
 
       setInvoiceNumber(nextNum);
       setSelectedSalesOrderId(targetSalesOrder.id);
@@ -110,7 +203,8 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       setClientNit(targetSalesOrder.clientNit || '');
       setIssueDate(new Date().toISOString().split('T')[0]);
       setDueDate('');
-      setTotalAmountCOP(rem > 0 ? rem : targetSalesOrder.totalValueCOP || 0);
+      setAllocations(defaultAllocations);
+      setTotalAmountCOP(allocatedTotal > 0 ? allocatedTotal : rem > 0 ? rem : targetSalesOrder.totalValueCOP || 0);
       setPaymentStatus('Pendiente de Pago');
       setAttachedInvoiceFile(undefined);
       setNotes(
@@ -130,6 +224,7 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       setPaymentStatus('Pendiente de Pago');
       setAttachedInvoiceFile(undefined);
       setNotes('');
+      setAllocations({});
     }
   }, [isOpen, invoiceToEdit, targetSalesOrder, existingInvoices]);
 
@@ -152,7 +247,13 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       const prevSum = otherInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmountCOP) || 0), 0);
       const rem = Math.max(0, (matchedSO.totalValueCOP || 0) - prevSum);
 
-      setTotalAmountCOP(rem > 0 ? rem : matchedSO.totalValueCOP || 0);
+      const defaultAllocations = buildRemainingAllocations(matchedSO);
+      const allocatedTotal = (matchedSO.items || []).reduce(
+        (sum, it) => sum + (Number(defaultAllocations[it.id]) || 0) * (Number(it.unitSalePriceCOP) || 0),
+        0
+      );
+      setAllocations(defaultAllocations);
+      setTotalAmountCOP(allocatedTotal > 0 ? allocatedTotal : rem > 0 ? rem : matchedSO.totalValueCOP || 0);
     }
   };
 
@@ -232,12 +333,28 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       alert('Por favor indica el cliente de la factura');
       return;
     }
-    if (totalAmountCOP <= 0) {
+    if (effectiveTotalCOP <= 0) {
       alert('El valor total de la factura debe ser mayor a 0 COP');
       return;
     }
 
     const matchedSO = currentSalesOrder;
+
+    const invoiceItems: SalesInvoiceItemAllocation[] = itemRows
+      .map((row) => {
+        const qty = Math.min(row.remaining, Number(allocations[row.item.id]) || 0);
+        if (qty <= 0) return null;
+        return {
+          salesOrderItemId: row.item.id,
+          equipmentId: row.item.equipmentId,
+          code: row.item.code,
+          name: row.item.name,
+          quantity: qty,
+          unitPriceCOP: row.unitPrice,
+          totalCOP: qty * row.unitPrice,
+        };
+      })
+      .filter(Boolean) as SalesInvoiceItemAllocation[];
 
     const finalInvoice: SalesInvoiceRecord = {
       id: invoiceToEdit?.id || `inv-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -252,26 +369,46 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
       clientNit: clientNit.trim(),
       issueDate: issueDate,
       dueDate: dueDate || undefined,
-      subtotalCOP: totalAmountCOP,
-      totalAmountCOP: totalAmountCOP,
+      subtotalCOP: effectiveTotalCOP,
+      totalAmountCOP: effectiveTotalCOP,
       paymentStatus: paymentStatus,
       attachedInvoiceFile: attachedInvoiceFile,
+      items: invoiceItems.length > 0 ? invoiceItems : undefined,
       notes: notes.trim(),
       createdAt: invoiceToEdit?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      items: matchedSO?.items || invoiceToEdit?.items || [],
     };
 
     // If an OV is linked, culminate it with this invoice info
     let updatedSO: SalesOrderRecord | undefined = undefined;
     if (matchedSO) {
+      const usesItemTracking = hasAllocations || hasItemLevelOtherInvoices;
+      const isFullyInvoicedNow =
+        itemRows.length > 0
+          ? usesItemTracking
+            ? allItemsCoveredNow
+            : orderTotalCOP > 0 && previouslyInvoicedCOP + effectiveTotalCOP >= orderTotalCOP
+          : orderTotalCOP > 0
+          ? previouslyInvoicedCOP + effectiveTotalCOP >= orderTotalCOP
+          : true;
+
+      const accumulatedInvoiceIds = Array.from(
+        new Set(
+          [
+            ...(matchedSO.invoiceIds || []),
+            ...(matchedSO.invoiceId ? [matchedSO.invoiceId] : []),
+            finalInvoice.id,
+          ].filter(Boolean) as string[]
+        )
+      );
+
       updatedSO = {
         ...matchedSO,
         invoiceNumber: finalInvoice.invoiceNumber,
         invoiceId: finalInvoice.id,
-        invoiceIds: [finalInvoice.id, ...(matchedSO.invoiceIds || []).filter(id => id !== finalInvoice.id)],
+        invoiceIds: accumulatedInvoiceIds,
         invoiceDate: finalInvoice.issueDate,
-        totalInvoicedCOP: totalAmountCOP,
+        totalInvoicedCOP: previouslyInvoicedCOP + effectiveTotalCOP,
         attachedInvoiceFile: finalInvoice.attachedInvoiceFile || matchedSO.attachedInvoiceFile,
         invoicedStatus: 'Facturada Total',
         status: matchedSO.status !== 'Cancelada' ? 'Facturada' : matchedSO.status,
@@ -290,10 +427,14 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentAccumulatedAfterThis = previouslyInvoicedCOP + (Number(totalAmountCOP) || 0);
+  const currentAccumulatedAfterThis = previouslyInvoicedCOP + (Number(effectiveTotalCOP) || 0);
   const currentPercentageAfterThis =
     orderTotalCOP > 0 ? Math.min(100, Math.round((currentAccumulatedAfterThis / orderTotalCOP) * 100)) : 0;
-  const isCoveringFullValue = orderTotalCOP > 0 && currentAccumulatedAfterThis >= orderTotalCOP;
+  const usesItemTracking = hasAllocations || hasItemLevelOtherInvoices;
+  const isCoveringFullValue =
+    itemRows.length > 0 && usesItemTracking
+      ? allItemsCoveredNow
+      : orderTotalCOP > 0 && currentAccumulatedAfterThis >= orderTotalCOP;
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -369,11 +510,14 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
               <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800 text-center">
                 <span className="text-[10px] text-amber-400/90 block font-medium">Esta Factura</span>
                 <strong className="text-amber-300 font-mono block text-xs truncate">
-                  {formatCOP(totalAmountCOP)}
+                  {formatCOP(effectiveTotalCOP)}
                 </strong>
                 <button
                   type="button"
-                  onClick={() => setTotalAmountCOP(remainingBalanceCOP)}
+                  onClick={() => {
+                    setAllocations({});
+                    setTotalAmountCOP(remainingBalanceCOP);
+                  }}
                   className="text-[9.5px] text-amber-400 hover:underline block mx-auto font-bold cursor-pointer"
                 >
                   Saldo exacto
@@ -498,7 +642,10 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
                 {remainingBalanceCOP > 0 && (
                   <button
                     type="button"
-                    onClick={() => setTotalAmountCOP(remainingBalanceCOP)}
+                    onClick={() => {
+                      setAllocations({});
+                      setTotalAmountCOP(remainingBalanceCOP);
+                    }}
                     className="text-[10.5px] font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
                   >
                     Usar Saldo ({formatCOP(remainingBalanceCOP)})
@@ -509,13 +656,28 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
                 type="number"
                 min="1"
                 required
-                value={totalAmountCOP || ''}
-                onChange={(e) => setTotalAmountCOP(Number(e.target.value) || 0)}
+                value={hasAllocations ? effectiveTotalCOP : totalAmountCOP || ''}
+                onChange={(e) => {
+                  if (hasAllocations) return;
+                  setTotalAmountCOP(Number(e.target.value) || 0);
+                }}
+                readOnly={hasAllocations}
                 placeholder="0"
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-bold text-emerald-400 focus:outline-none focus:border-emerald-400 font-mono"
+                className={`w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-bold text-emerald-400 focus:outline-none focus:border-emerald-400 font-mono ${
+                  hasAllocations ? 'opacity-80 cursor-not-allowed' : ''
+                }`}
               />
               <span className="text-[10px] text-slate-400 mt-1 block">
-                Monto: <strong className="text-emerald-400">{formatCOP(totalAmountCOP)}</strong>
+                {hasAllocations ? (
+                  <>
+                    Calculado por equipos seleccionados:{' '}
+                    <strong className="text-emerald-400">{formatCOP(effectiveTotalCOP)}</strong>
+                  </>
+                ) : (
+                  <>
+                    Monto: <strong className="text-emerald-400">{formatCOP(effectiveTotalCOP)}</strong>
+                  </>
+                )}
               </span>
             </div>
           </div>
@@ -585,6 +747,102 @@ export const AttachInvoiceModal: React.FC<AttachInvoiceModalProps> = ({
               </select>
             </div>
           </div>
+
+          {/* Equipment allocation (partial invoicing) */}
+          {currentSalesOrder && itemRows.length > 0 && (
+            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-purple-400" />
+                  Equipos que cubre esta factura
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const all = buildRemainingAllocations(currentSalesOrder, invoiceToEdit?.id);
+                      setAllocations(all);
+                      const newTotal = itemRows.reduce(
+                        (sum, row) => sum + (Number(all[row.item.id]) || 0) * row.unitPrice,
+                        0
+                      );
+                      setTotalAmountCOP(newTotal);
+                    }}
+                    className="text-[10px] font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                  >
+                    Facturar todo el saldo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAllocations({});
+                    }}
+                    className="text-[10px] font-bold text-slate-400 hover:text-slate-200 underline cursor-pointer"
+                  >
+                    Ninguno (solo monto)
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                {itemRows.map((row) => {
+                  const selectedQty = Math.min(row.remaining, Number(allocations[row.item.id]) || 0);
+                  const fullyInvoicedBefore = row.remaining <= 0;
+                  return (
+                    <div
+                      key={row.item.id}
+                      className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border text-[11px] ${
+                        fullyInvoicedBefore
+                          ? 'bg-slate-900/40 border-slate-800/60 opacity-60'
+                          : selectedQty > 0
+                          ? 'bg-purple-500/10 border-purple-500/30'
+                          : 'bg-slate-900 border-slate-800'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-slate-200 block truncate">
+                          {row.item.name} {row.item.brand ? `· ${row.item.brand}` : ''} {row.item.model || ''}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {row.item.code ? `${row.item.code} · ` : ''}
+                          {formatCOP(row.unitPrice)} / und · Pendiente {row.remaining} de {row.quantity}
+                          {row.already > 0 ? ` (${row.already} ya facturadas)` : ''}
+                        </span>
+                      </div>
+                      {fullyInvoicedBefore ? (
+                        <span className="text-[10px] font-bold text-emerald-400 shrink-0">
+                          ✓ Facturado
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <input
+                            type="number"
+                            min={0}
+                            max={row.remaining}
+                            value={selectedQty || ''}
+                            onChange={(e) => {
+                              const raw = Number(e.target.value) || 0;
+                              setAllocationForItem(row.item.id, Math.max(0, Math.min(row.remaining, raw)));
+                            }}
+                            placeholder="0"
+                            className="w-16 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs font-bold text-amber-300 text-center focus:outline-none focus:border-purple-400 font-mono"
+                          />
+                          <span className="text-[10px] text-slate-400">/ {row.remaining}</span>
+                          <button
+                            type="button"
+                            onClick={() => setAllocationForItem(row.item.id, row.remaining)}
+                            className="text-[10px] font-bold text-purple-300 hover:text-purple-200 px-1 cursor-pointer"
+                            title="Facturar todas las unidades pendientes de este equipo"
+                          >
+                            Todo
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div>

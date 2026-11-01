@@ -695,7 +695,7 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
             if (newItem.serialNumbers && newItem.serialNumbers.length > (existingItem.serialNumbers?.length || 0)) {
               existingItem.serialNumbers = newItem.serialNumbers;
             }
-            if (!existingItem.ocNumber || existingItem.ocNumber === '126622' || existingItem.ocNumber === 'Sin N° OC') {
+            if (!existingItem.ocNumber || existingItem.ocNumber === 'Sin N° OC') {
               if (newItem.ocNumber) existingItem.ocNumber = newItem.ocNumber;
             }
             if (!existingItem.supplier || existingItem.supplier === 'Sin Proveedor Asignado') {
@@ -704,20 +704,23 @@ export function deduplicateOCTrackingContracts(contracts: OCTrackingContract[]):
             if (newItem.invoiceNumber && !existingItem.invoiceNumber) {
               existingItem.invoiceNumber = newItem.invoiceNumber;
             }
+            // Only a real delivered/closed status from the source item propagates.
+            // Invoices, OV status or equipment names never mark an item as delivered.
             if (
               newItem.status === 'Entregado e Instalado' ||
-              newItem.status === 'Cerrado / Concluido' ||
-              Boolean(newItem.invoiceNumber) ||
-              newItem.salesOrderNumber === '1152149' ||
-              /HYBASE|MOBIEYE/i.test(newItem.name + ' ' + (newItem.model || ''))
+              newItem.status === 'Cerrado / Concluido'
             ) {
-              existingItem.status = 'Entregado e Instalado';
-              existingItem.paymentStatus = 'Pagado al Proveedor';
-              if (!existingItem.invoiceNumber) existingItem.invoiceNumber = 'FE-1001';
-              if (!existingItem.supplier || existingItem.supplier === 'Sin Proveedor Asignado') existingItem.supplier = 'TECNICA';
-              existingItem.ocNumber = '126622';
-              existingItem.serialNumber = '';
-              existingItem.serialNumbers = [];
+              existingItem.status = newItem.status;
+              if (newItem.paymentStatus) existingItem.paymentStatus = newItem.paymentStatus;
+              if (newItem.supplier && newItem.supplier !== 'Sin Proveedor Asignado') {
+                existingItem.supplier = newItem.supplier;
+              }
+              if (newItem.ocNumber) existingItem.ocNumber = newItem.ocNumber;
+              if (newItem.deliveryDate) existingItem.deliveryDate = newItem.deliveryDate;
+              if (newItem.installedDate) existingItem.installedDate = newItem.installedDate;
+              if (newItem.serialNumbers && newItem.serialNumbers.length > 0) {
+                existingItem.serialNumbers = newItem.serialNumbers;
+              }
             } else if (!existingItem.status || existingItem.status === 'Pendiente de OC' || existingItem.status === 'Pendiente') {
               if (newItem.status && newItem.status !== 'Pendiente de OC' && newItem.status !== 'Pendiente') {
                 existingItem.status = newItem.status;
@@ -898,23 +901,17 @@ export function segregateOCTrackingContractsBySalesOrder(
         if (!alreadyInPure) {
           const qty = Number(soIt.quantityToDispatch) || 1;
           const cost = Math.round(Number(soIt.unitSalePriceCOP || 1000000) * 0.65);
+          // Delivered status comes only from a real item/serial status.
           const isDelivered =
-            linkedSO.status === 'Facturada' ||
-            Boolean(linkedSO.invoiceNumber) ||
-            linkedSO.salesOrderNumber === '1152149' ||
             soIt.equipmentStatus === 'Entregado e Instalado' ||
-            soIt.equipmentStatus === 'Entregado al Cliente' ||
-            /HYBASE|MOBIEYE/i.test(soIt.name + ' ' + (soIt.model || ''));
+            soIt.equipmentStatus === 'Cerrado / Concluido' ||
+            (soIt.serialNumbers || []).some((sn: any) => sn?.status === 'Entregado e Instalado');
 
           const status: OCStatus = isDelivered
             ? 'Entregado e Instalado'
             : ((soIt.equipmentStatus as OCStatus) || ((soIt as any).status as OCStatus) || 'Borrador / Solicitud');
-          const supplier = isDelivered
-            ? (soIt.supplier && soIt.supplier !== 'Sin Proveedor Asignado' ? soIt.supplier : 'TECNICA')
-            : String(soIt.supplier || soIt.supplierName || 'Sin Proveedor Asignado');
-          const ocNumber = isDelivered
-            ? (linkedSO.salesOrderNumber === '1152149' ? '126622' : (soIt.supplierOCRef || soIt.linkedSupplierOCNumber || ''))
-            : String(soIt.supplierOCRef || soIt.linkedSupplierOCNumber || '');
+          const supplier = String(soIt.supplier || soIt.supplierName || 'Sin Proveedor Asignado');
+          const ocNumber = String(soIt.supplierOCRef || soIt.linkedSupplierOCNumber || '');
 
           pureItems.push({
             id: `oc-item-${linkedSO.id}-${soIt.id || idx}-${Date.now()}`,
@@ -929,13 +926,13 @@ export function segregateOCTrackingContractsBySalesOrder(
             supplier,
             ocNumber,
             status,
-            paymentStatus: isDelivered ? 'Pagado al Proveedor' : 'Pendiente',
+            paymentStatus: (soIt as any).paymentStatus || 'Pendiente',
             createdAt: linkedSO.orderDate || new Date().toISOString(),
             lastUpdatedAt: new Date().toISOString(),
             deliveryDate: isDelivered
-              ? (linkedSO.actualDeliveryDate || linkedSO.deliveryDate || '2026-10-01')
+              ? (linkedSO.actualDeliveryDate || linkedSO.deliveryDate || (soIt as any).deliveryDate)
               : ((soIt as any).deliveryDate || (soIt as any).actualDeliveryDate || linkedSO.actualDeliveryDate || linkedSO.deliveryDate),
-            installedDate: isDelivered ? '2026-10-01' : undefined,
+            installedDate: isDelivered ? ((soIt as any).installedDate || undefined) : undefined,
             serialNumber: (soIt as any).serialNumber || (soIt.assignedSerialNumbers?.[0]) || '',
             serialNumbers: (soIt.serialNumbers || (soIt.assignedSerialNumbers || []).map((sn: string, sIdx: number) => ({
               id: `sn-${soIt.id || idx}-${sIdx}`,
@@ -946,7 +943,7 @@ export function segregateOCTrackingContractsBySalesOrder(
             salesOrderId: linkedSO.id,
             salesOrderNumber: linkedSO.salesOrderNumber,
             salesOrderItemId: soIt.id,
-            invoiceNumber: isDelivered ? (linkedSO.invoiceNumber || 'FE-1001') : undefined,
+            invoiceNumber: (soIt as any).invoiceNumber || undefined,
             notes: `Equipo de Orden de Venta ${linkedSO.salesOrderNumber}`,
             history: [],
           });
@@ -1052,23 +1049,17 @@ export function segregateOCTrackingContractsBySalesOrder(
 
         const qty = Number(item.quantityToDispatch) || 1;
         const cost = Math.round(Number(item.unitSalePriceCOP || 1000000) * 0.65);
+        // Delivered status comes only from a real item/serial status.
         const isDelivered =
-          so.status === 'Facturada' ||
-          Boolean(so.invoiceNumber) ||
-          so.salesOrderNumber === '1152149' ||
           item.equipmentStatus === 'Entregado e Instalado' ||
-          item.equipmentStatus === 'Entregado al Cliente' ||
-          /HYBASE|MOBIEYE/i.test(item.name + ' ' + (item.model || ''));
+          item.equipmentStatus === 'Cerrado / Concluido' ||
+          (item.serialNumbers || []).some((sn: any) => sn?.status === 'Entregado e Instalado');
 
         const status: OCStatus = isDelivered
           ? 'Entregado e Instalado'
           : ((item.equipmentStatus as OCStatus) || ((item as any).status as OCStatus) || 'Borrador / Solicitud');
-        const supplier = isDelivered
-          ? (item.supplier && item.supplier !== 'Sin Proveedor Asignado' ? item.supplier : 'TECNICA')
-          : String(item.supplier || item.supplierName || 'Sin Proveedor Asignado');
-        const ocNumber = isDelivered
-          ? (so.salesOrderNumber === '1152149' ? '126622' : (item.supplierOCRef || item.linkedSupplierOCNumber || ''))
-          : String(item.supplierOCRef || item.linkedSupplierOCNumber || '');
+        const supplier = String(item.supplier || item.supplierName || 'Sin Proveedor Asignado');
+        const ocNumber = String(item.supplierOCRef || item.linkedSupplierOCNumber || '');
 
         return {
           id: `oc-item-${so.id}-${item.id || idx}-${Date.now()}`,
@@ -1083,13 +1074,13 @@ export function segregateOCTrackingContractsBySalesOrder(
           supplier,
           ocNumber,
           status,
-          paymentStatus: isDelivered ? 'Pagado al Proveedor' : 'Pendiente',
+          paymentStatus: (item as any).paymentStatus || 'Pendiente',
           createdAt: so.orderDate || new Date().toISOString(),
           lastUpdatedAt: new Date().toISOString(),
           deliveryDate: isDelivered
-            ? (so.actualDeliveryDate || so.deliveryDate || '2026-10-01')
+            ? (so.actualDeliveryDate || so.deliveryDate || (item as any).deliveryDate)
             : ((item as any).deliveryDate || (item as any).actualDeliveryDate || so.actualDeliveryDate || so.deliveryDate),
-          installedDate: isDelivered ? '2026-10-01' : undefined,
+          installedDate: isDelivered ? ((item as any).installedDate || undefined) : undefined,
           serialNumber: (item as any).serialNumber || (item.assignedSerialNumbers?.[0]) || '',
           serialNumbers: (item.serialNumbers || (item.assignedSerialNumbers || []).map((sn: string, sIdx: number) => ({
             id: `sn-${item.id || idx}-${sIdx}`,
@@ -1100,7 +1091,7 @@ export function segregateOCTrackingContractsBySalesOrder(
           salesOrderId: so.id,
           salesOrderNumber: so.salesOrderNumber,
           salesOrderItemId: item.id,
-          invoiceNumber: isDelivered ? (so.invoiceNumber || 'FE-1001') : undefined,
+          invoiceNumber: (item as any).invoiceNumber || undefined,
           notes: `Equipo de Orden de Venta ${so.salesOrderNumber}`,
           history: [],
         };
@@ -1351,80 +1342,6 @@ export function capContractItemsToAwardedQuantities(
   });
 }
 
-export const DEFAULT_NAPOLEON_OC_CONTRACT: OCTrackingContract = {
-  id: 'oc-contract-napoleon-hboc0000000640',
-  salesOrderId: 'ov-1152149-napoleon',
-  salesOrderNumber: '1152149',
-  salesOrderIds: ['ov-1152149-napoleon'],
-  salesOrderNumbers: ['1152149'],
-  tenderClientId: 'tender-from-quote-1790883515061',
-  contractNumber: 'OV: 1152149 (NoHBOC0000000640)',
-  clientName: 'FUNDACION HOSPITAL INFANTIL NAPOLEON FRANCO PAREJA',
-  nit: '800.000.000-1',
-  city: 'Cartagena, Bolivar',
-  sourceType: 'licitacion_adjudicada',
-  totalBudgetCOP: 472626055,
-  totalCostCOP: 397164752,
-  globalStatus: 'Entregado e Instalado',
-  createdAt: '2026-09-15T08:00:00.000Z',
-  lastUpdatedAt: '2026-10-01T16:00:00.000Z',
-  notes: 'Contrato y equipos 100% entregados e instalados a satisfacción en IPS con Factura FE-1001.',
-  items: [
-    {
-      id: 'oc-item-hybase-v5-napoleon',
-      equipmentId: 'eq-hybase-v5-napoleon',
-      code: '70904',
-      name: 'MESA DE CIRUGIA',
-      brand: 'MINDRAY',
-      model: 'HYBASE V5',
-      quantity: 1,
-      costPriceCOP: 64000000,
-      totalCostCOP: 64000000,
-      supplier: 'TECNICA',
-      ocNumber: '126622',
-      status: 'Entregado e Instalado',
-      paymentStatus: 'Pagado al Proveedor',
-      deliveryDate: '2026-10-01',
-      serialNumber: '',
-      serialNumbers: [],
-      salesOrderId: 'ov-1152149-napoleon',
-      salesOrderNumber: '1152149',
-      salesOrderItemId: 'ov-item-hybase-v5',
-      invoiceNumber: 'FE-1001',
-      notes: 'Mesa de cirugía entregada e instalada a satisfacción.',
-      createdAt: '2026-09-15T08:00:00.000Z',
-      lastUpdatedAt: '2026-10-01T16:00:00.000Z',
-      history: [],
-    },
-    {
-      id: 'oc-item-mobieye-700-napoleon',
-      equipmentId: 'eq-mobieye-700-napoleon',
-      code: '70796',
-      name: 'EQUIPO DE RAYOS PORTATIL X CON FLAT PANEL',
-      brand: 'MINDRAY',
-      model: 'MOBIEYE 700',
-      quantity: 1,
-      costPriceCOP: 333164752,
-      totalCostCOP: 333164752,
-      supplier: 'TECNICA',
-      ocNumber: '126622',
-      status: 'Entregado e Instalado',
-      paymentStatus: 'Pagado al Proveedor',
-      deliveryDate: '2026-10-01',
-      serialNumber: '',
-      serialNumbers: [],
-      salesOrderId: 'ov-1152149-napoleon',
-      salesOrderNumber: '1152149',
-      salesOrderItemId: 'ov-item-mobieye-700',
-      invoiceNumber: 'FE-1001',
-      notes: 'Equipo de rayos portátil X entregado e instalado a satisfacción.',
-      createdAt: '2026-09-15T08:00:00.000Z',
-      lastUpdatedAt: '2026-10-01T16:00:00.000Z',
-      history: [],
-    },
-  ],
-};
-
 export const getStoredOCTrackingContracts = (): OCTrackingContract[] => {
   try {
     // Clear legacy demo keys if present
@@ -1432,96 +1349,36 @@ export const getStoredOCTrackingContracts = (): OCTrackingContract[] => {
     localStorage.removeItem('syd_oc_tracking_contracts_v2');
 
     const raw = localStorage.getItem(OC_STORAGE_KEY);
-    if (!raw) {
-      const initial = [DEFAULT_NAPOLEON_OC_CONTRACT, ...INITIAL_DEMO_OC_CONTRACTS];
-      localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(initial));
-      return initial;
-    }
+    if (!raw) return [];
+
     const parsed: OCTrackingContract[] = JSON.parse(raw);
-    // Remove any leftover demo items
-    const clean = parsed.filter((c) => !c.id.includes('demo'));
+    if (!Array.isArray(parsed)) return [];
+
+    // Remove any leftover demo contracts. Never inject demo/seed data.
+    const clean = parsed.filter((c) => c && c.id && !c.id.includes('demo'));
+
     const segregated = capContractItemsToAwardedQuantities(
       segregateOCTrackingContractsBySalesOrder(clean)
     );
-    let hasNapoleon = false;
-    const reconciled = segregated.map((c) => {
-      const isNapoleon = /NAPOLEON|HOSPITAL\s+INFANTIL|CASA\s+DEL\s+NI[ÑN]O|HBOC0000000640/i.test(
-        c.clientName + ' ' + (c.contractNumber || '')
-      );
-      if (isNapoleon) {
-        hasNapoleon = true;
-        // Retain any active items (e.g. REANIMADOR NEONATAL from 1154865) and filter out any incomplete duplicate of HYBASE/MOBIEYE/DIGIEYE
-        const otherItems = (c.items || []).filter(
-          (it) =>
-            !/HYBASE|MOBIEYE|DIGIEYE/i.test(it.name + ' ' + (it.model || '')) &&
-            it.code !== '70904' &&
-            it.code !== '70796'
-        );
-        const finalItems = [...otherItems, ...DEFAULT_NAPOLEON_OC_CONTRACT.items];
-        const allSONums = Array.from(new Set([...(c.salesOrderNumbers || []), c.salesOrderNumber, '1152149'])).filter(Boolean) as string[];
-        const allSOIds = Array.from(new Set([...(c.salesOrderIds || []), c.salesOrderId, 'ov-1152149-napoleon'])).filter(Boolean) as string[];
 
-        return {
-          ...c,
-          globalStatus: 'Entregado e Instalado' as const,
-          salesOrderNumber: c.salesOrderNumber || '1152149',
-          salesOrderNumbers: allSONums,
-          salesOrderIds: allSOIds,
-          items: finalItems,
-        };
-      }
-      return c;
-    });
-
-    if (!hasNapoleon) {
-      reconciled.push(DEFAULT_NAPOLEON_OC_CONTRACT);
-    }
-
-    const sanitized = reconciled.map((c) => ({
+    // Sanitize obviously fake placeholder serial numbers without inventing data.
+    const sanitized = segregated.map((c) => ({
       ...c,
       items: (c.items || []).map((it) => {
-        const isNapoleonDelivered = /HYBASE|MOBIEYE/i.test(it.name + ' ' + (it.model || '')) || it.code === '70904' || it.code === '70796';
-        let validSerialNumbers: ItemSerialNumberRecord[] = [];
-        let finalSingleSerial = '';
-
-        if (isNapoleonDelivered) {
-          if (/HYBASE/i.test(it.name + ' ' + (it.model || '')) || it.code === '70904') {
-            finalSingleSerial = 'TN0-5C000150';
-            validSerialNumbers = [
-              {
-                id: 'sn-hybase-official',
-                serialNumber: 'TN0-5C000150',
-                status: 'Entregado e Instalado',
-                documents: [],
-              },
-            ];
-          } else if (/MOBIEYE/i.test(it.name + ' ' + (it.model || '')) || it.code === '70796') {
-            finalSingleSerial = 'C8-58001028';
-            validSerialNumbers = [
-              {
-                id: 'sn-mobieye-official',
-                serialNumber: 'C8-58001028',
-                status: 'Entregado e Instalado',
-                documents: [],
-              },
-            ];
-          }
-        } else {
-          validSerialNumbers = (it.serialNumbers || []).filter(
-            (sn) =>
-              sn &&
-              sn.serialNumber &&
-              sn.serialNumber.trim().length > 0 &&
-              !/^(HBV5|MB700|MD-2026|EQ-|sn-|SER-|SN-|SERIE|101|TEMP|DEMO)/i.test(sn.serialNumber) &&
-              !sn.serialNumber.includes('2026-')
-          );
-          finalSingleSerial =
-            it.serialNumber &&
-            !/^(HBV5|MB700|MD-2026|EQ-|sn-|SER-|SN-|SERIE|101|TEMP|DEMO)/i.test(it.serialNumber) &&
-            !it.serialNumber.includes('2026-')
-              ? it.serialNumber
-              : validSerialNumbers[0]?.serialNumber || '';
-        }
+        const validSerialNumbers = (it.serialNumbers || []).filter(
+          (sn) =>
+            sn &&
+            sn.serialNumber &&
+            sn.serialNumber.trim().length > 0 &&
+            !/^(HBV5|MB700|MD-2026|EQ-|sn-|SER-|SN-|SERIE|TEMP|DEMO)/i.test(sn.serialNumber) &&
+            !sn.serialNumber.includes('2026-')
+        );
+        const finalSingleSerial =
+          it.serialNumber &&
+          !/^(HBV5|MB700|MD-2026|EQ-|sn-|SER-|SN-|SERIE|TEMP|DEMO)/i.test(it.serialNumber) &&
+          !it.serialNumber.includes('2026-')
+            ? it.serialNumber
+            : validSerialNumbers[0]?.serialNumber || '';
 
         return {
           ...it,
@@ -1537,22 +1394,14 @@ export const getStoredOCTrackingContracts = (): OCTrackingContract[] => {
     return sanitized;
   } catch (error) {
     console.error('Error reading OC tracking storage:', error);
-    return [DEFAULT_NAPOLEON_OC_CONTRACT, ...INITIAL_DEMO_OC_CONTRACTS];
+    return [];
   }
 };
 
 export const saveStoredOCTrackingContracts = (contracts: OCTrackingContract[]): void => {
   try {
-    const list = [...(contracts || [])];
-    const hasNapoleon = list.some(
-      (c) =>
-        /NAPOLEON|HOSPITAL\s+INFANTIL|HBOC0000000640/i.test(c.clientName + ' ' + (c.contractNumber || '')) ||
-        c.id === DEFAULT_NAPOLEON_OC_CONTRACT.id ||
-        c.salesOrderNumber === '1152149'
-    );
-    if (!hasNapoleon) {
-      list.push(DEFAULT_NAPOLEON_OC_CONTRACT);
-    }
+    // Never re-add demo/seed contracts. Persist exactly what the app manages.
+    const list = (contracts || []).filter((c) => c && c.id && !c.id.includes('demo'));
     const deduped = capContractItemsToAwardedQuantities(deduplicateOCTrackingContracts(list));
     localStorage.setItem(OC_STORAGE_KEY, JSON.stringify(deduped));
     if (typeof window !== 'undefined') {

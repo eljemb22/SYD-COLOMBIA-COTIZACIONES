@@ -206,14 +206,22 @@ export function computeOrderInvoicingData(order: SalesOrderRecord, salesInvoices
       invoiceCount: 0,
       invoiceNumbers: '',
       percentInvoiced: 0,
+      itemCoverage: [],
+      invoicedQuantities: {},
+      allItemsCovered: false,
+      hasItemLevelInvoices: false,
     };
   }
 
   const invoices = salesInvoices || [];
   const orderInvoices = invoices.filter(
     (inv) =>
-      Boolean(inv && inv.id && inv.salesOrderId && inv.salesOrderId === order.id) ||
-      Boolean(order.invoiceId && inv.id === order.invoiceId)
+      Boolean(inv && inv.id) &&
+      ((inv.salesOrderId && inv.salesOrderId === order.id) ||
+        (order.invoiceId && inv.id === order.invoiceId) ||
+        (order.salesOrderNumber &&
+          inv.salesOrderNumber &&
+          cleanRef(inv.salesOrderNumber) === cleanRef(order.salesOrderNumber)))
   );
 
   const totalInvoicedCOP =
@@ -222,14 +230,50 @@ export function computeOrderInvoicingData(order: SalesOrderRecord, salesInvoices
       : (order.totalInvoicedCOP || 0);
 
   const totalOrderCOP = Number(order.totalValueCOP) || 0;
+
+  // Item-level coverage: how many units of each OV item are already invoiced.
+  const invoicedQuantities: Record<string, number> = {};
+  let hasItemLevelInvoices = false;
+  orderInvoices.forEach((inv) => {
+    (inv.items || []).forEach((alloc) => {
+      if (!alloc || !alloc.salesOrderItemId) return;
+      hasItemLevelInvoices = true;
+      invoicedQuantities[alloc.salesOrderItemId] =
+        (invoicedQuantities[alloc.salesOrderItemId] || 0) + (Number(alloc.quantity) || 0);
+    });
+  });
+
+  const itemCoverage = (order.items || []).map((it) => {
+    const quantity = Number(it.quantityToDispatch ?? it.quantity ?? 1) || 1;
+    const invoicedQty = Math.min(quantity, invoicedQuantities[it.id] || 0);
+    return {
+      item: it,
+      quantity,
+      invoicedQty,
+      remainingQty: Math.max(0, quantity - invoicedQty),
+      isCovered: invoicedQty >= quantity,
+    };
+  });
+
+  const allItemsCovered = itemCoverage.length > 0 && itemCoverage.every((c) => c.isCovered);
+  const valueCovered = totalOrderCOP > 0 ? totalInvoicedCOP >= totalOrderCOP : totalInvoicedCOP > 0;
+
+  // Full invoicing requires every unit invoiced. Legacy invoices without item
+  // allocations fall back to value coverage so already-closed orders stay closed.
   const isFullyInvoiced =
-    (totalOrderCOP > 0 && totalInvoicedCOP >= totalOrderCOP) ||
-    order.status === 'Facturada' ||
-    order.invoicedStatus === 'Facturada Total';
+    orderInvoices.length > 0 &&
+    (itemCoverage.length > 0
+      ? hasItemLevelInvoices
+        ? allItemsCovered
+        : valueCovered
+      : valueCovered);
+
   const remainingToInvoiceCOP = Math.max(0, totalOrderCOP - totalInvoicedCOP);
   const invoiceCount = orderInvoices.length;
   const invoiceNumbers =
-    Array.from(new Set(orderInvoices.map((i) => i.invoiceNumber).filter(Boolean))).join(', ') || order.invoiceNumber || '';
+    Array.from(new Set(orderInvoices.map((i) => i.invoiceNumber).filter(Boolean))).join(', ') ||
+    order.invoiceNumber ||
+    '';
   const percentInvoiced =
     totalOrderCOP > 0 ? Math.min(100, Math.round((totalInvoicedCOP / totalOrderCOP) * 100)) : 0;
 
@@ -242,6 +286,10 @@ export function computeOrderInvoicingData(order: SalesOrderRecord, salesInvoices
     invoiceCount,
     invoiceNumbers,
     percentInvoiced,
+    itemCoverage,
+    invoicedQuantities,
+    allItemsCovered,
+    hasItemLevelInvoices,
   };
 }
 
@@ -288,6 +336,10 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
 }) => {
   // Helper to compute invoicing breakdown for any sales order (initialized at top to eliminate any TDZ ReferenceError)
   const getOrderInvoicingData = (order: SalesOrderRecord) => computeOrderInvoicingData(order, salesInvoices);
+
+  // An OV is archived only when real invoice coverage reaches 100% of its units.
+  const isOrderArchived = (order: SalesOrderRecord): boolean =>
+    computeOrderInvoicingData(order, salesInvoices).isFullyInvoiced;
 
   // Main subtab selection
   const [activeSubTab, setActiveSubTab] = useState<'orders' | 'invoices' | 'traceability'>('orders');
@@ -624,19 +676,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   const baseSalesOrders = useMemo(() => {
     return deduplicatedSalesOrders.filter((order) => {
       // Lifecycle Filter: Activas vs Culminadas / Facturadas
-      const hasLinkedInvoice = (salesInvoices || []).some(
-        (inv) =>
-          inv.salesOrderId === order.id ||
-          (order.salesOrderNumber && cleanRef(inv.salesOrderNumber) === cleanRef(order.salesOrderNumber))
-      );
-      const isArchived =
-        order.status === 'Facturada' ||
-        order.invoicedStatus === 'Facturada Total' ||
-        order.salesOrderNumber === '1152149' ||
-        order.id === 'ov-1152149-napoleon' ||
-        Boolean(order.attachedInvoiceFile) ||
-        Boolean(order.invoiceNumber) ||
-        (hasLinkedInvoice && (order.status === 'Entregada' || order.status === 'Facturada' || order.invoicedStatus === 'Facturada Parcial' || order.invoicedStatus === 'Facturada Total'));
+      const isArchived = isOrderArchived(order);
 
       if (!showActiveOrders && !isArchived) return false;
       if (!showArchivedOrders && isArchived) return false;
@@ -677,38 +717,14 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   // Counts for active vs archived orders
   const activeOrdersCount = useMemo(() => {
     return deduplicatedSalesOrders.filter((order) => {
-      const hasLinkedInvoice = (salesInvoices || []).some(
-        (inv) =>
-          inv.salesOrderId === order.id ||
-          (order.salesOrderNumber && cleanRef(inv.salesOrderNumber) === cleanRef(order.salesOrderNumber))
-      );
-      const isArchived =
-        order.status === 'Facturada' ||
-        order.invoicedStatus === 'Facturada Total' ||
-        order.salesOrderNumber === '1152149' ||
-        order.id === 'ov-1152149-napoleon' ||
-        Boolean(order.attachedInvoiceFile) ||
-        Boolean(order.invoiceNumber) ||
-        (hasLinkedInvoice && (order.status === 'Entregada' || order.status === 'Facturada' || order.invoicedStatus === 'Facturada Parcial' || order.invoicedStatus === 'Facturada Total'));
+      const isArchived = isOrderArchived(order);
       return !isArchived;
     }).length;
   }, [deduplicatedSalesOrders, salesInvoices]);
 
   const archivedOrdersCount = useMemo(() => {
     return deduplicatedSalesOrders.filter((order) => {
-      const hasLinkedInvoice = (salesInvoices || []).some(
-        (inv) =>
-          inv.salesOrderId === order.id ||
-          (order.salesOrderNumber && cleanRef(inv.salesOrderNumber) === cleanRef(order.salesOrderNumber))
-      );
-      const isArchived =
-        order.status === 'Facturada' ||
-        order.invoicedStatus === 'Facturada Total' ||
-        order.salesOrderNumber === '1152149' ||
-        order.id === 'ov-1152149-napoleon' ||
-        Boolean(order.attachedInvoiceFile) ||
-        Boolean(order.invoiceNumber) ||
-        (hasLinkedInvoice && (order.status === 'Entregada' || order.status === 'Facturada' || order.invoicedStatus === 'Facturada Parcial' || order.invoicedStatus === 'Facturada Total'));
+      const isArchived = isOrderArchived(order);
       return isArchived;
     }).length;
   }, [deduplicatedSalesOrders, salesInvoices]);
@@ -988,14 +1004,9 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   };
 
   // Helper to check if all equipment linked to a Sales Order is delivered in Seguimiento de OC
-  const isOrderEquipmentDeliveredInOC = (order: SalesOrderRecord): { isDelivered: boolean; pendingCount: number; reason?: string } => {
+  const isOrderEquipmentDeliveredInOC = (order: SalesOrderRecord): { isDelivered: boolean; pendingCount: number; deliveredCount?: number; reason?: string } => {
     if (!order.items || order.items.length === 0) {
       return { isDelivered: false, pendingCount: 0, reason: 'La Orden no tiene equipos registrados' };
-    }
-
-    // If order was already officially facturada with support file/number
-    if (order.status === 'Facturada' || Boolean(order.invoiceNumber) || Boolean(order.attachedInvoiceFile)) {
-      return { isDelivered: true, pendingCount: 0 };
     }
 
     const normSO = normalizeClean(order.salesOrderNumber?.replace(/^ov:\s*/i, ''));
@@ -1042,8 +1053,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
         s.includes('instalado') ||
         s.includes('cerrado / concluido') ||
         s.includes('cerrado') ||
-        s.includes('concluid') ||
-        s.includes('facturad')
+        s.includes('concluid')
       );
     };
 
@@ -1168,25 +1178,16 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
     onUpdateSalesOrders(updated);
   };
 
-  const handleSaveInvoice = async (savedInvoice: SalesInvoiceRecord, updatedSalesOrder?: SalesOrderRecord) => {
+  const handleSaveInvoice = async (savedInvoice: SalesInvoiceRecord, _updatedSalesOrder?: SalesOrderRecord) => {
     unmarkSalesInvoiceAsDeleted(savedInvoice.id, savedInvoice.invoiceNumber, savedInvoice.salesOrderId);
 
-    let updatedInvoices: SalesInvoiceRecord[];
-    if (savedInvoice.salesOrderId) {
-      // Retain only 1 invoice per sales order when attaching/updating
-      const otherInvoices = salesInvoices.filter(
-        (i) => i.salesOrderId !== savedInvoice.salesOrderId && i.id !== savedInvoice.id && i.invoiceNumber !== savedInvoice.invoiceNumber
-      );
-      updatedInvoices = [savedInvoice, ...otherInvoices];
-    } else {
-      const existingIndex = salesInvoices.findIndex((i) => i.id === savedInvoice.id || (savedInvoice.invoiceNumber && i.invoiceNumber === savedInvoice.invoiceNumber));
-      if (existingIndex >= 0) {
-        updatedInvoices = [...salesInvoices];
-        updatedInvoices[existingIndex] = savedInvoice;
-      } else {
-        updatedInvoices = [savedInvoice, ...salesInvoices];
-      }
-    }
+    // Accumulate invoices: never drop previously registered partial invoices.
+    const updatedInvoices: SalesInvoiceRecord[] = [
+      savedInvoice,
+      ...salesInvoices.filter(
+        (i) => i.id !== savedInvoice.id && i.invoiceNumber !== savedInvoice.invoiceNumber
+      ),
+    ];
     onUpdateSalesInvoices(updatedInvoices);
 
     try {
@@ -1195,77 +1196,126 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
       console.error('Error saving invoice to Firestore:', e);
     }
 
-    if (updatedSalesOrder) {
-      await handleSaveOrder(updatedSalesOrder);
+    const targetOrder =
+      (savedInvoice.salesOrderId && salesOrders.find((o) => o.id === savedInvoice.salesOrderId)) ||
+      (savedInvoice.salesOrderNumber &&
+        salesOrders.find(
+          (o) => cleanRef(o.salesOrderNumber) === cleanRef(savedInvoice.salesOrderNumber!)
+        )) ||
+      undefined;
 
-      // Auto-archive linked Tender & Contract when an invoice is attached and order is billed!
-      const targetTenderId = updatedSalesOrder.tenderClientId || updatedSalesOrder.contractId;
-      const matchedTender = (tenderClients || []).find((t) => {
-        if (targetTenderId && t.id === targetTenderId) return true;
-        if (updatedSalesOrder.contractNumber && t.header?.processNumber && normalizeClean(t.header.processNumber).includes(normalizeClean(updatedSalesOrder.contractNumber))) return true;
-        if (updatedSalesOrder.salesOrderNumber && t.header?.processNumber && normalizeClean(t.header.processNumber).includes(normalizeClean(updatedSalesOrder.salesOrderNumber))) return true;
-        if (updatedSalesOrder.clientName && t.clientName && (
-          normalizeClean(t.clientName) === normalizeClean(updatedSalesOrder.clientName) ||
-          normalizeClean(t.clientName).includes(normalizeClean(updatedSalesOrder.clientName)) ||
-          normalizeClean(updatedSalesOrder.clientName).includes(normalizeClean(t.clientName))
-        )) return true;
-        return false;
+    if (!targetOrder) return;
+
+    const invData = computeOrderInvoicingData(targetOrder, updatedInvoices);
+    const updatedSO: SalesOrderRecord = {
+      ...targetOrder,
+      invoiceNumber: invData.invoiceNumbers || targetOrder.invoiceNumber,
+      invoiceId: invData.orderInvoices[0]?.id || targetOrder.invoiceId,
+      invoiceIds: invData.orderInvoices.map((i) => i.id),
+      invoiceDate: savedInvoice.issueDate || targetOrder.invoiceDate,
+      totalInvoicedCOP: invData.totalInvoicedCOP,
+      attachedInvoiceFile: savedInvoice.attachedInvoiceFile || targetOrder.attachedInvoiceFile,
+      invoicedStatus: invData.isFullyInvoiced
+        ? 'Facturada Total'
+        : invData.totalInvoicedCOP > 0
+        ? 'Facturada Parcial'
+        : 'No Facturada',
+      status:
+        invData.isFullyInvoiced && targetOrder.status !== 'Cancelada'
+          ? 'Facturada'
+          : targetOrder.status,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await handleSaveOrder(updatedSO);
+
+    // Invoice numbers per equipment: only items actually covered by an invoice.
+    const coveredItemInvoiceMap = new Map<string, string[]>();
+    updatedInvoices.forEach((inv) => {
+      (inv.items || []).forEach((alloc) => {
+        if (!alloc || !alloc.salesOrderItemId) return;
+        const list = coveredItemInvoiceMap.get(alloc.salesOrderItemId) || [];
+        if (inv.invoiceNumber) list.push(inv.invoiceNumber);
+        coveredItemInvoiceMap.set(alloc.salesOrderItemId, list);
       });
+    });
 
-      if (matchedTender && onUpdateTenderClient) {
-        const tenderItems = matchedTender.items || [];
-        const allDelivered = tenderItems.length > 0 && tenderItems.every((tIt) => {
-          return (contracts || []).some((c) =>
-            (c.items || []).some((cIt) => {
-              const isMatch = (cIt.equipmentId && tIt.equipmentId && cIt.equipmentId === tIt.equipmentId) ||
-                (cIt.code && tIt.code && cIt.code === tIt.code) ||
-                (cIt.name && tIt.name && normalizeClean(cIt.name) === normalizeClean(tIt.name));
-              return isMatch && (cIt.status === 'Entregado e Instalado' || cIt.status === 'Cerrado / Concluido');
-            })
-          );
-        });
-        if (allDelivered) {
-          onUpdateTenderClient(matchedTender.id, { status: 'Cumplido / Archivado' });
-        }
+    // Auto-archive the linked tender only when every unit is invoiced AND delivered.
+    const targetTenderId = updatedSO.tenderClientId || updatedSO.contractId;
+    const matchedTender = (tenderClients || []).find((t) => {
+      if (targetTenderId && t.id === targetTenderId) return true;
+      if (updatedSO.contractNumber && t.header?.processNumber && normalizeClean(t.header.processNumber).includes(normalizeClean(updatedSO.contractNumber))) return true;
+      if (updatedSO.salesOrderNumber && t.header?.processNumber && normalizeClean(t.header.processNumber).includes(normalizeClean(updatedSO.salesOrderNumber))) return true;
+      if (updatedSO.clientName && t.clientName && (
+        normalizeClean(t.clientName) === normalizeClean(updatedSO.clientName) ||
+        normalizeClean(t.clientName).includes(normalizeClean(updatedSO.clientName)) ||
+        normalizeClean(updatedSO.clientName).includes(normalizeClean(t.clientName))
+      )) return true;
+      return false;
+    });
+
+    if (matchedTender && onUpdateTenderClient) {
+      const tenderItems = matchedTender.items || [];
+      const allDelivered = tenderItems.length > 0 && tenderItems.every((tIt) => {
+        return (contracts || []).some((c) =>
+          (c.items || []).some((cIt) => {
+            const isMatch = (cIt.equipmentId && tIt.equipmentId && cIt.equipmentId === tIt.equipmentId) ||
+              (cIt.code && tIt.code && cIt.code === tIt.code) ||
+              (cIt.name && tIt.name && normalizeClean(cIt.name) === normalizeClean(tIt.name));
+            return isMatch && (cIt.status === 'Entregado e Instalado' || cIt.status === 'Cerrado / Concluido');
+          })
+        );
+      });
+      if (allDelivered && invData.isFullyInvoiced) {
+        onUpdateTenderClient(matchedTender.id, { status: 'Cumplido / Archivado' });
       }
+    }
 
-      if (onUpdateContracts && contracts && contracts.length > 0) {
-        const normSO = normalizeClean(updatedSalesOrder.salesOrderNumber);
+    if (onUpdateContracts && contracts && contracts.length > 0) {
+      const normSO = normalizeClean(updatedSO.salesOrderNumber);
 
-        const updatedContracts = contracts.map((c) => {
-          const isMatch =
-            (updatedSalesOrder.ocContractId && c.id === updatedSalesOrder.ocContractId) ||
-            c.salesOrderId === updatedSalesOrder.id ||
-            (normSO && c.salesOrderNumber && normalizeClean(c.salesOrderNumber) === normSO);
+      const updatedContracts = contracts.map((c) => {
+        const isMatch =
+          (updatedSO.ocContractId && c.id === updatedSO.ocContractId) ||
+          c.salesOrderId === updatedSO.id ||
+          (normSO && c.salesOrderNumber && normalizeClean(c.salesOrderNumber) === normSO);
 
-          if (isMatch) {
-            // Associate invoiceNumber with items in this order, but preserve their real logistical status!
-            const updatedItems = (c.items || []).map((it) => {
-              const matchingSOItem = (updatedSalesOrder.items || []).find(
-                (sIt) => sIt.code === it.code || sIt.name === it.name || (sIt.equipmentId && sIt.equipmentId === it.equipmentId)
-              );
-              if (matchingSOItem) {
-                return {
-                  ...it,
-                  invoiceNumber: savedInvoice.invoiceNumber || it.invoiceNumber,
-                };
-              }
-              return it;
-            });
-            const allDelivered = updatedItems.length > 0 && updatedItems.every(
-              (it) => it.status === 'Entregado e Instalado' || it.status === 'Cerrado / Concluido'
+        if (isMatch) {
+          // Associate invoiceNumber only with the equipment actually invoiced.
+          const updatedItems = (c.items || []).map((it) => {
+            const matchingSOItem = (updatedSO.items || []).find(
+              (sIt) =>
+                (it.salesOrderItemId && sIt.id === it.salesOrderItemId) ||
+                sIt.code === it.code ||
+                sIt.name === it.name ||
+                (sIt.equipmentId && sIt.equipmentId === it.equipmentId)
             );
-            return {
-              ...c,
-              globalStatus: allDelivered ? ('Cerrado / Concluido' as any) : c.globalStatus,
-              items: updatedItems,
-              lastUpdatedAt: new Date().toISOString(),
-            };
-          }
-          return c;
-        });
-        onUpdateContracts(updatedContracts);
-      }
+            if (!matchingSOItem) return it;
+
+            const itemInvoices = coveredItemInvoiceMap.get(matchingSOItem.id);
+            let invoiceNumber: string | undefined = it.invoiceNumber;
+            if (itemInvoices && itemInvoices.length > 0) {
+              invoiceNumber = Array.from(new Set(itemInvoices)).join(', ');
+            } else if (invData.isFullyInvoiced && !invData.hasItemLevelInvoices) {
+              invoiceNumber = invData.invoiceNumbers || it.invoiceNumber;
+            }
+            return { ...it, invoiceNumber };
+          });
+
+          const allDelivered = updatedItems.length > 0 && updatedItems.every(
+            (it) => it.status === 'Entregado e Instalado' || it.status === 'Cerrado / Concluido'
+          );
+          return {
+            ...c,
+            globalStatus:
+              allDelivered && invData.isFullyInvoiced ? ('Cerrado / Concluido' as any) : c.globalStatus,
+            items: updatedItems,
+            lastUpdatedAt: new Date().toISOString(),
+          };
+        }
+        return c;
+      });
+      onUpdateContracts(updatedContracts);
     }
   };
 
@@ -1285,26 +1335,24 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
     if (invoiceToDelete?.salesOrderId) {
       const so = salesOrders.find((o) => o.id === invoiceToDelete.salesOrderId);
       if (so) {
-        const remainingInvoices = updated.filter(
-          (i) => i.salesOrderId === so.id || (so.salesOrderNumber && i.salesOrderNumber === so.salesOrderNumber)
-        );
-        const newTotalInvoiced = remainingInvoices.reduce((sum, i) => sum + (Number(i.totalAmountCOP) || 0), 0);
-        const isFullyInvoiced = so.totalValueCOP > 0 && newTotalInvoiced >= so.totalValueCOP;
-        const allInvoiceNumbers = Array.from(new Set(remainingInvoices.map((i) => i.invoiceNumber).filter(Boolean))).join(', ');
-        const allInvoiceIds = remainingInvoices.map((i) => i.id);
-
+        const invData = computeOrderInvoicingData(so, updated);
         const updatedSO: SalesOrderRecord = {
           ...so,
-          invoiceNumber: allInvoiceNumbers || undefined,
-          invoiceId: remainingInvoices[0]?.id || undefined,
-          invoiceIds: allInvoiceIds,
-          totalInvoicedCOP: newTotalInvoiced,
-          invoicedStatus: isFullyInvoiced
+          invoiceNumber: invData.invoiceNumbers || undefined,
+          invoiceId: invData.orderInvoices[0]?.id || undefined,
+          invoiceIds: invData.orderInvoices.map((i) => i.id),
+          totalInvoicedCOP: invData.totalInvoicedCOP,
+          invoicedStatus: invData.isFullyInvoiced
             ? 'Facturada Total'
-            : newTotalInvoiced > 0
+            : invData.totalInvoicedCOP > 0
             ? 'Facturada Parcial'
             : 'No Facturada',
-          status: isFullyInvoiced ? 'Facturada' : so.status === 'Facturada' ? 'Entregada al Cliente' : so.status,
+          status:
+            invData.isFullyInvoiced
+              ? 'Facturada'
+              : so.status === 'Facturada'
+              ? 'Entregada al Cliente'
+              : so.status,
           updatedAt: new Date().toISOString(),
         };
         await handleSaveOrder(updatedSO);
@@ -1801,7 +1849,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                             <tbody className="divide-y divide-slate-800">
                               {clientGroup.orders.map((order) => {
                                 const { isDelivered, reason } = isOrderEquipmentDeliveredInOC(order);
-                                const canInvoice = order.status === 'Facturada' || Boolean(order.invoiceNumber) || isDelivered;
+                                const canInvoice = isDelivered;
                                 const originInfo = getOrderOriginInfo(order);
                                 const OriginIcon = originInfo.icon;
                                 const invData = getOrderInvoicingData(order);
@@ -2034,7 +2082,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                                             </span>
                                           );
                                         }
-                                        const isInvoiceEnabled = order.status === 'Facturada' || isDelivered;
+                                        const isInvoiceEnabled = isDelivered;
                                         if (invData.invoiceCount > 0) {
                                           return (
                                             <div className="flex flex-col gap-1 items-start">
@@ -2176,7 +2224,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredOrders.map((order) => {
                 const { isDelivered } = isOrderEquipmentDeliveredInOC(order);
-                const canInvoice = order.status === 'Facturada' || Boolean(order.invoiceNumber) || isDelivered;
+                const canInvoice = isDelivered;
                 const originInfo = getOrderOriginInfo(order);
                 const OriginIcon = originInfo.icon;
 
@@ -2352,7 +2400,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                               </span>
                             );
                           }
-                          const isInvoiceEnabled = order.status === 'Facturada' || isDelivered;
+                          const isInvoiceEnabled = isDelivered;
                           if (invData.invoiceCount > 0) {
                             return (
                               <div className="flex flex-col gap-1 items-start">
@@ -2583,13 +2631,8 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {filteredOrders.map((order) => {
-                      const { isDelivered, deliveredCount } = isOrderEquipmentDeliveredInOC(order);
-                      const canInvoice =
-                        order.status === 'Facturada' ||
-                        Boolean(order.invoiceNumber) ||
-                        Boolean(order.attachedInvoiceFile) ||
-                        isDelivered ||
-                        (deliveredCount !== undefined && deliveredCount > 0);
+                      const { isDelivered } = isOrderEquipmentDeliveredInOC(order);
+                      const canInvoice = isDelivered;
                       const originInfo = getOrderOriginInfo(order);
                       const OriginIcon = originInfo.icon;
                       const invData = getOrderInvoicingData(order);

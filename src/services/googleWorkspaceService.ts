@@ -688,7 +688,10 @@ export class GoogleWorkspaceService {
   }
 
   /**
-   * Check if a file or folder still exists and is not trashed in Google Drive
+   * Check if a file or folder still exists and is not trashed in Google Drive.
+   * Returns false ONLY when Google Drive explicitly confirms the item is gone
+   * (404/410, trashed, or a notFound reason). Auth, permission, quota and
+   * network errors return true so callers never delete local records by mistake.
    */
   public async checkFileOrFolderExists(id: string): Promise<boolean> {
     if (!id || id === 'root' || id === 'all') return true;
@@ -725,11 +728,8 @@ export class GoogleWorkspaceService {
             return false;
           }
         } catch (_) {}
-        // If 403 or other client error for a specific file, it's inaccessible / deleted
-        if (res.status === 403 || res.status === 400) {
-          return false;
-        }
-        return false;
+        // 401/403/429/5xx or any other error: the item may still exist.
+        return true;
       }
       const data = await res.json();
       if (!data || data.trashed === true || data.explicitlyTrashed === true) {
@@ -737,7 +737,8 @@ export class GoogleWorkspaceService {
       }
       return true;
     } catch (_) {
-      return false;
+      // Network failure: never treat it as a confirmed deletion.
+      return true;
     }
   }
 

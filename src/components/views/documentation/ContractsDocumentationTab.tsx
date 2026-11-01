@@ -675,24 +675,55 @@ export const ContractsDocumentationTab: React.FC<ContractsDocumentationTabProps>
     let linkedCount = 0;
     items.forEach((it) => {
       if (!it) return;
-      const matchingDocs = findMatchingCatalogDocs(it, documents);
-      if (matchingDocs.length > 0 && onSaveDocument) {
-        matchingDocs.forEach((doc) => {
-          if (doc.equipmentId !== it.equipmentId && it.equipmentId) {
-            const linkedDoc: TechnicalDocument = {
-              ...doc,
-              id: `doc-link-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-              equipmentId: it.equipmentId,
-              equipmentCode: it.code || doc.equipmentCode,
-              equipmentName: it.name || doc.equipmentName,
-              uploadDate: new Date().toISOString().split('T')[0],
-              notes: `Vinculado automáticamente desde la Base de Datos del Catálogo. ${doc.notes || ''}`,
-            };
-            onSaveDocument(linkedDoc);
-            linkedCount++;
-          }
-        });
-      }
+      const matchedEq = (equipments || []).find(
+        (e) =>
+          e &&
+          ((it.equipmentId && e.id === it.equipmentId) ||
+            (it.code && e.code && normalizeClean(e.code) === normalizeClean(it.code)) ||
+            (it.name && e.name && normalizeClean(e.name) === normalizeClean(it.name)))
+      );
+      const targetEquipmentId = it.equipmentId || it.id || matchedEq?.id || it.code || it.name;
+      if (!targetEquipmentId) return;
+
+      const matchingDocs = findMatchingCatalogDocs(
+        {
+          id: targetEquipmentId,
+          equipmentId: targetEquipmentId,
+          code: it.code || matchedEq?.code,
+          name: it.name || it.equipmentName || matchedEq?.name,
+          brand: it.brand || matchedEq?.brand,
+          model: it.model || matchedEq?.model,
+        },
+        documents
+      );
+      if (matchingDocs.length === 0 || !onSaveDocument) return;
+
+      matchingDocs.forEach((doc) => {
+        if (!doc) return;
+        // Already linked to this equipment: never create duplicate links.
+        if (doc.equipmentId === targetEquipmentId) return;
+        const alreadyLinked = (documents || []).some(
+          (existing) =>
+            existing &&
+            existing.equipmentId === targetEquipmentId &&
+            existing.docType === doc.docType &&
+            (existing.title || existing.fileName) === (doc.title || doc.fileName) &&
+            (existing.notes || '').includes('Vinculado automáticamente desde la Base de Datos del Catálogo')
+        );
+        if (alreadyLinked) return;
+
+        const linkedDoc: TechnicalDocument = {
+          ...doc,
+          id: `doc-link-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+          equipmentId: targetEquipmentId,
+          equipmentCode: it.code || matchedEq?.code || doc.equipmentCode,
+          equipmentName: it.name || it.equipmentName || matchedEq?.name || doc.equipmentName,
+          uploadDate: new Date().toISOString().split('T')[0],
+          notes: `Vinculado automáticamente desde la Base de Datos del Catálogo. ${doc.notes || ''}`.trim(),
+        };
+        onSaveDocument(linkedDoc);
+        linkedCount++;
+      });
     });
 
     if (linkedCount > 0) {
@@ -704,6 +735,9 @@ export const ContractsDocumentationTab: React.FC<ContractsDocumentationTabProps>
 
   // Open the modal to choose location and name before creating or linking the contract folder
   const handleOpenCreateContractFolderModal = async (exp: UnifiedExpediente) => {
+    // Ensure the contract/direct-OC equipment documentation is linked from the
+    // master catalog before opening/creating its Drive folder.
+    handleAutoLinkAllCatalogDocs(exp.items || []);
     const rawContractName = `${exp.processNumber} - ${exp.clientName}`.trim();
     const folderName = rawContractName.replace(/[\\/:*?"<>|]/g, '-').trim() || `Contrato-${exp.id}`;
     setFolderModalTarget(exp);

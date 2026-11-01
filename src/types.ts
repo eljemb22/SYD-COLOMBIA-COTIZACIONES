@@ -616,12 +616,19 @@ export interface SalesOrderItem {
   unitSalePriceCOP: number;
   totalSalePriceCOP: number;
   equipmentStatus: SalesOrderEquipmentStatus | string;
+  supplier?: string;
+  supplierName?: string;
+  paymentStatus?: string;
   supplierOCRef?: string;
   linkedSupplierOCNumber?: string;
   supplier?: string;
   preferredSupplier?: string;
   assignedSerialNumbers?: any[];
   serialNumbers?: string[];
+  invoiceNumber?: string;
+  deliveryDate?: string;
+  actualDeliveryDate?: string;
+  installedDate?: string;
   notes?: string;
   transferredFromOV?: string;
   transferredAt?: string;
@@ -665,6 +672,20 @@ export interface SalesOrderRecord {
 
 export type SalesInvoicePaymentStatus = 'Pendiente Radicación' | 'Radicada en Cliente' | 'Pagada' | 'Vencida';
 
+/**
+ * Item-level allocation of a sales invoice. One invoice may cover only part of
+ * the equipment of an OV; the OV is archived only when every unit is invoiced.
+ */
+export interface SalesInvoiceItemAllocation {
+  salesOrderItemId: string;
+  equipmentId?: string;
+  code?: string;
+  name: string;
+  quantity: number;
+  unitPriceCOP: number;
+  totalCOP: number;
+}
+
 export interface SalesInvoiceRecord {
   id: string;
   invoiceNumber: string;
@@ -682,6 +703,7 @@ export interface SalesInvoiceRecord {
   items?: any[];
   attachedInvoiceFile?: any;
   radicadoProofDoc?: any;
+  items?: SalesInvoiceItemAllocation[];
   notes?: string;
   createdAt: string;
   updatedAt: string;

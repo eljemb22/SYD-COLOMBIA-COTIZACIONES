@@ -54,6 +54,34 @@ import {
 import { isValidOCNumber } from '../../../utils/formatters';
 import { SupplierInvoicesModal } from './SupplierInvoicesModal';
 
+/**
+ * True only when an item carries a real, explicitly recorded delivery status.
+ * Invoices, OV status or equipment names must never imply delivery.
+ */
+const isDeliveredOCStatus = (status?: string): boolean => {
+  if (!status) return false;
+  const s = String(status)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (
+    s.includes('transito') ||
+    s.includes('despachad') ||
+    s.includes('bodega') ||
+    s.includes('aduana') ||
+    s.includes('pendiente') ||
+    s.includes('solicitud')
+  ) {
+    return false;
+  }
+  return (
+    s.includes('entregado e instalado') ||
+    s.includes('entregada al cliente') ||
+    s.includes('instalado / recibido') ||
+    s.includes('cerrado / concluido')
+  );
+};
+
 export interface SupplierOCGroup {
   supplier: string;
   ocNumber: string;
@@ -532,51 +560,35 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
               return false;
             });
 
-          const isDeliveredOrder =
-            so.status === 'Facturada' ||
-            Boolean(so.invoiceNumber) ||
-            so.salesOrderNumber === '1152149' ||
-            so.id === 'ov-1152149-napoleon';
-
           const isItemDelivered =
-            isDeliveredOrder ||
-            soIt.equipmentStatus === 'Entregado e Instalado' ||
-            soIt.equipmentStatus === 'Entregado al Cliente' ||
-            /HYBASE|MOBIEYE/i.test(soIt.name + ' ' + (soIt.model || ''));
+            isDeliveredOCStatus(matchedContractItem.status) ||
+            isDeliveredOCStatus(soIt.equipmentStatus);
 
           if (matchedContractItem) {
             usedContractItemIds.add(matchedContractItem.id);
-            const isReallyDelivered =
-              isItemDelivered ||
-              matchedContractItem.status === 'Entregado e Instalado' ||
-              matchedContractItem.status === 'Cerrado / Concluido';
-            const finalStatus: OCStatus = isReallyDelivered ? 'Entregado e Instalado' : matchedContractItem.status;
-            const finalSupplier = isReallyDelivered
-              ? (matchedContractItem.supplier && matchedContractItem.supplier !== 'Sin Proveedor Asignado' ? matchedContractItem.supplier : (soIt.supplier || 'TECNICA'))
-              : (matchedContractItem.supplier || 'Sin Proveedor Asignado');
-            const finalOC = isReallyDelivered
-              ? (so.salesOrderNumber === '1152149' ? '126622' : (matchedContractItem.ocNumber || soIt.supplierOCRef || ''))
-              : (matchedContractItem.ocNumber || '');
-            const finalPaymentStatus: OCPaymentStatus = isReallyDelivered ? 'Pagado al Proveedor' : matchedContractItem.paymentStatus;
-            const finalInvoice = isReallyDelivered ? (matchedContractItem.invoiceNumber || so.invoiceNumber || 'FE-1001') : matchedContractItem.invoiceNumber;
-            const isNapoleonDelivered = /HYBASE|MOBIEYE/i.test(soIt.name + ' ' + (soIt.model || '')) || soIt.code === '70904' || soIt.code === '70796';
-            const cleanSerials = isNapoleonDelivered
-              ? [
-                  {
-                    id: `sn-${soIt.id || idx}`,
-                    serialNumber: /HYBASE/i.test(soIt.name + ' ' + (soIt.model || '')) || soIt.code === '70904' ? 'TN0-5C000150' : 'C8-58001028',
-                    status: 'Entregado e Instalado' as const,
-                    documents: [],
-                  },
-                ]
-              : (matchedContractItem.serialNumbers || []).filter(
-                  (sn) => sn && sn.serialNumber && !/^(HBV5|MB700|MD-2026|EQ-|sn-|SER-|SN-|SERIE|101|TEMP|DEMO)/i.test(sn.serialNumber) && !sn.serialNumber.includes('2026-')
-                );
-            const cleanSingleSerial = isNapoleonDelivered
-              ? (/HYBASE/i.test(soIt.name + ' ' + (soIt.model || '')) || soIt.code === '70904' ? 'TN0-5C000150' : 'C8-58001028')
-              : (matchedContractItem.serialNumber && !/^(HBV5|MB700|MD-2026|EQ-|sn-|SER-|SN-|SERIE|101|TEMP|DEMO)/i.test(matchedContractItem.serialNumber) && !matchedContractItem.serialNumber.includes('2026-'))
-              ? matchedContractItem.serialNumber
-              : (cleanSerials[0]?.serialNumber || '');
+            const finalStatus: OCStatus =
+              matchedContractItem.status || ((soIt.equipmentStatus as OCStatus) || 'Borrador / Solicitud');
+            const finalSupplier =
+              matchedContractItem.supplier ||
+              soIt.supplier ||
+              (soIt as any).supplierName ||
+              'Sin Proveedor Asignado';
+            const finalOC =
+              matchedContractItem.ocNumber ||
+              soIt.supplierOCRef ||
+              soIt.linkedSupplierOCNumber ||
+              '';
+            const finalPaymentStatus: OCPaymentStatus =
+              matchedContractItem.paymentStatus || 'Pendiente';
+            const finalInvoice =
+              matchedContractItem.invoiceNumber ||
+              (so.invoicedStatus === 'Facturada Total' ? so.invoiceNumber : '') ||
+              '';
+            const cleanSerials = (matchedContractItem.serialNumbers || []).filter(
+              (sn) => sn && sn.serialNumber && !/^(HBV5|MB700|MD-2026|EQ-|sn-|SER-|SN-|SERIE|TEMP|DEMO)/i.test(sn.serialNumber) && !sn.serialNumber.includes('2026-')
+            );
+            const cleanSingleSerial =
+              matchedContractItem.serialNumber || cleanSerials[0]?.serialNumber || '';
 
             matchedItems.push({
               ...matchedContractItem,
@@ -588,27 +600,20 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
               supplier: finalSupplier,
               ocNumber: finalOC,
               paymentStatus: finalPaymentStatus,
-              invoiceNumber: finalInvoice,
-              deliveryDate: isItemDelivered ? (matchedContractItem.deliveryDate || so.actualDeliveryDate || so.deliveryDate || '2026-10-01') : matchedContractItem.deliveryDate,
-              installedDate: isItemDelivered ? (matchedContractItem.installedDate || '2026-10-01') : matchedContractItem.installedDate,
+              invoiceNumber: finalInvoice || undefined,
+              deliveryDate:
+                matchedContractItem.deliveryDate ||
+                (isItemDelivered ? so.actualDeliveryDate || so.deliveryDate : undefined),
+              installedDate: matchedContractItem.installedDate,
               serialNumber: cleanSingleSerial,
               serialNumbers: cleanSerials,
             });
           } else {
             const qty = Number(soIt.quantityToDispatch) || 1;
             const cost = Math.round(Number(soIt.unitSalePriceCOP || 1000000) * 0.65);
-            const isFallbackDelivered =
-              isItemDelivered ||
-              soIt.equipmentStatus === 'Entregado e Instalado' ||
-              soIt.equipmentStatus === 'Entregado al Cliente' ||
-              soIt.status === 'Entregado e Instalado';
-            const status: OCStatus = isFallbackDelivered ? 'Entregado e Instalado' : ((soIt.equipmentStatus as OCStatus) || 'Borrador / Solicitud');
-            const supplier = isFallbackDelivered
-              ? (soIt.supplier && soIt.supplier !== 'Sin Proveedor Asignado' ? soIt.supplier : 'TECNICA')
-              : String(soIt.supplier || soIt.supplierName || 'Sin Proveedor Asignado');
-            const ocNumber = isFallbackDelivered
-              ? (so.salesOrderNumber === '1152149' ? '126622' : (soIt.supplierOCRef || soIt.linkedSupplierOCNumber || ''))
-              : String(soIt.supplierOCRef || soIt.linkedSupplierOCNumber || '');
+            const status: OCStatus = (soIt.equipmentStatus as OCStatus) || 'Borrador / Solicitud';
+            const supplier = String(soIt.supplier || (soIt as any).supplierName || 'Sin Proveedor Asignado');
+            const ocNumber = String(soIt.supplierOCRef || soIt.linkedSupplierOCNumber || '');
 
             matchedItems.push({
               id: `so-it-${so.id}-${soIt.id || idx}`,
@@ -623,14 +628,14 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
               supplier,
               ocNumber,
               status,
-              paymentStatus: isItemDelivered ? 'Pagado al Proveedor' : 'Pendiente',
+              paymentStatus: 'Pendiente',
               createdAt: so.orderDate || new Date().toISOString(),
               lastUpdatedAt: new Date().toISOString(),
-              deliveryDate: isItemDelivered ? (so.actualDeliveryDate || so.deliveryDate || '2026-10-01') : undefined,
-              installedDate: isItemDelivered ? '2026-10-01' : undefined,
+              deliveryDate: so.actualDeliveryDate || so.deliveryDate || undefined,
+              installedDate: undefined,
               serialNumber: '',
               serialNumbers: [],
-              invoiceNumber: isItemDelivered ? (so.invoiceNumber || 'FE-1001') : undefined,
+              invoiceNumber: so.invoicedStatus === 'Facturada Total' ? so.invoiceNumber : undefined,
               notes: `Equipo de Orden de Venta ${so.salesOrderNumber || ''}`,
               salesOrderId: so.id,
               salesOrderNumber: so.salesOrderNumber,
