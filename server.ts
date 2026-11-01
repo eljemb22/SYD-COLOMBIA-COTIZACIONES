@@ -364,7 +364,19 @@ Devuelve un JSON estrictamente con esta estructura:
           'actor', 'actress', 'movie', 'film', 'pelicula', 'album', 'singer', 'cancion',
           'guitar', 'stadium', 'football', 'soccer', 'thatcher', 'madonna', 'santa elena',
           'island', 'politician', 'president', 'minister', 'general election', 'band',
-          'concert', 'celebrity', 'portrait of', 'biography', 'painting', 'sculpture'
+          'concert', 'celebrity', 'portrait of', 'biography', 'painting', 'sculpture',
+          // Reject illustrations, drawings, engravings, paintings
+          'illustration', 'drawing', 'sketch', 'engraving', 'etching', 'woodcut',
+          'lithograph', 'watercolor', 'oil painting', 'diagram', 'schematic',
+          'blueprint', 'chart', 'graph', 'map', 'plan', 'design',
+          // Reject old/historical/black and white photos
+          'historical', 'historic', 'vintage', 'antique', 'old', '19th century',
+          '18th century', '17th century', '1900', '1800', '1700', '1600',
+          'black and white', 'b&w', 'monochrome', 'sepia',
+          'tretise', 'treatise', 'trabajo', 'ensayo', 'estudio',
+          // Reject non-photographic medical images
+          'radiograph', 'x-ray plate', 'radiography film', 'scan result',
+          'ultrasound image', 'mri scan', 'ct scan'
         ];
         if (forbidden.some((w) => combined.includes(w))) return true;
 
@@ -557,6 +569,34 @@ Devuelve un JSON estrictamente con esta estructura:
                 const title = (page.title || '').replace(/^File:/i, '').replace(/\.[^.]+$/, '');
                 // Reject non-medical images
                 if (isForbiddenImage(title, info.url)) continue;
+
+                // Reject images that are likely illustrations, diagrams, or old photos
+                // Check dimensions: real photos are usually landscape with reasonable resolution
+                const width = info.width || 0;
+                const height = info.height || 0;
+                if (width > 0 && height > 0) {
+                  const aspectRatio = width / height;
+                  // Reject very small images (< 400px width) - likely thumbnails or icons
+                  if (width < 400 || height < 300) continue;
+                  // Reject portrait-oriented images (likely not equipment photos)
+                  if (aspectRatio < 0.8) continue;
+                  // Reject extremely wide images (> 3:1) - likely panoramas or diagrams
+                  if (aspectRatio > 3) continue;
+                }
+
+                // Reject titles that indicate non-photo content
+                const titleLower = title.toLowerCase();
+                const nonPhotoKeywords = [
+                  'illustration', 'drawing', 'sketch', 'diagram', 'chart', 'graph',
+                  'map', 'painting', 'engraving', 'etching', 'woodcut', 'lithograph',
+                  'blueprint', 'schematic', 'design', 'plan', 'portrait',
+                  'historical', 'historic', 'vintage', 'antique', 'old',
+                  'black and white', 'b&w', 'monochrome', 'sepia',
+                  'treatise', 'trabajo', 'ensayo', 'estudio',
+                  'radiograph', 'scan result', 'ultrasound image', 'mri scan', 'ct scan',
+                  'file:', 'wikimedia commons:'
+                ];
+                if (nonPhotoKeywords.some((k) => titleLower.includes(k))) continue;
 
                 if (!resultsMap.has(info.url)) {
                   resultsMap.set(info.url, {
