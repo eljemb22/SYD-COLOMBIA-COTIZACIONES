@@ -365,18 +365,31 @@ Devuelve un JSON estrictamente con esta estructura:
           'guitar', 'stadium', 'football', 'soccer', 'thatcher', 'madonna', 'santa elena',
           'island', 'politician', 'president', 'minister', 'general election', 'band',
           'concert', 'celebrity', 'portrait of', 'biography', 'painting', 'sculpture',
-          // Reject illustrations, drawings, engravings, paintings
-          'illustration', 'drawing', 'sketch', 'engraving', 'etching', 'woodcut',
-          'lithograph', 'watercolor', 'oil painting', 'diagram', 'schematic',
-          'blueprint', 'chart', 'graph', 'map', 'plan', 'design',
-          // Reject old/historical/black and white photos
-          'historical', 'historic', 'vintage', 'antique', 'old', '19th century',
-          '18th century', '17th century', '1900', '1800', '1700', '1600',
-          'black and white', 'b&w', 'monochrome', 'sepia',
-          'tretise', 'treatise', 'trabajo', 'ensayo', 'estudio',
-          // Reject non-photographic medical images
+          // REJECT: Non-photographic media
+          'illustration', 'drawing', 'sketch', 'diagram', 'chart', 'graph',
+          'map', 'painting', 'engraving', 'etching', 'woodcut', 'lithograph',
+          'watercolor', 'oil painting', 'blueprint', 'schematic', 'design',
+          'plan', 'cartoon', 'clipart', 'icon', 'symbol', 'logo',
+          // REJECT: Historical/old content
+          'historical', 'historic', 'vintage', 'antique', 'old', 'ancient',
+          '19th century', '18th century', '17th century', '1600', '1700', '1800', '1900',
+          'black and white', 'b&w', 'monochrome', 'sepia', 'retro',
+          'tretise', 'treatise', 'trabajo', 'ensayo', 'estudio', 'thesis',
+          'diseases of', 'with their homopathi', 'treatise on',
+          // REJECT: Non-equipment medical images (anatomical, cellular, etc.)
+          'anatomical', 'anatomy', 'skeleton', 'organ', 'organo', 'órgano',
+          'cell', 'celula', 'célula', 'virus', 'bacteria', 'microbe', 'microbio',
+          'dna', 'rna', 'protein', 'proteína',
+          // REJECT: Generic medical stock (not equipment)
+          'doctor', 'nurse', 'patient', 'surgeon', 'medical team',
+          'hospital corridor', 'waiting room', 'reception',
+          'first aid', 'bandage', 'syringe', 'pill', 'capsule',
+          'prescription', 'receta', 'medicine bottle', 'frasco de medicina',
+          // REJECT: Scan results (not equipment photos)
           'radiograph', 'x-ray plate', 'radiography film', 'scan result',
-          'ultrasound image', 'mri scan', 'ct scan'
+          'ultrasound image', 'mri scan', 'ct scan', 'pet scan',
+          // REJECT: Wikimedia file pages (often old illustrations)
+          'file:', 'wikimedia commons:',
         ];
         if (forbidden.some((w) => combined.includes(w))) return true;
 
@@ -570,21 +583,22 @@ Devuelve un JSON estrictamente con esta estructura:
                 // Reject non-medical images
                 if (isForbiddenImage(title, info.url)) continue;
 
-                // Reject images that are likely illustrations, diagrams, or old photos
-                // Check dimensions: real photos are usually landscape with reasonable resolution
+                // STRICT dimension requirements: real product photos are usually 1024x768 or larger
                 const width = info.width || 0;
                 const height = info.height || 0;
                 if (width > 0 && height > 0) {
+                  // REJECT: Very small images (< 1024px width) - likely thumbnails or icons
+                  if (width < 1024 || height < 768) continue;
                   const aspectRatio = width / height;
-                  // Reject very small images (< 400px width) - likely thumbnails or icons
-                  if (width < 400 || height < 300) continue;
-                  // Reject portrait-oriented images (likely not equipment photos)
-                  if (aspectRatio < 0.8) continue;
-                  // Reject extremely wide images (> 3:1) - likely panoramas or diagrams
-                  if (aspectRatio > 3) continue;
+                  // REJECT: Portrait-oriented images (not equipment photos)
+                  if (aspectRatio < 1.0) continue;
+                  // REJECT: Extremely wide images (> 2.5:1) - likely panoramas or diagrams
+                  if (aspectRatio > 2.5) continue;
+                  // REJECT: Square images (likely icons or logos)
+                  if (aspectRatio > 0.9 && aspectRatio < 1.1) continue;
                 }
 
-                // Reject titles that indicate non-photo content
+                // REJECT: Titles indicating non-photo content
                 const titleLower = title.toLowerCase();
                 const nonPhotoKeywords = [
                   'illustration', 'drawing', 'sketch', 'diagram', 'chart', 'graph',
@@ -597,6 +611,21 @@ Devuelve un JSON estrictamente con esta estructura:
                   'file:', 'wikimedia commons:'
                 ];
                 if (nonPhotoKeywords.some((k) => titleLower.includes(k))) continue;
+
+                // REQUIRE: Title must contain photo-related or equipment-related terms
+                const photoTerms = [
+                  'photo', 'photograph', 'picture', 'image', 'product',
+                  'clinical', 'hospital', 'medical equipment', 'medical device',
+                  'surgical', 'operating', 'monitor', 'scanner', 'pump',
+                  'ventilator', 'incubator', 'defibrillator', 'ultrasound',
+                  'x-ray', 'rayos', 'table', 'mesa', 'bed', 'camilla',
+                  'monitor', 'signos vitales', 'patient monitor',
+                  'wheeled', 'mobile', 'portable', 'cart', 'carrito',
+                  'supplier', 'distributor', 'manufacturer',
+                  'price', 'precio', 'buy', 'sale', 'venta',
+                  'catalog', 'catálogo', 'brochure', 'datasheet'
+                ];
+                if (!photoTerms.some((k) => titleLower.includes(k))) continue;
 
                 if (!resultsMap.has(info.url)) {
                   resultsMap.set(info.url, {
@@ -616,11 +645,22 @@ Devuelve un JSON estrictamente con esta estructura:
         }
       }
 
-      const images = Array.from(resultsMap.values());
+      // FINAL FILTER: Remove images with years before 2000 in title or URL
+      const filteredImages = Array.from(resultsMap.values()).filter((img: any) => {
+        const combined = `${img.title} ${img.url}`.toLowerCase();
+        // Reject any image with year before 2000
+        const yearMatch = combined.match(/\b(1[6-9][0-9]{2}|200[0-9])\b/);
+        if (yearMatch) {
+          const year = parseInt(yearMatch[0]);
+          if (year < 2000) return false;
+        }
+        return true;
+      });
+
       return res.json({
         success: true,
         query: rawQuery,
-        images: images.slice(0, 12),
+        images: filteredImages.slice(0, 12),
       });
     } catch (err: any) {
       console.error('Error in /api/products/search-images:', err);
