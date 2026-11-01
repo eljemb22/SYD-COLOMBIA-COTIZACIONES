@@ -39,6 +39,7 @@ import {
   ItemSerialNumberRecord,
   SerialUnitStatus,
 } from '../../../types';
+import { WarrantyAlertsWidget } from '../../components/chat/FloatingChatWidget';
 import {
   getStoredSalesInvoices,
   saveStoredSalesInvoices,

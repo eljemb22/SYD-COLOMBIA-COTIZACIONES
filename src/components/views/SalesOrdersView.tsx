@@ -3720,6 +3720,10 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           }}
         />
       )}
+      <ProfitabilityCalculator
+        isOpen={isProfitabilityModalOpen}
+        onClose={() => setIsProfitabilityModalOpen(false)}
+      />
     </div>
   );
 };

@@ -23,7 +23,6 @@ import {
   autoRegisterSupplierIfNotExists,
 } from '../../utils/ocTrackingStorage';
 import { PriceHistoryModal } from '../modals/PriceHistoryModal';
-import { PriceHistoryModal } from '../modals/PriceHistoryModal';
 import {
   getStoredSalesOrders,
   saveStoredSalesOrders,

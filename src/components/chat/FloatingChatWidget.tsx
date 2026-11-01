@@ -15,7 +15,7 @@ import {
   Hash,
   UserCheck,
   ShieldCheck,
-  CheckCheck,
+  CheckCircle2,
   Loader2,
   PlusCircle,
   FileSpreadsheet,
@@ -1288,7 +1288,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                         </div>
                         <span className="text-[9.5px] text-slate-500 mt-1 px-1 flex items-center gap-1">
                           <span>{msg.timestamp}</span>
-                          {isOwn && <CheckCheck className="w-3 h-3 text-sky-400" />}
+                          {isOwn && <CheckCircle2 className="w-3 h-3 text-sky-400" />}
                         </span>
                       </div>
                     );
