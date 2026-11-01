@@ -679,6 +679,7 @@ export interface SalesInvoiceRecord {
   subtotalCOP?: number;
   taxCOP?: number;
   paymentStatus: SalesInvoicePaymentStatus;
+  items?: any[];
   attachedInvoiceFile?: any;
   radicadoProofDoc?: any;
   notes?: string;

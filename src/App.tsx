@@ -68,6 +68,8 @@ import {
   saveStoredSalesOrders,
   getStoredSalesInvoices,
   saveStoredSalesInvoices,
+  createTenderProjectFromQuote,
+  createOCTrackingContractFromSalesOrder,
 } from './utils/salesOrdersStorage';
 import {
   getStoredTenders,
@@ -76,10 +78,13 @@ import {
   deleteTenderClientFromFirestore,
   saveSingleEquipmentToFirestore,
   deleteEquipmentFromFirestore,
+  saveOCTrackingContractsToFirestore,
+  saveSingleSalesOrderToFirestore,
   SyncConnectionStatus,
 } from './services/realtimeSync';
 import { useIdleStandby } from './hooks/useIdleStandby';
 import { hydrateFromSnapshotIfEmpty } from './utils/hydrateInitialData';
+import { isValidEquipmentCode, isValidSupplierName } from './utils/formatters';
 
 // Hydrate local data on bundle evaluation
 hydrateFromSnapshotIfEmpty();
@@ -120,9 +125,31 @@ export default function App() {
     };
   };
 
-  // Core Business State - Always starts with a fresh new quote following the daily consecutive
-  const [quoteHeader, setQuoteHeader] = useState<QuoteHeader>(() => buildNewDailyQuoteHeader());
-  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
+  // Core Business State - Draft quote persisted across sessions and tab navigation
+  const [quoteHeader, setQuoteHeader] = useState<QuoteHeader>(() => {
+    try {
+      const saved = localStorage.getItem('syd_active_draft_quote_header');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return buildNewDailyQuoteHeader();
+  });
+  const [quoteItems, setQuoteItems] = useState<QuoteItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('syd_active_draft_quote_items');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return [];
+  });
   const [customLetterheadUrl, setCustomLetterheadUrl] = useState<string | null>(() => {
     try {
       const saved = localStorage.getItem('syd_custom_manual_letterhead');
@@ -186,7 +213,36 @@ export default function App() {
   });
 
   const [savedQuotes, setSavedQuotes] = useState<SavedQuote[]>(() => getSavedQuotes());
-  const [tenderClients, setTenderClients] = useState<TenderClientProject[]>(() => getStoredTenders());
+  const [tenderClients, setTenderClients] = useState<TenderClientProject[]>(() => {
+    const stored = getStoredTenders();
+    try {
+      const quotes = getSavedQuotes();
+      let changed = false;
+      const healed = stored.map((t) => {
+        if ((!t.items || t.items.length === 0) && (t.linkedQuoteNumber || t.linkedQuoteId || t.header?.linkedQuoteNumber || t.header?.linkedQuoteId)) {
+          const qNum = t.linkedQuoteNumber || t.header?.linkedQuoteNumber;
+          const qId = t.linkedQuoteId || t.header?.linkedQuoteId;
+          const q = quotes.find((sq) => (qNum && sq.quoteNumber === qNum) || (qId && sq.id === qId));
+          if (q && q.items && q.items.length > 0) {
+            const generated = createTenderProjectFromQuote(q, stored, []);
+            if (generated.items && generated.items.length > 0) {
+              changed = true;
+              return {
+                ...t,
+                items: generated.items,
+              };
+            }
+          }
+        }
+        return t;
+      });
+      if (changed) {
+        localStorage.setItem('syd_tender_clients_v2', JSON.stringify(healed));
+        return healed;
+      }
+    } catch (_) {}
+    return stored;
+  });
   const [ocContracts, setOcContracts] = useState<OCTrackingContract[]>(() => getStoredOCTrackingContracts());
   const [salesOrders, setSalesOrders] = useState<SalesOrderRecord[]>(() => getStoredSalesOrders());
   const [salesInvoices, setSalesInvoices] = useState<SalesInvoiceRecord[]>(() => getStoredSalesInvoices());
@@ -325,17 +381,33 @@ export default function App() {
 
   // Handlers for Quotes
   const handleUpdateHeader = useCallback((headerUpdates: Partial<QuoteHeader>) => {
-    setQuoteHeader((prev) => ({ ...prev, ...headerUpdates }));
+    setQuoteHeader((prev) => {
+      const updated = { ...prev, ...headerUpdates };
+      try {
+        localStorage.setItem('syd_active_draft_quote_header', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
   }, []);
 
   const handleUpdateItem = useCallback((id: string, updates: Partial<QuoteItem>) => {
-    setQuoteItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, ...updates } : it))
-    );
+    setQuoteItems((prev) => {
+      const updated = prev.map((it) => (it.id === id ? { ...it, ...updates } : it));
+      try {
+        localStorage.setItem('syd_active_draft_quote_items', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
   }, []);
 
   const handleDeleteItem = useCallback((id: string) => {
-    setQuoteItems((prev) => prev.filter((it) => it.id !== id));
+    setQuoteItems((prev) => {
+      const updated = prev.filter((it) => it.id !== id);
+      try {
+        localStorage.setItem('syd_active_draft_quote_items', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
   }, []);
 
   // Global tab navigation event listener
@@ -355,6 +427,10 @@ export default function App() {
     setQuoteHeader(freshHeader);
     setQuoteItems([]);
     setEditingQuoteId(null);
+    try {
+      localStorage.removeItem('syd_active_draft_quote_header');
+      localStorage.removeItem('syd_active_draft_quote_items');
+    } catch (_) {}
     setCustomLetterheadUrl((prev) => {
       if (prev && prev !== 'none' && prev.length > 20) return prev;
       return getOfficialSyDLetterheadDataUrl();
@@ -391,6 +467,11 @@ export default function App() {
     };
     setQuoteHeader(header);
     setQuoteItems(quote.items || []);
+    setEditingQuoteId(quote.id);
+    try {
+      localStorage.setItem('syd_active_draft_quote_header', JSON.stringify(header));
+      localStorage.setItem('syd_active_draft_quote_items', JSON.stringify(quote.items || []));
+    } catch (_) {}
     setEditingQuoteId(quote.id);
     if (quote.letterheadUrl !== undefined) {
       setCustomLetterheadUrl(quote.letterheadUrl === 'none' ? null : (quote.letterheadUrl || getOfficialSyDLetterheadDataUrl()));
@@ -462,36 +543,69 @@ export default function App() {
   }, []);
 
   // Handlers for Equipments
-  const handleAddItemFromEquipment = useCallback((equipment: MedicalEquipment) => {
-    const newItem: QuoteItem = {
-      id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      equipmentId: equipment.id,
-      code: equipment.code,
-      name: equipment.name,
-      brand: equipment.brand,
-      model: equipment.model,
-      description: equipment.description,
-      briefDescription: equipment.description,
-      technicalFeatures: equipment.technicalSpecs || [],
-      quantity: 1,
-      unitCostCOP: equipment.baseCostCOP || 0,
-      totalCost: equipment.baseCostCOP || 0,
-      multiplier: 1.5874, // L4 default
-      marginType: 'L4',
-      unitSalePrice: Math.round((equipment.baseCostCOP || 0) * 1.5874),
-      totalSalePrice: Math.round((equipment.baseCostCOP || 0) * 1.5874),
-      taxExempt: equipment.taxExempt || false,
-      taxRate: equipment.taxRate ?? 0.19,
-      warrantyMonths: equipment.warrantyMonths || 12,
-      imageUrl: equipment.imageUrl || equipment.image,
-      accessories: [],
-    };
-    setQuoteItems((prev) => [...prev, newItem]);
-    setActiveTab('ventas');
+  const handleAddItemFromEquipment = useCallback((equipment: MedicalEquipment, shouldNavigate = false) => {
+    setQuoteItems((prev) => {
+      const existing = prev.find(
+        (it) => it.equipmentId === equipment.id || (equipment.code && it.code === equipment.code)
+      );
+      let updated: QuoteItem[];
+      if (existing) {
+        const newQty = (existing.quantity || 1) + 1;
+        updated = prev.map((it) =>
+          it.id === existing.id
+            ? {
+                ...it,
+                quantity: newQty,
+                totalCost: (it.unitCostCOP || 0) * newQty,
+                totalSalePrice: (it.unitSalePrice || 0) * newQty,
+              }
+            : it
+        );
+      } else {
+        const newItem: QuoteItem = {
+          id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          equipmentId: equipment.id,
+          code: equipment.code,
+          name: equipment.name,
+          brand: equipment.brand,
+          model: equipment.model,
+          description: equipment.description,
+          briefDescription: equipment.description,
+          technicalFeatures: equipment.technicalSpecs || [],
+          quantity: 1,
+          unitCostCOP: equipment.baseCostCOP || 0,
+          totalCost: equipment.baseCostCOP || 0,
+          multiplier: 1.5874, // L4 default
+          marginType: 'L4',
+          unitSalePrice: Math.round((equipment.baseCostCOP || 0) * 1.5874),
+          totalSalePrice: Math.round((equipment.baseCostCOP || 0) * 1.5874),
+          taxExempt: equipment.taxExempt || false,
+          taxRate: equipment.taxRate ?? 0.19,
+          warrantyMonths: equipment.warrantyMonths || 12,
+          imageUrl: equipment.imageUrl || equipment.image,
+          accessories: [],
+        };
+        updated = [...prev, newItem];
+      }
+      try {
+        localStorage.setItem('syd_active_draft_quote_items', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    if (shouldNavigate) {
+      setActiveTab('ventas');
+    }
   }, []);
 
   const handleAddCustomQuoteItem = useCallback((item: QuoteItem) => {
-    setQuoteItems((prev) => [...prev, item]);
+    setQuoteItems((prev) => {
+      const updated = [...prev, item];
+      try {
+        localStorage.setItem('syd_active_draft_quote_items', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
   }, []);
 
   const handleSaveEquipment = useCallback((equipment: MedicalEquipment) => {
@@ -509,6 +623,104 @@ export default function App() {
       } catch (_) {}
       return updated;
     });
+
+    // Dispatch catalog update event so open modals immediately see the new equipment
+    window.dispatchEvent(new CustomEvent('syd_equipment_catalog_updated', { detail: equipment }));
+
+    // Propagate newly assigned code, supplier, brand to any pending items in tender projects (such as Contrato 11111)
+    if (isValidEquipmentCode(equipment.code)) {
+      const cleanNormStr = (str?: string) =>
+        (str || '')
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]/g, '');
+
+      const eqNormName = cleanNormStr(equipment.name);
+      const eqNormModel = cleanNormStr(equipment.model);
+
+      setTenderClients((prevTenders) => {
+        let tendersChanged = false;
+        const nextTenders = prevTenders.map((t) => {
+          let itemChanged = false;
+          const nextItems = (t.items || []).map((ti) => {
+            const tiNormName = cleanNormStr(ti.name);
+            const tiNormModel = cleanNormStr(ti.model);
+
+            const isMatch =
+              (tiNormName && (tiNormName === eqNormName || tiNormName === eqNormModel)) ||
+              (tiNormModel && (tiNormModel === eqNormModel || tiNormModel === eqNormName)) ||
+              (ti.equipmentId && ti.equipmentId === equipment.id);
+
+            if (isMatch && (!isValidEquipmentCode(ti.code) || !isValidSupplierName(ti.supplier))) {
+              itemChanged = true;
+              return {
+                ...ti,
+                equipmentId: equipment.id,
+                code: equipment.code,
+                supplier: isValidSupplierName(equipment.supplier) ? equipment.supplier : ti.supplier,
+                brand: equipment.brand || ti.brand,
+                model: equipment.model || ti.model,
+              };
+            }
+            return ti;
+          });
+
+          if (itemChanged) {
+            tendersChanged = true;
+            return {
+              ...t,
+              items: nextItems,
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          return t;
+        });
+
+        if (tendersChanged) {
+          try {
+            localStorage.setItem('syd_tender_clients_v2', JSON.stringify(nextTenders));
+          } catch (_) {}
+          window.dispatchEvent(new CustomEvent('syd_tender_clients_updated', { detail: nextTenders }));
+          return nextTenders;
+        }
+        return prevTenders;
+      });
+
+      // Also propagate to draft quote items if active
+      setQuoteItems((prevItems) => {
+        let itemsChanged = false;
+        const nextItems = prevItems.map((qi) => {
+          const qiNormName = cleanNormStr(qi.name);
+          const qiNormModel = cleanNormStr(qi.model);
+          const isMatch =
+            (qiNormName && (qiNormName === eqNormName || qiNormName === eqNormModel)) ||
+            (qiNormModel && (qiNormModel === eqNormModel || qiNormModel === eqNormName)) ||
+            (qi.equipmentId && qi.equipmentId === equipment.id);
+
+          if (isMatch && (!isValidEquipmentCode(qi.code) || !qi.code)) {
+            itemsChanged = true;
+            return {
+              ...qi,
+              equipmentId: equipment.id,
+              code: equipment.code,
+              brand: equipment.brand || qi.brand,
+              model: equipment.model || qi.model,
+            };
+          }
+          return qi;
+        });
+
+        if (itemsChanged) {
+          try {
+            localStorage.setItem('syd_active_draft_quote_items', JSON.stringify(nextItems));
+          } catch (_) {}
+          return nextItems;
+        }
+        return prevItems;
+      });
+    }
 
     // If equipment was created from a pending emergency quote equipment, mark it as created
     if (equipment.sourceOrigin && equipment.sourceOrigin.startsWith('pending-id:')) {
@@ -532,29 +744,46 @@ export default function App() {
 
   // Handlers for Tenders
   const handleCreateTenderClient = useCallback((clientData: any) => {
+    const rawHeader = clientData.header || {};
     const newTender: TenderClientProject = {
-      id: `tender-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      clientName: clientData.clientName || 'Nuevo Cliente Hospitalario',
+      id: clientData.id || `tender-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      clientName: clientData.clientName || rawHeader.clientName || 'Nuevo Cliente Hospitalario',
+      nit: clientData.nit || rawHeader.nit || '',
       header: {
-        entityName: clientData.clientName || '',
-        processNumber: clientData.processNumber || '',
-        processType: clientData.processType || 'Licitación Pública',
-        contractObject: clientData.contractObject || '',
-        openingDate: clientData.openingDate || new Date().toISOString().split('T')[0],
-        closingDate: clientData.closingDate || '',
-        city: clientData.city || 'Bogotá',
-        budgetCOP: clientData.budgetCOP || 0,
-        executionTerm: clientData.executionTerm || '',
-        nit: clientData.nit || '',
-        ...(clientData.header || {}),
+        entityName: clientData.clientName || rawHeader.clientName || '',
+        processNumber: clientData.processNumber || rawHeader.processNumber || '',
+        processType: clientData.processType || rawHeader.processType || 'Licitación Pública',
+        contractObject: clientData.contractObject || rawHeader.contractObject || '',
+        openingDate: clientData.openingDate || rawHeader.openingDate || new Date().toISOString().split('T')[0],
+        closingDate: clientData.closingDate || rawHeader.closingDate || '',
+        city: clientData.city || rawHeader.city || 'Bogotá',
+        budgetCOP: clientData.budgetCOP !== undefined ? Number(clientData.budgetCOP) : (rawHeader.budgetCOP || 0),
+        executionTerm: clientData.executionTerm || rawHeader.executionTerm || '',
+        nit: clientData.nit || rawHeader.nit || '',
+        linkedQuoteId: clientData.linkedQuoteId || rawHeader.linkedQuoteId,
+        linkedQuoteNumber: clientData.linkedQuoteNumber || rawHeader.linkedQuoteNumber,
+        linkedQuoteTotal: clientData.linkedQuoteTotal || rawHeader.linkedQuoteTotal,
+        isDirectClientOC: Boolean(clientData.isDirectClientOC || rawHeader.isDirectClientOC),
+        clientOrderNumber: clientData.clientOrderNumber || rawHeader.clientOrderNumber,
+        ...rawHeader,
       },
-      items: [],
-      status: clientData.status || 'borrador',
-      createdAt: new Date().toISOString(),
+      items: Array.isArray(clientData.items) ? clientData.items : [],
+      status: clientData.status || (clientData.isDirectClientOC || rawHeader.isDirectClientOC ? 'Adjudicada' : 'borrador'),
+      linkedQuoteId: clientData.linkedQuoteId || rawHeader.linkedQuoteId,
+      linkedQuoteNumber: clientData.linkedQuoteNumber || rawHeader.linkedQuoteNumber,
+      linkedQuoteTotal: clientData.linkedQuoteTotal || rawHeader.linkedQuoteTotal,
+      createdAt: clientData.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     setTenderClients((prev) => {
-      const updated = [newTender, ...prev];
+      const idx = prev.findIndex((t) => t.id === newTender.id);
+      let updated: TenderClientProject[];
+      if (idx >= 0) {
+        updated = [...prev];
+        updated[idx] = newTender;
+      } else {
+        updated = [newTender, ...prev];
+      }
       try {
         localStorage.setItem('syd_tender_clients_v2', JSON.stringify(updated));
       } catch (_) {}
@@ -567,7 +796,55 @@ export default function App() {
   const handleUpdateContracts = useCallback((updated: OCTrackingContract[]) => {
     setOcContracts(updated);
     saveStoredOCTrackingContracts(updated);
+    saveOCTrackingContractsToFirestore(updated).catch(console.warn);
   }, []);
+
+  const handleGenerateOCTracking = useCallback(
+    (order: SalesOrderRecord) => {
+      if (!order || !order.items || order.items.length === 0) {
+        return;
+      }
+
+      const newContract = createOCTrackingContractFromSalesOrder(order, equipments);
+
+      setOcContracts((prev) => {
+        const idx = prev.findIndex(
+          (c) =>
+            c.id === newContract.id ||
+            c.salesOrderId === order.id ||
+            (order.salesOrderNumber && c.salesOrderNumber === order.salesOrderNumber)
+        );
+        let updated: OCTrackingContract[];
+        if (idx >= 0) {
+          updated = [...prev];
+          updated[idx] = { ...updated[idx], ...newContract };
+        } else {
+          updated = [newContract, ...prev];
+        }
+        try {
+          localStorage.setItem('syd_oc_tracking_contracts_v1', JSON.stringify(updated));
+        } catch (_) {}
+        saveOCTrackingContractsToFirestore(updated).catch(console.warn);
+        return updated;
+      });
+
+      setSalesOrders((prev) => {
+        const updated = prev.map((o) =>
+          o.id === order.id ? { ...o, hasLinkedOC: true, ocContractId: newContract.id } : o
+        );
+        try {
+          localStorage.setItem('syd_sales_orders_v1', JSON.stringify(updated));
+        } catch (_) {}
+        saveSingleSalesOrderToFirestore({
+          ...order,
+          hasLinkedOC: true,
+          ocContractId: newContract.id,
+        }).catch(console.warn);
+        return updated;
+      });
+    },
+    [equipments]
+  );
 
   // Handlers for Sales Orders & Invoices
   const handleUpdateSalesOrders = useCallback((orders: SalesOrderRecord[]) => {
@@ -863,7 +1140,7 @@ export default function App() {
               onUpdateItem={handleUpdateItem}
               onDeleteItem={handleDeleteItem}
               onNavigateToSales={() => setActiveTab('ventas')}
-              onAddItemFromEquipment={handleAddItemFromEquipment}
+              onAddItemFromEquipment={(eq) => handleAddItemFromEquipment(eq, false)}
               onAddCustomQuoteItem={handleAddCustomQuoteItem}
               onUpdateEquipmentBaseCost={(idOrCode, newCost) => {
                 setEquipments((prev) =>
@@ -918,12 +1195,27 @@ export default function App() {
               salesInvoices={salesInvoices}
               onCreateClient={handleCreateTenderClient}
               onCreateTenderClient={handleCreateTenderClient}
+              onUpdateClient={(clientId, updates) => {
+                setTenderClients((prev) => {
+                  const updated = prev.map((tc) => (tc.id === clientId ? { ...tc, ...updates } : tc));
+                  localStorage.setItem('syd_tender_clients_v2', JSON.stringify(updated));
+                  return updated;
+                });
+              }}
               onUpdateTenderClient={(clientId, updates) => {
                 setTenderClients((prev) => {
                   const updated = prev.map((tc) => (tc.id === clientId ? { ...tc, ...updates } : tc));
                   localStorage.setItem('syd_tender_clients_v2', JSON.stringify(updated));
                   return updated;
                 });
+              }}
+              onDeleteClient={(clientId) => {
+                setTenderClients((prev) => {
+                  const updated = prev.filter((tc) => tc.id !== clientId);
+                  localStorage.setItem('syd_tender_clients_v2', JSON.stringify(updated));
+                  return updated;
+                });
+                deleteTenderClientFromFirestore(clientId).catch(console.warn);
               }}
               onDeleteTenderClient={(clientId) => {
                 setTenderClients((prev) => {
@@ -989,6 +1281,7 @@ export default function App() {
               onClearInitialQuoteToConvert={handleClearInitialQuoteToConvert}
               initialTenderToConvert={initialTenderToConvert}
               onClearInitialTenderToConvert={handleClearInitialTenderToConvert}
+              onGenerateOCTracking={handleGenerateOCTracking}
             />
           )}
 

@@ -36,6 +36,7 @@ import {
   SalesOrderRecord,
   SalesOrderItem,
   SalesInvoiceRecord,
+  MedicalEquipment,
 } from '../../types';
 import { formatCOP, normalizeClean } from '../../utils/formatters';
 import { formatTenderProcessNumber } from '../../utils/tenderDeduplication';
@@ -134,6 +135,7 @@ interface TenderAwardedViewProps {
   salesOrders?: SalesOrderRecord[];
   salesInvoices?: SalesInvoiceRecord[];
   onCreateSalesOrder?: (tender: TenderClientProject) => void;
+  equipments?: MedicalEquipment[];
 }
 
 export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
@@ -153,10 +155,92 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
   salesOrders = [],
   salesInvoices = [],
   onCreateSalesOrder,
+  equipments = [],
 }) => {
   const [isConfirmClearModalOpen, setIsConfirmClearModalOpen] = useState(false);
   const items = activeClient.items || [];
   const defaultTaxRate = 0.19; // 19% IVA standard
+
+  // Helper to read latest catalog from props or localStorage
+  const getEffectiveCatalog = useCallback((): MedicalEquipment[] => {
+    let list: MedicalEquipment[] = equipments || [];
+    try {
+      const raw = localStorage.getItem('syd_equipments_catalog');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          list = parsed;
+        }
+      }
+    } catch (_) {}
+    return list;
+  }, [equipments]);
+
+  const [catalogList, setCatalogList] = useState<MedicalEquipment[]>(getEffectiveCatalog);
+
+  useEffect(() => {
+    setCatalogList(getEffectiveCatalog());
+    const onCatalogUpdate = () => setCatalogList(getEffectiveCatalog());
+    window.addEventListener('syd_equipment_catalog_updated', onCatalogUpdate);
+    return () => window.removeEventListener('syd_equipment_catalog_updated', onCatalogUpdate);
+  }, [getEffectiveCatalog]);
+
+  const resolveItemCode = useCallback((item: TenderItem): string => {
+    const rawCode = (item.code || '').trim();
+    if (rawCode && rawCode.toUpperCase() !== 'PENDIENTE' && rawCode !== '-' && rawCode !== '0' && rawCode !== 'N/A') {
+      return rawCode;
+    }
+    const clean = (s?: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const itemName = clean(item.name);
+    const itemModel = clean(item.model);
+
+    const match = catalogList.find((eq) => {
+      const eqCode = (eq.code || '').trim();
+      if (!eqCode || eqCode.toUpperCase() === 'PENDIENTE') return false;
+      const eqName = clean(eq.name);
+      const eqModel = clean(eq.model);
+      if (itemName && eqName === itemName) return true;
+      if (itemModel && (eqModel === itemModel || eqName === itemModel)) return true;
+      if (itemName && (eqName.includes(itemName) || itemName.includes(eqName))) return true;
+      return false;
+    });
+
+    return match?.code || rawCode || 'PENDIENTE';
+  }, [catalogList]);
+
+  // Auto-detect and sync newly registered catalog items (e.g. ADIOS -> code 00000)
+  useEffect(() => {
+    if (!activeClient || !activeClient.items || activeClient.items.length === 0) return;
+    const clean = (s?: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+    activeClient.items.forEach((item) => {
+      const currentCode = (item.code || '').trim();
+      const isPending = !currentCode || currentCode.toUpperCase() === 'PENDIENTE' || currentCode === '-' || currentCode === '0';
+      if (!isPending) return;
+
+      const itemName = clean(item.name);
+      const itemModel = clean(item.model);
+
+      const match = catalogList.find((eq) => {
+        const eqCode = (eq.code || '').trim();
+        if (!eqCode || eqCode.toUpperCase() === 'PENDIENTE') return false;
+        const eqName = clean(eq.name);
+        const eqModel = clean(eq.model);
+        if (itemName && eqName === itemName) return true;
+        if (itemModel && (eqModel === itemModel || eqName === itemModel)) return true;
+        if (itemName && (eqName.includes(itemName) || itemName.includes(eqName))) return true;
+        return false;
+      });
+
+      if (match && match.code && match.code.toUpperCase() !== 'PENDIENTE') {
+        onUpdateTenderItem(activeClient.id, item.id, {
+          code: match.code,
+          brand: (item.brand && item.brand.toUpperCase() !== 'PENDIENTE' && item.brand !== item.name) ? item.brand : (match.brand || item.brand),
+          model: (item.model && item.model.toUpperCase() !== 'PENDIENTE' && item.model !== item.name) ? item.model : (match.model || item.model),
+        });
+      }
+    });
+  }, [activeClient?.id, activeClient?.items, catalogList, onUpdateTenderItem]);
 
   // Excel table filter hook
   const {
@@ -1337,9 +1421,23 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                     >
                       <td className="p-2.5 text-center font-mono font-bold text-purple-300">{idx + 1}</td>
                       <td className="p-2.5 font-mono text-[11px] font-bold whitespace-nowrap">
-                        <span className={itemDelivery.isInvoiced ? "line-through text-slate-500 decoration-rose-400/80 decoration-2 font-semibold" : "text-[#38bdf8]"}>
-                          {item.code}
-                        </span>
+                        {(() => {
+                          const displayCode = resolveItemCode(item);
+                          const isPending = !displayCode || displayCode.toUpperCase() === 'PENDIENTE' || displayCode === '-';
+                          return (
+                            <span
+                              className={
+                                itemDelivery.isInvoiced
+                                  ? "line-through text-slate-500 decoration-rose-400/80 decoration-2 font-semibold"
+                                  : isPending
+                                  ? "text-amber-400 font-bold"
+                                  : "text-[#38bdf8]"
+                              }
+                            >
+                              {displayCode}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="p-2.5 font-bold text-white">
                         <div className="flex items-center gap-1.5 flex-wrap">

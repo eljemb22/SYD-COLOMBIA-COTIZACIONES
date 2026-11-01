@@ -1132,11 +1132,25 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
   const handleAddEquipmentFromCatalog = (equipmentToInsert?: MedicalEquipment) => {
     const eq = equipmentToInsert || equipments.find((e) => e.id === selectedEquipmentToAdd);
     if (eq) {
-      onAddItemFromEquipment(eq);
-      setActionAlert({
-        msg: `Equipo "${eq.name}" agregado al Gestor de Costos.`,
-        type: 'info',
-      });
+      const existing = quoteItems.find((it) => it.equipmentId === eq.id || (eq.code && it.code === eq.code));
+      if (existing) {
+        const nextQty = (existing.quantity || 1) + 1;
+        onUpdateItem(existing.id, {
+          quantity: nextQty,
+          totalCost: (existing.unitCostCOP || 0) * nextQty,
+          totalSalePrice: (existing.unitSalePrice || 0) * nextQty,
+        });
+        setActionAlert({
+          msg: `✓ +1 unidad agregada a "${eq.name}" (Total: ${nextQty} uds en cotización).`,
+          type: 'success',
+        });
+      } else {
+        onAddItemFromEquipment(eq);
+        setActionAlert({
+          msg: `✓ Equipo "${eq.name}" agregado al Gestor de Costos (1 ud).`,
+          type: 'success',
+        });
+      }
       setTimeout(() => setActionAlert(null), 3000);
     }
   };
@@ -1642,15 +1656,69 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleAddEquipmentFromCatalog(eq)}
-                          className="inline-flex items-center gap-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white font-black text-xs px-3.5 py-1.5 rounded-lg shadow-md transition cursor-pointer active:scale-95 whitespace-nowrap"
-                        >
-                          <Plus className="w-4 h-4 stroke-[3]" />
-                          <span>{existingItem ? 'Otra Unidad' : 'Agregar'}</span>
-                        </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {existingItem ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex items-center bg-[#15253d] border border-emerald-500/50 rounded-lg p-0.5 shadow-inner">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (existingItem.quantity > 1) {
+                                    const nextQty = existingItem.quantity - 1;
+                                    onUpdateItem(existingItem.id, {
+                                      quantity: nextQty,
+                                      totalCost: (existingItem.unitCostCOP || 0) * nextQty,
+                                      totalSalePrice: (existingItem.unitSalePrice || 0) * nextQty,
+                                    });
+                                  } else {
+                                    onDeleteItem(existingItem.id);
+                                  }
+                                }}
+                                className="w-6 h-6 rounded flex items-center justify-center font-bold text-slate-300 hover:text-white hover:bg-slate-700 active:scale-95 transition cursor-pointer"
+                                title="Reducir 1 unidad"
+                              >
+                                -
+                              </button>
+                              <span className="font-mono font-black text-xs text-emerald-300 px-2 min-w-[24px] text-center">
+                                {existingItem.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextQty = (existingItem.quantity || 1) + 1;
+                                  onUpdateItem(existingItem.id, {
+                                    quantity: nextQty,
+                                    totalCost: (existingItem.unitCostCOP || 0) * nextQty,
+                                    totalSalePrice: (existingItem.unitSalePrice || 0) * nextQty,
+                                  });
+                                }}
+                                className="w-6 h-6 rounded flex items-center justify-center font-bold text-slate-300 hover:text-white hover:bg-slate-700 active:scale-95 transition cursor-pointer"
+                                title="Aumentar 1 unidad"
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleAddEquipmentFromCatalog(eq)}
+                              className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-2.5 py-1.5 rounded-lg shadow-sm transition cursor-pointer active:scale-95 whitespace-nowrap"
+                              title="Agregar otra unidad a la cotización"
+                            >
+                              <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                              <span>Otra Unidad</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleAddEquipmentFromCatalog(eq)}
+                            className="inline-flex items-center gap-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white font-black text-xs px-3.5 py-1.5 rounded-lg shadow-md transition cursor-pointer active:scale-95 whitespace-nowrap"
+                          >
+                            <Plus className="w-4 h-4 stroke-[3]" />
+                            <span>Agregar</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1659,9 +1727,33 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="px-4 py-2.5 bg-[#111c2e] border-t border-[#334d6e] flex items-center justify-between text-xs text-slate-400 shrink-0">
-              <span className="text-[11px]">{equipments.length} equipos en catálogo</span>
-              <span className="text-[11px] text-slate-500">Presione <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">ESC</kbd> o clic arriba para cerrar</span>
+            <div className="px-4 py-2.5 bg-[#111c2e] border-t border-[#334d6e] flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300 shrink-0">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="text-[11px] text-slate-400">{equipments.length} equipos en catálogo</span>
+                <span className="inline-flex items-center gap-1.5 bg-[#0284c7]/20 border border-[#0284c7]/40 text-[#38bdf8] px-2.5 py-0.5 rounded-full font-bold text-[11px]">
+                  <ShoppingCart className="w-3 h-3" />
+                  <span>{quoteItems.length} ítems ({quoteItems.reduce((s, it) => s + it.quantity, 0)} uds) en cotización</span>
+                </span>
+                {quoteHeader?.clientName && (
+                  <span className="text-[11px] text-emerald-300 font-semibold truncate max-w-[220px]" title={quoteHeader.clientName}>
+                    Destino: {quoteHeader.clientName}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400 hidden sm:inline">Presione <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">ESC</kbd> al terminar</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddEquipmentDrawerOpen(false);
+                    setCostSearchQuery('');
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow transition cursor-pointer flex items-center gap-1.5 active:scale-95"
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Listo, ver en Gestor de Costos</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>,

@@ -132,6 +132,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
   const [accessories, setAccessories] = useState<{ name: string; costCOP: number; included: boolean }[]>([]);
   const [newAccName, setNewAccName] = useState('');
   const [newAccCost, setNewAccCost] = useState<number>(0);
+  const [newAccIncluded, setNewAccIncluded] = useState<boolean>(true);
   const [partCodeError, setPartCodeError] = useState<string | null>(null);
 
   const isFromPending = Boolean(equipmentToEdit?.sourceOrigin?.startsWith('pending-id:'));

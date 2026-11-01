@@ -228,6 +228,17 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
     const newSt = targetStatus || batchStatusValue;
     if (selectedItemMap.size === 0) return;
 
+    // Guard: Verify all selected items have an assigned OC number
+    const itemsWithoutOC = Array.from(selectedItemMap.values()).filter(
+      (v) => !isValidOCNumber(v.item.ocNumber)
+    );
+    if (itemsWithoutOC.length > 0) {
+      alert(
+        `Debe asignar primero el número de OC oficial a los equipos seleccionados para poder manipular o cambiar su estado.`
+      );
+      return;
+    }
+
     const itemsList = Array.from(selectedItemMap.values()).map((v) => ({
       contractId: v.contractId,
       itemId: v.itemId,
@@ -909,28 +920,34 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                   </div>
                 ) : (
                   !isReadOnly && onUpdateOCNumber ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEditingOCModal({
-                          contractId: contract.id,
-                          supplier: group.supplier,
-                          oldOC: '',
-                          newOC: '',
-                          targetItemIds: group.items.map((it) => it.id),
-                          targetSalesOrderId: salesOrderId || group.items[0]?.salesOrderId,
-                          targetSalesOrderNumber: ovNumberLabel || group.items[0]?.salesOrderNumber,
-                        })
-                      }
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10.5px] font-bold transition cursor-pointer"
-                      title="Asignar el número de Orden de Compra (OC) consecutivo de la empresa"
-                    >
-                      <Plus className="w-3 h-3 stroke-[2.5]" />
-                      <span>Añadir OC</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingOCModal({
+                            contractId: contract.id,
+                            supplier: group.supplier,
+                            oldOC: '',
+                            newOC: '',
+                            targetItemIds: group.items.map((it) => it.id),
+                            targetSalesOrderId: salesOrderId || group.items[0]?.salesOrderId,
+                            targetSalesOrderNumber: ovNumberLabel || group.items[0]?.salesOrderNumber,
+                          })
+                        }
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition cursor-pointer shadow-sm shadow-amber-500/20"
+                        title="Asignar el número de Orden de Compra (OC) consecutivo de la empresa para habilitar la gestión de los equipos"
+                      >
+                        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>Ingresar N° de OC</span>
+                      </button>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                        <Lock className="w-2.5 h-2.5 text-amber-400" />
+                        Bloqueado: Ingrese N° OC para habilitar
+                      </span>
+                    </div>
                   ) : (
                     <span className="font-mono text-[10.5px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
-                      Sin N° OC
+                      Sin N° OC (Bloqueado)
                     </span>
                   )
                 )}
@@ -1174,20 +1191,44 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                               const isSerialsComplete =
                                 serialsCount >= (item.quantity || 1);
 
+                              const hasItemOC = Boolean(
+                                isValidOCNumber(group.ocNumber) || isValidOCNumber(item.ocNumber)
+                              );
+
                               return (
                                 <button
                                   type="button"
-                                  onClick={() => onOpenSerialsModal(contract, item)}
+                                  onClick={() => {
+                                    if (!hasItemOC) {
+                                      if (onUpdateOCNumber) {
+                                        setEditingOCModal({
+                                          contractId: contract.id,
+                                          supplier: group.supplier,
+                                          oldOC: '',
+                                          newOC: '',
+                                          targetItemIds: group.items.map((it) => it.id),
+                                          targetSalesOrderId: salesOrderId || group.items[0]?.salesOrderId,
+                                          targetSalesOrderNumber: ovNumberLabel || group.items[0]?.salesOrderNumber,
+                                        });
+                                      } else {
+                                        alert('Debe colocar el número de la OC primero para poder manipular los datos del equipo.');
+                                      }
+                                      return;
+                                    }
+                                    onOpenSerialsModal(contract, item);
+                                  }}
                                   className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.2 rounded border transition cursor-pointer ${
-                                    isSerialsComplete
+                                    !hasItemOC
+                                      ? 'opacity-50 bg-slate-900 text-slate-400 border-slate-700'
+                                      : isSerialsComplete
                                       ? 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border-emerald-500/50'
                                       : serialsCount > 0
                                       ? 'bg-amber-950/80 hover:bg-amber-900 text-amber-300 border-amber-500/50'
                                       : 'bg-purple-950/80 hover:bg-purple-900 text-purple-300 border-purple-500/40'
                                   }`}
-                                  title="Gestionar seriales, declaración DIAN y dossier hospitalario"
+                                  title={!hasItemOC ? 'Bloqueado: Debe colocar el número de la OC primero' : 'Gestionar seriales, declaración DIAN y dossier hospitalario'}
                                 >
-                                  <Tag className="w-2.5 h-2.5" />
+                                  {!hasItemOC ? <Lock className="w-2.5 h-2.5 text-amber-400" /> : <Tag className="w-2.5 h-2.5" />}
                                   <span>
                                     Seriales ({serialsCount}/{item.quantity})
                                   </span>
@@ -1343,47 +1384,102 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                       {/* Action Buttons */}
                       <td className="py-2 px-2.5 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          {!isReadOnly && (
-                            <>
+                          {!isReadOnly && (() => {
+                              const hasItemOC = Boolean(
+                                isValidOCNumber(group.ocNumber) || isValidOCNumber(item.ocNumber)
+                              );
+
+                              return (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!hasItemOC) {
+                                        if (onUpdateOCNumber) {
+                                          setEditingOCModal({
+                                            contractId: contract.id,
+                                            supplier: group.supplier,
+                                            oldOC: '',
+                                            newOC: '',
+                                            targetItemIds: group.items.map((it) => it.id),
+                                            targetSalesOrderId: salesOrderId || group.items[0]?.salesOrderId,
+                                            targetSalesOrderNumber: ovNumberLabel || group.items[0]?.salesOrderNumber,
+                                          });
+                                        } else {
+                                          alert('Debe colocar el número de la OC primero para poder manipular los datos del equipo.');
+                                        }
+                                        return;
+                                      }
+                                      onOpenEditItem(contract.id, item);
+                                    }}
+                                    className={`p-1 rounded transition cursor-pointer ${
+                                      !hasItemOC
+                                        ? 'bg-slate-900 text-slate-500 hover:text-amber-400'
+                                        : 'bg-[#1b2d46] hover:bg-[#253f63] text-slate-300 hover:text-white'
+                                    }`}
+                                    title={!hasItemOC ? 'Bloqueado: Debe colocar el número de la OC primero' : 'Editar equipo y registrar novedad'}
+                                  >
+                                    {!hasItemOC ? <Lock className="w-3 h-3 text-amber-400" /> : <Edit3 className="w-3 h-3 text-sky-400" />}
+                                  </button>
+
+                                  {onUpdateOCSupplier && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setChangingSupplierModal({
+                                          contractId: contract.id,
+                                          currentSupplier: item.supplier || group.supplier,
+                                          ocNumber: item.ocNumber || group.ocNumber,
+                                          items: [item],
+                                        })
+                                      }
+                                      className="p-1 rounded bg-[#1b2d46] hover:bg-sky-900/60 text-sky-400 hover:text-white transition cursor-pointer border border-sky-500/30"
+                                      title="Reasignar o cambiar proveedor a este equipo"
+                                    >
+                                      <ArrowRightLeft className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
+
+                          {onOpenSerialsModal && (() => {
+                            const hasItemOC = Boolean(
+                              isValidOCNumber(group.ocNumber) || isValidOCNumber(item.ocNumber)
+                            );
+                            return (
                               <button
                                 type="button"
-                                onClick={() => onOpenEditItem(contract.id, item)}
-                                className="p-1 rounded bg-[#1b2d46] hover:bg-[#253f63] text-slate-300 hover:text-white transition cursor-pointer"
-                                title="Editar equipo y registrar novedad"
-                              >
-                                <Edit3 className="w-3 h-3 text-sky-400" />
-                              </button>
-
-                              {onUpdateOCSupplier && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setChangingSupplierModal({
-                                      contractId: contract.id,
-                                      currentSupplier: item.supplier || group.supplier,
-                                      ocNumber: item.ocNumber || group.ocNumber,
-                                      items: [item],
-                                    })
+                                onClick={() => {
+                                  if (!hasItemOC) {
+                                    if (onUpdateOCNumber) {
+                                      setEditingOCModal({
+                                        contractId: contract.id,
+                                        supplier: group.supplier,
+                                        oldOC: '',
+                                        newOC: '',
+                                        targetItemIds: group.items.map((it) => it.id),
+                                        targetSalesOrderId: salesOrderId || group.items[0]?.salesOrderId,
+                                        targetSalesOrderNumber: ovNumberLabel || group.items[0]?.salesOrderNumber,
+                                      });
+                                    } else {
+                                      alert('Debe colocar el número de la OC primero para poder manipular los datos del equipo.');
+                                    }
+                                    return;
                                   }
-                                  className="p-1 rounded bg-[#1b2d46] hover:bg-sky-900/60 text-sky-400 hover:text-white transition cursor-pointer border border-sky-500/30"
-                                  title="Reasignar o cambiar proveedor a este equipo"
-                                >
-                                  <ArrowRightLeft className="w-3 h-3" />
-                                </button>
-                              )}
-                            </>
-                          )}
-
-                          {onOpenSerialsModal && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenSerialsModal(contract, item)}
-                              className="p-1 rounded bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 hover:text-white transition cursor-pointer border border-purple-500/40"
-                              title="Seriales, Declaración DIAN y Dossier Hospitalario"
-                            >
-                              <Tag className="w-3 h-3" />
-                            </button>
-                          )}
+                                  onOpenSerialsModal(contract, item);
+                                }}
+                                className={`p-1 rounded transition cursor-pointer border ${
+                                  !hasItemOC
+                                    ? 'bg-slate-900 text-slate-500 border-slate-800'
+                                    : 'bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 hover:text-white border-purple-500/40'
+                                }`}
+                                title={!hasItemOC ? 'Bloqueado: Debe colocar el número de la OC primero' : 'Seriales, Declaración DIAN y Dossier Hospitalario'}
+                              >
+                                {!hasItemOC ? <Lock className="w-3 h-3 text-amber-400" /> : <Tag className="w-3 h-3" />}
+                              </button>
+                            );
+                          })()}
 
                           <button
                             type="button"

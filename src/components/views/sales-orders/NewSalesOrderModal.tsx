@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -26,6 +26,9 @@ import {
   ChevronUp,
   ChevronsUpDown,
   AlertTriangle,
+  RefreshCw,
+  BookOpen,
+  ExternalLink,
 } from 'lucide-react';
 import {
   SalesOrderRecord,
@@ -40,11 +43,12 @@ import {
   SupplierProfile,
 } from '../../../types';
 import { resolveItemManufacturerBrand } from '../../../utils/equipmentBrandResolver';
-import { generateNextSalesOrderNumber } from '../../../utils/salesOrdersStorage';
-import { formatCOP } from '../../../utils/formatters';
+import { generateNextSalesOrderNumber, createTenderProjectFromQuote } from '../../../utils/salesOrdersStorage';
+import { formatCOP, isValidEquipmentCode, isValidSupplierName } from '../../../utils/formatters';
 import { getStoredClients, ClientRecord } from '../../../utils/clientStorage';
 import { isSalesOrderDeleted } from '../../../utils/tombstones';
 import { getStoredSupplierProfiles } from '../../../utils/ocTrackingStorage';
+import { EquipmentModal } from '../../modals/EquipmentModal';
 
 interface NewSalesOrderModalProps {
   isOpen: boolean;
@@ -249,6 +253,11 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
     return () => window.removeEventListener('syd_suppliers_updated', handleSuppliersUpdated);
   }, []);
 
+  // Notice modal state for items requiring part numbers or suppliers
+  const [showPendingPartsNotice, setShowPendingPartsNotice] = useState(false);
+  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+  const [equipmentToCreateOrEdit, setEquipmentToCreateOrEdit] = useState<MedicalEquipment | null>(null);
+
   // Manual equipment adder state
   const [isAddingManualItem, setIsAddingManualItem] = useState(false);
   const [selectedCatalogEquipmentId, setSelectedCatalogEquipmentId] = useState('');
@@ -268,105 +277,379 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       .replace(/[^a-z0-9]/g, '');
 
   /**
-   * Intelligently detects the assigned supplier for an equipment:
-   * 1. If explicit supplier provided on item, respects it
-   * 2. Checks supplier stored in the equipment catalog when created (eq.supplier, allSuppliers, supplierPrices)
+   * Reads the freshest equipment catalog merging props and localStorage
+   */
+  const getLatestCatalog = (propEquipments: MedicalEquipment[]): MedicalEquipment[] => {
+    try {
+      const raw = localStorage.getItem('syd_equipments_catalog');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map<string, MedicalEquipment>();
+          // Put parsed items from localStorage FIRST so newly created items in Catálogo Maestro take priority
+          parsed.forEach((e) => {
+            if (e) {
+              const k = e.id || (e.code ? `code-${e.code}` : undefined);
+              if (k) map.set(k, e);
+            }
+          });
+          (propEquipments || []).forEach((e) => {
+            if (e) {
+              const k = e.id || (e.code ? `code-${e.code}` : undefined);
+              if (k && !map.has(k)) {
+                map.set(k, e);
+              }
+            }
+          });
+          return Array.from(map.values());
+        }
+      }
+    } catch {}
+    return propEquipments || [];
+  };
+
+  /**
+   * Intelligent matcher that finds the catalog equipment record matching a draft item:
+   * 1. Matches by direct ID (if the catalog equipment has a valid code)
+   * 2. Matches by exact valid equipment code
+   * 3. Matches by exact normalized equipment name (e.g. 'ADIOS' === 'adios')
+   * 4. Matches by model (e.g. item.model matches catalog.model or catalog.name)
+   * 5. Matches by trimmed case-insensitive name or model
+   * 6. Matches by substring containment (>= 3 chars)
+   * 7. Matches by token overlap
+   */
+  const findCatalogMatchForDraftItem = (
+    item: { equipmentId?: string; code?: string; name?: string; model?: string; brand?: string },
+    catalog: MedicalEquipment[]
+  ): MedicalEquipment | undefined => {
+    if (!catalog || catalog.length === 0) return undefined;
+
+    // 1. By direct ID (only if the catalog item has a valid code)
+    if (item.equipmentId) {
+      const match = catalog.find((e) => e.id === item.equipmentId && isValidEquipmentCode(e.code));
+      if (match) return match;
+    }
+
+    // 2. By valid equipment code
+    if (item.code && isValidEquipmentCode(item.code)) {
+      const cleanC = cleanNorm(item.code);
+      const match = catalog.find((e) => cleanNorm(e.code) === cleanC);
+      if (match) return match;
+    }
+
+    const normName = cleanNorm(item.name);
+    const normModel = cleanNorm(item.model);
+    const isSpecificModel =
+      normModel && !['na', 'sinmodelo', 'estandar', 'generico', 'noaplica'].includes(normModel);
+
+    // 3. Exact normalized name match (e.g. 'ADIOS' === 'adios') with valid code preferred
+    if (normName) {
+      const matchWithCode = catalog.find((e) => cleanNorm(e.name) === normName && isValidEquipmentCode(e.code));
+      if (matchWithCode) return matchWithCode;
+      const matchAny = catalog.find((e) => cleanNorm(e.name) === normName);
+      if (matchAny) return matchAny;
+    }
+
+    // 4. Exact model match or item model matching catalog name
+    if (isSpecificModel) {
+      const match = catalog.find(
+        (e) =>
+          isValidEquipmentCode(e.code) &&
+          (cleanNorm(e.model) === normModel ||
+            cleanNorm(e.name) === normModel ||
+            (normName && cleanNorm(e.model) === normName))
+      );
+      if (match) return match;
+    }
+
+    // 5. Trimmed lowercase exact match
+    const lowerName = (item.name || '').trim().toLowerCase();
+    if (lowerName) {
+      const match = catalog.find(
+        (e) =>
+          isValidEquipmentCode(e.code) &&
+          ((e.name || '').trim().toLowerCase() === lowerName ||
+            (e.model || '').trim().toLowerCase() === lowerName)
+      );
+      if (match) return match;
+    }
+
+    // 6. Containment match for names/models of meaningful length (>= 3 chars)
+    if (normName && normName.length >= 3) {
+      const match = catalog.find((e) => {
+        if (!isValidEquipmentCode(e.code)) return false;
+        const catName = cleanNorm(e.name);
+        const catModel = cleanNorm(e.model);
+        return (
+          (catName.length >= 3 && (normName.includes(catName) || catName.includes(normName))) ||
+          (catModel.length >= 3 && (normName.includes(catModel) || catModel.includes(normName)))
+        );
+      });
+      if (match) return match;
+    }
+
+    // 7. Token overlap matching
+    const itemTokens = cleanNorm(item.name).split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
+    if (itemTokens.length > 0) {
+      const match = catalog.find((e) => {
+        if (!isValidEquipmentCode(e.code)) return false;
+        const catTokens = cleanNorm(e.name).split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
+        const common = itemTokens.filter((t) => catTokens.includes(t));
+        return common.length >= 1 && (common.length >= itemTokens.length || common.length >= catTokens.length);
+      });
+      if (match) return match;
+    }
+
+    return undefined;
+  };
+
+  /**
+   * Intelligently detects the assigned supplier and part code for an equipment:
+   * 1. Checks supplier stored in the equipment catalog when created (eq.supplier, allSuppliers, supplierPrices)
+   * 2. Checks explicit supplier provided on item
    * 3. Checks registered supplier directory for suppliers handling this brand or named after the brand
    */
   const detectSupplierAndBrandForItem = (
-    item: { equipmentId?: string; code?: string; name?: string; brand?: string; supplier?: string },
+    item: { equipmentId?: string; code?: string; name?: string; brand?: string; supplier?: string; model?: string },
     profiles: SupplierProfile[] = supplierProfiles
-  ): { supplier: string; brand: string; source: string } => {
-    // 1. Explicit supplier on item
-    if (
-      item.supplier &&
-      item.supplier.trim() &&
-      !['por asignar', 'n/a', 'ninguno', 'sin proveedor asignado', 'proveedor principal'].includes(
-        item.supplier.trim().toLowerCase()
-      )
-    ) {
-      return { supplier: item.supplier.trim(), brand: item.brand || '', source: 'manual' };
+  ): { supplier: string; brand: string; source: string; matchedCode?: string; matchedEqId?: string } => {
+    // 1. Lookup in equipment catalog (fresh catalog)
+    const freshCatalog = getLatestCatalog(equipments);
+    const matchedEq = findCatalogMatchForDraftItem(item, freshCatalog);
+
+    let catalogSupplier = '';
+    let matchedCode = '';
+    let matchedEqId = '';
+
+    if (matchedEq) {
+      if (isValidEquipmentCode(matchedEq.code)) {
+        matchedCode = matchedEq.code.trim();
+      }
+      if (matchedEq.id) {
+        matchedEqId = matchedEq.id;
+      }
+      if (isValidSupplierName(matchedEq.supplier)) {
+        catalogSupplier = matchedEq.supplier.trim();
+      } else if (matchedEq.allSuppliers && Array.isArray(matchedEq.allSuppliers)) {
+        const valid = matchedEq.allSuppliers.find((s) => isValidSupplierName(s));
+        if (valid) catalogSupplier = valid.trim();
+      } else if (matchedEq.supplierPrices && Array.isArray(matchedEq.supplierPrices)) {
+        const valid = matchedEq.supplierPrices.find((sp) => isValidSupplierName(sp.supplier));
+        if (valid) catalogSupplier = valid.supplier.trim();
+      }
     }
 
-    // 2. Lookup in equipment catalog (as assigned when equipment was created)
-    const matchedEq = equipments.find(
-      (e) =>
-        (item.equipmentId && e.id === item.equipmentId) ||
-        (item.code && cleanNorm(e.code) === cleanNorm(item.code)) ||
-        (item.name && cleanNorm(e.name) === cleanNorm(item.name))
-    );
+    // 2. Explicit supplier on item (if it is a valid real supplier name)
+    const explicitSup = isValidSupplierName(item.supplier) ? item.supplier!.trim() : '';
 
-    const catalogBrand = (item.brand || matchedEq?.brand || '').trim();
+    const resolvedSupplier = catalogSupplier || explicitSup;
+    const catalogBrand = (matchedEq?.brand || item.brand || '').trim();
 
-    if (
-      matchedEq?.supplier &&
-      matchedEq.supplier.trim() &&
-      !['por asignar', 'n/a', 'ninguno', 'sin proveedor asignado'].includes(matchedEq.supplier.trim().toLowerCase())
-    ) {
-      return { supplier: matchedEq.supplier.trim(), brand: catalogBrand, source: 'catalogo_equipo' };
+    if (resolvedSupplier) {
+      return {
+        supplier: resolvedSupplier,
+        brand: catalogBrand,
+        source: catalogSupplier ? 'catalogo_equipo' : 'manual',
+        matchedCode,
+        matchedEqId,
+      };
     }
 
-    if (matchedEq?.allSuppliers && Array.isArray(matchedEq.allSuppliers) && matchedEq.allSuppliers.length > 0) {
-      const valid = matchedEq.allSuppliers.find(
-        (s) => s && s.trim() && !['por asignar', 'n/a', 'ninguno', 'sin proveedor asignado'].includes(s.trim().toLowerCase())
-      );
-      if (valid) return { supplier: valid.trim(), brand: catalogBrand, source: 'catalogo_proveedores' };
-    }
+    return {
+      supplier: '',
+      brand: catalogBrand || item.brand || '',
+      source: 'ninguna',
+      matchedCode,
+      matchedEqId,
+    };
+  };
 
-    if (matchedEq?.supplierPrices && Array.isArray(matchedEq.supplierPrices) && matchedEq.supplierPrices.length > 0) {
-      const valid = matchedEq.supplierPrices.find(
-        (sp) =>
-          sp.supplier &&
-          sp.supplier.trim() &&
-          !['por asignar', 'n/a', 'ninguno', 'sin proveedor asignado'].includes(sp.supplier.trim().toLowerCase())
-      );
-      if (valid) return { supplier: valid.supplier.trim(), brand: catalogBrand, source: 'catalogo_precios' };
-    }
+  /**
+   * Universal resolver for item drafts that maps code, supplier, brand, model from the catalog
+   */
+  const resolveDraftItemProps = (
+    rawItem: {
+      equipmentId?: string;
+      code?: string;
+      name: string;
+      brand?: string;
+      model?: string;
+      supplier?: string;
+    },
+    freshCatalog: MedicalEquipment[] = getLatestCatalog(equipments)
+  ) => {
+    const match = findCatalogMatchForDraftItem(rawItem, freshCatalog);
+    const detected = detectSupplierAndBrandForItem(rawItem);
 
-    // 3. Search in equipment catalog for any other equipment with the SAME brand that has an assigned supplier
-    if (catalogBrand) {
-      const normBrand = cleanNorm(catalogBrand);
+    const rawCode = rawItem.code || '';
+    const isRawCodeValid = isValidEquipmentCode(rawCode);
+    const effectiveCode = isRawCodeValid
+      ? rawCode.trim().toUpperCase()
+      : (match && isValidEquipmentCode(match.code)
+          ? match.code.trim().toUpperCase()
+          : (detected.matchedCode && isValidEquipmentCode(detected.matchedCode)
+              ? detected.matchedCode.trim().toUpperCase()
+              : rawCode.trim().toUpperCase()));
 
-      const eqSameBrand = equipments.find((e) => {
-        const eBrand = cleanNorm(e.brand);
-        return (
-          eBrand &&
-          (eBrand === normBrand || eBrand.includes(normBrand) || normBrand.includes(eBrand)) &&
-          e.supplier &&
-          !['por asignar', 'n/a', 'ninguno', 'sin proveedor asignado'].includes(e.supplier.trim().toLowerCase())
+    const rawSup = rawItem.supplier || '';
+    const isRawSupValid = isValidSupplierName(rawSup);
+    const effectiveSupplier = (match && isValidSupplierName(match.supplier))
+      ? match.supplier.trim()
+      : (isRawSupValid
+          ? rawSup.trim()
+          : (isValidSupplierName(detected.supplier) ? detected.supplier.trim() : ''));
+
+    const effectiveBrand = match?.brand || rawItem.brand || detected.brand || '';
+    const effectiveModel = match?.model || rawItem.model || '';
+    const effectiveEqId = (match && match.id) ? match.id : (rawItem.equipmentId || detected.matchedEqId);
+    const isEligible = isValidEquipmentCode(effectiveCode) && isValidSupplierName(effectiveSupplier);
+
+    return {
+      code: effectiveCode,
+      supplier: effectiveSupplier,
+      brand: effectiveBrand,
+      model: effectiveModel,
+      equipmentId: effectiveEqId,
+      isEligible,
+    };
+  };
+
+  /**
+   * Scans draft items against fresh catalog and automatically enriches matching equipment
+   */
+  const syncDraftItemsWithCatalog = useCallback((showFeedback: boolean = false) => {
+    const freshCatalog = getLatestCatalog(equipments);
+    let updatedCount = 0;
+
+    setItemDrafts((prev) => {
+      let hasChanges = false;
+      const next = prev.map((item) => {
+        const resolved = resolveDraftItemProps(item, freshCatalog);
+        let itemChanged = false;
+
+        let newCode = item.code;
+        let newSupplier = item.supplier;
+        let newBrand = item.brand;
+        let newModel = item.model;
+        let newEqId = item.equipmentId;
+
+        if (!isValidEquipmentCode(newCode) && isValidEquipmentCode(resolved.code)) {
+          newCode = resolved.code;
+          itemChanged = true;
+        }
+        if (!isValidSupplierName(newSupplier) && isValidSupplierName(resolved.supplier)) {
+          newSupplier = resolved.supplier;
+          itemChanged = true;
+        }
+        if (!newBrand && resolved.brand) {
+          newBrand = resolved.brand;
+          itemChanged = true;
+        }
+        if (!newModel && resolved.model) {
+          newModel = resolved.model;
+          itemChanged = true;
+        }
+        if (!newEqId && resolved.equipmentId) {
+          newEqId = resolved.equipmentId;
+          itemChanged = true;
+        }
+
+        const nowValid = isValidEquipmentCode(newCode) && isValidSupplierName(newSupplier);
+        const nextIsSelected = item.isSelected || nowValid;
+        if (nextIsSelected !== item.isSelected) {
+          itemChanged = true;
+        }
+
+        if (itemChanged) {
+          hasChanges = true;
+          updatedCount++;
+          return {
+            ...item,
+            code: newCode,
+            supplier: newSupplier,
+            brand: newBrand,
+            model: newModel,
+            equipmentId: newEqId,
+            isSelected: nextIsSelected,
+          };
+        }
+        return item;
+      });
+
+      return hasChanges ? next : prev;
+    });
+
+    if (showFeedback) {
+      if (updatedCount > 0) {
+        alert(
+          `✅ SINCRONIZACIÓN EXITOSA:\n\nSe detectaron y completaron ${updatedCount} equipo(s) con sus números de parte y proveedores desde el Catálogo Maestro.`
         );
-      });
-      if (eqSameBrand?.supplier) {
-        return { supplier: eqSameBrand.supplier.trim(), brand: catalogBrand, source: 'catalogo_misma_marca' };
+      } else {
+        alert(
+          'ℹ️ Catálogo Maestro consultado: los equipos pendientes aún no aparecen creados con número de parte y proveedor asignado.'
+        );
       }
+    }
+  }, [equipments]);
 
-      // 4. Search in registered Supplier Directory for suppliers handling this brand
-      // A. Supplier with this brand in their brand list
-      const supplierWithBrand = profiles.find((p) =>
-        p.brands?.some((b) => {
-          if (!b) return false;
-          const bNorm = cleanNorm(b);
-          return bNorm === normBrand || bNorm.includes(normBrand) || normBrand.includes(bNorm);
-        })
-      );
-      if (supplierWithBrand) {
-        return { supplier: supplierWithBrand.name.trim(), brand: catalogBrand, source: 'marca_proveedor' };
+  // Sync draft items whenever modal opens or catalog updates in localStorage/window
+  useEffect(() => {
+    if (!isOpen) return;
+    syncDraftItemsWithCatalog(false);
+
+    const handleCatalogUpdated = () => {
+      syncDraftItemsWithCatalog(false);
+    };
+
+    window.addEventListener('syd_equipment_catalog_updated', handleCatalogUpdated);
+    window.addEventListener('storage', handleCatalogUpdated);
+    return () => {
+      window.removeEventListener('syd_equipment_catalog_updated', handleCatalogUpdated);
+      window.removeEventListener('storage', handleCatalogUpdated);
+    };
+  }, [isOpen, syncDraftItemsWithCatalog]);
+
+  const handleOpenCreateInCatalog = (item: ItemDraftState) => {
+    const prefilledEq: MedicalEquipment = {
+      id: `eq-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: item.name,
+      code: isValidEquipmentCode(item.code) ? item.code : '',
+      brand: item.brand && item.brand !== 'Por Asignar' ? item.brand : 'MINDRAY',
+      model: item.model || item.name,
+      category: 'Monitoreo',
+      supplier: isValidSupplierName(item.supplier) ? item.supplier : '',
+      baseCostCOP: item.unitSalePriceCOP ? Math.round(item.unitSalePriceCOP / 1.5874) : 0,
+      technicalSpecs: [],
+      taxExempt: false,
+      warrantyMonths: 12,
+    };
+    setEquipmentToCreateOrEdit(prefilledEq);
+    setIsEquipmentModalOpen(true);
+  };
+
+  const handleSaveCatalogEquipment = (newEq: MedicalEquipment) => {
+    try {
+      const raw = localStorage.getItem('syd_equipments_catalog');
+      let currentCatalog: MedicalEquipment[] = [];
+      if (raw) currentCatalog = JSON.parse(raw);
+      const idx = currentCatalog.findIndex((e) => e.id === newEq.id || (e.code && e.code === newEq.code));
+      if (idx >= 0) {
+        currentCatalog[idx] = newEq;
+      } else {
+        currentCatalog = [newEq, ...currentCatalog];
       }
-
-      // B. Supplier whose name matches the brand
-      const supplierNamedBrand = profiles.find((p) => {
-        const normName = cleanNorm(p.name);
-        return normName === normBrand || normName.includes(normBrand) || normBrand.includes(normName);
-      });
-      if (supplierNamedBrand) {
-        return { supplier: supplierNamedBrand.name.trim(), brand: catalogBrand, source: 'proveedor_marca' };
-      }
-
-      // C. Brand itself as manufacturer/supplier
-      return { supplier: catalogBrand, brand: catalogBrand, source: 'marca_directa' };
+      localStorage.setItem('syd_equipments_catalog', JSON.stringify(currentCatalog));
+    } catch (err) {
+      console.error('Error saving equipment to localStorage:', err);
     }
 
-    return { supplier: item.supplier || 'Por Asignar', brand: item.brand || '', source: 'ninguna' };
+    window.dispatchEvent(new CustomEvent('syd_equipment_catalog_updated', { detail: newEq }));
+    setIsEquipmentModalOpen(false);
+    setEquipmentToCreateOrEdit(null);
+
+    setTimeout(() => {
+      syncDraftItemsWithCatalog(true);
+    }, 150);
   };
 
   /**
@@ -652,21 +935,16 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       setStatus(orderToEdit.status || 'En Proceso');
       setNotes(orderToEdit.notes || '');
 
+      const freshCatalog = getLatestCatalog(equipments);
       const mapped: ItemDraftState[] = (orderToEdit.items || []).map((it) => {
-        const detected = detectSupplierAndBrandForItem(it);
-        const isPlaceholderSup =
-          !it.supplier ||
-          ['por asignar', 'sin proveedor asignado', 'n/a', 'ninguno', 'proveedor principal'].includes(
-            it.supplier.trim().toLowerCase()
-          );
-        const resolvedSup = (!isPlaceholderSup && it.supplier?.trim())
-          ? it.supplier.trim()
-          : (detected.supplier || 'Por Asignar');
-
+        const resolved = resolveDraftItemProps(it, freshCatalog);
         return {
           ...it,
-          brand: it.brand || detected.brand || '',
-          supplier: resolvedSup,
+          code: resolved.code || it.code,
+          supplier: resolved.supplier || it.supplier,
+          brand: resolved.brand || it.brand,
+          model: resolved.model || it.model,
+          equipmentId: resolved.equipmentId || it.equipmentId,
           isSelected: true,
           equipmentStatus: it.equipmentStatus || 'Pendiente de OC',
         };
@@ -704,24 +982,36 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
         initialTenderToConvert.clientName
       );
 
-      const itemsWithRemaining = (initialTenderToConvert.items || []).map((tItem, idx) => {
+      let tenderItemsList = initialTenderToConvert.items || [];
+      if (tenderItemsList.length === 0 && (initialTenderToConvert.linkedQuoteNumber || initialTenderToConvert.linkedQuoteId || initialTenderToConvert.header?.linkedQuoteNumber || initialTenderToConvert.header?.linkedQuoteId)) {
+        const qNum = initialTenderToConvert.linkedQuoteNumber || initialTenderToConvert.header?.linkedQuoteNumber;
+        const qId = initialTenderToConvert.linkedQuoteId || initialTenderToConvert.header?.linkedQuoteId;
+        const matchedQuote = (savedQuotes || []).find((q) => (qNum && q.quoteNumber === qNum) || (qId && q.id === qId));
+        if (matchedQuote && matchedQuote.items && matchedQuote.items.length > 0) {
+          const generated = createTenderProjectFromQuote(matchedQuote, tenderClients, equipments);
+          tenderItemsList = generated.items || [];
+        }
+      }
+
+      const itemsWithRemaining = tenderItemsList.map((tItem, idx) => {
         const totalQty = Number(tItem.quantity) || 1;
         const alreadyDispatched = getDispatchedCount(tItem, dispatchedMap);
         const remaining = totalQty - alreadyDispatched;
         return { tItem, totalQty, alreadyDispatched, remaining, idx };
       }).filter((x) => x.remaining > 0);
 
+      const freshCatalog = getLatestCatalog(equipments);
       const mapped: ItemDraftState[] = itemsWithRemaining.map(({ tItem, totalQty, alreadyDispatched, remaining, idx }) => {
         const unitPrice = Number(tItem.offeredUnitPrice) || 0;
-        const detected = detectSupplierAndBrandForItem(tItem);
+        const resolved = resolveDraftItemProps(tItem, freshCatalog);
         return {
           id: `item-${Date.now()}-${idx}`,
-          equipmentId: tItem.equipmentId,
-          code: tItem.code || `EQ-${idx + 1}`,
+          equipmentId: resolved.equipmentId,
+          code: resolved.code,
           name: tItem.name,
-          brand: tItem.brand || detected.brand || '',
-          supplier: (tItem as any).supplier || detected.supplier || 'Por Asignar',
-          model: tItem.model || '',
+          brand: resolved.brand,
+          supplier: resolved.supplier,
+          model: resolved.model,
           quotedQuantity: remaining,
           quantityToDispatch: remaining,
           totalContractQuantity: totalQty,
@@ -730,7 +1020,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
           totalSalePriceCOP: unitPrice * remaining,
           equipmentStatus: 'Pendiente de OC',
           assignedSerialNumbers: [],
-          isSelected: true,
+          isSelected: resolved.isEligible,
           notes: tItem.observations || '',
         };
       });
@@ -771,17 +1061,18 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
         return { qItem, totalQty, alreadyDispatched, remaining, idx };
       }).filter((x) => x.remaining > 0);
 
+      const freshCatalog = getLatestCatalog(equipments);
       const mapped: ItemDraftState[] = itemsWithRemaining.map(({ qItem, totalQty, alreadyDispatched, remaining, idx }) => {
         const unitPrice = Number(qItem.unitSalePrice) || 0;
-        const detected = detectSupplierAndBrandForItem(qItem);
+        const resolved = resolveDraftItemProps(qItem, freshCatalog);
         return {
           id: `item-${Date.now()}-${idx}`,
-          equipmentId: qItem.equipmentId,
-          code: qItem.code || `EQ-${idx + 1}`,
+          equipmentId: resolved.equipmentId,
+          code: resolved.code,
           name: qItem.name,
-          brand: qItem.brand || detected.brand || '',
-          supplier: qItem.supplier || detected.supplier || 'Por Asignar',
-          model: qItem.model || '',
+          brand: resolved.brand,
+          supplier: resolved.supplier,
+          model: resolved.model,
           quotedQuantity: remaining,
           quantityToDispatch: remaining,
           totalContractQuantity: totalQty,
@@ -790,7 +1081,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
           totalSalePriceCOP: unitPrice * remaining,
           equipmentStatus: 'Pendiente de OC',
           assignedSerialNumbers: [],
-          isSelected: true,
+          isSelected: resolved.isEligible,
           notes: qItem.notes || '',
         };
       });
@@ -872,17 +1163,18 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
         return { qItem, totalQty, alreadyDispatched, remaining, idx };
       }).filter((x) => x.remaining > 0);
 
+      const freshCatalog = getLatestCatalog(equipments);
       const mapped: ItemDraftState[] = itemsWithRemaining.map(({ qItem, totalQty, alreadyDispatched, remaining, idx }) => {
         const unitPrice = Number(qItem.unitSalePrice) || 0;
-        const detected = detectSupplierAndBrandForItem(qItem);
+        const resolved = resolveDraftItemProps(qItem, freshCatalog);
         return {
           id: `item-${Date.now()}-${idx}`,
-          equipmentId: qItem.equipmentId,
-          code: qItem.code || `EQ-${idx + 1}`,
+          equipmentId: resolved.equipmentId,
+          code: resolved.code,
           name: qItem.name,
-          brand: qItem.brand || detected.brand || '',
-          supplier: qItem.supplier || detected.supplier || 'Por Asignar',
-          model: qItem.model || '',
+          brand: resolved.brand,
+          supplier: resolved.supplier,
+          model: resolved.model,
           quotedQuantity: remaining,
           quantityToDispatch: remaining,
           totalContractQuantity: totalQty,
@@ -891,7 +1183,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
           totalSalePriceCOP: unitPrice * remaining,
           equipmentStatus: 'Pendiente de OC',
           assignedSerialNumbers: [],
-          isSelected: true,
+          isSelected: resolved.isEligible,
           notes: qItem.notes || '',
         };
       });
@@ -938,24 +1230,36 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
           matchedTender.clientName
         );
 
-        const itemsWithRemaining = (matchedTender.items || []).map((tItem, idx) => {
+        let tenderItemsList = matchedTender.items || [];
+        if (tenderItemsList.length === 0 && (matchedTender.linkedQuoteNumber || matchedTender.linkedQuoteId || matchedTender.header?.linkedQuoteNumber || matchedTender.header?.linkedQuoteId)) {
+          const qNum = matchedTender.linkedQuoteNumber || matchedTender.header?.linkedQuoteNumber;
+          const qId = matchedTender.linkedQuoteId || matchedTender.header?.linkedQuoteId;
+          const matchedQuote = (savedQuotes || []).find((q) => (qNum && q.quoteNumber === qNum) || (qId && q.id === qId));
+          if (matchedQuote && matchedQuote.items && matchedQuote.items.length > 0) {
+            const generated = createTenderProjectFromQuote(matchedQuote, tenderClients, equipments);
+            tenderItemsList = generated.items || [];
+          }
+        }
+
+        const itemsWithRemaining = tenderItemsList.map((tItem, idx) => {
           const totalQty = Number(tItem.quantity) || 1;
           const alreadyDispatched = getDispatchedCount(tItem, tracker);
           const remaining = totalQty - alreadyDispatched;
           return { tItem, totalQty, alreadyDispatched, remaining, idx };
         }).filter((x) => x.remaining > 0);
 
+        const freshCatalog = getLatestCatalog(equipments);
         const mapped: ItemDraftState[] = itemsWithRemaining.map(({ tItem, totalQty, alreadyDispatched, remaining, idx }) => {
           const unitPrice = Number(tItem.offeredUnitPrice) || 0;
-          const detected = detectSupplierAndBrandForItem(tItem);
+          const resolved = resolveDraftItemProps(tItem, freshCatalog);
           return {
             id: `item-${Date.now()}-${idx}`,
-            equipmentId: tItem.equipmentId,
-            code: tItem.code || `EQ-${idx + 1}`,
+            equipmentId: resolved.equipmentId,
+            code: resolved.code,
             name: tItem.name,
-            brand: tItem.brand || detected.brand || '',
-            supplier: (tItem as any).supplier || detected.supplier || 'Por Asignar',
-            model: tItem.model || '',
+            brand: resolved.brand,
+            supplier: resolved.supplier,
+            model: resolved.model,
             quotedQuantity: remaining,
             quantityToDispatch: remaining,
             totalContractQuantity: totalQty,
@@ -964,7 +1268,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
             totalSalePriceCOP: unitPrice * remaining,
             equipmentStatus: 'Pendiente de OC',
             assignedSerialNumbers: [],
-            isSelected: true,
+            isSelected: resolved.isEligible,
             notes: tItem.observations || '',
           };
         });
@@ -1013,24 +1317,36 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
         matchedTender.clientName
       );
 
-      const itemsWithRemaining = (matchedTender.items || []).map((tItem, idx) => {
+      let tenderItemsList = matchedTender.items || [];
+      if (tenderItemsList.length === 0 && (matchedTender.linkedQuoteNumber || matchedTender.linkedQuoteId || matchedTender.header?.linkedQuoteNumber || matchedTender.header?.linkedQuoteId)) {
+        const qNum = matchedTender.linkedQuoteNumber || matchedTender.header?.linkedQuoteNumber;
+        const qId = matchedTender.linkedQuoteId || matchedTender.header?.linkedQuoteId;
+        const matchedQuote = (savedQuotes || []).find((q) => (qNum && q.quoteNumber === qNum) || (qId && q.id === qId));
+        if (matchedQuote && matchedQuote.items && matchedQuote.items.length > 0) {
+          const generated = createTenderProjectFromQuote(matchedQuote, tenderClients, equipments);
+          tenderItemsList = generated.items || [];
+        }
+      }
+
+      const itemsWithRemaining = tenderItemsList.map((tItem, idx) => {
         const totalQty = Number(tItem.quantity) || 1;
         const alreadyDispatched = getDispatchedCount(tItem, dispatchedMap);
         const remaining = totalQty - alreadyDispatched;
         return { tItem, totalQty, alreadyDispatched, remaining, idx };
       }).filter((x) => x.remaining > 0);
 
+      const freshCatalog = getLatestCatalog(equipments);
       const mapped: ItemDraftState[] = itemsWithRemaining.map(({ tItem, totalQty, alreadyDispatched, remaining, idx }) => {
         const unitPrice = Number(tItem.offeredUnitPrice) || 0;
-        const detected = detectSupplierAndBrandForItem(tItem);
+        const resolved = resolveDraftItemProps(tItem, freshCatalog);
         return {
           id: `item-${Date.now()}-${idx}`,
-          equipmentId: tItem.equipmentId,
-          code: tItem.code || `EQ-${idx + 1}`,
+          equipmentId: resolved.equipmentId,
+          code: resolved.code,
           name: tItem.name,
-          brand: tItem.brand || detected.brand || '',
-          supplier: (tItem as any).supplier || detected.supplier || 'Por Asignar',
-          model: tItem.model || '',
+          brand: resolved.brand,
+          supplier: resolved.supplier,
+          model: resolved.model,
           quotedQuantity: remaining,
           quantityToDispatch: remaining,
           totalContractQuantity: totalQty,
@@ -1039,7 +1355,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
           totalSalePriceCOP: unitPrice * remaining,
           equipmentStatus: 'Pendiente de OC',
           assignedSerialNumbers: [],
-          isSelected: true,
+          isSelected: resolved.isEligible,
           notes: tItem.observations || '',
         };
       });
@@ -1234,6 +1550,13 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
     );
   };
 
+  // Change code / part number for an item
+  const handleItemCodeChange = (index: number, newCode: string) => {
+    setItemDrafts((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, code: newCode } : item))
+    );
+  };
+
   // Change item equipment status
   const handleItemStatusChange = (index: number, newStatus: SalesOrderEquipmentStatus) => {
     setItemDrafts((prev) =>
@@ -1310,19 +1633,26 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
   const handleAddManualItem = () => {
     if (!manualItemName.trim()) return;
 
+    const selectedEq = equipments.find((e) => e.id === selectedCatalogEquipmentId);
+    const itemCode = selectedEq?.code || '';
     const detected = detectSupplierAndBrandForItem({
       equipmentId: selectedCatalogEquipmentId || undefined,
+      code: itemCode,
       name: manualItemName.trim(),
       brand: manualItemBrand.trim(),
     });
+    const resolvedSup = isValidSupplierName(selectedEq?.supplier)
+      ? selectedEq!.supplier!.trim()
+      : (isValidSupplierName(detected.supplier) ? detected.supplier.trim() : '');
+    const isComplete = isValidEquipmentCode(itemCode) && isValidSupplierName(resolvedSup);
 
     const newItem: ItemDraftState = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       equipmentId: selectedCatalogEquipmentId || undefined,
-      code: 'EQ-MANUAL',
+      code: itemCode,
       name: manualItemName.trim(),
       brand: manualItemBrand.trim() || detected.brand,
-      supplier: detected.supplier || manualItemBrand.trim() || 'Por Asignar',
+      supplier: resolvedSup,
       model: manualItemModel.trim(),
       quotedQuantity: manualItemQty,
       quantityToDispatch: manualItemQty,
@@ -1332,7 +1662,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       totalSalePriceCOP: manualItemQty * manualItemUnitPrice,
       equipmentStatus: 'Pendiente de OC',
       assignedSerialNumbers: [],
-      isSelected: true,
+      isSelected: isComplete,
     };
 
     setItemDrafts((prev) => [...prev, newItem]);
@@ -1448,12 +1778,15 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
         const remaining = totalQty - dispatched;
         if (remaining > 0) {
           const detected = detectSupplierAndBrandForItem(ti);
+          const resolvedSup = isValidSupplierName((ti as any).supplier)
+            ? (ti as any).supplier.trim()
+            : (isValidSupplierName(detected.supplier) ? detected.supplier.trim() : '');
           list.push({
             sourceId: ti.id || `tender-item-${idx}`,
-            code: ti.code || `EQ-${idx + 1}`,
+            code: ti.code || '',
             name: ti.name,
             brand: ti.brand || detected.brand || '',
-            supplier: (ti as any).supplier || detected.supplier || 'Por Asignar',
+            supplier: resolvedSup,
             model: ti.model || '',
             quantity: remaining,
             totalContractQty: totalQty,
@@ -1477,12 +1810,15 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
           if (remaining > 0) {
             const cost = Number(ci.costPriceCOP) || 0;
             const detected = detectSupplierAndBrandForItem(ci);
+            const resolvedSup = isValidSupplierName(ci.supplier)
+              ? ci.supplier.trim()
+              : (isValidSupplierName(detected.supplier) ? detected.supplier.trim() : '');
             list.push({
               sourceId: ci.id || `contract-item-${idx}`,
-              code: ci.code || `EQ-${idx + 1}`,
+              code: ci.code || '',
               name: ci.name,
               brand: ci.brand || detected.brand || '',
-              supplier: ci.supplier || detected.supplier || 'Por Asignar',
+              supplier: resolvedSup,
               model: ci.model || '',
               quantity: remaining,
               totalContractQty: totalQty,
@@ -1504,12 +1840,15 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
         const remaining = totalQty - dispatched;
         if (remaining > 0) {
           const detected = detectSupplierAndBrandForItem(qi);
+          const resolvedSup = isValidSupplierName(qi.supplier)
+            ? qi.supplier.trim()
+            : (isValidSupplierName(detected.supplier) ? detected.supplier.trim() : '');
           list.push({
             sourceId: qi.id || `quote-item-${idx}`,
-            code: qi.code || `EQ-${idx + 1}`,
+            code: qi.code || '',
             name: qi.name,
             brand: qi.brand || detected.brand || '',
-            supplier: qi.supplier || detected.supplier || 'Por Asignar',
+            supplier: resolvedSup,
             model: qi.model || '',
             quantity: remaining,
             totalContractQty: totalQty,
@@ -1526,13 +1865,11 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
     return list;
   }, [linkedTender, linkedContract, linkedQuote, existingOrders, orderToEdit, supplierProfiles]);
 
-  // Which equipments from the linked contract are currently NOT selected in this OV
+  // Which equipments from the linked contract are currently NOT present in this OV workspace
   const unselectedContractItems = useMemo(() => {
     return contractAvailableEquipments.filter((cEq) => {
-      return !itemDrafts.some((draft) => {
-        if (!draft.isSelected) return false;
-        return doesItemMatch(cEq, draft);
-      });
+      // If the item already exists in the table below (itemDrafts), do NOT show it in the top purple box
+      return !itemDrafts.some((draft) => doesItemMatch(cEq, draft));
     });
   }, [contractAvailableEquipments, itemDrafts]);
 
@@ -1545,16 +1882,17 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
         return prev.map((d, i) => (i === existingIdx ? { ...d, isSelected: true } : d));
       }
 
-      const detected = detectSupplierAndBrandForItem(cEq);
+      const freshCatalog = getLatestCatalog(equipments);
+      const resolved = resolveDraftItemProps(cEq, freshCatalog);
 
       const newItem: ItemDraftState = {
         id: `item-from-contract-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        equipmentId: cEq.equipmentId,
-        code: cEq.code,
+        equipmentId: resolved.equipmentId,
+        code: resolved.code,
         name: cEq.name,
-        brand: cEq.brand || detected.brand || '',
-        supplier: cEq.supplier || detected.supplier || 'Por Asignar',
-        model: cEq.model,
+        brand: resolved.brand,
+        supplier: resolved.supplier,
+        model: resolved.model || cEq.model,
         quotedQuantity: cEq.quantity,
         quantityToDispatch: cEq.quantity,
         totalContractQuantity: cEq.totalContractQty || cEq.quantity,
@@ -1563,7 +1901,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
         totalSalePriceCOP: cEq.quantity * cEq.unitPriceCOP,
         equipmentStatus: 'Pendiente de OC',
         assignedSerialNumbers: [],
-        isSelected: true,
+        isSelected: resolved.isEligible,
         notes: cEq.notes || '',
       };
       return [...prev, newItem];
@@ -1602,6 +1940,10 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
   // Calculate selected total
   const selectedItems = itemDrafts.filter((it) => it.isSelected);
   const totalSelectedValueCOP = selectedItems.reduce((acc, it) => acc + (it.totalSalePriceCOP || 0), 0);
+  const incompleteDraftItems = useMemo(
+    () => itemDrafts.filter((it) => !isValidEquipmentCode(it.code) || !isValidSupplierName(it.supplier)),
+    [itemDrafts]
+  );
 
   // Submit handler
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1626,25 +1968,42 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       return;
     }
 
-    const cleanItems: SalesOrderItem[] = selectedItems.map((draft) => {
+    const eligibleItems = selectedItems.filter(
+      (draft) => isValidEquipmentCode(draft.code) && isValidSupplierName(draft.supplier)
+    );
+    const incompleteItems = selectedItems.filter(
+      (draft) => !isValidEquipmentCode(draft.code) || !isValidSupplierName(draft.supplier)
+    );
+
+    if (eligibleItems.length === 0) {
+      setShowPendingPartsNotice(true);
+      return;
+    }
+
+    if (incompleteItems.length > 0) {
+      const proceed = confirm(
+        `⚠️ ATENCIÓN: EQUIPOS SIN PARTE O PROVEEDOR\n\nHay ${incompleteItems.length} equipo(s) seleccionados que NO tienen Número de Parte o Proveedor asignado:\n${incompleteItems.map((i) => `• ${i.name} (Cód: ${i.code || 'Sin código'}, Prov: ${i.supplier || 'Sin proveedor'})`).join('\n')}\n\nPor regla de negocio, estos equipos incompletos NO se incluirán en la Orden de Venta.\n\n¿Desea crear la Orden de Venta únicamente con los ${eligibleItems.length} equipo(s) válidos?`
+      );
+      if (!proceed) {
+        setShowPendingPartsNotice(true);
+        return;
+      }
+    }
+
+    const cleanItems: SalesOrderItem[] = eligibleItems.map((draft) => {
       const { isSelected, totalContractQuantity, alreadyDispatchedQuantity, ...rest } = draft;
-      const detected = detectSupplierAndBrandForItem(rest);
-      const isPlaceholder =
-        !rest.supplier ||
-        ['por asignar', 'sin proveedor asignado', 'n/a', 'ninguno', 'proveedor principal'].includes(
-          rest.supplier.trim().toLowerCase()
-        );
-      const finalSupplier = (!isPlaceholder && rest.supplier?.trim())
-        ? rest.supplier.trim()
-        : (detected.supplier && detected.supplier !== 'Por Asignar' ? detected.supplier : (rest.brand || detected.brand || 'Proveedor Principal'));
-      const finalBrand = rest.brand?.trim() || detected.brand?.trim() || '';
+      const finalSupplier = rest.supplier.trim();
+      const finalBrand = rest.brand?.trim() || '';
       return {
         ...rest,
+        code: rest.code.trim().toUpperCase(),
         brand: finalBrand,
         supplier: finalSupplier,
         supplierName: finalSupplier,
       };
     });
+
+    const finalTotalValueCOP = cleanItems.reduce((acc, it) => acc + (it.totalSalePriceCOP || 0), 0);
 
     const finalOrder: SalesOrderRecord = {
       id: orderToEdit?.id || `ov-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -1665,7 +2024,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
       deliveryDate: deliveryDate || undefined,
       status: status,
       items: cleanItems,
-      totalValueCOP: totalSelectedValueCOP,
+      totalValueCOP: finalTotalValueCOP,
       invoicedStatus: orderToEdit?.invoicedStatus || 'No Facturada',
       invoiceNumber: orderToEdit?.invoiceNumber,
       invoiceId: orderToEdit?.invoiceId,
@@ -1900,8 +2259,18 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                             undefined,
                             t.clientName
                           );
-                          const totalTenderUnits = (t.items || []).reduce((sum, it) => sum + (Number(it.quantity) || 1), 0);
-                          const pendingTenderUnits = (t.items || []).reduce((sum, it) => {
+                          let tItems = t.items || [];
+                          if (tItems.length === 0 && (t.linkedQuoteNumber || t.linkedQuoteId || t.header?.linkedQuoteNumber || t.header?.linkedQuoteId)) {
+                            const qNum = t.linkedQuoteNumber || t.header?.linkedQuoteNumber;
+                            const qId = t.linkedQuoteId || t.header?.linkedQuoteId;
+                            const q = (savedQuotes || []).find((sq) => (qNum && sq.quoteNumber === qNum) || (qId && sq.id === qId));
+                            if (q && q.items && q.items.length > 0) {
+                              const generated = createTenderProjectFromQuote(q, tenderClients, equipments);
+                              tItems = generated.items || [];
+                            }
+                          }
+                          const totalTenderUnits = tItems.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0);
+                          const pendingTenderUnits = tItems.reduce((sum, it) => {
                             const q = Number(it.quantity) || 1;
                             const d = getDispatchedCount(it, tracker);
                             return sum + Math.max(0, q - d);
@@ -2224,6 +2593,28 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                       </>
                     )}
 
+                    {incompleteDraftItems.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowPendingPartsNotice(true)}
+                        className="text-xs px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 transition cursor-pointer flex items-center gap-1.5 font-bold shadow-2xs"
+                        title="Ver ventana de aviso: equipos que requieren crear número de parte y asignar proveedor"
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                        <span>{incompleteDraftItems.length} Pendiente(s) (Ver Aviso)</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => syncDraftItemsWithCatalog(true)}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-sky-950/70 hover:bg-sky-900/80 text-sky-300 border border-sky-500/40 transition cursor-pointer flex items-center gap-1.5 font-semibold shadow-2xs"
+                      title="Sincronizar y detectar automáticamente partes creadas en el Catálogo Maestro"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Detectar Catálogo</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => setIsAddingManualItem(!isAddingManualItem)}
@@ -2493,7 +2884,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                                   </td>
 
                                   {/* Equipo Info */}
-                                  <td className="py-2 px-2.5 min-w-[170px]">
+                                  <td className="py-2 px-2.5 min-w-[200px]">
                                     <div className="flex items-center gap-2">
                                       <div className={`font-semibold truncate max-w-[200px] sm:max-w-[240px] ${item.isSelected ? 'text-white' : 'text-slate-400'}`}>
                                         {item.name}
@@ -2504,12 +2895,22 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                                         </span>
                                       )}
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5 flex-wrap">
-                                      {item.code && (
-                                        <span className="font-mono text-cyan-300 bg-slate-900 px-1 py-0.2 rounded border border-slate-800">
-                                          {item.code}
-                                        </span>
-                                      )}
+                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-1 flex-wrap">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-slate-400 font-medium">N° Parte:</span>
+                                        <input
+                                          type="text"
+                                          value={item.code || ''}
+                                          onChange={(e) => handleItemCodeChange(index, e.target.value)}
+                                          placeholder="N° de Parte..."
+                                          className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
+                                            isValidEquipmentCode(item.code)
+                                              ? 'bg-slate-900 border-slate-700 text-cyan-300'
+                                              : 'bg-rose-950/50 border-rose-500/70 text-rose-200 placeholder:text-rose-400/60'
+                                          } focus:outline-none focus:border-amber-400 w-28`}
+                                          title="Número de parte o código obligatorio del equipo"
+                                        />
+                                      </div>
                                       <span>{resolveItemManufacturerBrand(item)}</span>
                                       {item.model && <span>({item.model})</span>}
                                       {item.totalContractQuantity !== undefined && item.alreadyDispatchedQuantity !== undefined && item.alreadyDispatchedQuantity > 0 ? (
@@ -2518,6 +2919,18 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                                         </span>
                                       ) : null}
                                     </div>
+                                    {(!isValidEquipmentCode(item.code) || !isValidSupplierName(item.supplier)) && (
+                                      <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-rose-400 bg-rose-950/50 border border-rose-800/60 px-1.5 py-0.5 rounded w-fit">
+                                        <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
+                                        <span>
+                                          {!isValidEquipmentCode(item.code) && !isValidSupplierName(item.supplier)
+                                            ? 'Requiere N° de Parte y Proveedor'
+                                            : !isValidEquipmentCode(item.code)
+                                            ? 'Requiere N° de Parte obligatorio'
+                                            : 'Requiere Proveedor asignado'}
+                                        </span>
+                                      </div>
+                                    )}
                                   </td>
 
                                   {/* Proveedor para OC with Datalist */}
@@ -2527,8 +2940,12 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                                       list={`suppliers-list-${index}`}
                                       value={item.supplier || ''}
                                       onChange={(e) => handleItemSupplierChange(index, e.target.value)}
-                                      placeholder="Proveedor para OC..."
-                                      className="w-full px-2 py-1 bg-slate-900 border border-slate-700/80 focus:border-sky-400 rounded text-xs text-white placeholder:text-slate-600 font-medium"
+                                      placeholder="Proveedor obligatorio..."
+                                      className={`w-full px-2 py-1 rounded text-xs font-medium border ${
+                                        isValidSupplierName(item.supplier)
+                                          ? 'bg-slate-900 border-slate-700/80 text-white focus:border-sky-400'
+                                          : 'bg-rose-950/50 border-rose-500/70 text-rose-200 placeholder:text-rose-400/60 focus:border-rose-400'
+                                      }`}
                                     />
                                     <datalist id={`suppliers-list-${index}`}>
                                       {supplierProfiles.map((p) => (
@@ -2538,7 +2955,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                                       ))}
                                       {equipments
                                         .map((e) => e.supplier)
-                                        .filter((s): s is string => Boolean(s && s.trim()))
+                                        .filter((s): s is string => Boolean(s && isValidSupplierName(s)))
                                         .filter((s, sIdx, arr) => arr.indexOf(s) === sIdx)
                                         .map((s, sIdx) => (
                                           <option key={`eq-sup-${sIdx}`} value={s}>
@@ -2724,6 +3141,174 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Dedicated External Notice Modal: Equipos con N° de Parte y Proveedor Pendientes */}
+      {showPendingPartsNotice && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm animate-fadeIn"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowPendingPartsNotice(false);
+          }}
+        >
+          <div className="relative w-full max-w-2xl bg-slate-900 border border-amber-500/50 rounded-2xl shadow-2xl overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-amber-950/60 via-slate-900 to-slate-950 border-b border-amber-500/30">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    Aviso: Creación Obligatoria de Parte y Proveedor
+                  </h3>
+                  <p className="text-xs text-amber-300/90">
+                    Requisito para formalizar Orden de Venta y generar Órdenes de Compra (OC)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPendingPartsNotice(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+              {/* Informative banner */}
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200/95 leading-relaxed space-y-2">
+                <p className="font-semibold text-amber-300">
+                  ℹ️ Para crear una Orden de Venta en la app, primero se debe crear el número de la parte y asignar proveedor, o terminar de crear el equipo en el Catálogo Maestro:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-slate-300 text-[11px]">
+                  <li>
+                    <strong className="text-white">Número de Parte oficial:</strong> El equipo debe tener un código válido registrado en el catálogo (no provisional ni «PENDIENTE»).
+                  </li>
+                  <li>
+                    <strong className="text-white">Proveedor asignado:</strong> Se requiere definir a qué proveedor se le generará la Orden de Compra (OC).
+                  </li>
+                  <li>
+                    Los equipos que aún no tengan parte o proveedor <strong className="text-amber-300">no se incluirán en la Orden de Venta</strong> hasta que sean completados.
+                  </li>
+                </ul>
+              </div>
+
+              {/* Items requiring attention */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Equipos que requieren creación o asignación ({incompleteDraftItems.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => syncDraftItemsWithCatalog(true)}
+                    className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 font-semibold cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Detectar si ya fue creado</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {incompleteDraftItems.map((item, idx) => {
+                    const hasValidCode = isValidEquipmentCode(item.code);
+                    const hasValidSup = isValidSupplierName(item.supplier);
+                    return (
+                      <div
+                        key={item.id || idx}
+                        className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-white text-sm">{item.name}</span>
+                            {item.brand && (
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                                {item.brand}
+                              </span>
+                            )}
+                            {item.model && item.model !== item.name && (
+                              <span className="text-[10px] text-slate-400 font-mono">({item.model})</span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs flex-wrap">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[11px] font-mono border ${
+                                hasValidCode
+                                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                                  : 'bg-rose-950/50 border-rose-500/60 text-rose-300 font-bold'
+                              }`}
+                            >
+                              N° Parte: {hasValidCode ? item.code : item.code || 'PENDIENTE'}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[11px] border ${
+                                hasValidSup
+                                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                                  : 'bg-rose-950/50 border-rose-500/60 text-rose-300 font-bold'
+                              }`}
+                            >
+                              Proveedor: {hasValidSup ? item.supplier : 'Por Asignar'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleOpenCreateInCatalog(item);
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Crear en Catálogo</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => syncDraftItemsWithCatalog(true)}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-sky-300 bg-sky-950/60 hover:bg-sky-900/60 border border-sky-500/40 transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Sincronizar y Detectar Catálogo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPendingPartsNotice(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 transition cursor-pointer"
+              >
+                Entendido / Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EquipmentModal to directly create/complete the equipment in Catálogo Maestro */}
+      {isEquipmentModalOpen && (
+        <EquipmentModal
+          isOpen={isEquipmentModalOpen}
+          onClose={() => {
+            setIsEquipmentModalOpen(false);
+            setEquipmentToCreateOrEdit(null);
+          }}
+          onSave={handleSaveCatalogEquipment}
+          equipmentToEdit={equipmentToCreateOrEdit}
+        />
+      )}
     </div>,
     document.body
   );

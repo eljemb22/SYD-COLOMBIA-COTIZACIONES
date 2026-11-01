@@ -68,6 +68,7 @@ import {
 } from '../../utils/tombstones';
 import {
   createSalesOrderFromOCTrackingContract,
+  createOCTrackingContractFromSalesOrder,
   deduplicateSalesOrders,
   splitSalesOrderRecord,
   saveStoredSalesOrders,
@@ -184,7 +185,12 @@ const SALES_INVOICE_COLUMNS: ExcelColumnConfig<SalesInvoiceRecord>[] = [
     id: 'paymentStatus',
     label: 'Estado de Pago',
     type: 'enum',
-    accessor: (row) => row.paymentStatus || 'Pendiente',
+    accessor: (row) => {
+      const st = row.paymentStatus || 'Pendiente';
+      if (st === 'Pagada / Cancelada' || st === 'Pagada') return 'Pagada';
+      if (st === 'Pendiente de Pago' || st === 'Pendiente') return 'Pendiente';
+      return st;
+    },
     align: 'center',
   },
 ];
@@ -774,8 +780,15 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   // Base Filtered Invoices (Search & Status)
   const baseSalesInvoices = useMemo(() => {
     return salesInvoices.filter((inv) => {
-      if (invoiceStatusFilter !== 'all' && inv.paymentStatus !== invoiceStatusFilter) {
-        return false;
+      if (invoiceStatusFilter !== 'all') {
+        const normSt = (inv.paymentStatus === 'Pagada / Cancelada' || inv.paymentStatus === 'Pagada')
+          ? 'Pagada'
+          : (inv.paymentStatus === 'Pendiente de Pago' || inv.paymentStatus === 'Pendiente' || !inv.paymentStatus)
+          ? 'Pendiente'
+          : inv.paymentStatus;
+        if (normSt !== invoiceStatusFilter) {
+          return false;
+        }
       }
       if (invoiceSearchText.trim()) {
         const query = invoiceSearchText.toLowerCase().trim();
@@ -837,26 +850,49 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   const handleSaveOrder = async (savedOrder: SalesOrderRecord, generateOCNow?: boolean) => {
     unmarkSalesOrderAsDeleted(savedOrder.id, savedOrder.salesOrderNumber, savedOrder.tenderClientId, savedOrder.contractId);
 
-    const existingIndex = deduplicatedSalesOrders.findIndex((o) => o.id === savedOrder.id);
+    const hasItems = (savedOrder.items || []).length > 0;
+    const finalOrder: SalesOrderRecord = hasItems
+      ? { ...savedOrder, hasLinkedOC: true }
+      : savedOrder;
+
+    const existingIndex = deduplicatedSalesOrders.findIndex((o) => o.id === finalOrder.id);
     let updatedOrders: SalesOrderRecord[];
     if (existingIndex >= 0) {
       updatedOrders = [...deduplicatedSalesOrders];
-      updatedOrders[existingIndex] = savedOrder;
+      updatedOrders[existingIndex] = finalOrder;
     } else {
-      updatedOrders = [savedOrder, ...deduplicatedSalesOrders];
+      updatedOrders = [finalOrder, ...deduplicatedSalesOrders];
     }
     onUpdateSalesOrders(updatedOrders);
 
     // Guaranteed cloud persistence before proceeding
     try {
-      await saveSingleSalesOrderToFirestore(savedOrder);
+      await saveSingleSalesOrderToFirestore(finalOrder);
     } catch (e) {
       console.error('Error saving sales order to Firestore:', e);
     }
 
-    // If requested or order has items, generate/sync OC now in Ventana 5
-    if (onGenerateOCTracking && (savedOrder.items || []).length > 0) {
-      onGenerateOCTracking(savedOrder);
+    // Automatically generate/sync OC tracking contract in Ventana 7
+    if (hasItems) {
+      if (onGenerateOCTracking) {
+        onGenerateOCTracking(finalOrder);
+      } else if (onUpdateContracts) {
+        const newContract = createOCTrackingContractFromSalesOrder(finalOrder, equipments);
+        const existingIdx = contracts.findIndex(
+          (c) =>
+            c.id === newContract.id ||
+            c.salesOrderId === finalOrder.id ||
+            (finalOrder.salesOrderNumber && c.salesOrderNumber === finalOrder.salesOrderNumber)
+        );
+        let updatedContracts = [...contracts];
+        if (existingIdx >= 0) {
+          updatedContracts[existingIdx] = { ...updatedContracts[existingIdx], ...newContract };
+        } else {
+          updatedContracts = [newContract, ...updatedContracts];
+        }
+        onUpdateContracts(updatedContracts);
+        saveStoredOCTrackingContracts(updatedContracts);
+      }
     }
   };
 
@@ -1272,6 +1308,27 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           updatedAt: new Date().toISOString(),
         };
         await handleSaveOrder(updatedSO);
+      }
+    }
+  };
+
+  const handleUpdateInvoicePaymentStatus = async (invoiceId: string, newStatus: string) => {
+    const updated = salesInvoices.map((inv) =>
+      inv.id === invoiceId
+        ? { ...inv, paymentStatus: newStatus as any, updatedAt: new Date().toISOString() }
+        : inv
+    );
+    onUpdateSalesInvoices(updated);
+    try {
+      localStorage.setItem('syd_sales_invoices_v1', JSON.stringify(updated));
+    } catch (_) {}
+
+    const targetInv = updated.find((i) => i.id === invoiceId);
+    if (targetInv) {
+      try {
+        await saveSingleSalesInvoiceToFirestore(targetInv);
+      } catch (e) {
+        console.warn('Error updating invoice payment status in Firestore:', e);
       }
     }
   };
@@ -1736,7 +1793,6 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                                   </div>
                                 </th>
                                 <th className="py-2.5 px-3 min-w-[130px] text-right">Monto Total COP</th>
-                                <th className="py-2.5 px-3 min-w-[150px]">Estado OV</th>
                                 <th className="py-2.5 px-3 min-w-[130px]">Seguimiento OC</th>
                                 <th className="py-2.5 px-3 min-w-[170px]">Facturación & Soporte</th>
                                 <th className="py-2.5 px-3 text-right min-w-[110px]">Acciones</th>
@@ -1927,30 +1983,6 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                                       {formatCOP(order.totalValueCOP)}
                                     </td>
 
-                                    {/* Estado OV Selector */}
-                                    <td className="py-3 px-3">
-                                      <select
-                                        value={order.status}
-                                        disabled={isReadOnly}
-                                        onChange={(e) => {
-                                          const newSt = e.target.value as SalesOrderStatus;
-                                          handleUpdateOrderStatus(order.id, newSt);
-                                        }}
-                                        className={`text-[10.5px] font-bold px-2 py-1 rounded-lg border bg-slate-900 focus:outline-none cursor-pointer ${getStatusBadge(order.status)}`}
-                                        title="Cambiar estado de la OV"
-                                      >
-                                        <option value="Borrador">Borrador</option>
-                                        <option value="En Proceso">En Proceso</option>
-                                        <option value="Equipos en Bodega">Equipos en Bodega</option>
-                                        <option value="Entregada al Cliente">Entregada al Cliente</option>
-                                        <option value="Listo para Facturar">Listo para Facturar</option>
-                                        {order.status === 'Facturada' && (
-                                          <option value="Facturada">Facturada</option>
-                                        )}
-                                        <option value="Cancelada">Cancelada</option>
-                                      </select>
-                                    </td>
-
                                     {/* Seguimiento OC */}
                                     <td className="py-3 px-3">
                                       {order.hasLinkedOC ? (
@@ -1965,7 +1997,19 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                                       ) : (
                                         <button
                                           type="button"
-                                          onClick={() => onGenerateOCTracking?.(order)}
+                                          onClick={() => {
+                                            if (onGenerateOCTracking) {
+                                              onGenerateOCTracking(order);
+                                            } else {
+                                              if (onUpdateContracts && (order.items || []).length > 0) {
+                                                const newContract = createOCTrackingContractFromSalesOrder(order, equipments);
+                                                const updated = [newContract, ...contracts.filter((c) => c.id !== newContract.id)];
+                                                onUpdateContracts(updated);
+                                                saveStoredOCTrackingContracts(updated);
+                                              }
+                                              onNavigateToTab?.('seguimiento_oc');
+                                            }
+                                          }}
                                           className="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 font-bold border border-sky-500/30 cursor-pointer"
                                         >
                                           <ShoppingCart className="w-3 h-3 text-sky-400" /> Ver OC
@@ -1979,32 +2023,15 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                                         if (order.status === 'Cancelada') {
                                           return <span className="text-[10px] text-slate-500">Cancelada</span>;
                                         }
-                                        if (invData.isFullyInvoiced) {
-                                          const invoiceFile = order.attachedInvoiceFile || invData.orderInvoices.find(i => i.attachedInvoiceFile)?.attachedInvoiceFile;
+                                        if (invData.isFullyInvoiced || order.status === 'Facturada') {
                                           return (
-                                            <div className="flex flex-col gap-1">
-                                              <span
-                                                className="inline-flex items-center gap-1 text-[10.5px] text-emerald-300 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded"
-                                                title={`Facturación Completa (100%): ${invData.invoiceNumbers}`}
-                                              >
-                                                <ReceiptText className="w-3.5 h-3.5 text-emerald-400" /> {invData.invoiceNumbers || 'Facturada Total'}
-                                              </span>
-                                              <span className="text-[9.5px] text-emerald-400 font-bold">
-                                                ✓ 100% Facturado ({formatCOP(invData.totalInvoicedCOP)})
-                                              </span>
-                                              {invoiceFile && (
-                                                <a
-                                                  href={invoiceFile.dataUrl}
-                                                  download={invoiceFile.name}
-                                                  className="inline-flex items-center gap-1 text-[9.5px] px-1.5 py-0.5 rounded bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 font-bold transition cursor-pointer"
-                                                  title={`Descargar: ${invoiceFile.name}`}
-                                                >
-                                                  <Paperclip className="w-3 h-3 text-sky-400" />
-                                                  <span className="max-w-[110px] truncate">{invoiceFile.name}</span>
-                                                  <Download className="w-2.5 h-2.5 ml-0.5" />
-                                                </a>
-                                              )}
-                                            </div>
+                                            <span
+                                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-xs"
+                                              title={`Facturación Completa: ${invData.invoiceNumbers || 'Facturada'}`}
+                                            >
+                                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                              <span>Facturada{invData.invoiceNumbers ? ` (${invData.invoiceNumbers})` : ''}</span>
+                                            </span>
                                           );
                                         }
                                         const isInvoiceEnabled = order.status === 'Facturada' || isDelivered;
@@ -2314,19 +2341,15 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                           if (order.status === 'Cancelada') {
                             return <span className="text-[11px] text-slate-500">Orden Cancelada</span>;
                           }
-                          if (invData.isFullyInvoiced) {
+                          if (invData.isFullyInvoiced || order.status === 'Facturada') {
                             return (
-                              <div className="flex flex-col gap-0.5">
-                                <span
-                                  className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold"
-                                  title={`Facturación Completa (100%): ${invData.invoiceNumbers}`}
-                                >
-                                  <ReceiptText className="w-3 h-3 text-emerald-400" /> Facturas: {invData.invoiceNumbers || 'Facturada Total'}
-                                </span>
-                                <span className="text-[9.5px] text-emerald-400 font-bold">
-                                  ✓ 100% Facturado ({formatCOP(invData.totalInvoicedCOP)})
-                                </span>
-                              </div>
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                                title={`Facturación Completa: ${invData.invoiceNumbers || 'Facturada'}`}
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                <span>Facturada{invData.invoiceNumbers ? ` (${invData.invoiceNumbers})` : ''}</span>
+                              </span>
                             );
                           }
                           const isInvoiceEnabled = order.status === 'Facturada' || isDelivered;
@@ -2793,19 +2816,15 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                               if (order.status === 'Cancelada') {
                                 return <span className="text-[10px] text-slate-500">Cancelada</span>;
                               }
-                              if (invData.isFullyInvoiced) {
+                              if (invData.isFullyInvoiced || order.status === 'Facturada') {
                                 return (
-                                  <div className="flex flex-col gap-0.5">
-                                    <span
-                                      className="inline-flex items-center gap-1 text-[11px] text-emerald-300 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded"
-                                      title={`Facturación Completa (100%): ${invData.invoiceNumbers}`}
-                                    >
-                                      <ReceiptText className="w-3.5 h-3.5 text-emerald-400" /> {invData.invoiceNumbers || 'Facturada Total'}
-                                    </span>
-                                    <span className="text-[9.5px] text-emerald-400 font-bold">
-                                      ✓ 100% Facturado ({formatCOP(invData.totalInvoicedCOP)})
-                                    </span>
-                                  </div>
+                                  <span
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-xs"
+                                    title={`Facturación Completa: ${invData.invoiceNumbers || 'Facturada'}`}
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                    <span>Facturada{invData.invoiceNumbers ? ` (${invData.invoiceNumbers})` : ''}</span>
+                                  </span>
                                 );
                               }
                               const isInvoiceEnabled = canInvoice;
@@ -2966,9 +2985,9 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                 className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-purple-400"
               >
                 <option value="all">Todos los Estados</option>
-                <option value="Pendiente de Pago">Pendiente de Pago</option>
+                <option value="Pendiente">Pendiente</option>
                 <option value="Radicada en Cliente">Radicada en Cliente</option>
-                <option value="Pagada / Cancelada">Pagada / Cancelada</option>
+                <option value="Pagada">Pagada</option>
                 <option value="Anulada">Anulada</option>
               </select>
             </div>
@@ -3054,6 +3073,9 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                           onClearColumnFilter={onClearInvoiceExcelColumnFilter}
                         />
                       </th>
+                      <th className="py-2.5 px-3 min-w-[220px] text-slate-300 font-bold text-[11px]">
+                        Equipos Facturados
+                      </th>
                       <th className="py-2.5 px-3 min-w-[130px]">
                         <ExcelColumnHeader
                           column={SALES_INVOICE_COLUMNS[3]}
@@ -3129,6 +3151,46 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                           {inv.clientName}
                         </td>
 
+                        {/* Equipos Facturados */}
+                        <td className="py-3 px-3 max-w-[280px]">
+                          {(() => {
+                            const linkedOrder = salesOrders.find(
+                              (o) => o.id === inv.salesOrderId || (inv.salesOrderNumber && o.salesOrderNumber === inv.salesOrderNumber)
+                            );
+                            const billedItems = (inv.items && inv.items.length > 0)
+                              ? inv.items
+                              : (linkedOrder?.items || []);
+
+                            if (billedItems.length === 0) {
+                              return <span className="text-[11px] text-slate-500 italic">Sin detalle de equipos</span>;
+                            }
+
+                            const totalUnits = billedItems.reduce((acc: number, it: any) => acc + (it.quantity || it.quantityToDispatch || 1), 0);
+
+                            return (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[10px] font-bold font-mono px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                                    {totalUnits} uds • {billedItems.length} {billedItems.length === 1 ? 'equipo' : 'equipos'}
+                                  </span>
+                                </div>
+                                <div className="max-h-24 overflow-y-auto space-y-0.5 scrollbar-thin pr-1">
+                                  {billedItems.map((it: any, itIdx: number) => (
+                                    <div key={it.id || itIdx} className="text-[11px] text-slate-200 flex items-center justify-between gap-1.5 leading-snug">
+                                      <span className="truncate text-white font-medium" title={it.name}>
+                                        • {it.name}
+                                      </span>
+                                      <span className="text-[10px] text-purple-300 font-mono font-bold shrink-0">
+                                        x{it.quantity || it.quantityToDispatch || 1}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </td>
+
                         {/* Fecha Emisión */}
                         <td className="py-3 px-4 text-slate-300 font-mono whitespace-nowrap">
                           {inv.issueDate || '—'}
@@ -3144,23 +3206,39 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                           {formatCOP(inv.totalAmountCOP)}
                         </td>
 
-                        {/* Estado */}
+                        {/* Estado de Pago */}
                         <td className="py-3 px-4 text-center">
-                          <span
-                            className={`inline-block px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${
-                              inv.paymentStatus === 'Pagada / Cancelada'
-                                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                                : inv.paymentStatus === 'Pendiente de Pago'
-                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                                : inv.paymentStatus === 'Radicada en Cliente'
-                                ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
-                                : inv.paymentStatus === 'Anulada'
-                                ? 'bg-red-500/15 text-red-300 border-red-500/30'
-                                : 'bg-slate-700 text-slate-300 border-slate-600'
-                            }`}
-                          >
-                            {inv.paymentStatus}
-                          </span>
+                          {(() => {
+                            const rawSt = inv.paymentStatus;
+                            const currentVal = (rawSt === 'Pagada / Cancelada' || rawSt === 'Pagada')
+                              ? 'Pagada'
+                              : (rawSt === 'Pendiente de Pago' || rawSt === 'Pendiente' || !rawSt)
+                              ? 'Pendiente'
+                              : rawSt;
+
+                            return (
+                              <select
+                                value={currentVal}
+                                disabled={isReadOnly}
+                                onChange={(e) => handleUpdateInvoicePaymentStatus(inv.id, e.target.value)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border outline-none cursor-pointer transition shadow-xs ${
+                                  currentVal === 'Pagada'
+                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                                    : currentVal === 'Radicada en Cliente'
+                                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/40 hover:bg-blue-500/30'
+                                    : currentVal === 'Anulada'
+                                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
+                                    : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                                }`}
+                                title="Clic para cambiar el estado de pago de la factura"
+                              >
+                                <option value="Pendiente" className="bg-slate-900 text-amber-300 font-bold">Pendiente</option>
+                                <option value="Radicada en Cliente" className="bg-slate-900 text-blue-300 font-bold">Radicada en Cliente</option>
+                                <option value="Pagada" className="bg-slate-900 text-emerald-300 font-bold">Pagada</option>
+                                <option value="Anulada" className="bg-slate-900 text-rose-300 font-bold">Anulada</option>
+                              </select>
+                            );
+                          })()}
                         </td>
 
                         {/* Soporte Adjunto */}

@@ -157,19 +157,21 @@ interface TendersViewProps {
     header?: Partial<TenderHeader>;
   }) => void;
   onBatchCreateClients?: (newClients: TenderClientProject[]) => void;
-  onUpdateClient: (clientId: string, updates: Partial<TenderClientProject>) => void;
-  onDeleteClient: (clientId: string) => void;
-  onAddItemToClient: (clientId: string, equipment: MedicalEquipment) => void;
-  onUpdateTenderItem: (clientId: string, itemId: string, updates: Partial<TenderItem>) => void;
-  onDeleteTenderItem: (clientId: string, itemId: string) => void;
-  onAddRequirement: (clientId: string, itemId: string, requirement: TechnicalRequirement) => void;
-  onUpdateRequirement: (
+  onUpdateClient?: (clientId: string, updates: Partial<TenderClientProject>) => void;
+  onUpdateTenderClient?: (clientId: string, updates: Partial<TenderClientProject>) => void;
+  onDeleteClient?: (clientId: string) => void;
+  onDeleteTenderClient?: (clientId: string) => void;
+  onAddItemToClient?: (clientId: string, equipment: MedicalEquipment) => void;
+  onUpdateTenderItem?: (clientId: string, itemId: string, updates: Partial<TenderItem>) => void;
+  onDeleteTenderItem?: (clientId: string, itemId: string) => void;
+  onAddRequirement?: (clientId: string, itemId: string, requirement: TechnicalRequirement) => void;
+  onUpdateRequirement?: (
     clientId: string,
     itemId: string,
     requirementId: string,
     updates: Partial<TechnicalRequirement>
   ) => void;
-  onDeleteRequirement: (clientId: string, itemId: string, requirementId: string) => void;
+  onDeleteRequirement?: (clientId: string, itemId: string, requirementId: string) => void;
   onNavigateToOCTracking?: () => void;
   onSyncTenderItemToCatalog?: (item: TenderItem, createNewDuplicate?: boolean) => void;
   onBatchSyncTenderItemsToCatalog?: (items: TenderItem[]) => void;
@@ -190,7 +192,9 @@ export const TendersView: React.FC<TendersViewProps> = ({
   onCreateTenderClient,
   onBatchCreateClients,
   onUpdateClient,
+  onUpdateTenderClient,
   onDeleteClient,
+  onDeleteTenderClient,
   onAddItemToClient,
   onUpdateTenderItem,
   onDeleteTenderItem,
@@ -217,6 +221,70 @@ export const TendersView: React.FC<TendersViewProps> = ({
     return salesInvoices && salesInvoices.length > 0 ? salesInvoices : getStoredSalesInvoices();
   }, [salesInvoices]);
   const handleCreateClientFn = onCreateTenderClient || onCreateClient;
+  const handleUpdateClientFn = onUpdateTenderClient || onUpdateClient;
+  const handleDeleteClientFn = onDeleteTenderClient || onDeleteClient;
+
+  const handleUpdateClient = (clientId: string, updates: Partial<TenderClientProject>) => {
+    if (handleUpdateClientFn) {
+      handleUpdateClientFn(clientId, updates);
+    }
+  };
+
+  const handleDeleteClient = async (clientId: string) => {
+    if (handleDeleteClientFn) {
+      await handleDeleteClientFn(clientId);
+    }
+  };
+
+  const handleUpdateTenderItemFn = onUpdateTenderItem || ((clientId: string, itemId: string, updates: Partial<TenderItem>) => {
+    const target = tenderClients.find((c) => c.id === clientId);
+    if (!target) return;
+    const updatedItems = (target.items || []).map((it) => (it.id === itemId ? { ...it, ...updates } : it));
+    handleUpdateClient(clientId, { items: updatedItems });
+  });
+
+  const handleDeleteTenderItemFn = onDeleteTenderItem || ((clientId: string, itemId: string) => {
+    const target = tenderClients.find((c) => c.id === clientId);
+    if (!target) return;
+    const updatedItems = (target.items || []).filter((it) => it.id !== itemId);
+    handleUpdateClient(clientId, { items: updatedItems });
+  });
+
+  const handleAddRequirementFn = onAddRequirement || ((clientId: string, itemId: string, requirement: TechnicalRequirement) => {
+    const target = tenderClients.find((c) => c.id === clientId);
+    if (!target) return;
+    const updatedItems = (target.items || []).map((it) => {
+      if (it.id !== itemId) return it;
+      return { ...it, requirements: [...(it.requirements || []), requirement] };
+    });
+    handleUpdateClient(clientId, { items: updatedItems });
+  });
+
+  const handleUpdateRequirementFn = onUpdateRequirement || ((clientId: string, itemId: string, requirementId: string, updates: Partial<TechnicalRequirement>) => {
+    const target = tenderClients.find((c) => c.id === clientId);
+    if (!target) return;
+    const updatedItems = (target.items || []).map((it) => {
+      if (it.id !== itemId) return it;
+      return {
+        ...it,
+        requirements: (it.requirements || []).map((r) => (r.id === requirementId ? { ...r, ...updates } : r)),
+      };
+    });
+    handleUpdateClient(clientId, { items: updatedItems });
+  });
+
+  const handleDeleteRequirementFn = onDeleteRequirement || ((clientId: string, itemId: string, requirementId: string) => {
+    const target = tenderClients.find((c) => c.id === clientId);
+    if (!target) return;
+    const updatedItems = (target.items || []).map((it) => {
+      if (it.id !== itemId) return it;
+      return {
+        ...it,
+        requirements: (it.requirements || []).filter((r) => r.id !== requirementId),
+      };
+    });
+    handleUpdateClient(clientId, { items: updatedItems });
+  });
   // Client selection state
   const [internalActiveClientId, setInternalActiveClientId] = useState<string | null>(null);
   const activeClientId = controlledActiveClientId !== undefined ? controlledActiveClientId : internalActiveClientId;
@@ -344,6 +412,27 @@ export const TendersView: React.FC<TendersViewProps> = ({
     }
   }, [baseClients, activeClientId, onSelectClient]);
 
+  // Auto-heal activeClient if it has 0 items but is linked to a quote
+  useEffect(() => {
+    if (activeClient && (!activeClient.items || activeClient.items.length === 0)) {
+      const qNum = activeClient.linkedQuoteNumber || activeClient.header?.linkedQuoteNumber;
+      const qId = activeClient.linkedQuoteId || activeClient.header?.linkedQuoteId;
+      if (qNum || qId) {
+        const matchedQuote = (savedQuotes || []).find(
+          (q) => (qNum && q.quoteNumber === qNum) || (qId && q.id === qId)
+        );
+        if (matchedQuote && matchedQuote.items && matchedQuote.items.length > 0) {
+          const generated = createTenderProjectFromQuote(matchedQuote, tenderClients, equipments);
+          if (generated.items && generated.items.length > 0) {
+            handleUpdateClient(activeClient.id, {
+              items: generated.items,
+            });
+          }
+        }
+      }
+    }
+  }, [activeClient, savedQuotes, equipments, tenderClients, handleUpdateClientFn]);
+
   const handleSelectClient = (clientId: string) => {
     if (onSelectClient) onSelectClient(clientId);
     else setInternalActiveClientId(clientId);
@@ -369,19 +458,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
     if (onBatchCreateClients) {
       onBatchCreateClients([newTender]);
     } else if (handleCreateClientFn) {
-      handleCreateClientFn({
-        clientName: newTender.clientName,
-        nit: newTender.nit,
-        processNumber: newTender.header.processNumber,
-        budgetCOP: newTender.header.budgetCOP,
-        city: newTender.header.city,
-        processType: newTender.header.processType,
-        contractObject: newTender.header.contractObject,
-        contactPerson: newTender.header.contactPerson,
-        status: newTender.status,
-        executionTerm: newTender.header.executionTerm,
-        header: newTender.header,
-      });
+      handleCreateClientFn(newTender);
     }
 
     if (onSelectClient) {
@@ -430,7 +507,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
       }
     }
 
-    onUpdateClient(activeClient.id, updates);
+    handleUpdateClient(activeClient.id, updates);
     confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
     showToast(`✓ Cotización ${quote.quoteNumber} enlazada exitosamente a este proceso`);
   };
@@ -455,7 +532,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
       linkedQuoteTotal: 0,
       header: cleanHeader,
     };
-    onUpdateClient(activeClient.id, updates);
+    handleUpdateClient(activeClient.id, updates);
     showToast(`✓ Cotización ${oldQuoteNum} desenlazada de esta licitación`);
   };
 
@@ -472,7 +549,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
     const existingItems = targetClient?.items || [];
     const finalItems = mode === 'append' ? [...existingItems, ...newItems] : newItems;
 
-    onUpdateClient(targetId, { items: finalItems });
+    handleUpdateClient(targetId, { items: finalItems });
 
     if (onBatchSyncTenderItemsToCatalog) {
       onBatchSyncTenderItemsToCatalog(newItems);
@@ -494,12 +571,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
       onBatchCreateClients(newContracts);
     } else if (handleCreateClientFn) {
       newContracts.forEach((c) => {
-        handleCreateClientFn({
-          clientName: c.clientName,
-          nit: c.nit,
-          status: c.status,
-          header: c.header,
-        });
+        handleCreateClientFn(c);
       });
     }
 
@@ -516,7 +588,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
   // Save client modal
   const handleSaveClientModal = (data: any) => {
     if (clientToEdit) {
-      onUpdateClient(clientToEdit.id, {
+      handleUpdateClient(clientToEdit.id, {
         clientName: data.clientName,
         status: data.status,
         header: {
@@ -552,7 +624,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
 
         if (existingTender) {
           const tenderFromQuote = createTenderProjectFromQuote(data.linkedQuote, tenderClients, equipments);
-          onUpdateClient(existingTender.id, {
+          handleUpdateClient(existingTender.id, {
             clientName: data.clientName,
             status: data.status || (data.isDirectClientOC ? 'Adjudicada' : existingTender.status),
             items: tenderFromQuote.items.length > 0 ? tenderFromQuote.items : existingTender.items,
@@ -607,12 +679,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
         if (onBatchCreateClients) {
           onBatchCreateClients([newProject]);
         } else if (handleCreateClientFn) {
-          handleCreateClientFn({
-            clientName: newProject.clientName,
-            nit: newProject.nit,
-            status: newProject.status,
-            header: newProject.header,
-          });
+          handleCreateClientFn(newProject);
         }
         if (onBatchSyncTenderItemsToCatalog && newProject.items?.length > 0) {
           onBatchSyncTenderItemsToCatalog(newProject.items);
@@ -1159,9 +1226,9 @@ export const TendersView: React.FC<TendersViewProps> = ({
               {activeSubTab === 'adjudicadas' && (
                 <TenderAwardedView
                   activeClient={activeClient}
-                  onUpdateClient={onUpdateClient}
-                  onUpdateTenderItem={onUpdateTenderItem}
-                  onDeleteTenderItem={onDeleteTenderItem}
+                  onUpdateClient={handleUpdateClient}
+                  onUpdateTenderItem={handleUpdateTenderItemFn}
+                  onDeleteTenderItem={handleDeleteTenderItemFn}
                   onOpenExcelImportModal={() => setIsExcelImportModalOpen(true)}
                   onOpenEditClientModal={() => {
                     setClientToEdit(activeClient);
@@ -1178,6 +1245,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
                   salesOrders={effectiveOrders}
                   salesInvoices={effectiveInvoices}
                   onCreateSalesOrder={onCreateSalesOrder}
+                  equipments={equipments}
                 />
               )}
 
@@ -1188,10 +1256,10 @@ export const TendersView: React.FC<TendersViewProps> = ({
                   equipments={equipments}
                   selectedEquipmentId={selectedEquipmentIdForSpecs}
                   onSelectEquipmentId={setSelectedEquipmentIdForSpecs}
-                  onUpdateTenderItem={onUpdateTenderItem}
-                  onAddRequirement={onAddRequirement}
-                  onUpdateRequirement={onUpdateRequirement}
-                  onDeleteRequirement={onDeleteRequirement}
+                  onUpdateTenderItem={handleUpdateTenderItemFn}
+                  onAddRequirement={handleAddRequirementFn}
+                  onUpdateRequirement={handleUpdateRequirementFn}
+                  onDeleteRequirement={handleDeleteRequirementFn}
                   onSwitchToAwardedTab={() => setActiveSubTab('adjudicadas')}
                   isReadOnly={isReadOnly}
                 />
@@ -1240,7 +1308,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
           catalogEquipments={equipments}
           onAddItem={(newItem, createNewDuplicate) => {
             const current = activeClient.items || [];
-            onUpdateClient(activeClient.id, { items: [...current, newItem] });
+            handleUpdateClient(activeClient.id, { items: [...current, newItem] });
 
             if (onSyncTenderItemToCatalog) {
               onSyncTenderItemToCatalog(newItem, createNewDuplicate);
@@ -1446,7 +1514,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
                 onClick={async () => {
                   const idToDelete = clientToDelete.id;
                   setClientToDelete(null);
-                  await onDeleteClient(idToDelete);
+                  await handleDeleteClient(idToDelete);
                   showToast('✓ Licitación eliminada permanentemente');
                 }}
                 className="inline-flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-lg active:scale-95"

@@ -20,6 +20,7 @@ import {
   unmarkSalesInvoiceAsDeleted,
 } from './tombstones';
 import { resolveItemManufacturerBrand } from './equipmentBrandResolver';
+import { isValidEquipmentCode, isValidSupplierName } from './formatters';
 import {
   autoRegisterSuppliersFromEquipments,
   cleanContractReference,
@@ -472,12 +473,7 @@ export function resolveSupplierForOVItem(
 ): string {
   // 1. Explicit supplier on item
   const explicit = (item.supplier || item.supplierName || '').trim();
-  if (
-    explicit &&
-    !['por asignar', 'n/a', 'ninguno', 'sin proveedor asignado', 'proveedor principal'].includes(
-      explicit.toLowerCase()
-    )
-  ) {
+  if (isValidSupplierName(explicit)) {
     return explicit;
   }
 
@@ -485,97 +481,25 @@ export function resolveSupplierForOVItem(
   const matchedEq = equipments.find(
     (e) =>
       (item.equipmentId && e.id === item.equipmentId) ||
-      (item.code && e.code?.trim().toLowerCase() === item.code?.trim().toLowerCase()) ||
+      (item.code && isValidEquipmentCode(item.code) && e.code?.trim().toLowerCase() === item.code?.trim().toLowerCase()) ||
       (item.name && e.name?.trim().toLowerCase() === item.name?.trim().toLowerCase())
   );
 
-  if (
-    matchedEq?.supplier &&
-    matchedEq.supplier.trim() &&
-    !['por asignar', 'n/a', 'ninguno'].includes(matchedEq.supplier.trim().toLowerCase())
-  ) {
-    return matchedEq.supplier.trim();
+  if (isValidSupplierName(matchedEq?.supplier)) {
+    return matchedEq!.supplier!.trim();
   }
 
   if (matchedEq?.allSuppliers && Array.isArray(matchedEq.allSuppliers) && matchedEq.allSuppliers.length > 0) {
-    const valid = matchedEq.allSuppliers.find(
-      (s) => s && s.trim() && !['por asignar', 'n/a', 'ninguno'].includes(s.trim().toLowerCase())
-    );
+    const valid = matchedEq.allSuppliers.find((s) => isValidSupplierName(s));
     if (valid) return valid.trim();
   }
 
   if (matchedEq?.supplierPrices && Array.isArray(matchedEq.supplierPrices) && matchedEq.supplierPrices.length > 0) {
-    const valid = matchedEq.supplierPrices.find(
-      (sp) =>
-        sp.supplier &&
-        sp.supplier.trim() &&
-        !['por asignar', 'n/a', 'ninguno'].includes(sp.supplier.trim().toLowerCase())
-    );
+    const valid = matchedEq.supplierPrices.find((sp) => isValidSupplierName(sp.supplier));
     if (valid) return valid.supplier.trim();
   }
 
-  // 3. Match from Catalog Equipments by same Brand
-  const targetBrand = (item.brand || matchedEq?.brand || '').trim();
-  if (targetBrand) {
-    const normBrand = targetBrand
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-
-    // Check if another equipment in the catalog with same brand has an assigned supplier
-    const eqSameBrand = equipments.find((e) => {
-      const eBrand = (e.brand || '')
-        .trim()
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
-      return (
-        eBrand &&
-        (eBrand === normBrand || eBrand.includes(normBrand) || normBrand.includes(eBrand)) &&
-        e.supplier &&
-        !['por asignar', 'n/a', 'ninguno', 'sin proveedor asignado'].includes(e.supplier.trim().toLowerCase())
-      );
-    });
-    if (eqSameBrand?.supplier) {
-      return eqSameBrand.supplier.trim();
-    }
-
-    // 4. Match from Supplier Directory based on Brand
-    const profiles = supplierProfiles || getStoredSupplierProfiles();
-    // Registered supplier whose brands list includes targetBrand
-    const matchByBrandList = profiles.find((p) =>
-      p.brands?.some((b) => {
-        if (!b) return false;
-        const bNorm = b
-          .trim()
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '');
-        return bNorm === normBrand || bNorm.includes(normBrand) || normBrand.includes(bNorm);
-      })
-    );
-    if (matchByBrandList) {
-      return matchByBrandList.name.trim();
-    }
-
-    // Registered supplier whose name matches targetBrand
-    const matchByName = profiles.find((p) => {
-      const normName = p.name
-        .trim()
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
-      return normName === normBrand || normName.includes(normBrand) || normBrand.includes(normName);
-    });
-    if (matchByName) {
-      return matchByName.name.trim();
-    }
-
-    // Fallback: the brand itself
-    return targetBrand;
-  }
-
-  return 'Proveedor Principal';
+  return '';
 }
 
 /**
@@ -590,8 +514,14 @@ export function createOCTrackingContractFromSalesOrder(
   const now = new Date().toISOString();
   const profiles = getStoredSupplierProfiles();
 
-  // Create OCTrackingItem for each item in the Sales Order with resolved supplier
-  const ocItems: OCTrackingItem[] = (salesOrder.items || []).map((item, idx) => {
+  // Filter only items that have a valid equipment code AND an assigned supplier
+  const validItems = (salesOrder.items || []).filter((item) => {
+    const resolvedSup = (item.supplier || (item as any).supplierName || resolveSupplierForOVItem(item, equipments, profiles)).trim();
+    return isValidEquipmentCode(item.code) && isValidSupplierName(resolvedSup);
+  });
+
+  // Create OCTrackingItem for each valid item in the Sales Order with resolved supplier
+  const ocItems: OCTrackingItem[] = validItems.map((item, idx) => {
     // Attempt to lookup base cost from catalog
     const matchedEq = equipments.find(
       (e) =>
@@ -602,7 +532,7 @@ export function createOCTrackingContractFromSalesOrder(
 
     const costPriceCOP = matchedEq?.baseCostCOP || Math.round(Number(item.unitSalePriceCOP || 10000000) * 0.65);
     const qty = Number(item.quantityToDispatch) || 1;
-    const supplierName = resolveSupplierForOVItem(item, equipments, profiles);
+    const supplierName = resolveSupplierForOVItem(item, equipments, profiles) || (item.supplier || '').trim();
     const resolvedBrand = resolveItemManufacturerBrand(
       {
         ...item,
@@ -616,9 +546,11 @@ export function createOCTrackingContractFromSalesOrder(
       equipmentId: item.equipmentId || matchedEq?.id,
       code: item.code || `EQ-${idx + 1}`,
       name: item.name,
+      description: item.name,
       brand: resolvedBrand,
       model: item.model || matchedEq?.model || '',
       quantity: qty,
+      unitCostCOP: costPriceCOP,
       costPriceCOP: costPriceCOP,
       totalCostCOP: costPriceCOP * qty,
       supplier: supplierName,

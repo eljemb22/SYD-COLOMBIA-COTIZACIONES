@@ -160,3 +160,75 @@ export function cleanRef(str?: string | null): string {
     .replace(/[^a-z0-9]/g, '');
 }
 
+/**
+ * Validates that an equipment code or part number is a real identifier
+ * and not a temporary placeholder like 'PENDIENTE', 'SIN ASIGNAR', 'N/A', etc.
+ */
+export function isValidEquipmentCode(code?: string | null): boolean {
+  if (!code) return false;
+  const clean = String(code)
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+  if (!clean) return false;
+
+  const placeholders = [
+    'pendiente',
+    'porasignar',
+    'sinasignar',
+    'sincodigo',
+    'sincod',
+    'sinparte',
+    'sinpartenumber',
+    'na',
+    'none',
+    'null',
+    'undefined',
+    'eqmanual',
+    'manual',
+    'temp',
+    'temporal',
+    'provisional',
+    'sn',
+  ];
+  if (placeholders.includes(clean)) return false;
+  if (/^eq\d+$/.test(clean) && !code.includes('-REAL')) return false;
+
+  return clean.length >= 2;
+}
+
+/**
+ * Validates that a supplier name is a real assigned vendor
+ * and not a generic placeholder like 'Por Asignar', 'Proveedor Principal', 'N/A', etc.
+ */
+export function isValidSupplierName(supplier?: string | null): boolean {
+  if (!supplier) return false;
+  const clean = String(supplier)
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+  if (!clean) return false;
+
+  const placeholders = [
+    'porasignar',
+    'sinasignar',
+    'sinproveedor',
+    'sinproveedorasignado',
+    'proveedorprincipal',
+    'proveedor',
+    'na',
+    'ninguno',
+    'none',
+    'null',
+    'undefined',
+    'pendiente',
+  ];
+  if (placeholders.includes(clean)) return false;
+
+  return clean.length >= 2;
+}
+

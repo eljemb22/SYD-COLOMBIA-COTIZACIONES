@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   OCTrackingContract,
   OCTrackingItem,
@@ -22,7 +22,13 @@ import {
   exportOCTrackingToExcel,
   autoRegisterSupplierIfNotExists,
 } from '../../utils/ocTrackingStorage';
-import { getStoredSalesOrders, saveStoredSalesOrders, splitSalesOrderRecord } from '../../utils/salesOrdersStorage';
+import {
+  getStoredSalesOrders,
+  saveStoredSalesOrders,
+  splitSalesOrderRecord,
+  createOCTrackingContractFromSalesOrder,
+} from '../../utils/salesOrdersStorage';
+import { normalizeClean } from '../../utils/formatters';
 import { SplitSalesOrderModal } from './sales-orders/SplitSalesOrderModal';
 import {
   deleteOCTrackingContractFromFirestore,
@@ -217,6 +223,78 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
   const effectiveSalesOrders = useMemo(() => {
     return salesOrders && salesOrders.length > 0 ? salesOrders : getStoredSalesOrders();
   }, [salesOrders]);
+
+  const contractsRef = useRef(contracts);
+  useEffect(() => {
+    contractsRef.current = contracts;
+  }, [contracts]);
+
+  // Auto-reconciliation: Guarantee all active Sales Orders with items are represented in contracts
+  useEffect(() => {
+    if (!onUpdateContracts) return;
+    const activeOrders = effectiveSalesOrders.filter(
+      (so) => (so.items || []).length > 0 && so.status !== 'Cancelada'
+    );
+    if (activeOrders.length === 0) return;
+
+    const currentContracts = contractsRef.current || [];
+    let hasNewContracts = false;
+    let nextContracts = [...currentContracts];
+
+    activeOrders.forEach((so) => {
+      const soNum = (so.salesOrderNumber || '').trim();
+      const soId = so.id;
+      const soClient = normalizeClean(so.clientName);
+
+      const alreadyCovered = nextContracts.some((c) => {
+        if (soId && c.salesOrderId === soId) return true;
+        if (c.salesOrderIds && soId && c.salesOrderIds.includes(soId)) return true;
+        if (soNum && c.salesOrderNumber === soNum) return true;
+        if (c.salesOrderNumbers && soNum && c.salesOrderNumbers.includes(soNum)) return true;
+        if (c.items?.some((it) => (soId && it.salesOrderId === soId) || (soNum && it.salesOrderNumber === soNum))) {
+          return true;
+        }
+        return false;
+      });
+
+      if (!alreadyCovered) {
+        const newContract = createOCTrackingContractFromSalesOrder(so, equipments);
+        // If contract for same client already exists, merge items under this client contract card
+        const clientContractIdx = nextContracts.findIndex(
+          (c) => normalizeClean(c.clientName) === soClient && soClient.length > 3
+        );
+        if (clientContractIdx >= 0) {
+          const existingC = nextContracts[clientContractIdx];
+          const combinedItems = [...existingC.items];
+          newContract.items.forEach((newIt) => {
+            const alreadyHas = combinedItems.some(
+              (ci) => ci.id === newIt.id || (ci.code && ci.code === newIt.code && ci.salesOrderId === newIt.salesOrderId)
+            );
+            if (!alreadyHas) combinedItems.push(newIt);
+          });
+          const updatedSOIds = Array.from(new Set([...(existingC.salesOrderIds || []), so.id]));
+          const updatedSONums = Array.from(
+            new Set([...(existingC.salesOrderNumbers || []), so.salesOrderNumber].filter(Boolean))
+          );
+          nextContracts[clientContractIdx] = {
+            ...existingC,
+            items: combinedItems,
+            salesOrderIds: updatedSOIds,
+            salesOrderNumbers: updatedSONums,
+          };
+        } else {
+          nextContracts.push(newContract);
+        }
+        hasNewContracts = true;
+      }
+    });
+
+    if (hasNewContracts) {
+      onUpdateContracts(nextContracts);
+      saveStoredOCTrackingContracts(nextContracts);
+      saveOCTrackingContractsToFirestore(nextContracts).catch(console.warn);
+    }
+  }, [effectiveSalesOrders, equipments, onUpdateContracts]);
 
   // Distinct suppliers collected across all contracts
   const distinctSuppliers = useMemo(() => {
