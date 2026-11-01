@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { MedicalEquipment, SavedQuote, OCTrackingContract, SalesOrderRecord, TechnicalDocument } from '../types';
+import { buildGoogleOAuthErrorMessage } from '../utils/googleOAuthError';
 
 export const GOOGLE_WORKSPACE_TOKEN_KEY = 'syd_google_workspace_token_v1';
 export const GOOGLE_WORKSPACE_EXPIRY_KEY = 'syd_google_workspace_token_exp_v1';
@@ -226,12 +227,20 @@ export class GoogleWorkspaceService {
 
   public getClientId(): string {
     try {
+      // 1) Client ID personalizado de la conexion Google (propio de Drive)
       const customId = localStorage.getItem('syd_custom_google_client_id');
       if (customId && customId.trim().includes('.apps.googleusercontent.com') && !customId.includes('807213907458')) {
         return customId.trim();
       }
       if (customId && customId.includes('807213907458')) {
         localStorage.removeItem('syd_custom_google_client_id');
+      }
+
+      // 2) Client ID personalizado configurado en la ventana de Gmail
+      //    (se comparte con Drive para no repetir la configuracion)
+      const sharedId = localStorage.getItem('syd_gmail_custom_client_id_v1');
+      if (sharedId && sharedId.trim().includes('.apps.googleusercontent.com') && !sharedId.includes('807213907458')) {
+        return sharedId.trim();
       }
     } catch {}
     const configClientId = (firebaseConfig as any)?.oAuthClientId;
@@ -318,7 +327,7 @@ export class GoogleWorkspaceService {
                   )
                 );
               }
-              return reject(new Error(`Error al autenticar con Google: ${errStr}`));
+              return reject(new Error(buildGoogleOAuthErrorMessage(errStr, 'Error al autenticar con Google:')));
             }
 
             if (!tokenResponse.access_token) {
@@ -358,7 +367,11 @@ export class GoogleWorkspaceService {
             }
           },
           error_callback: (err) => {
-            reject(new Error(err?.message || 'Error inicializando el cliente OAuth de Google.'));
+            reject(
+              new Error(
+                buildGoogleOAuthErrorMessage(err, 'Error inicializando el cliente OAuth de Google.')
+              )
+            );
           },
         });
 

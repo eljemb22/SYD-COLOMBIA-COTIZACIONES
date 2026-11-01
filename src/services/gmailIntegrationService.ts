@@ -17,6 +17,7 @@ import {
 } from '../utils/emailThreadUtils';
 import { extractStructuredRowsFromEmail, parseCurrencyCOP, parseQuantity } from '../utils/emailTableParser';
 import { extractEquipmentNamesFromSubject } from '../utils/clientPOUtils';
+import { buildGoogleOAuthErrorMessage } from '../utils/googleOAuthError';
 import { MASTER_EQUIPMENTS_CATALOG } from '../data/masterEquipmentsCatalog';
 
 export interface GmailUserProfile {
@@ -671,7 +672,7 @@ class GmailIntegrationService {
                   )
                 );
               }
-              return reject(new Error(`Error de autenticación Google: ${errStr}`));
+              return reject(new Error(buildGoogleOAuthErrorMessage(errStr, 'Error de autenticación Google:')));
             }
             if (!tokenResponse.access_token) {
               return reject(new Error('No se recibió el token de acceso de Google.'));
@@ -706,11 +707,11 @@ class GmailIntegrationService {
             const errorMsg = err?.message || (typeof err === 'string' ? err : '');
             
             if (errorType === 'popup_closed' || errorMsg.includes('closed') || errorMsg.includes('Popup window closed')) {
-              reject(new Error('La ventana emergente de Google fue cerrada. Puedes conectar cualquier cuenta de Gmail directamente mediante el botón de Conexión Directa.'));
+              reject(new Error('La ventana emergente de Google fue cerrada. Vuelve a intentarlo y acepta todos los permisos solicitados.'));
             } else if (errorType === 'popup_failed_to_open') {
-              reject(new Error('El navegador bloqueó la ventana emergente de Google. Por favor habilite las ventanas emergentes o utilice la Conexión Directa.'));
+              reject(new Error('El navegador bloqueó la ventana emergente de Google. Por favor habilite las ventanas emergentes para este sitio y vuelve a intentarlo.'));
             } else {
-              reject(new Error(errorMsg || 'La ventana de autenticación fue cerrada o cancelada por el usuario.'));
+              reject(new Error(buildGoogleOAuthErrorMessage(errorMsg || errorType, 'La ventana de autenticación fue cerrada o cancelada por el usuario.')));
             }
           },
         });
