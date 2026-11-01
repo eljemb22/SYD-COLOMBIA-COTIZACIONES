@@ -90,12 +90,12 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
           }`}
         >
           {/* Halo suave detrás del logo */}
-          <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[26rem] h-[26rem] sm:w-[32rem] sm:h-[32rem] rounded-full bg-cyan-500/10 blur-[90px] animate-introGlow" />
+          <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] sm:w-[42rem] sm:h-[42rem] rounded-full bg-cyan-500/10 blur-[90px] animate-introGlow" />
 
           <img
             src={LOGO_SRC}
             alt="SYD"
-            className="relative w-72 sm:w-80 h-auto object-contain animate-logoReveal"
+            className="relative w-[88vw] max-w-[38rem] h-auto object-contain animate-logoReveal"
             style={{ filter: 'drop-shadow(0 14px 40px rgba(56,189,248,0.35))' }}
           />
 
