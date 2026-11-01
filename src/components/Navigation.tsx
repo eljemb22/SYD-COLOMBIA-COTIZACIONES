@@ -271,7 +271,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           backgroundColor: 'var(--syd-sidebar-bg)',
           borderColor: 'var(--syd-border-color)',
         }}
-        className={`fixed top-0 h-screen z-40 flex flex-col border-r transition-all duration-300 ease-in-out shadow-2xl shrink-0 ${
+        className={`fixed top-0 h-screen z-40 flex flex-col border-r transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] shadow-2xl shrink-0 ${
           isMobileOpen ? 'left-0 w-64' : '-left-full md:left-0'
         } ${
           isEffectiveCollapsed
