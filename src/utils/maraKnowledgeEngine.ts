@@ -1,4 +1,4 @@
-import { ActiveTab, BotActionOption } from '../types';
+import { ActiveTab, BotActionOption, BotActionType } from '../types';
 import { getStoredOCTrackingContracts } from './ocTrackingStorage';
 import { getSavedQuotes } from './quoteStorage';
 import { getStoredSalesOrders, getStoredSalesInvoices } from './salesOrdersStorage';
@@ -306,7 +306,14 @@ export function resolveNavigationIntent(query: string): TabNavigationTarget | nu
     q.includes('documentación') ||
     q.includes('manuales') ||
     q.includes('fichas tecnicas') ||
-    q.includes('fichas técnicas')
+    q.includes('fichas técnicas') ||
+    q.includes('repositorio') ||
+    q.includes('guías') ||
+    q.includes('guias') ||
+    q.includes('registros sanitarios') ||
+    q.includes('invima') ||
+    q.includes('módulo de documentación') ||
+    q.includes('documentos técnicos')
   ) {
     return {
       tab: 'documentacion',
@@ -329,8 +336,17 @@ export function resolveNavigationIntent(query: string): TabNavigationTarget | nu
     q.includes('ordenes de venta') ||
     q.includes('órdenes de venta') ||
     q.includes('orden de venta') ||
+    q.includes('ov') ||
     q.includes('facturacion') ||
-    q.includes('facturación')
+    q.includes('facturación') ||
+    q.includes('remision') ||
+    q.includes('remisión') ||
+    q.includes('despacho') ||
+    q.includes('radicacion') ||
+    q.includes('radicación') ||
+    q.includes('cartera') ||
+    q.includes('módulo de órdenes de venta') ||
+    q.includes('facturación y despacho')
   ) {
     return {
       tab: 'ordenes_venta',
@@ -347,7 +363,9 @@ export function resolveNavigationIntent(query: string): TabNavigationTarget | nu
     q.includes('pestaña 5.1') ||
     q.includes('gmail') ||
     q.includes('gmail compras') ||
-    q.includes('correo compras')
+    q.includes('correo compras') ||
+    q.includes('bandeja gmail') ||
+    q.includes('extraer oc')
   ) {
     return {
       tab: 'gmail_compras',
@@ -369,7 +387,10 @@ export function resolveNavigationIntent(query: string): TabNavigationTarget | nu
     q.includes('ir a 5') ||
     q.includes('seguimiento oc') ||
     q.includes('seguimiento de oc') ||
-    q.includes('trazabilidad oc')
+    q.includes('trazabilidad oc') ||
+    q.includes('órdenes de compra') ||
+    q.includes('ordenes de compra') ||
+    q.includes('seguimiento de compras')
   ) {
     return {
       tab: 'seguimiento_oc',
@@ -391,7 +412,9 @@ export function resolveNavigationIntent(query: string): TabNavigationTarget | nu
     q.includes('ir a 4') ||
     q.includes('licitaciones') ||
     q.includes('contratos') ||
-    q.includes('secop')
+    q.includes('secop') ||
+    q.includes('pliego') ||
+    q.includes('módulo de licitaciones')
   ) {
     return {
       tab: 'licitaciones',
@@ -414,7 +437,11 @@ export function resolveNavigationIntent(query: string): TabNavigationTarget | nu
     q.includes('creacion equipos') ||
     q.includes('creación equipos') ||
     q.includes('catalogo') ||
-    q.includes('catálogo')
+    q.includes('catálogo') ||
+    q.includes('catálogo de equipos') ||
+    q.includes('equipos biomédicos') ||
+    q.includes('registro invima') ||
+    q.includes('módulo de catálogo')
   ) {
     return {
       tab: 'catalogo',
@@ -435,7 +462,11 @@ export function resolveNavigationIntent(query: string): TabNavigationTarget | nu
     q.includes('a la 2') ||
     q.includes('ir a 2') ||
     q.includes('costos') ||
-    q.includes('rentabilidad')
+    q.includes('rentabilidad') ||
+    q.includes('gestor de costos') ||
+    q.includes('márgenes') ||
+    q.includes('margenes') ||
+    q.includes('módulo de costos')
   ) {
     return {
       tab: 'costos',
@@ -457,13 +488,81 @@ export function resolveNavigationIntent(query: string): TabNavigationTarget | nu
     q.includes('ir a 1') ||
     q.includes('cotizaciones') ||
     q.includes('cotizador') ||
-    q.includes('ventas')
+    q.includes('ventas') ||
+    q.includes('cotizar') ||
+    q.includes('propuesta comercial') ||
+    q.includes('módulo de cotizaciones')
   ) {
     return {
       tab: 'ventas',
       tabNumber: '1',
       name: 'Cotizaciones',
       description: 'Cotizador comercial oficial, propuesta con membrete y descargas en Word o PDF',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Detecta si el usuario quiere ejecutar una acción autónoma (no solo navegar)
+ */
+export function resolveAutonomousAction(query: string, context: DynamicSystemContext): { label: string; type: BotActionType; tab?: ActiveTab; modalAction?: string; autoExecute: boolean; confirmationRequired: boolean; description: string } | null {
+  const q = query.toLowerCase().replace(/[¡!¿?.,:;]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Acciones de creación de entidades (seguras, auto-ejecutables)
+  if (q.includes('crea una cotización') || q.includes('crear cotización') || q.includes('nueva cotización') || q.includes('cotizar')) {
+    return {
+      label: 'Crear Nueva Cotización',
+      type: 'execute',
+      tab: 'ventas',
+      autoExecute: true,
+      confirmationRequired: false,
+      description: 'Abre el cotizador y prepara una nueva cotización comercial',
+    };
+  }
+
+  if (q.includes('registra un equipo') || q.includes('nuevo equipo') || q.includes('crear equipo') || q.includes('agregar equipo')) {
+    return {
+      label: 'Registrar Nuevo Equipo',
+      type: 'modal',
+      modalAction: 'new_equipment',
+      autoExecute: true,
+      confirmationRequired: false,
+      description: 'Abre el modal para registrar un nuevo equipo biomédico en el catálogo',
+    };
+  }
+
+  if (q.includes('nueva orden de compra') || q.includes('crea una oc') || q.includes('crear oc') || q.includes('nueva oc')) {
+    return {
+      label: 'Crear Nueva Orden de Compra',
+      type: 'modal',
+      modalAction: 'new_oc',
+      autoExecute: true,
+      confirmationRequired: false,
+      description: 'Abre el modal para crear una nueva Orden de Compra (OC)',
+    };
+  }
+
+  // Acciones críticas (requieren confirmación)
+  if (q.includes('facturar') || q.includes('radicar factura') || q.includes('emitir factura')) {
+    return {
+      label: 'Ir a Órdenes de Venta y Facturar',
+      type: 'navigate',
+      tab: 'ordenes_venta',
+      autoExecute: true,
+      confirmationRequired: true,
+      description: 'Navega a Órdenes de Venta para gestionar facturación y radicación',
+    };
+  }
+
+  if (q.includes('eliminar') || q.includes('borrar') || q.includes('desactivar')) {
+    return {
+      label: 'Acción de Eliminación',
+      type: 'execute',
+      autoExecute: false,
+      confirmationRequired: true,
+      description: 'Requiere confirmación previa antes de ejecutar eliminación',
     };
   }
 
@@ -481,6 +580,31 @@ export function getIntelligentMaraFallbackReply(
   const cleanQ = q.replace(/[¡!¿?.,:;]/g, '').trim();
 
   // -2. Navegación directa por número o nombre de ventana
+  // PASO 0: Detección de acción autónoma (Mara puede ejecutar directamente)
+  const autonomousAction = resolveAutonomousAction(query, context);
+  if (autonomousAction) {
+    const userFirst = context.userName ? context.userName.split(' ')[0] : '';
+    const greeting = userFirst && userFirst !== 'Usuario' ? `Con gusto, ${userFirst}. ` : 'Con gusto. ';
+    const confirmText = autonomousAction.confirmationRequired ? ' Esta acción requiere tu confirmación antes de ejecutarse.' : '';
+    const actionText = autonomousAction.autoExecute ? 'Voy a ejecutar esta acción por ti.' : 'Puedo ayudarte con esto.';
+
+    return {
+      reply: cleanBotReplyText(`${greeting}${actionText}${confirmText} ${autonomousAction.description}. ¿En qué más te puedo colaborar hoy?`),
+      actions: [
+        {
+          label: autonomousAction.label,
+          type: autonomousAction.type,
+          tab: autonomousAction.tab,
+          modalAction: autonomousAction.modalAction,
+          primary: true,
+          autoExecute: autonomousAction.autoExecute,
+          confirmationRequired: autonomousAction.confirmationRequired,
+          description: autonomousAction.description,
+        },
+      ],
+    };
+  }
+
   const navTarget = resolveNavigationIntent(query);
   if (navTarget) {
     const userFirst = context.userName ? context.userName.split(' ')[0] : '';
@@ -488,7 +612,7 @@ export function getIntelligentMaraFallbackReply(
     return {
       reply: cleanBotReplyText(`${greeting}Te dirijo de inmediato a la Ventana ${navTarget.tabNumber}: ${navTarget.name}. ¿En qué más te puedo colaborar hoy?`),
       actions: [
-        { label: `Ir a ${navTarget.name}`, type: 'navigate', tab: navTarget.tab, primary: true },
+        { label: `Ir a ${navTarget.name}`, type: 'navigate', tab: navTarget.tab, primary: true, autoExecute: true, description: `Navega a ${navTarget.name}` },
       ],
     };
   }

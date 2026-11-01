@@ -32,7 +32,7 @@ import {
   GripHorizontal,
   Database,
 } from 'lucide-react';
-import { AuthUser, ActiveTab, BotChatMessage, BotActionOption, UserChatMessage, StoredUserAccount } from '../../types';
+import { AuthUser, ActiveTab, BotChatMessage, BotActionOption, BotActionType, UserChatMessage, StoredUserAccount } from '../../types';
 import { getStoredUsers } from '../../data/authData';
 import { MaraAvatar } from '../common/MaraAvatar';
 import {
@@ -199,6 +199,8 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   });
   const [botInput, setBotInput] = useState('');
   const [isBotThinking, setIsBotThinking] = useState(false);
+  const [pendingAction, setPendingAction] = useState<BotActionOption | null>(null);
+  const [isExecutingAuto, setIsExecutingAuto] = useState(false);
 
   // Team User Chat state
   const [teamMessages, setTeamMessages] = useState<UserChatMessage[]>(() => getStoredTeamMessages());
@@ -411,8 +413,24 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     window.addEventListener('pointerup', handlePointerUp);
   };
 
-  // Action Click Handler for Mara
+  // Action Click Handler for Mara - Soporte completo para ejecución autónoma y confirmaciones
   const handleExecuteAction = (action: BotActionOption) => {
+    // Si requiere confirmación, guardar acción pendiente y mostrar diálogo
+    if (action.confirmationRequired) {
+      setPendingAction(action);
+      return;
+    }
+
+    // Ejecución autónoma: notificar y ejecutar sin interrupción
+    if (action.autoExecute && action.type !== 'navigate') {
+      setIsExecutingAuto(true);
+      setTimeout(() => {
+        executeAutonomousAction(action);
+        setIsExecutingAuto(false);
+      }, 300);
+      return;
+    }
+
     if (action.type === 'navigate' || action.tab) {
       if (action.tab) {
         safeNavigate(action.tab);
@@ -481,6 +499,70 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     } else if (action.type === 'query' && action.queryPrompt) {
       handleSendBotMessage(action.queryPrompt);
     }
+  };
+
+  // Ejecuta una acción autónoma de Mara
+  const executeAutonomousAction = (action: BotActionOption) => {
+    try {
+      if (action.tab) {
+        safeNavigate(action.tab);
+      }
+      if (action.modalAction) {
+        switch (action.modalAction) {
+          case 'new_equipment':
+            onOpenEquipmentModal?.();
+            break;
+          case 'new_document':
+            onOpenDocumentModal?.();
+            break;
+          case 'new_quote':
+            onOpenNewQuote?.();
+            break;
+          case 'new_oc':
+            safeNavigate('seguimiento_oc');
+            onOpenNewOCModal?.();
+            break;
+          default:
+            break;
+        }
+      }
+      // Notificar al usuario que se ejecutó
+      const userFirst = currentUser?.name ? currentUser.name.split(' ')[0] : '';
+      const greeting = userFirst ? `Listo, ${userFirst}. ` : 'Listo. ';
+      const execMsg: BotChatMessage = {
+        id: `bot-auto-${Date.now()}`,
+        sender: 'bot',
+        text: cleanBotReplyText(`${greeting}${action.description || 'La acción se ha ejecutado correctamente.'} ¿En qué más te puedo colaborar hoy?`),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actions: [
+          { label: 'Ir al Cotizador', type: 'navigate', tab: 'ventas', primary: true },
+          { label: 'Gestor de Costos', type: 'navigate', tab: 'costos' },
+        ],
+      };
+      setBotMessages((prev) => [...prev, execMsg]);
+    } catch (err) {
+      console.error('Error ejecutando acción autónoma:', err);
+      const errMsg: BotChatMessage = {
+        id: `bot-auto-err-${Date.now()}`,
+        sender: 'bot',
+        text: cleanBotReplyText('Hubo un problema ejecutando esa acción automáticamente. Inténtalo de nuevo o dime cómo puedo ayudarte.'),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setBotMessages((prev) => [...prev, errMsg]);
+    } finally {
+      setIsExecutingAuto(false);
+    }
+  };
+
+  // Confirma una acción pendiente (desde diálogo de confirmación)
+  const handleConfirmPendingAction = () => {
+    if (!pendingAction) return;
+    setPendingAction(null);
+    handleExecuteAction(pendingAction);
+  };
+
+  const handleCancelPendingAction = () => {
+    setPendingAction(null);
   };
 
   // Helper to get action icon
@@ -894,14 +976,23 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                                     key={idx}
                                     type="button"
                                     onClick={() => handleExecuteAction(act)}
+                                    disabled={isExecutingAuto && act.autoExecute}
                                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all duration-150 cursor-pointer active:scale-95 shadow-sm ${
-                                      act.primary
+                                      act.autoExecute
+                                        ? 'bg-linear-to-r from-emerald-400 to-green-500 hover:from-emerald-300 hover:to-green-400 text-slate-950 shadow-emerald-500/20 font-black'
+                                        : act.primary
                                         ? 'bg-linear-to-r from-sky-400 to-blue-500 hover:from-sky-300 hover:to-blue-400 text-slate-950 shadow-sky-500/20 font-black'
                                         : 'bg-[#1c3252] hover:bg-[#284775] text-sky-200 border border-[#3b5e8c]'
-                                    }`}
+                                    } ${isExecutingAuto && act.autoExecute ? 'opacity-70 cursor-not-allowed' : ''}`}
                                   >
                                     {getActionIcon(act)}
                                     <span>{act.label}</span>
+                                    {act.autoExecute && (
+                                      <span className="text-[8px] bg-slate-950/80 text-emerald-300 px-1 py-0.5 rounded ml-1">Auto</span>
+                                    )}
+                                    {act.confirmationRequired && (
+                                      <span className="text-[8px] bg-amber-500/20 text-amber-200 px-1 py-0.5 rounded ml-1 border border-amber-500/40">Confirmar</span>
+                                    )}
                                   </button>
                                 ))}
                               </div>
@@ -925,6 +1016,40 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Diálogo de Confirmación para Acciones Críticas */}
+              {pendingAction && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={handleCancelPendingAction}>
+                  <div
+                    className="bg-[#15243b] border border-[#38bdf8]/50 rounded-2xl p-5 shadow-2xl w-[90%] sm:w-[96px] max-w-[340px]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <ShieldCheck className="w-5 h-5 text-amber-400" />
+                      <span className="text-sm font-bold text-slate-100">Confirmar Acción</span>
+                    </div>
+                    <p className="text-xs text-slate-300 mb-4 leading-relaxed">
+                      {pendingAction.description || '¿Confirmas ejecutar esta acción?'}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCancelPendingAction}
+                        className="flex-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-200 bg-[#0f1a2e] border border-[#2d4972] transition"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmPendingAction}
+                        className="flex-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-950 bg-amber-500 hover:bg-amber-400 shadow-amber-500/30 transition active:scale-95"
+                      >
+                        Confirmar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Quick Prompts Bar */}
               <div className="px-3 pt-2 pb-1.5 border-t border-[#20344d] bg-[#0c1422]/90 flex items-center gap-1.5 overflow-x-auto scrollbar-none">

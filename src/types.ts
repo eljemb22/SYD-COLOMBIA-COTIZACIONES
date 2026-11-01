@@ -831,10 +831,37 @@ export interface SystemAlertItem {
   timestamp: number;
 }
 
+export type BotActionType =
+  | 'navigate'
+  | 'modal'
+  | 'query'
+  | 'execute'
+  | 'auto';
+
 export interface BotActionOption {
   label: string;
-  action: string;
+  type?: BotActionType;
+  action?: string;
+  tab?: ActiveTab;
+  primary?: boolean;
+  modalAction?:
+    | 'new_equipment'
+    | 'new_document'
+    | 'new_quote'
+    | 'user_management'
+    | 'customization'
+    | 'print_preview'
+    | 'manage_suppliers'
+    | 'new_oc'
+    | 'alerts_widget'
+    | 'app_updates'
+    | 'backup_modal'
+    | 'google_workspace_modal';
+  queryPrompt?: string;
   payload?: any;
+  autoExecute?: boolean;
+  confirmationRequired?: boolean;
+  description?: string;
 }
 
 export interface BotChatMessage {
