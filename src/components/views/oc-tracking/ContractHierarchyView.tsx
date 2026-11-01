@@ -1959,13 +1959,12 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                             )}
                           </div>
                         </div>
-                        </div>
                       </div>
                     );
                   })
                 )}
               </div>
-            )}
+            </div>
           </div>
         );
       })}
