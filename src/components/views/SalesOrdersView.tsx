@@ -1474,8 +1474,8 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Top Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] shadow-xl flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 transition-colors">
-        <div className="min-w-0 flex-1">
+      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] shadow-xl flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 transition-colors">
+        <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-[var(--syd-accent-glow)] border border-[var(--syd-accent)] text-[var(--syd-accent)] shrink-0">
               <PackageCheck className="w-5 h-5" />
@@ -1484,8 +1484,8 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
               <h1 className="text-base sm:text-lg font-extrabold text-[var(--syd-text-primary,#ffffff)] tracking-tight flex items-center gap-2">
                 Órdenes de Venta (OV) y Facturación
               </h1>
-              <p className="text-xs text-[var(--syd-text-secondary,#94a3b8)] truncate max-w-xl">
-                Gestión comercial unificada de pedidos vinculados a Licitaciones, Cotizaciones y Venta Directa
+              <p className="text-xs text-[var(--syd-text-secondary,#94a3b8)] truncate max-w-md">
+                Pedidos de licitaciones, cotizaciones y venta directa
               </p>
             </div>
           </div>
@@ -1606,7 +1606,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
       {activeSubTab === 'orders' && (
         <div className="space-y-4">
           {/* Sticky Controls Container: Lifecycle Filter + Search & Filter bar */}
-          <div className="sticky top-0 z-20 bg-[var(--syd-body-bg,#0b1523)]/95 pt-1 pb-2 space-y-2.5 backdrop-blur-md">
+          <div className="sticky top-0 z-20 bg-[var(--syd-card-bg)]/95 backdrop-blur-md border border-[var(--syd-border-color)] rounded-2xl px-3 py-2.5 space-y-2.5 shadow-lg">
             {/* Lifecycle Filter: Activas vs Culminadas/Facturadas vs Todas las OVs (Permite activar/inactivar individualmente) */}
             <div className="view-toolbar">
               <div className="view-toolbar-group" data-label="Órdenes">
@@ -1773,7 +1773,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           ) : ordersViewMode === 'clients' ? (
             /* CLIENT ACCORDION VIEW (Grouped by Customer with Collapsible Card) */
             <div className="space-y-4">
-              <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-400 px-1">
                 <span>
                   Mostrando <strong className="text-white">{groupedClientsOrders.length}</strong> {groupedClientsOrders.length === 1 ? 'cliente' : 'clientes'} con <strong className="text-amber-400">{filteredOrders.length}</strong> {filteredOrders.length === 1 ? 'Orden de Venta' : 'Órdenes de Venta'}
                 </span>

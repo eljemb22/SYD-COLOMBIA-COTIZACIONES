@@ -1515,8 +1515,8 @@ select[class*="bg-["] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-start;
-  gap: 5px 14px;
+  justify-content: center;
+  gap: 6px 18px;
   width: 100%;
 }
 
