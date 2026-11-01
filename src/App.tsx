@@ -1358,7 +1358,7 @@ export default function App() {
         <AppUpdateBanner />
 
         {/* Dynamic View Router */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-6 lg:p-8">
+        <main id="app-main-content" className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-6 lg:p-8">
           {activeTab === 'inicio' && (
             <DashboardOverview
               quoteHeader={quoteHeader}

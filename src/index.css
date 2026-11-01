@@ -1270,3 +1270,204 @@ select[class*="bg-["] {
   background: rgba(56, 189, 248, 0.3);
   border-radius: 9999px;
 }
+
+
+/* =====================================================================
+   SKIN GLOBAL DE VENTANAS — unifica superficies, bordes y profundidad
+   Solo estilos: no altera ninguna lógica de la aplicación.
+   ===================================================================== */
+
+/* --- Nivel 1: paneles y tarjetas ---------------------------------- */
+[class*="bg-[#111c2e]"],
+[class*="bg-[#101b2b]"],
+[class*="bg-[#0d1827]"],
+[class*="bg-[#0d1828]"],
+[class*="bg-[#0e1726]"],
+[class*="bg-[#111e30]"],
+[class*="bg-[#0f1a2e]"],
+[class*="bg-[#142338]"],
+[class*="bg-[#14233a]"],
+[class*="bg-[#182942]"],
+[class*="bg-[#152438]"],
+[class*="bg-[#18263a]"],
+[class*="bg-[#0f172a]"],
+[class*="bg-[#0b1424]"],
+[class*="bg-[#0b1329]"],
+[class*="bg-[#131f38]"],
+[class*="bg-[#111f33]"],
+[class*="bg-[#121f33]"],
+[class*="bg-[#0a111c]"],
+[class*="bg-[#0e1929]"],
+[class*="bg-[#101c2e]"],
+[class*="bg-[#122033]"],
+[class*="bg-[#0f1b2c]"],
+[class*="bg-[#0f1b2d]"],
+[class*="bg-[#0f192b]"],
+[class*="bg-[#101b2d]"],
+[class*="bg-[var(--syd-body-bg"] {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.006) 100%);
+  border-color: rgba(148, 197, 255, 0.13);
+  transition: transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.26s ease,
+              background-color 0.22s ease,
+              border-color 0.22s ease,
+              color 0.22s ease;
+}
+
+/* --- Nivel 2: filas, cabeceras de tabla y campos ------------------- */
+[class*="bg-[#15253d]"],
+[class*="bg-[#192b45]"],
+[class*="bg-[#1e314b]"],
+[class*="bg-[#1b2d46]"],
+[class*="bg-[#1a2f4c]"],
+[class*="bg-[#203657]"],
+[class*="bg-[#253f63]"],
+[class*="bg-[#253f68]"],
+[class*="bg-[#1f375b]"],
+[class*="bg-[#1f3555]"],
+[class*="bg-[#0a1322]"],
+[class*="bg-[#0b1320]"],
+[class*="bg-[#0b1420]"],
+[class*="bg-[#1b2d48]"],
+[class*="bg-[#1e3455]"],
+[class*="bg-[#20375a]"],
+[class*="bg-[#253d5e]"],
+[class*="bg-[#25426b]"] {
+  background-image: linear-gradient(180deg, rgba(3, 8, 18, 0.14) 0%, rgba(255, 255, 255, 0.022) 100%);
+  border-color: rgba(148, 197, 255, 0.11);
+  transition: transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.26s ease,
+              background-color 0.22s ease,
+              border-color 0.22s ease,
+              color 0.22s ease;
+}
+
+/* --- Bordes suaves en todo el sistema ------------------------------ */
+[class*="border-[#334d6e]"],
+[class*="border-[#243c5a]"],
+[class*="border-[#243c5e]"],
+[class*="border-[#233a59]"],
+[class*="border-[#223854]"],
+[class*="border-[#253952]"],
+[class*="border-[#1e3450]"],
+[class*="border-[#233a57]"],
+[class*="border-[#28466d]"] {
+  border-color: rgba(148, 197, 255, 0.13);
+}
+
+/* --- Botones de acción principales -------------------------------- */
+[class~="bg-[#38bdf8]"] {
+  box-shadow: 0 10px 24px -12px rgba(56, 189, 248, 0.85),
+              inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+[class~="bg-[#0284c7]"] {
+  box-shadow: 0 10px 24px -12px rgba(2, 132, 199, 0.85),
+              inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* --- Entrada de cada ventana -------------------------------------- */
+@keyframes viewEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Halo suave de fondo para dar profundidad a las ventanas */
+#app-main-content {
+  background-image:
+    radial-gradient(900px 380px at 82% -12%, rgba(56, 189, 248, 0.075), transparent 72%),
+    radial-gradient(700px 320px at 12% -8%, rgba(129, 140, 248, 0.055), transparent 70%);
+  background-repeat: no-repeat;
+  background-attachment: local;
+}
+
+#app-main-content > * {
+  animation: viewEnter 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* --- Títulos algo más compactos y limpios ------------------------- */
+#app-main-content h1,
+#app-main-content h2 {
+  letter-spacing: -0.022em;
+}
+
+/* --- Tablas: transición suave en las filas ------------------------ */
+#app-main-content table tbody tr {
+  transition: background-color 0.18s ease;
+}
+
+/* --- Modales: forma y sombra unificadas --------------------------- */
+.fixed.inset-0 > [class*="rounded-2xl"],
+.fixed.inset-0 > [class*="rounded-3xl"] {
+  border-radius: 22px;
+  box-shadow: 0 40px 90px -35px rgba(2, 8, 23, 0.95),
+              inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* --- Superficies basadas en variables de tema (Órdenes de venta) --- */
+[class~="bg-[var(--syd-card-bg)]"],
+[class~="bg-[var(--syd-sidebar-bg)]"] {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.006) 100%);
+  transition: background-color 0.22s ease, border-color 0.22s ease, box-shadow 0.26s ease;
+}
+
+[class*="border-[var(--syd-border-color)]"] {
+  border-color: rgba(148, 197, 255, 0.13);
+}
+
+/* --- Superficies slate (Órdenes de venta y tablas internas) ------- */
+[class~="bg-slate-900"],
+[class~="bg-slate-950"],
+[class~="bg-slate-800"] {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.006) 100%);
+  transition: background-color 0.22s ease, border-color 0.22s ease;
+}
+
+[class*="border-slate-800"],
+[class*="border-slate-700"] {
+  border-color: rgba(148, 197, 255, 0.13);
+}
+
+/* --- Campos: foco uniforme y limpio ------------------------------- */
+#app-main-content :is(input, select, textarea):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.6);
+}
+
+/* --- Scrollbars finas dentro de las ventanas ---------------------- */
+#app-main-content * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 197, 255, 0.22) transparent;
+}
+
+#app-main-content *::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+#app-main-content *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#app-main-content *::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 197, 255, 0.2);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 9999px;
+}
+
+#app-main-content *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(56, 189, 248, 0.38);
+}
+
+/* --- Aviso de impresión: nada de esto debe afectar el papel ------- */
+@media print {
+  [class*="bg-[#"],
+  [class*="bg-[var("],
+  [class~="bg-slate-900"],
+  [class~="bg-slate-950"],
+  [class~="bg-slate-800"] {
+    background-image: none !important;
+  }
+}
