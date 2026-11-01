@@ -356,44 +356,28 @@ Devuelve un JSON estrictamente con esta estructura:
       const isForbiddenImage = (title: string = '', url: string = '', snippet: string = '') => {
         const combined = `${title} ${url} ${snippet}`.toLowerCase();
         const forbidden = [
+          // Vehicles (not medical equipment)
           'car', 'automobile', 'vehicle', 'vehiculo', 'auto', 'racing', 'race',
-          'ferrari', 'alfa romeo', 'alfa_romeo', 'porsche', 'formula 1', 'formula1', 'f1',
-          'motorsport', 'laguna seca', 'laguna_seca', 'circuit', 'corvette', 'bmw',
-          'mercedes', 'truck', 'camion', 'nascar', 'rally', 'aircraft', 'airplane',
-          'motorcycle', 'fiat', 'ford', 'maserati', 'audi', 'chevrolet', 'honda',
-          'actor', 'actress', 'movie', 'film', 'pelicula', 'album', 'singer', 'cancion',
-          'guitar', 'stadium', 'football', 'soccer', 'thatcher', 'madonna', 'santa elena',
-          'island', 'politician', 'president', 'minister', 'general election', 'band',
-          'concert', 'celebrity', 'portrait of', 'biography', 'painting', 'sculpture',
-          // REJECT: Non-photographic media
+          'ferrari', 'alfa romeo', 'porsche', 'formula 1', 'bmw', 'mercedes',
+          'truck', 'camion', 'nascar', 'aircraft', 'airplane', 'motorcycle',
+          // Entertainment/people (not equipment)
+          'actor', 'actress', 'movie', 'film', 'pelicula', 'singer', 'cancion',
+          'guitar', 'stadium', 'football', 'soccer', 'madonna', 'band',
+          'concert', 'celebrity', 'portrait of', 'painting', 'sculpture',
+          // Non-photographic media
           'illustration', 'drawing', 'sketch', 'diagram', 'chart', 'graph',
-          'map', 'painting', 'engraving', 'etching', 'woodcut', 'lithograph',
-          'watercolor', 'oil painting', 'blueprint', 'schematic', 'design',
-          'plan', 'cartoon', 'clipart', 'icon', 'symbol', 'logo',
-          // REJECT: Historical/old content
-          'historical', 'historic', 'vintage', 'antique', 'old', 'ancient',
-          '19th century', '18th century', '17th century', '1600', '1700', '1800', '1900',
-          'black and white', 'b&w', 'monochrome', 'sepia', 'retro',
-          'tretise', 'treatise', 'trabajo', 'ensayo', 'estudio', 'thesis',
-          'diseases of', 'with their homopathi', 'treatise on',
-          // REJECT: Non-equipment medical images (anatomical, cellular, etc.)
-          'anatomical', 'anatomy', 'skeleton', 'organ', 'organo', 'órgano',
-          'cell', 'celula', 'célula', 'virus', 'bacteria', 'microbe', 'microbio',
-          'dna', 'rna', 'protein', 'proteína',
-          // REJECT: Generic medical stock (not equipment)
-          'doctor', 'nurse', 'patient', 'surgeon', 'medical team',
-          'hospital corridor', 'waiting room', 'reception',
-          'first aid', 'bandage', 'syringe', 'pill', 'capsule',
-          'prescription', 'receta', 'medicine bottle', 'frasco de medicina',
-          // REJECT: Scan results (not equipment photos)
-          'radiograph', 'x-ray plate', 'radiography film', 'scan result',
-          'ultrasound image', 'mri scan', 'ct scan', 'pet scan',
-          // REJECT: Wikimedia file pages (often old illustrations)
-          'file:', 'wikimedia commons:',
+          'map', 'engraving', 'etching', 'woodcut', 'lithograph',
+          'blueprint', 'schematic', 'cartoon', 'clipart', 'icon', 'logo',
+          // Historical/old content (before modern era)
+          'historical', 'historic', 'vintage', 'antique', 'ancient',
+          '17th century', '18th century', '19th century',
+          'black and white', 'b&w', 'monochrome', 'sepia',
+          'treatise', 'trabajo', 'ensayo', 'estudio', 'thesis',
+          'diseases of', 'treatise on',
         ];
         if (forbidden.some((w) => combined.includes(w))) return true;
 
-        // Strictly enforce clinical and medical context
+        // Require at least some medical/equipment context
         const medicalTerms = [
           'medic', 'médic', 'hospital', 'clinic', 'clínic', 'radiolog', 'radiograf',
           'x-ray', 'rayos', 'surgical', 'quirurg', 'quirúrg', 'device', 'equipment',
@@ -401,7 +385,11 @@ Devuelve un JSON estrictamente con esta estructura:
           'oximetro', 'monitor', 'lamp', 'lampara', 'lámpara', 'table', 'mesa',
           'forceps', 'pinza', 'incubator', 'incubadora', 'ultrasound', 'ecograf',
           'defibrillator', 'desfibrilador', 'sensor', 'stethoscop', 'estetoscop',
-          'fonendoscop', 'health', 'salud', 'care', 'biomedic', 'biomédic', 'infantometer'
+          'fonendoscop', 'health', 'salud', 'care', 'biomedic', 'biomédic', 'infantometer',
+          'photo', 'photograph', 'picture', 'image', 'product',
+          'surgical', 'operating', 'scanner', 'pump', 'ventilator',
+          'wheeled', 'mobile', 'portable', 'cart', 'carrito',
+          'supplier', 'distributor', 'manufacturer', 'catalog', 'catálogo',
         ];
         return !medicalTerms.some((t) => combined.includes(t));
       };
@@ -583,34 +571,17 @@ Devuelve un JSON estrictamente con esta estructura:
                 // Reject non-medical images
                 if (isForbiddenImage(title, info.url)) continue;
 
-                // MODERATE dimension requirements: reject tiny thumbnails only
+                // Basic dimension check: reject tiny images only
                 const width = info.width || 0;
                 const height = info.height || 0;
-                if (width > 0 && height > 0) {
-                  // REJECT: Very small images (< 600px width) - likely thumbnails or icons
-                  if (width < 600 || height < 450) continue;
-                  const aspectRatio = width / height;
-                  // REJECT: Portrait-oriented images (not equipment photos)
-                  if (aspectRatio < 0.8) continue;
-                  // REJECT: Extremely wide images (> 3:1) - likely panoramas or diagrams
-                  if (aspectRatio > 3.0) continue;
-                  // REJECT: Square images (likely icons or logos)
-                  if (aspectRatio > 0.95 && aspectRatio < 1.05) continue;
-                }
+                if (width > 0 && height > 0 && width < 300 && height < 200) continue;
 
-                // REJECT: Titles indicating non-photo content
+                // Basic non-photo keyword filter on title only
                 const titleLower = title.toLowerCase();
-                const nonPhotoKeywords = [
-                  'illustration', 'drawing', 'sketch', 'diagram', 'chart', 'graph',
-                  'map', 'painting', 'engraving', 'etching', 'woodcut', 'lithograph',
-                  'blueprint', 'schematic', 'design', 'plan', 'portrait',
-                  'historical', 'historic', 'vintage', 'antique', 'old',
-                  'black and white', 'b&w', 'monochrome', 'sepia',
-                  'treatise', 'trabajo', 'ensayo', 'estudio',
-                  'radiograph', 'scan result', 'ultrasound image', 'mri scan', 'ct scan',
-                  'file:', 'wikimedia commons:'
-                ];
-                if (nonPhotoKeywords.some((k) => titleLower.includes(k))) continue;
+                if (titleLower.includes('illustration') || titleLower.includes('drawing') || 
+                    titleLower.includes('painting') || titleLower.includes('diagram') ||
+                    titleLower.includes('historical') || titleLower.includes('vintage') ||
+                    titleLower.includes('black and white')) continue;
 
                 if (!resultsMap.has(info.url)) {
                   resultsMap.set(info.url, {
@@ -630,15 +601,13 @@ Devuelve un JSON estrictamente con esta estructura:
         }
       }
 
-      // FINAL FILTER: Remove images with very old years (before 1990) in title or URL
-      // Allow modern images from 1990 onwards
+      // FINAL FILTER: Only remove very old images (before 1980)
       const filteredImages = Array.from(resultsMap.values()).filter((img: any) => {
         const combined = `${img.title} ${img.url}`.toLowerCase();
-        // Reject images with years before 1990 only (very old historical photos)
-        const yearMatch = combined.match(/\b(1[6-8][0-9]{2}|19[0-8][0-9])\b/);
+        const yearMatch = combined.match(/\b(1[6-7][0-9]{2}|19[0-7][0-9])\b/);
         if (yearMatch) {
           const year = parseInt(yearMatch[0]);
-          if (year < 1990) return false;
+          if (year < 1980) return false;
         }
         return true;
       });
