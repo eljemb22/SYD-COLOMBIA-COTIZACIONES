@@ -283,6 +283,8 @@ function scoreImageOption(
   return score;
 }
 
+import { getKnownEquipmentImage } from './knownEquipmentImages';
+
 export async function getAutoEquipmentImageUrl(
   equipmentName: string,
   brand?: string,
@@ -329,7 +331,7 @@ export async function getAutoEquipmentImageUrl(
     // Sort by score descending
     candidates.sort((a, b) => b.score - a.score);
 
-    // Try the best candidates
+    // Try the best candidates from internet search
     for (const candidate of candidates.slice(0, 8)) {
       try {
         const b64 = await proxyAndConvertImageToBase64(candidate.option.url);
@@ -338,6 +340,19 @@ export async function getAutoEquipmentImageUrl(
         console.warn(`Failed to convert image:`, err);
         continue;
       }
+    }
+
+    // FALLBACK: Use known equipment image catalog if internet search found nothing
+    const knownImage = getKnownEquipmentImage(equipmentName, brand, model);
+    if (knownImage) {
+      try {
+        const b64 = await proxyAndConvertImageToBase64(knownImage.url);
+        if (b64) return b64;
+      } catch (err) {
+        console.warn(`Failed to convert known image:`, err);
+      }
+      // Return URL directly if proxy fails
+      return knownImage.url;
     }
   } catch (err) {
     console.warn('Error in getAutoEquipmentImageUrl:', err);
