@@ -612,16 +612,56 @@ Devuelve un JSON estrictamente con esta estructura:
         return true;
       });
 
+      // Also search DuckDuckGo Images for more results (especially specific equipment models)
+      const ddgResults = await searchDuckDuckGoImages(rawQuery);
+
+      // Merge DDG results (dedup by URL)
+      for (const ddg of ddgResults) {
+        if (!resultsMap.has(ddg.url)) {
+          resultsMap.set(ddg.url, ddg);
+        }
+      }
+
+      const allImages = Array.from(resultsMap.values());
+
       return res.json({
         success: true,
         query: rawQuery,
-        images: filteredImages.slice(0, 12),
+        images: allImages.slice(0, 12),
       });
     } catch (err: any) {
       console.error('Error in /api/products/search-images:', err);
       return res.status(500).json({ success: false, error: err.message, images: [] });
     }
   });
+
+  // DuckDuckGo Images search (free, no API key required)
+  async function searchDuckDuckGoImages(query: string): Promise<any[]> {
+    try {
+      const ddgUrl = `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json`;
+      const r = await fetch(ddgUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'application/json',
+        },
+      });
+      if (r.ok) {
+        const data = await r.json();
+        const results = data.results || [];
+        return results.map((item: any) => ({
+          title: item.title || query,
+          url: item.image || item.url,
+          thumbnail: item.thumbnail || item.image,
+          source: 'DuckDuckGo Images',
+          width: item.width || 0,
+          height: item.height || 0,
+        }));
+      }
+    } catch (err) {
+      console.warn('DuckDuckGo search failed:', err);
+    }
+    return [];
+  }
 
   // Image proxy endpoint to bypass CORS and convert to base64
   app.all('/api/proxy-image', async (req, res) => {
