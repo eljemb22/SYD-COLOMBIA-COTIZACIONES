@@ -141,8 +141,8 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
         <div className="relative rounded-[32px] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.7)]">
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-transparent backdrop-blur-3xl" />
 
-          <div className="relative px-8 pt-12 pb-6 text-center">
-            <div className="mx-auto mb-6 w-80 h-80 flex items-center justify-center animate-float">
+          <div className="relative px-8 pt-6 pb-4 text-center">
+            <div className="mx-auto mb-4 w-80 h-80 flex items-center justify-center animate-float">
               <img
                 src={LOGO_SRC}
                 alt="SUMINISTROS Y DOTACIONES DE COLOMBIA S.A.S."
@@ -164,7 +164,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="relative px-8 pb-8 space-y-4">
+          <form onSubmit={handleLogin} className="relative px-8 pb-6 space-y-3">
             {errorMsg && (
               <div className="flex items-center gap-2 p-3 rounded-2xl bg-rose-500/15 border border-rose-400/40 text-rose-200 text-xs font-semibold animate-shake backdrop-blur-md">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-300" />
@@ -246,7 +246,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
             </button>
           </form>
 
-          <div className="relative px-8 py-4 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400 bg-white/[0.02]">
+          <div className="relative px-8 py-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400 bg-white/[0.02]">
             <div className="flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-emerald-400" />
               <span>Sistema Seguro Verificado</span>
