@@ -459,28 +459,40 @@ select[class*="bg-["] {
 /* ===== Animaciones temáticas por icono de ventana ===== */
 #main-sidebar-navigation .nav-icon {
   position: relative;
-  perspective: 180px;
+  perspective: 240px;
   overflow: visible;
+  will-change: transform;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.4s ease,
+              background-color 0.3s ease,
+              color 0.3s ease;
 }
 
-/* 1) Cotizaciones — el carrito se llena de productos */
-@keyframes sydCartBump {
-  0%, 100% { transform: scale(1.14) rotate(-6deg) translateY(0); }
-  30%      { transform: scale(1.18) rotate(-8deg) translateY(-1.5px); }
-  55%      { transform: scale(1.13) rotate(-5deg) translateY(0.8px); }
-  80%      { transform: scale(1.16) rotate(-7deg) translateY(-0.7px); }
+/* Resplandor suave común al pasar el cursor */
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover .nav-icon {
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.22),
+              0 0 18px rgba(56, 189, 248, 0.35);
+}
+
+/* 1) Cotizaciones — el carrito se balancea mientras se llena */
+@keyframes sydCartSway {
+  0%, 100% { transform: scale(1.12) rotate(-5deg) translateY(0); }
+  25%      { transform: scale(1.15) rotate(-8deg) translateY(-1px); }
+  50%      { transform: scale(1.12) rotate(-4deg) translateY(0.5px); }
+  75%      { transform: scale(1.14) rotate(-7deg) translateY(-0.6px); }
 }
 
 @keyframes sydCartDrop {
-  0%   { transform: translateY(-8px) scale(0.5); opacity: 0; }
-  25%  { opacity: 1; }
-  70%  { transform: translateY(8px) scale(1); opacity: 1; }
-  85%, 100% { transform: translateY(10px) scale(0.6); opacity: 0; }
+  0%   { transform: translateY(-9px) scale(0.35); opacity: 0; }
+  18%  { opacity: 0.9; }
+  62%  { transform: translateY(5px) scale(1); opacity: 0.95; }
+  80%  { transform: translateY(9px) scale(0.55); opacity: 0; }
+  100% { transform: translateY(9px) scale(0.4); opacity: 0; }
 }
 
 #main-sidebar-navigation #sidebar-tab-ventas:hover svg {
-  animation: sydCartBump 2.2s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9));
+  animation: sydCartSway 2.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.85));
 }
 
 #main-sidebar-navigation #sidebar-tab-ventas .nav-icon::before,
@@ -492,7 +504,7 @@ select[class*="bg-["] {
   height: 3px;
   border-radius: 9999px;
   background: #a5f3fc;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.95);
+  box-shadow: 0 0 7px rgba(56, 189, 248, 0.95);
   opacity: 0;
   pointer-events: none;
   z-index: 2;
@@ -502,32 +514,32 @@ select[class*="bg-["] {
 #main-sidebar-navigation #sidebar-tab-ventas .nav-icon::after  { left: 19px; }
 
 #main-sidebar-navigation #sidebar-tab-ventas:hover .nav-icon::before {
-  animation: sydCartDrop 1.7s ease-in infinite;
+  animation: sydCartDrop 1.8s cubic-bezier(0.35, 0.05, 0.4, 1) infinite;
 }
 
 #main-sidebar-navigation #sidebar-tab-ventas:hover .nav-icon::after {
-  animation: sydCartDrop 1.7s ease-in infinite 0.6s;
+  animation: sydCartDrop 1.8s cubic-bezier(0.35, 0.05, 0.4, 1) infinite 0.6s;
 }
 
-/* 2) Costos — el lápiz escribe */
+/* 2) Costos — el lápiz escribe con trazo continuo */
 @keyframes sydPenWrite {
-  0%, 100% { transform: scale(1.14) rotate(-10deg) translate(0, 0); }
-  20%      { transform: scale(1.14) rotate(-4deg) translate(1.2px, -1.2px); }
-  40%      { transform: scale(1.14) rotate(-13deg) translate(-1.2px, 1px); }
-  60%      { transform: scale(1.14) rotate(-5deg) translate(1px, 0.4px); }
-  80%      { transform: scale(1.14) rotate(-11deg) translate(-0.4px, 1.2px); }
+  0%, 100% { transform: scale(1.12) rotate(-9deg) translate(0, 0); }
+  15%      { transform: scale(1.12) rotate(-6deg) translate(0.8px, -0.8px); }
+  35%      { transform: scale(1.12) rotate(-11deg) translate(-0.8px, 0.6px); }
+  55%      { transform: scale(1.12) rotate(-7deg) translate(0.6px, 0.3px); }
+  75%      { transform: scale(1.12) rotate(-10deg) translate(-0.6px, 0.8px); }
 }
 
 @keyframes sydPenLine {
   0%, 100% { width: 0; opacity: 0; }
-  15%      { opacity: 1; }
-  70%      { width: 15px; opacity: 1; }
-  90%      { width: 15px; opacity: 0; }
+  12%      { opacity: 1; }
+  65%      { width: 16px; opacity: 1; }
+  85%      { width: 16px; opacity: 0; }
 }
 
 #main-sidebar-navigation #sidebar-tab-costos:hover svg {
-  animation: sydPenWrite 1.9s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.9));
+  animation: sydPenWrite 2.1s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.85));
 }
 
 #main-sidebar-navigation #sidebar-tab-costos .nav-icon::after {
@@ -538,41 +550,41 @@ select[class*="bg-["] {
   height: 1.5px;
   width: 0;
   border-radius: 9999px;
-  background: linear-gradient(90deg, rgba(251, 191, 36, 0.2), #fbbf24);
-  box-shadow: 0 0 6px rgba(251, 191, 36, 0.8);
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.15), #fbbf24);
+  box-shadow: 0 0 7px rgba(251, 191, 36, 0.75);
   opacity: 0;
   pointer-events: none;
 }
 
 #main-sidebar-navigation #sidebar-tab-costos:hover .nav-icon::after {
-  animation: sydPenLine 1.9s ease-out infinite;
+  animation: sydPenLine 2.1s cubic-bezier(0.33, 0, 0.35, 1) infinite;
 }
 
-/* 3) Catálogo — el libro pasa la página */
+/* 3) Catálogo — el libro pasa la página en 3D */
 @keyframes sydBookFlip {
-  0%, 100% { transform: scale(1.14) rotateY(0deg); }
-  30%      { transform: scale(1.14) rotateY(-28deg); }
-  55%      { transform: scale(1.14) rotateY(8deg); }
-  75%      { transform: scale(1.14) rotateY(-4deg); }
+  0%, 100% { transform: scale(1.12) rotateY(0deg) skewY(0deg); }
+  35%      { transform: scale(1.12) rotateY(-26deg) skewY(-1deg); }
+  60%      { transform: scale(1.12) rotateY(6deg) skewY(0.5deg); }
+  80%      { transform: scale(1.12) rotateY(-3deg) skewY(0deg); }
 }
 
 #main-sidebar-navigation #sidebar-tab-catalogo:hover svg {
-  animation: sydBookFlip 2.4s cubic-bezier(0.34, 1.4, 0.64, 1) infinite;
-  transform-origin: 72% 50%;
-  filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.9));
+  animation: sydBookFlip 2.6s cubic-bezier(0.34, 1.3, 0.64, 1) infinite;
+  transform-origin: 75% 50%;
+  filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.85));
 }
 
-/* 4) Licitaciones — se apilan documentos */
+/* 4) Licitaciones — los documentos se apilan con sombra */
 @keyframes sydDocStack {
-  0%   { transform: translate(4px, 6px) rotate(8deg) scale(0.7); opacity: 0; }
-  35%  { transform: translate(-2px, 0) rotate(0deg) scale(1); opacity: 1; }
-  75%  { transform: translate(-6px, -3px) rotate(-6deg) scale(1); opacity: 0.9; }
-  100% { transform: translate(-6px, -4px) rotate(-8deg) scale(0.9); opacity: 0; }
+  0%   { transform: translate(3px, 7px) rotate(10deg) scale(0.75); opacity: 0; }
+  30%  { transform: translate(-2px, -1px) rotate(2deg) scale(1); opacity: 1; }
+  70%  { transform: translate(-6px, -4px) rotate(-5deg) scale(1); opacity: 1; }
+  100% { transform: translate(-8px, -7px) rotate(-9deg) scale(0.92); opacity: 0; }
 }
 
 #main-sidebar-navigation #sidebar-tab-licitaciones:hover svg {
-  transform: scale(1.14) rotate(-4deg);
-  filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.9));
+  transform: scale(1.12) rotate(-4deg);
+  filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.85));
 }
 
 #main-sidebar-navigation #sidebar-tab-licitaciones .nav-icon::before,
@@ -586,26 +598,26 @@ select[class*="bg-["] {
   border-radius: 2px;
   border: 1.5px solid #d8b4fe;
   background: rgba(88, 28, 135, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
   opacity: 0;
   pointer-events: none;
   z-index: 2;
 }
 
 #main-sidebar-navigation #sidebar-tab-licitaciones:hover .nav-icon::before {
-  animation: sydDocStack 1.9s ease-in-out infinite;
+  animation: sydDocStack 2s cubic-bezier(0.33, 0, 0.3, 1) infinite;
 }
 
 #main-sidebar-navigation #sidebar-tab-licitaciones:hover .nav-icon::after {
-  animation: sydDocStack 1.9s ease-in-out infinite 0.55s;
+  animation: sydDocStack 2s cubic-bezier(0.33, 0, 0.3, 1) infinite 0.6s;
 }
 
-/* 5) Seguimiento de OC — el camión va manejando */
+/* 5) Seguimiento de OC — el camión avanza con las ruedas girando */
 @keyframes sydTruckDrive {
-  0%, 100% { transform: scale(1.12) translateX(0) translateY(0) rotate(0deg); }
-  20%      { transform: scale(1.12) translateX(2.5px) translateY(-1.2px) rotate(1deg); }
-  40%      { transform: scale(1.12) translateX(0.8px) translateY(0.4px) rotate(-0.5deg); }
-  60%      { transform: scale(1.12) translateX(2.5px) translateY(-1.2px) rotate(1deg); }
-  80%      { transform: scale(1.12) translateX(0.8px) translateY(0) rotate(0deg); }
+  0%, 100% { transform: scale(1.1) translateX(0) translateY(0); }
+  25%      { transform: scale(1.1) translateX(1.6px) translateY(-0.9px); }
+  50%      { transform: scale(1.1) translateX(0.2px) translateY(0); }
+  75%      { transform: scale(1.1) translateX(1.6px) translateY(-0.9px); }
 }
 
 @keyframes sydWheelSpin {
@@ -613,82 +625,83 @@ select[class*="bg-["] {
   to   { transform: rotate(360deg); }
 }
 
+@keyframes sydSpeedLines {
+  0%   { transform: translateX(5px); opacity: 0; }
+  35%  { opacity: 0.9; }
+  100% { transform: translateX(-4px); opacity: 0; }
+}
+
 #main-sidebar-navigation #sidebar-tab-seguimiento_oc:hover svg {
-  animation: sydTruckDrive 1.1s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9));
+  animation: sydTruckDrive 1.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.85));
 }
 
 #main-sidebar-navigation #sidebar-tab-seguimiento_oc:hover svg circle {
   transform-box: fill-box;
   transform-origin: center;
-  animation: sydWheelSpin 0.55s linear infinite;
+  animation: sydWheelSpin 0.75s linear infinite;
 }
 
 #main-sidebar-navigation #sidebar-tab-seguimiento_oc .nav-icon::before {
   content: '';
   position: absolute;
-  left: 2px;
-  top: 50%;
-  width: 6px;
+  left: 1px;
+  top: 45%;
+  width: 7px;
   height: 1.5px;
   border-radius: 9999px;
   background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.9));
+  box-shadow: 0 4px 0 -0.2px rgba(56, 189, 248, 0.45);
   opacity: 0;
   pointer-events: none;
 }
 
 #main-sidebar-navigation #sidebar-tab-seguimiento_oc:hover .nav-icon::before {
-  animation: sydSpeedLines 0.8s linear infinite;
+  animation: sydSpeedLines 0.9s ease-out infinite;
 }
 
-@keyframes sydSpeedLines {
-  0%   { transform: translateX(4px); opacity: 0; }
-  40%  { opacity: 1; }
-  100% { transform: translateX(-3px); opacity: 0; }
-}
-
-/* 6) Gmail — el sobre vuela */
+/* 6) Gmail — el sobre flota */
 @keyframes sydMailFly {
-  0%, 100% { transform: scale(1.13) translateY(0) rotate(0deg); }
-  50%      { transform: scale(1.16) translateY(-3px) rotate(-6deg); }
+  0%, 100% { transform: scale(1.11) translateY(0) rotate(0deg); }
+  50%      { transform: scale(1.14) translateY(-3px) rotate(-5deg); }
 }
 
 #main-sidebar-navigation #sidebar-tab-gmail_compras:hover svg {
-  animation: sydMailFly 1.8s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(251, 113, 133, 0.9));
+  animation: sydMailFly 2.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(251, 113, 133, 0.85));
 }
 
-/* 7) Órdenes de venta — el paquete rebota */
+/* 7) Órdenes de venta — el paquete rebota con inercia */
 @keyframes sydPkgBounce {
-  0%, 100% { transform: scale(1.12, 1.12) translateY(0); }
-  28%      { transform: scale(1.08, 1.2) translateY(-3.5px); }
-  52%      { transform: scale(1.2, 1.02) translateY(1px); }
-  72%      { transform: scale(1.12, 1.14) translateY(-1.2px); }
+  0%, 100% { transform: scale(1.1, 1.1) translateY(0); }
+  30%      { transform: scale(1.06, 1.16) translateY(-3.5px); }
+  55%      { transform: scale(1.16, 1.02) translateY(0.8px); }
+  75%      { transform: scale(1.1, 1.12) translateY(-1px); }
 }
 
 #main-sidebar-navigation #sidebar-tab-ordenes_venta:hover svg {
-  animation: sydPkgBounce 1.5s ease-in-out infinite;
+  animation: sydPkgBounce 1.7s cubic-bezier(0.34, 1.2, 0.64, 1) infinite;
   transform-origin: 50% 90%;
-  filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.9));
+  filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.85));
 }
 
 /* 8) Documentación — la carpeta se abre y sale un papel */
 @keyframes sydFolderOpen {
-  0%, 100% { transform: scale(1.13) rotate(0deg) skewX(0deg); }
-  35%      { transform: scale(1.15) rotate(-4deg) skewX(-7deg) translateY(-1px); }
-  70%      { transform: scale(1.14) rotate(2deg) skewX(4deg); }
+  0%, 100% { transform: scale(1.11) rotate(0deg) skewX(0deg); }
+  40%      { transform: scale(1.13) rotate(-3deg) skewX(-6deg) translateY(-1px); }
+  70%      { transform: scale(1.12) rotate(1.5deg) skewX(3deg); }
 }
 
 @keyframes sydPaperOut {
-  0%   { transform: translateY(6px) scale(0.85); opacity: 0; }
-  35%  { transform: translateY(-4px) scale(1); opacity: 1; }
-  70%  { transform: translateY(-9px) scale(1); opacity: 0.85; }
-  100% { transform: translateY(-12px) scale(0.9); opacity: 0; }
+  0%   { transform: translateY(6px) scale(0.8); opacity: 0; }
+  30%  { transform: translateY(-4px) scale(1); opacity: 1; }
+  70%  { transform: translateY(-9px) scale(1); opacity: 0.9; }
+  100% { transform: translateY(-13px) scale(0.92); opacity: 0; }
 }
 
 #main-sidebar-navigation #sidebar-tab-documentacion:hover svg {
-  animation: sydFolderOpen 2.2s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.9));
+  animation: sydFolderOpen 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.85));
 }
 
 #main-sidebar-navigation #sidebar-tab-documentacion .nav-icon::before {
@@ -700,36 +713,36 @@ select[class*="bg-["] {
   height: 12px;
   border-radius: 2px;
   background: #d1fae5;
-  box-shadow: 0 0 6px rgba(52, 211, 153, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   opacity: 0;
   pointer-events: none;
   z-index: 2;
 }
 
 #main-sidebar-navigation #sidebar-tab-documentacion:hover .nav-icon::before {
-  animation: sydPaperOut 2.2s ease-out infinite;
+  animation: sydPaperOut 2.4s ease-out infinite;
 }
 
 /* 9) Inicio — las tarjetas del tablero laten en secuencia */
 @keyframes sydTilePop {
   0%, 100% { opacity: 0.85; transform: scale(1); }
-  50%      { opacity: 1; transform: scale(1.18); }
+  50%      { opacity: 1; transform: scale(1.16); }
 }
 
 #main-sidebar-navigation #sidebar-tab-inicio:hover svg {
-  transform: scale(1.12);
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9));
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.85));
 }
 
 #main-sidebar-navigation #sidebar-tab-inicio:hover svg rect {
   transform-box: fill-box;
   transform-origin: center;
-  animation: sydTilePop 1.6s ease-in-out infinite;
+  animation: sydTilePop 1.9s ease-in-out infinite;
 }
 
-#main-sidebar-navigation #sidebar-tab-inicio:hover svg rect:nth-child(2) { animation-delay: 0.15s; }
-#main-sidebar-navigation #sidebar-tab-inicio:hover svg rect:nth-child(3) { animation-delay: 0.3s; }
-#main-sidebar-navigation #sidebar-tab-inicio:hover svg rect:nth-child(4) { animation-delay: 0.45s; }
+#main-sidebar-navigation #sidebar-tab-inicio:hover svg rect:nth-child(2) { animation-delay: 0.16s; }
+#main-sidebar-navigation #sidebar-tab-inicio:hover svg rect:nth-child(3) { animation-delay: 0.32s; }
+#main-sidebar-navigation #sidebar-tab-inicio:hover svg rect:nth-child(4) { animation-delay: 0.48s; }
 
 /* Reduced motion respect */
 @media (prefers-reduced-motion: reduce) {
