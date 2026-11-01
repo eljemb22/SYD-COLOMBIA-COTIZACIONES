@@ -583,19 +583,19 @@ Devuelve un JSON estrictamente con esta estructura:
                 // Reject non-medical images
                 if (isForbiddenImage(title, info.url)) continue;
 
-                // STRICT dimension requirements: real product photos are usually 1024x768 or larger
+                // MODERATE dimension requirements: reject tiny thumbnails only
                 const width = info.width || 0;
                 const height = info.height || 0;
                 if (width > 0 && height > 0) {
-                  // REJECT: Very small images (< 1024px width) - likely thumbnails or icons
-                  if (width < 1024 || height < 768) continue;
+                  // REJECT: Very small images (< 600px width) - likely thumbnails or icons
+                  if (width < 600 || height < 450) continue;
                   const aspectRatio = width / height;
                   // REJECT: Portrait-oriented images (not equipment photos)
-                  if (aspectRatio < 1.0) continue;
-                  // REJECT: Extremely wide images (> 2.5:1) - likely panoramas or diagrams
-                  if (aspectRatio > 2.5) continue;
+                  if (aspectRatio < 0.8) continue;
+                  // REJECT: Extremely wide images (> 3:1) - likely panoramas or diagrams
+                  if (aspectRatio > 3.0) continue;
                   // REJECT: Square images (likely icons or logos)
-                  if (aspectRatio > 0.9 && aspectRatio < 1.1) continue;
+                  if (aspectRatio > 0.95 && aspectRatio < 1.05) continue;
                 }
 
                 // REJECT: Titles indicating non-photo content
@@ -611,21 +611,6 @@ Devuelve un JSON estrictamente con esta estructura:
                   'file:', 'wikimedia commons:'
                 ];
                 if (nonPhotoKeywords.some((k) => titleLower.includes(k))) continue;
-
-                // REQUIRE: Title must contain photo-related or equipment-related terms
-                const photoTerms = [
-                  'photo', 'photograph', 'picture', 'image', 'product',
-                  'clinical', 'hospital', 'medical equipment', 'medical device',
-                  'surgical', 'operating', 'monitor', 'scanner', 'pump',
-                  'ventilator', 'incubator', 'defibrillator', 'ultrasound',
-                  'x-ray', 'rayos', 'table', 'mesa', 'bed', 'camilla',
-                  'monitor', 'signos vitales', 'patient monitor',
-                  'wheeled', 'mobile', 'portable', 'cart', 'carrito',
-                  'supplier', 'distributor', 'manufacturer',
-                  'price', 'precio', 'buy', 'sale', 'venta',
-                  'catalog', 'catálogo', 'brochure', 'datasheet'
-                ];
-                if (!photoTerms.some((k) => titleLower.includes(k))) continue;
 
                 if (!resultsMap.has(info.url)) {
                   resultsMap.set(info.url, {
@@ -645,14 +630,15 @@ Devuelve un JSON estrictamente con esta estructura:
         }
       }
 
-      // FINAL FILTER: Remove images with years before 2000 in title or URL
+      // FINAL FILTER: Remove images with very old years (before 1990) in title or URL
+      // Allow modern images from 1990 onwards
       const filteredImages = Array.from(resultsMap.values()).filter((img: any) => {
         const combined = `${img.title} ${img.url}`.toLowerCase();
-        // Reject any image with year before 2000
-        const yearMatch = combined.match(/\b(1[6-9][0-9]{2}|200[0-9])\b/);
+        // Reject images with years before 1990 only (very old historical photos)
+        const yearMatch = combined.match(/\b(1[6-8][0-9]{2}|19[0-8][0-9])\b/);
         if (yearMatch) {
           const year = parseInt(yearMatch[0]);
-          if (year < 2000) return false;
+          if (year < 1990) return false;
         }
         return true;
       });
