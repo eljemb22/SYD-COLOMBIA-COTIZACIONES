@@ -83,9 +83,9 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
         <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-cyan-500/20 blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-indigo-500/25 blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
         <div className="relative flex flex-col items-center">
-          <div className="relative w-72 h-72 sm:w-96 sm:h-96">
+          <div className="relative w-96 h-96 sm:w-[28rem] sm:h-[28rem]">
             {/* Glow de fondo */}
-            <div className="absolute inset-0 rounded-full bg-cyan-400/40 blur-[100px] animate-pulse" />
+            <div className="absolute inset-0 rounded-full bg-cyan-400/40 blur-[120px] animate-pulse" />
             {/* Logo dibujándose con clip-path (efecto pincel) */}
             <img
               src={LOGO_SRC}
@@ -94,7 +94,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
               style={{
                 clipPath: 'inset(0 100% 0 0)',
                 animation: 'drawIn 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards',
-                filter: 'drop-shadow(0 0 50px rgba(56,189,248,0.8))',
+                filter: 'drop-shadow(0 0 60px rgba(56,189,248,0.9))',
               }}
             />
             {/* Trazo de pincel que sigue el dibujo */}
@@ -142,12 +142,12 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-transparent backdrop-blur-3xl" />
 
           <div className="relative px-8 pt-12 pb-6 text-center">
-            <div className="mx-auto mb-6 w-64 h-64 flex items-center justify-center animate-float">
+            <div className="mx-auto mb-6 w-80 h-80 flex items-center justify-center animate-float">
               <img
                 src={LOGO_SRC}
                 alt="SUMINISTROS Y DOTACIONES DE COLOMBIA S.A.S."
                 style={{
-                  filter: 'drop-shadow(0 0 50px rgba(56,189,248,0.7))',
+                  filter: 'drop-shadow(0 0 60px rgba(56,189,248,0.8))',
                 }}
                 className="w-full h-full object-contain"
               />
