@@ -8,6 +8,7 @@ import {
   ExternalLink,
   FileSpreadsheet,
   HardDrive,
+  KeyRound,
   Mail,
   Database,
   Cloud,
@@ -123,6 +124,33 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
   const [isConnected, setIsConnected] = useState<boolean>(() => googleWorkspaceService.isConnected());
   const [isConnecting, setIsConnecting] = useState(false);
   const [activeTab, setActiveTab] = useState<'sheets' | 'drive'>('sheets');
+  const [oauthClientIdInput, setOauthClientIdInput] = useState<string>(
+    () => googleWorkspaceService.getClientId()
+  );
+  const [showClientIdEditor, setShowClientIdEditor] = useState(false);
+
+  const handleSaveOauthClientId = () => {
+    const value = oauthClientIdInput.trim();
+    try {
+      if (value.includes('.apps.googleusercontent.com')) {
+        localStorage.setItem('syd_custom_google_client_id', value);
+        // Se comparte con el modulo de Gmail para no configurar dos veces
+        localStorage.setItem('syd_gmail_custom_client_id_v1', value);
+        setSheetError(
+          'Client ID de Google OAuth guardado. Vuelve a pulsar "Conectar con Google Drive (OAuth)".'
+        );
+      } else if (!value) {
+        localStorage.removeItem('syd_custom_google_client_id');
+        localStorage.removeItem('syd_gmail_custom_client_id_v1');
+        setOauthClientIdInput(googleWorkspaceService.getClientId());
+        setSheetError('Se restauro el Client ID oficial del proyecto.');
+      } else {
+        setSheetError('El Client ID no es valido. Debe terminar en .apps.googleusercontent.com');
+      }
+    } catch {
+      setSheetError('No se pudo guardar el Client ID en este navegador.');
+    }
+  };
 
   useEffect(() => {
     if (initialTab) {
@@ -2627,6 +2655,60 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                           <span>Cargar Archivo Excel (.xlsx)</span>
                           <input type="file" accept=".xlsx,.xls,.csv" onChange={handleLocalFileUpload} className="hidden" />
                         </label>
+                      </div>
+
+                      {/* Configuracion del Client ID de Google OAuth */}
+                      <div className="pt-2 border-t border-slate-800 space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowClientIdEditor((v) => !v)}
+                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-sky-300 transition cursor-pointer"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                          <span>
+                            {showClientIdEditor
+                              ? 'Ocultar configuracion del Client ID de Google'
+                              : 'Configurar Client ID de Google OAuth (si Google muestra origin_mismatch)'}
+                          </span>
+                        </button>
+
+                        {showClientIdEditor && (
+                          <div className="space-y-2 p-3 rounded-xl border border-slate-700/80 bg-slate-950/60">
+                            <p className="text-[11px] text-slate-400 leading-relaxed">
+                              Si Google responde <span className="text-rose-300 font-mono">Error 400: origin_mismatch</span>,
+                              el origen desde el que abres esta app no esta autorizado en Google Cloud Console.
+                              Crea un cliente OAuth 2.0 de tipo <span className="text-slate-200 font-semibold">Aplicacion web</span> con
+                              el origen <span className="text-cyan-300 font-mono">{typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}</span>
+                              en "Origenes de JavaScript autorizados" y pega aqui su Client ID.
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <input
+                                type="text"
+                                value={oauthClientIdInput}
+                                onChange={(e) => setOauthClientIdInput(e.target.value)}
+                                placeholder="xxxx-xxxx.apps.googleusercontent.com"
+                                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-[11px] text-white font-mono placeholder-slate-600 focus:border-sky-500 outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleSaveOauthClientId}
+                                className="px-3 py-2 bg-sky-700 hover:bg-sky-600 text-white font-bold text-[11px] rounded-lg transition cursor-pointer whitespace-nowrap"
+                              >
+                                Guardar Client ID
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOauthClientIdInput('');
+                                  handleSaveOauthClientId();
+                                }}
+                                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold text-[11px] rounded-lg transition cursor-pointer whitespace-nowrap"
+                              >
+                                Restablecer
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : null}

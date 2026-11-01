@@ -787,6 +787,7 @@ export interface SalesOrderRecord {
   carrierName?: string;
   clientAddress?: string;
   attachedInvoiceFile?: any;
+  attachedDeliveryReceipt?: any;
   notes?: string;
   renewedFromSalesOrderNumber?: string;
   renewedAt?: string;
