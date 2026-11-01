@@ -141,15 +141,15 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
         <div className="relative rounded-[32px] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.7)]">
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-transparent backdrop-blur-3xl" />
 
-          <div className="relative px-8 pt-6 pb-4 text-center">
-            <div className="mx-auto mb-4 w-80 h-80 flex items-center justify-center animate-float">
+          <div className="relative px-8 pt-3 pb-2 text-center">
+            <div className="mx-auto mb-2 w-80 h-auto max-h-80 flex items-center justify-center animate-float">
               <img
                 src={LOGO_SRC}
                 alt="SUMINISTROS Y DOTACIONES DE COLOMBIA S.A.S."
                 style={{
                   filter: 'drop-shadow(0 0 60px rgba(56,189,248,0.8))',
                 }}
-                className="w-full h-full object-contain"
+                className="w-full h-auto object-contain"
               />
             </div>
 
