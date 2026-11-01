@@ -86,7 +86,6 @@ import {
   deleteTechnicalDocumentFromFirestore,
   deleteEquipmentFromFirestore,
   saveOCTrackingContractsToFirestore,
-  saveSingleSalesOrderToFirestore,
   SyncConnectionStatus,
 } from './services/realtimeSync';
 import { syncTenderItemToCatalog } from './utils/catalogSyncUtils';
@@ -321,6 +320,14 @@ export default function App() {
 
   // Real-time Firestore Sync Subscription
   useEffect(() => {
+    // Migracion: limpiar membrete/logo guardados que puedan estar desactualizados,
+    // para que siempre se use el membrete y logo oficiales fijos en codigo.
+    try {
+      localStorage.removeItem('syd_custom_manual_letterhead');
+      localStorage.removeItem('syd_active_letterhead_url');
+      localStorage.removeItem('syd_permanent_default_letterhead');
+      localStorage.removeItem('syd_custom_login_logo_url');
+    } catch {}
     const unsubscribe = subscribeToRealtimeDatabase({
       onEquipmentsUpdate: (newEqs) => {
         if (newEqs && newEqs.length > 0) {
@@ -510,11 +517,8 @@ export default function App() {
       localStorage.setItem('syd_active_draft_quote_items', JSON.stringify(quote.items || []));
     } catch (_) {}
     setEditingQuoteId(quote.id);
-    if (quote.letterheadUrl !== undefined) {
-      setCustomLetterheadUrl(quote.letterheadUrl === 'none' ? null : (quote.letterheadUrl || getOfficialSyDLetterheadDataUrl()));
-    } else {
-      setCustomLetterheadUrl(getOfficialSyDLetterheadDataUrl());
-    }
+    // Membrete fijo: siempre usar el membrete oficial corporativo (no se permite cambiar)
+    setCustomLetterheadUrl(getOfficialSyDLetterheadDataUrl());
     if (quote.marginSettings && quote.marginSettings.subirBajar > 0) {
       setMarginSettings(quote.marginSettings);
     } else {
@@ -1567,7 +1571,6 @@ export default function App() {
               onClearInitialQuoteToConvert={handleClearInitialQuoteToConvert}
               initialTenderToConvert={initialTenderToConvert}
               onClearInitialTenderToConvert={handleClearInitialTenderToConvert}
-              onGenerateOCTracking={handleGenerateOCTracking}
             />
           )}
 

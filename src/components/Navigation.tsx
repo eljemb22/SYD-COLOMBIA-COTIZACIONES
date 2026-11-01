@@ -638,17 +638,22 @@ export const Navigation: React.FC<NavigationProps> = ({
                     className="w-full flex items-center justify-between px-2.5 py-1 text-[10px] font-bold text-slate-400 hover:text-slate-200 uppercase tracking-wider cursor-pointer select-none"
                   >
                     <span>{sec.group}</span>
-                    {isSecCollapsed ? (
-                      <ChevronDown className="w-3 h-3 text-slate-400" />
-                    ) : (
-                      <ChevronUp className="w-3 h-3 text-slate-400" />
-                    )}
+                    <ChevronDown className={`w-3 h-3 text-slate-400 chevron-toggle ${isSecCollapsed ? '' : 'open'}`} />
                   </button>
                 )}
                 {isEffectiveCollapsed && <div className="h-px bg-[#334d6e]/40 my-1 mx-1.5" />}
 
-                {(!isSecCollapsed || isEffectiveCollapsed) &&
-                  sec.items.map((tab) => {
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-out ${
+                    isEffectiveCollapsed
+                      ? 'max-h-0 opacity-0'
+                      : isSecCollapsed
+                      ? 'max-h-0 opacity-0'
+                      : 'max-h-[600px] opacity-100'
+                  }`}
+                >
+                  {isEffectiveExpanded &&
+                    sec.items.map((tab) => {
                     const isActive = (tab as any).matchesTab
                       ? (tab as any).matchesTab(activeTab)
                       : activeTab === tab.id;
@@ -723,6 +728,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                       </button>
                     );
                   })}
+                </div>
               </div>
             );
           })}

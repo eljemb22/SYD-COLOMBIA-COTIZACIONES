@@ -537,8 +537,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <Building2 className="w-3.5 h-3.5" />
               <span>SYD Colombia • Portal Principal de Navegación</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Centro de Gestión Comercial &amp; Licitaciones
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight bg-gradient-to-r from-white via-cyan-200 to-indigo-200 bg-clip-text text-transparent">
+              Centro de Gestión Comercial
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1.5 leading-relaxed">
               Seleccione la ventana a la que desea ingresar para gestionar cotizaciones en Word, liquidar costos con márgenes, consultar el catálogo, preparar licitaciones o descargar documentación técnica.

@@ -561,7 +561,7 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
             });
 
           const isItemDelivered =
-            isDeliveredOCStatus(matchedContractItem.status) ||
+            isDeliveredOCStatus(matchedContractItem?.status) ||
             isDeliveredOCStatus(soIt.equipmentStatus);
 
           if (matchedContractItem) {
@@ -839,11 +839,7 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
               className="p-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer shrink-0"
               title={isSupplierCollapsed ? 'Expandir equipos de este proveedor' : 'Minimizar equipos de este proveedor'}
             >
-              {isSupplierCollapsed ? (
-                <ChevronRight className="w-4 h-4" style={{ color: 'var(--syd-accent)' }} />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              )}
+              <ChevronDown className={`w-4 h-4 chevron-toggle ${isSupplierCollapsed ? '' : 'open'}`} style={{ color: isSupplierCollapsed ? 'var(--syd-accent)' : undefined }} />
             </button>
 
             <div
@@ -1098,7 +1094,7 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
             </span>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto animate-slideUp" style={{ animationDuration: '0.3s' }}>
             {(() => {
               const isGroupAllSelected = group.items.length > 0 && group.items.every((it) => selectedItemMap.has(`${contract.id}___${it.id}`));
               const isGroupSomeSelected = group.items.some((it) => selectedItemMap.has(`${contract.id}___${it.id}`));
@@ -1660,7 +1656,7 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                   className="mt-0.5 p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
                   title={isCollapsed ? 'Desplegar OCs del contrato' : 'Plegar contrato'}
                 >
-                  {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  <ChevronDown className={`w-4 h-4 chevron-toggle ${isCollapsed ? '' : 'open'}`} />
                 </button>
 
                 <div className="space-y-0.5">
@@ -1794,7 +1790,7 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
             </div>
 
             {/* LEVEL 2 & 3: ORDENES DE VENTA (OVs) AND SUPPLIER OCS */}
-            {!isCollapsed && (
+            <div className={`overflow-hidden transition-all duration-300 ease-out ${isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[8000px] opacity-100'}`}>
               <div className="p-3 sm:p-4 space-y-4 bg-slate-950/40">
                 {ovSections.length === 0 || (ovSections.length === 1 && ovSections[0].supplierGroups.length === 0 && ovSections[0].items.length === 0) ? (
                   <div className="text-center py-6 bg-slate-900/60 rounded-xl border border-dashed border-slate-700/70 p-5 space-y-1.5">
@@ -1838,11 +1834,7 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                               className="p-1 rounded-lg transition cursor-pointer shrink-0 border hover:opacity-80"
                               title={isOVCollapsed ? 'Desplegar OCs de esta Orden de Venta' : 'Plegar esta Orden de Venta'}
                             >
-                              {isOVCollapsed ? (
-                                <ChevronRight className="w-4 h-4" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4" />
-                              )}
+                              <ChevronDown className={`w-4 h-4 chevron-toggle ${isOVCollapsed ? '' : 'open'}`} />
                             </button>
 
                             <div
@@ -1942,7 +1934,7 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                         </div>
 
                         {/* LEVEL 2 & 3: SUPPLIER OCS OF THIS SPECIFIC OV */}
-                        {!isOVCollapsed && (
+                        <div className={`overflow-hidden transition-all duration-300 ease-out ${isOVCollapsed ? 'max-h-0 opacity-0' : 'max-h-[4000px] opacity-100'}`}>
                           <div className="p-2.5 sm:p-3 space-y-3 bg-slate-950/50">
                             {ovGroup.supplierGroups.length === 0 ? (
                               <div className="p-4 text-center text-xs text-slate-400 bg-slate-900/50 rounded-lg border border-dashed border-slate-700/60">
@@ -1966,7 +1958,8 @@ export const ContractHierarchyView: React.FC<ContractHierarchyViewProps> = ({
                               )
                             )}
                           </div>
-                        )}
+                        </div>
+                        </div>
                       </div>
                     );
                   })

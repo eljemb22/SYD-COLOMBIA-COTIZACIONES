@@ -7,6 +7,9 @@ coverage/
 .env*
 !.env.example
 
+# Build output
+dist/
+
 # Datos locales y credenciales: nunca versionar
 cookies.txt
 data_backup_snapshot.json

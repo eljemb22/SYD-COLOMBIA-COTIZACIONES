@@ -52,8 +52,12 @@ export function dataURItoBlob(dataURI: string): Blob {
   }
 
   const parts = dataURI.split(',');
+  if (parts.length < 2 || !parts[1]) {
+    console.warn('Invalid data URI, skipping IndexedDB save');
+    return new Blob([], { type: 'application/octet-stream' });
+  }
   const byteString = atob(parts[1]);
-  const mimeString = parts[0].split(':')[1].split(';')[0];
+  const mimeString = parts[0].split(':')[1]?.split(';')[0] || 'application/octet-stream';
   const ab = new ArrayBuffer(byteString.length);
   const ia = new Uint8Array(ab);
 
