@@ -1123,6 +1123,14 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           return;
         }
 
+        // Invoicing is authoritative: a manual status change must never mark
+        // an OV as invoiced without real invoice coverage for every unit.
+        const targetInvoicing = computeOrderInvoicingData(targetOrd, salesInvoices);
+        if (!targetInvoicing.isFullyInvoiced) {
+          alert(`⛔ BLOQUEO DE FACTURACIÓN:\n\nEsta Orden de Venta aún no está facturada por completo (${targetInvoicing.percentInvoiced}% cubierto).\n\nAdjunta las facturas que cubran todos los equipos antes de marcarla como "Facturada".`);
+          return;
+        }
+
         // Auto-archive linked Tender & Contract
         const targetTenderId = targetOrd.tenderClientId || targetOrd.contractId;
         const matchedTender = (tenderClients || []).find((t) => {
@@ -1149,7 +1157,26 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
               })
             );
           });
-          if (allDelivered) {
+
+          // The whole tender/OC directa must be invoiced, not just this OV.
+          const normProcess = normalizeClean(matchedTender.header?.processNumber || '');
+          const linkedTenderOrders = salesOrders.filter((so) => {
+            if (so.id === targetOrd.id) return true;
+            if (so.tenderClientId && so.tenderClientId === matchedTender.id) return true;
+            if (so.contractId && so.contractId === matchedTender.id) return true;
+            if (normProcess) {
+              const refs = [so.contractNumber, so.salesOrderNumber]
+                .map((r) => normalizeClean(r || ''))
+                .filter((r) => r.length >= 3);
+              if (refs.some((r) => r.includes(normProcess) || normProcess.includes(r))) return true;
+            }
+            return false;
+          });
+          const allOrdersInvoiced =
+            linkedTenderOrders.length > 0 &&
+            linkedTenderOrders.every((so) => computeOrderInvoicingData(so, salesInvoices).isFullyInvoiced);
+
+          if (allDelivered && allOrdersInvoiced) {
             onUpdateTenderClient(matchedTender.id, { status: 'Cumplido / Archivado' });
           }
         }
@@ -1164,7 +1191,18 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
               const allDelivered = (c.items || []).length > 0 && (c.items || []).every(
                 (it) => it.status === 'Entregado e Instalado' || it.status === 'Cerrado / Concluido'
               );
-              if (allDelivered) {
+              const linkedContractOrders = salesOrders.filter((so) => {
+                if (so.id === targetOrd.id) return true;
+                if (so.ocContractId && so.ocContractId === c.id) return true;
+                if (so.id && (c.salesOrderIds || []).includes(so.id)) return true;
+                if (so.id && c.salesOrderId === so.id) return true;
+                if (normSO && c.salesOrderNumber && normalizeClean(c.salesOrderNumber) === normSO) return true;
+                return false;
+              });
+              const allContractOrdersInvoiced =
+                linkedContractOrders.length > 0 &&
+                linkedContractOrders.every((so) => computeOrderInvoicingData(so, salesInvoices).isFullyInvoiced);
+              if (allDelivered && allContractOrdersInvoiced) {
                 return { ...c, globalStatus: 'Cerrado / Concluido' as any, lastUpdatedAt: new Date().toISOString() };
               }
             }
@@ -1266,7 +1304,26 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           })
         );
       });
-      if (allDelivered && invData.isFullyInvoiced) {
+
+      // Archive the tender/OC directa only when EVERY linked OV is fully invoiced.
+      const normProcess = normalizeClean(matchedTender.header?.processNumber || '');
+      const linkedTenderOrders = salesOrders.filter((so) => {
+        if (so.id === updatedSO.id) return true;
+        if (so.tenderClientId && so.tenderClientId === matchedTender.id) return true;
+        if (so.contractId && so.contractId === matchedTender.id) return true;
+        if (normProcess) {
+          const refs = [so.contractNumber, so.salesOrderNumber]
+            .map((r) => normalizeClean(r || ''))
+            .filter((r) => r.length >= 3);
+          if (refs.some((r) => r.includes(normProcess) || normProcess.includes(r))) return true;
+        }
+        return false;
+      });
+      const allOrdersInvoiced =
+        linkedTenderOrders.length > 0 &&
+        linkedTenderOrders.every((so) => computeOrderInvoicingData(so, updatedInvoices).isFullyInvoiced);
+
+      if (allDelivered && allOrdersInvoiced) {
         onUpdateTenderClient(matchedTender.id, { status: 'Cumplido / Archivado' });
       }
     }
@@ -1305,10 +1362,21 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           const allDelivered = updatedItems.length > 0 && updatedItems.every(
             (it) => it.status === 'Entregado e Instalado' || it.status === 'Cerrado / Concluido'
           );
+          const linkedContractOrders = salesOrders.filter((so) => {
+            if (so.id === updatedSO.id) return true;
+            if (so.ocContractId && so.ocContractId === c.id) return true;
+            if (so.id && (c.salesOrderIds || []).includes(so.id)) return true;
+            if (so.id && c.salesOrderId === so.id) return true;
+            if (normSO && c.salesOrderNumber && normalizeClean(c.salesOrderNumber) === normSO) return true;
+            return false;
+          });
+          const allContractOrdersInvoiced =
+            linkedContractOrders.length > 0 &&
+            linkedContractOrders.every((so) => computeOrderInvoicingData(so, updatedInvoices).isFullyInvoiced);
           return {
             ...c,
             globalStatus:
-              allDelivered && invData.isFullyInvoiced ? ('Cerrado / Concluido' as any) : c.globalStatus,
+              allDelivered && allContractOrdersInvoiced ? ('Cerrado / Concluido' as any) : c.globalStatus,
             items: updatedItems,
             lastUpdatedAt: new Date().toISOString(),
           };
