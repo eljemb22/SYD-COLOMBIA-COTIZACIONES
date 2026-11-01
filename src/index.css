@@ -369,6 +369,55 @@ select[class*="bg-["] {
   background-color: rgba(10, 19, 36, 0.85) !important;
 }
 
+/* ===== Sidebar tab micro-interactions ===== */
+#main-sidebar-navigation button[id^="sidebar-tab-"] {
+  position: relative;
+}
+
+/* Barra luminosa que crece a la izquierda al pasar el cursor */
+#main-sidebar-navigation button[id^="sidebar-tab-"]::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  height: 58%;
+  width: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #a5f3fc, #38bdf8 45%, #818cf8);
+  opacity: 0;
+  transform: translateY(-50%) scaleY(0.2);
+  transition: opacity 0.25s ease,
+              transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover::after {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.85);
+}
+
+/* Deslizamiento lateral suave de la pestaña */
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover {
+  transform: translateY(-2px) translateX(3px) scale(1.02);
+}
+
+/* El icono "salta" y gira levemente al pasar el cursor */
+#main-sidebar-navigation button[id^="sidebar-tab-"] svg {
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.25s ease;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover svg {
+  transform: scale(1.18) rotate(-7deg);
+  filter: drop-shadow(0 0 7px rgba(56, 189, 248, 0.9));
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:active svg {
+  transform: scale(0.92) rotate(0deg);
+  transition-duration: 0.1s;
+}
+
 /* Reduced motion respect */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
