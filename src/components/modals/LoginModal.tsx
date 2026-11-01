@@ -24,13 +24,17 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [phase, setPhase] = useState<'draw' | 'ready'>('draw');
+  const [phase, setPhase] = useState<'draw' | 'exit' | 'ready'>('draw');
 
   useEffect(() => {
     if (!isOpen) return;
     setPhase('draw');
-    const t = setTimeout(() => setPhase('ready'), 2200);
-    return () => clearTimeout(t);
+    const tExit = setTimeout(() => setPhase('exit'), 1800);
+    const tReady = setTimeout(() => setPhase('ready'), 2250);
+    return () => {
+      clearTimeout(tExit);
+      clearTimeout(tReady);
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -76,39 +80,62 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
     }
   };
 
-  // Fase de dibujo del logo
-  if (phase === 'draw') {
+  // Fase de bienvenida: el logo emerge con un brillo que recorre su silueta
+  if (phase !== 'ready') {
     return createPortal(
       <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#050b18] via-[#0a1324] to-[#1a1033]">
         <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-cyan-500/20 blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-indigo-500/25 blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
-        <div className="relative flex flex-col items-center">
-          <div className="relative w-96 h-96 sm:w-[28rem] sm:h-[28rem]">
-            {/* Glow de fondo */}
-            <div className="absolute inset-0 rounded-full bg-cyan-400/40 blur-[120px] animate-pulse" />
-            {/* Logo dibujándose con clip-path (efecto pincel) */}
+
+        <div
+          className={`relative flex flex-col items-center px-6 ${
+            phase === 'exit' ? 'animate-introExit' : ''
+          }`}
+        >
+          <div className="relative w-80 h-80 sm:w-96 sm:h-96">
+            {/* Halo que respira detrás del logo */}
+            <div className="absolute inset-8 rounded-full bg-cyan-400/30 blur-[90px] animate-introGlow" />
+            <div className="absolute inset-16 rounded-full bg-indigo-400/25 blur-[70px] animate-introGlow" style={{ animationDelay: '1.2s' }} />
+
+            {/* Logo que emerge desde el desenfoque */}
             <img
               src={LOGO_SRC}
               alt="SYD"
-              className="relative w-full h-full object-contain"
+              className="relative w-full h-full object-contain animate-logoReveal"
+            />
+
+            {/* Destello que recorre el logo, recortado a su propia silueta */}
+            <div
+              className="absolute inset-0 pointer-events-none animate-logoShine"
               style={{
-                clipPath: 'inset(0 100% 0 0)',
-                animation: 'drawIn 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards',
-                filter: 'drop-shadow(0 0 60px rgba(56,189,248,0.9))',
+                background:
+                  'linear-gradient(105deg, transparent 36%, rgba(255,255,255,0.9) 48%, rgba(165,243,252,0.75) 55%, transparent 68%)',
+                WebkitMaskImage: `url(${LOGO_SRC})`,
+                maskImage: `url(${LOGO_SRC})`,
+                WebkitMaskSize: 'contain',
+                maskSize: 'contain',
+                WebkitMaskRepeat: 'no-repeat',
+                maskRepeat: 'no-repeat',
+                WebkitMaskPosition: 'center',
+                maskPosition: 'center',
               }}
             />
-            {/* Trazo de pincel que sigue el dibujo */}
-            <div
-              className="absolute top-0 left-0 h-full w-1.5 bg-gradient-to-b from-cyan-300 via-white to-indigo-400 blur-[3px] opacity-90"
-              style={{ animation: 'brushSweep 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards' }}
-            />
           </div>
-          <p className="mt-10 text-xl sm:text-2xl text-white tracking-[0.25em] uppercase font-black animate-fadeIn drop-shadow-[0_0_16px_rgba(56,189,248,0.6)]" style={{ animationDelay: '1.4s' }}>
+
+          <p className="animate-introTextUp mt-6 text-center text-sm sm:text-base text-white uppercase font-black drop-shadow-[0_0_18px_rgba(56,189,248,0.55)]">
             Suministros y Dotaciones de Colombia
           </p>
-          <p className="mt-2 text-sm text-slate-400 font-medium animate-fadeIn" style={{ animationDelay: '1.6s' }}>
+          <p
+            className="mt-3 text-center text-[10px] sm:text-[11px] text-cyan-200/75 font-semibold uppercase tracking-[0.32em] animate-fadeIn"
+            style={{ animationDelay: '0.85s' }}
+          >
             Sistema de Cotizaciones y Licitaciones
           </p>
+
+          {/* Barra de carga sutil */}
+          <div className="mt-7 h-[2px] w-40 rounded-full bg-white/10 overflow-hidden">
+            <div className="animate-progressFill h-full w-full bg-gradient-to-r from-cyan-300 via-sky-400 to-indigo-400" />
+          </div>
         </div>
       </div>,
       document.body
@@ -137,7 +164,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
         ))}
       </div>
 
-      <div className="relative w-full max-w-md animate-scaleIn">
+      <div className="relative w-full max-w-md animate-loginCardIn">
         <div className="relative rounded-[32px] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.7)]">
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-transparent backdrop-blur-3xl" />
 
