@@ -588,10 +588,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                     }
                   : undefined
               }
-              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-150 cursor-pointer text-left border ${
+              className={`group w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 cursor-pointer text-left border hover:scale-[1.03] hover:shadow-[0_0_12px_rgba(56,189,248,0.25)] ${
                 activeTab === 'inicio'
                   ? 'text-white shadow-sm font-black'
-                  : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60'
               } ${isEffectiveCollapsed ? 'justify-center px-1 py-2' : ''}`}
             >
               <div
@@ -603,11 +603,13 @@ export const Navigation: React.FC<NavigationProps> = ({
                       }
                     : undefined
                 }
-                className={`p-1.5 rounded-md shrink-0 transition-transform ${
-                  activeTab === 'inicio' ? 'shadow-xs' : 'bg-slate-800/80 text-slate-400'
+                className={`p-2 rounded-lg shrink-0 transition-all duration-200 ${
+                  activeTab === 'inicio'
+                    ? 'shadow-md shadow-cyan-500/30'
+                    : 'bg-slate-800/80 text-slate-300 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 group-hover:ring-1 group-hover:ring-cyan-400/40'
                 }`}
               >
-                <LayoutDashboard className="w-3.5 h-3.5" />
+                <LayoutDashboard className="w-4 h-4" />
               </div>
 
               {isEffectiveExpanded && (
@@ -644,16 +646,15 @@ export const Navigation: React.FC<NavigationProps> = ({
                 {isEffectiveCollapsed && <div className="h-px bg-[#334d6e]/40 my-1 mx-1.5" />}
 
                 <div
-                  className={`overflow-hidden transition-all duration-300 ease-out ${
+                  className={`${
                     isEffectiveCollapsed
-                      ? 'max-h-0 opacity-0'
-                      : isSecCollapsed
-                      ? 'max-h-0 opacity-0'
-                      : 'max-h-[600px] opacity-100'
+                      ? 'space-y-1'
+                      : `overflow-hidden transition-all duration-300 ease-out ${
+                          isSecCollapsed ? 'max-h-0 opacity-0' : 'max-h-[600px] opacity-100'
+                        }`
                   }`}
                 >
-                  {isEffectiveExpanded &&
-                    sec.items.map((tab) => {
+                  {sec.items.map((tab) => {
                     const isActive = (tab as any).matchesTab
                       ? (tab as any).matchesTab(activeTab)
                       : activeTab === tab.id;
@@ -674,10 +675,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                               }
                             : undefined
                         }
-                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-150 cursor-pointer text-left border ${
+                        className={`group w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 cursor-pointer text-left border hover:scale-[1.03] hover:shadow-[0_0_12px_rgba(56,189,248,0.25)] ${
                           isActive
                             ? 'text-white shadow-sm font-black'
-                            : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                            : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60'
                         } ${isEffectiveCollapsed ? 'justify-center px-1 py-2' : ''}`}
                       >
                         <div
@@ -689,11 +690,13 @@ export const Navigation: React.FC<NavigationProps> = ({
                                 }
                               : undefined
                           }
-                          className={`p-1.5 rounded-md shrink-0 transition-transform ${
-                            isActive ? 'shadow-xs' : 'bg-slate-800/80 text-slate-400'
+                          className={`p-2 rounded-lg shrink-0 transition-all duration-200 ${
+                            isActive
+                              ? 'shadow-md shadow-cyan-500/30'
+                              : 'bg-slate-800/80 text-slate-300 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 group-hover:ring-1 group-hover:ring-cyan-400/40'
                           }`}
                         >
-                          <Icon className="w-3.5 h-3.5" />
+                          <Icon className="w-4 h-4" />
                         </div>
 
                         {isEffectiveExpanded && (
