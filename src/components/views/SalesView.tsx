@@ -973,10 +973,10 @@ export const SalesView: React.FC<SalesViewProps> = ({
             <div className="view-toolbar-group" data-label="Membrete">
               {effectiveLetterhead ? (
                 <>
-                  <div className="inline-flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold px-2.5 py-1.5 rounded-lg shadow-2xs">
+                  <span className="inline-flex items-center gap-1.5 text-emerald-300 text-[11px] font-bold">
                     <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" />
-                    <span>Membrete Manual Activo</span>
-                  </div>
+                    <span>Membrete manual activo</span>
+                  </span>
                   <button
                     id="btn-remove-letterhead"
                     type="button"
@@ -1039,7 +1039,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
           {/* GRUPO 3: FORMATO, EXPORTACIÓN E IMPRESIÓN */}
           <div className="view-toolbar-group" data-label="Formato y salida">
             {/* Selector de formato de cotización */}
-            <div className="flex items-center bg-[#0a1526] p-0.5 rounded-lg border border-[#223d60]">
+            <div className="flex items-center gap-0.5">
               <button
                 type="button"
                 onClick={() => onUpdateHeader({ formatStyle: 'standard' })}

@@ -2625,7 +2625,7 @@ export const MaintenanceScheduleManager: React.FC<MaintenanceScheduleManagerProp
             </button>
           </div>
 
-          <div className="view-toolbar-group" data-label="Buscar">
+          <div className="view-toolbar-group">
           <div className="relative min-w-[220px]">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input

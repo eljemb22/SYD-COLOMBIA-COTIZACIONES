@@ -1515,8 +1515,8 @@ select[class*="bg-["] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 5px 10px;
+  justify-content: flex-start;
+  gap: 5px 14px;
   width: 100%;
 }
 
@@ -1525,6 +1525,12 @@ select[class*="bg-["] {
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
+}
+
+/* Variante en linea: la barra mide solo lo que miden sus botones */
+.view-toolbar--inline {
+  width: auto;
+  justify-content: flex-end;
 }
 
 .view-toolbar-group {
@@ -1556,17 +1562,18 @@ select[class*="bg-["] {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
-  height: 16px;
-  padding: 0 5px;
-  border-radius: 9999px;
-  background: rgba(148, 197, 255, 0.1);
-  border: 1px solid rgba(148, 197, 255, 0.16);
-  font-size: 8px;
+  height: 14px;
+  margin-right: 0;
+  padding-left: 6px;
+  border-left: 2px solid rgba(56, 189, 248, 0.6);
+  border-radius: 0;
+  background: none;
+  font-size: 10px;
   line-height: 1;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #93a7c0;
+  color: #a3b8cd;
   white-space: nowrap;
   pointer-events: none;
 }

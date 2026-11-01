@@ -1474,8 +1474,8 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Top Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] shadow-xl flex flex-col gap-2.5 transition-colors">
-        <div className="min-w-0">
+      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] shadow-xl flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 transition-colors">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-[var(--syd-accent-glow)] border border-[var(--syd-accent)] text-[var(--syd-accent)] shrink-0">
               <PackageCheck className="w-5 h-5" />
@@ -1491,8 +1491,8 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           </div>
         </div>
 
-        <div className="view-toolbar">
-        <div className="view-toolbar-group" data-label="Acciones">
+        <div className="view-toolbar view-toolbar--inline">
+        <div className="view-toolbar-group">
           <button
             type="button"
             onClick={toggleKpiMinimized}
@@ -1622,9 +1622,6 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                 >
                   <PackageCheck className="w-3.5 h-3.5" />
                   <span>OVs Activas / En Proceso ({activeOrdersCount})</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-black ${showActiveOrders ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-700 text-slate-400'}`}>
-                    {showActiveOrders ? '✓ Activa' : 'Inactiva'}
-                  </span>
                 </button>
 
                 <button
@@ -1639,9 +1636,6 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                 >
                   <ReceiptText className="w-3.5 h-3.5" />
                   <span>OVs Culminadas / Facturadas ({archivedOrdersCount})</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-black ${showArchivedOrders ? 'bg-slate-950/20 text-white' : 'bg-slate-700 text-slate-400'}`}>
-                    {showArchivedOrders ? '✓ Activa' : 'Inactiva'}
-                  </span>
                 </button>
 
                 <button
@@ -1664,18 +1658,18 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
 
               <div className="view-toolbar-note" data-label="Mostrando">
                 {showActiveOrders && showArchivedOrders
-                  ? 'Mostrando todas las OVs (activas, terminadas y facturadas)'
+                  ? 'Todas las OVs (activas y culminadas)'
                   : showActiveOrders
-                  ? 'Mostrando únicamente órdenes activas en gestión y proceso'
+                  ? 'Solo órdenes activas'
                   : showArchivedOrders
-                  ? 'Mostrando únicamente órdenes culminadas / facturadas'
-                  : 'Ambos filtros inactivados individualmente'}
+                  ? 'Solo culminadas / facturadas'
+                  : 'Sin filtros: no se muestra ninguna'}
               </div>
             </div>
 
           {/* Search & Filter bar */}
           <div className="view-toolbar">
-            <div className="view-toolbar-group" data-label="Buscar">
+            <div className="view-toolbar-group">
             <div className="relative flex-1 min-w-[240px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -1718,7 +1712,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
               </select>
 
               {/* View Mode Toggle: Clients (Grouped Accordion) vs List (Table) vs Grid */}
-              <div className="flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700">
+              <div className="flex items-center gap-0.5">
                 <button
                   type="button"
                   onClick={() => setOrdersViewMode('clients')}

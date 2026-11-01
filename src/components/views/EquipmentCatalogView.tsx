@@ -726,7 +726,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
         {/* Row 1: Search (Left) + Filters, View Switcher & TRM (Right) */}
         <div className="view-toolbar">
           {/* Search Input */}
-          <div className="view-toolbar-group" data-label="Buscar">
+          <div className="view-toolbar-group">
           <div className="relative flex-1 min-w-[260px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
             <input
@@ -752,7 +752,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
           {/* Right Tools: Brand Filter + View Mode Switcher + Live TRM Badge */}
           <div className="view-toolbar-group" data-label="Vista y divisa">
             {/* Brand Filter */}
-            <div className="flex items-center gap-1.5 bg-[#15253d] border border-[#334d6e] rounded-xl px-2.5 py-1.5 text-xs">
+            <div className="flex items-center gap-1.5 text-xs">
               <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <select
                 value={selectedBrand}
@@ -768,7 +768,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
             </div>
 
             {/* View Mode Switcher */}
-            <div className="bg-[#15253d] p-1 rounded-xl border border-[#334d6e] flex items-center gap-1">
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 rounded-lg transition cursor-pointer ${

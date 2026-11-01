@@ -805,7 +805,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
 
           {/* View Mode Toggle: Workspace vs List */}
           <div className="view-toolbar-group" data-label="Vista">
-            <div className="flex items-center bg-[#15253d] p-1 rounded-xl border border-[#334d6e]">
+            <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setTendersViewLayout('workspace')}
