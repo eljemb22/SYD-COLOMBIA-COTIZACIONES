@@ -603,7 +603,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                       }
                     : undefined
                 }
-                className={`p-2 rounded-lg shrink-0 transition-all duration-200 ${
+                className={`nav-icon p-2 rounded-lg shrink-0 transition-all duration-200 ${
                   activeTab === 'inicio'
                     ? 'shadow-md shadow-cyan-500/30'
                     : 'bg-slate-800/80 text-slate-300 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 group-hover:ring-1 group-hover:ring-cyan-400/40'
@@ -690,7 +690,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                                 }
                               : undefined
                           }
-                          className={`p-2 rounded-lg shrink-0 transition-all duration-200 ${
+                          className={`nav-icon p-2 rounded-lg shrink-0 transition-all duration-200 ${
                             isActive
                               ? 'shadow-md shadow-cyan-500/30'
                               : 'bg-slate-800/80 text-slate-300 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 group-hover:ring-1 group-hover:ring-cyan-400/40'
