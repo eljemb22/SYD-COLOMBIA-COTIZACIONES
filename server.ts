@@ -622,6 +622,14 @@ Devuelve un JSON estrictamente con esta estructura:
         }
       }
 
+      // Also search Google Images (requires API key configured)
+      const googleResults = await searchGoogleImages(rawQuery);
+      for (const g of googleResults) {
+        if (!resultsMap.has(g.url)) {
+          resultsMap.set(g.url, g);
+        }
+      }
+
       const allImages = Array.from(resultsMap.values());
 
       return res.json({
@@ -659,6 +667,42 @@ Devuelve un JSON estrictamente con esta estructura:
       }
     } catch (err) {
       console.warn('DuckDuckGo search failed:', err);
+    }
+    return [];
+  }
+
+  // Google Custom Search API for images
+  async function searchGoogleImages(query: string): Promise<any[]> {
+    const apiKey = process.env.GOOGLE_CSE_API_KEY;
+    const cx = process.env.GOOGLE_CSE_CX;
+    if (!apiKey || !cx) {
+      console.warn('GOOGLE_CSE_API_KEY or GOOGLE_CSE_CX not configured, skipping Google Images');
+      return [];
+    }
+    try {
+      const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&searchType=image&num=10&imgType=photo&safe=off`;
+      const r = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'application/json',
+        },
+      });
+      if (r.ok) {
+        const data = await r.json();
+        const results = data.items || [];
+        return results.map((item: any) => ({
+          title: item.title || query,
+          url: item.link,
+          thumbnail: item.image?.thumbnailLink || item.link,
+          source: 'Google Images',
+          width: item.image?.width || 0,
+          height: item.image?.height || 0,
+        }));
+      } else {
+        console.warn('Google Images API error:', r.status, await r.text());
+      }
+    } catch (err) {
+      console.warn('Google Images search failed:', err);
     }
     return [];
   }

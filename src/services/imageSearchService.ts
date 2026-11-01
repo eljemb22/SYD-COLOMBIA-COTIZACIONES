@@ -198,16 +198,10 @@ function isRealEquipmentPhoto(
   const cleanBrand = (brand || '').trim().toLowerCase();
   const cleanModel = (model || '').trim().toLowerCase();
 
-  // REJECT: Non-photo content in title or URL
+  // REJECT: Only the most obvious non-photo content
   if (NON_PHOTO_KEYWORDS.some((k) => combined.includes(k))) return false;
 
-  // REJECT: URLs that look like Wikimedia file pages (often old illustrations)
-  if (url.includes('wikimedia.org/wiki/File:') || url.includes('wikipedia.org/wiki/File:')) {
-    // Only accept if it's clearly a modern photo
-    if (!REAL_PHOTO_KEYWORDS.some((k) => combined.includes(k))) return false;
-  }
-
-  // REQUIRE: At least one real photo keyword
+  // REQUIRE: At least one real photo keyword (permissive - just needs some medical/equipment context)
   if (!REAL_PHOTO_KEYWORDS.some((k) => combined.includes(k))) return false;
 
   // REQUIRE: Equipment type match if we can identify the type
@@ -221,17 +215,6 @@ function isRealEquipmentPhoto(
     if (!hasExpectedTerm) {
       return false;
     }
-  }
-
-  // REQUIRE: At least brand OR model OR name in title/URL for relevance
-  const hasBrand = cleanBrand && (combined.includes(cleanBrand) || combined.includes(cleanBrand.replace(/\s+/g, '')));
-  const hasModel = cleanModel && (combined.includes(cleanModel) || combined.includes(cleanModel.replace(/\s+/g, '')));
-  const hasName = cleanName && (combined.includes(cleanName) || combined.includes(cleanName.replace(/\s+/g, '')));
-
-  if (!hasBrand && !hasModel && !hasName) {
-    // Only accept very general medical equipment with strong photo keywords
-    const strongPhotoTerms = ['product photo', 'clinical photograph', 'medical device photo', 'hospital equipment photo'];
-    if (!strongPhotoTerms.some((t) => combined.includes(t))) return false;
   }
 
   return true;
@@ -308,16 +291,17 @@ export async function getAutoEquipmentImageUrl(
         );
 
         if (options && options.length > 0) {
-          for (const opt of options.slice(0, 10)) {
+          for (const opt of options.slice(0, 8)) {
             if (!opt.url) continue;
             if (triedUrls.has(opt.url)) continue;
             triedUrls.add(opt.url);
 
+            // More permissive validation - just reject obvious non-photos
             if (!isRealEquipmentPhoto(opt, equipmentName, brand, model)) continue;
 
             const score = scoreImageOption(opt, equipmentName, brand, model);
-            // Only keep candidates with decent score
-            if (score >= 30) {
+            // Lower threshold - accept more candidates
+            if (score >= 15) {
               candidates.push({ option: opt, score });
             }
           }
@@ -332,7 +316,7 @@ export async function getAutoEquipmentImageUrl(
     candidates.sort((a, b) => b.score - a.score);
 
     // Try the best candidates from internet search
-    for (const candidate of candidates.slice(0, 8)) {
+    for (const candidate of candidates.slice(0, 6)) {
       try {
         const b64 = await proxyAndConvertImageToBase64(candidate.option.url);
         if (b64) return b64;
@@ -342,7 +326,7 @@ export async function getAutoEquipmentImageUrl(
       }
     }
 
-    // FALLBACK: Use known equipment image catalog if internet search found nothing
+    // FALLBACK: Use known equipment image catalog if internet search found nothing usable
     const knownImage = getKnownEquipmentImage(equipmentName, brand, model);
     if (knownImage) {
       try {
