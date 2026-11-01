@@ -29,8 +29,8 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
   useEffect(() => {
     if (!isOpen) return;
     setPhase('draw');
-    const tExit = setTimeout(() => setPhase('exit'), 1800);
-    const tReady = setTimeout(() => setPhase('ready'), 2250);
+    const tExit = setTimeout(() => setPhase('exit'), 1500);
+    const tReady = setTimeout(() => setPhase('ready'), 1900);
     return () => {
       clearTimeout(tExit);
       clearTimeout(tReady);
@@ -80,61 +80,32 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
     }
   };
 
-  // Fase de bienvenida: el logo emerge con un brillo que recorre su silueta
+  // Fase de bienvenida: aparición limpia del logo, sin efectos agresivos
   if (phase !== 'ready') {
     return createPortal(
-      <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#050b18] via-[#0a1324] to-[#1a1033]">
-        <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-cyan-500/20 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-indigo-500/25 blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
-
+      <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#050b18] via-[#0a1324] to-[#141a33]">
         <div
           className={`relative flex flex-col items-center px-6 ${
             phase === 'exit' ? 'animate-introExit' : ''
           }`}
         >
-          <div className="relative w-80 h-80 sm:w-96 sm:h-96">
-            {/* Halo que respira detrás del logo */}
-            <div className="absolute inset-8 rounded-full bg-cyan-400/30 blur-[90px] animate-introGlow" />
-            <div className="absolute inset-16 rounded-full bg-indigo-400/25 blur-[70px] animate-introGlow" style={{ animationDelay: '1.2s' }} />
+          {/* Halo suave detrás del logo */}
+          <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[26rem] h-[26rem] sm:w-[32rem] sm:h-[32rem] rounded-full bg-cyan-500/10 blur-[90px] animate-introGlow" />
 
-            {/* Logo que emerge desde el desenfoque */}
-            <img
-              src={LOGO_SRC}
-              alt="SYD"
-              className="relative w-full h-full object-contain animate-logoReveal"
-            />
+          <img
+            src={LOGO_SRC}
+            alt="SYD"
+            className="relative w-72 sm:w-80 h-auto object-contain animate-logoReveal"
+            style={{ filter: 'drop-shadow(0 14px 40px rgba(56,189,248,0.35))' }}
+          />
 
-            {/* Destello que recorre el logo, recortado a su propia silueta */}
-            <div
-              className="absolute inset-0 pointer-events-none animate-logoShine"
-              style={{
-                background:
-                  'linear-gradient(105deg, transparent 36%, rgba(255,255,255,0.9) 48%, rgba(165,243,252,0.75) 55%, transparent 68%)',
-                WebkitMaskImage: `url(${LOGO_SRC})`,
-                maskImage: `url(${LOGO_SRC})`,
-                WebkitMaskSize: 'contain',
-                maskSize: 'contain',
-                WebkitMaskRepeat: 'no-repeat',
-                maskRepeat: 'no-repeat',
-                WebkitMaskPosition: 'center',
-                maskPosition: 'center',
-              }}
-            />
-          </div>
-
-          <p className="animate-introTextUp mt-6 text-center text-sm sm:text-base text-white uppercase font-black drop-shadow-[0_0_18px_rgba(56,189,248,0.55)]">
+          <p className="animate-introTextUp mt-6 text-center text-[11px] sm:text-xs font-bold text-cyan-200/80 uppercase tracking-[0.3em]">
             Suministros y Dotaciones de Colombia
           </p>
-          <p
-            className="mt-3 text-center text-[10px] sm:text-[11px] text-cyan-200/75 font-semibold uppercase tracking-[0.32em] animate-fadeIn"
-            style={{ animationDelay: '0.85s' }}
-          >
-            Sistema de Cotizaciones y Licitaciones
-          </p>
 
-          {/* Barra de carga sutil */}
-          <div className="mt-7 h-[2px] w-40 rounded-full bg-white/10 overflow-hidden">
-            <div className="animate-progressFill h-full w-full bg-gradient-to-r from-cyan-300 via-sky-400 to-indigo-400" />
+          {/* Línea de carga indeterminada */}
+          <div className="mt-6 h-[2px] w-44 rounded-full bg-white/10 overflow-hidden">
+            <div className="animate-introLine h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-cyan-300 to-transparent" />
           </div>
         </div>
       </div>,
