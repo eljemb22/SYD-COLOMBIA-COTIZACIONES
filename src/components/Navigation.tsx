@@ -27,6 +27,7 @@ import {
   Database,
   Mail,
   Moon,
+  LayoutGrid,
 } from 'lucide-react';
 import { ActiveTab, AuthUser, ThemeSettings } from '../types';
 import { SyDLogo } from './common/SyDLogo';
@@ -290,6 +291,22 @@ export const Navigation: React.FC<NavigationProps> = ({
           badgeColor: 'bg-emerald-400 text-slate-950 font-bold',
           activeClass: 'bg-emerald-400/15 border-emerald-400 text-white shadow-sm shadow-emerald-400/10',
           iconBg: 'bg-emerald-400 text-slate-950',
+        },
+      ],
+    },
+    {
+      group: 'HERRAMIENTAS',
+      items: [
+        {
+          id: 'herramientas' as ActiveTab,
+          name: '8. Herramientas',
+          subtitle: '',
+          icon: LayoutGrid,
+          badge: null,
+          badgeTitle: null,
+          badgeColor: '',
+          activeClass: 'bg-[#0ea5e9]/15 border-[#0ea5e9] text-white shadow-sm shadow-[#0ea5e9]/10',
+          iconBg: 'bg-[#0ea5e9] text-slate-950',
         },
       ],
     },

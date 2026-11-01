@@ -10,7 +10,8 @@ export type ActiveTab =
   | 'documentacion'
   | 'seguimiento_oc'
   | 'ordenes_venta'
-  | 'gmail_compras';
+  | 'gmail_compras'
+  | 'herramientas';
 
 export type UserRole = 'admin' | 'viewer';
 
@@ -242,6 +243,7 @@ export interface QuoteItem {
   taxRate?: number;
   discountPercentage?: number;
   warrantyMonths?: number;
+  serialNumber?: string;
   notes?: string;
   imageUrl?: string;
   isManualSalePrice?: boolean;
@@ -829,6 +831,98 @@ export interface SystemAlertItem {
   actionTab?: ActiveTab;
   relatedEntityId?: string;
   timestamp: number;
+}
+
+/**
+ * Historial de precios de un equipo (para consultar cómo ha variado el costo/venta con el tiempo)
+ */
+export interface PriceHistoryEntry {
+  id: string;
+  equipmentName: string;
+  brand: string;
+  model: string;
+  unitCostCOP: number;
+  unitSalePriceCOP: number;
+  marginPercent: number;
+  quoteNumber: string;
+  quoteDate: string;
+  clientName: string;
+}
+
+/**
+ * Alerta de garantía por vencer
+ */
+export interface WarrantyAlert {
+  id: string;
+  equipmentName: string;
+  brand: string;
+  model: string;
+  serialNumber?: string;
+  clientName: string;
+  warrantyEndDate: string;
+  daysRemaining: number;
+  severity: 'critica' | 'media' | 'baja';
+  quoteNumber?: string;
+}
+
+/**
+ * Firma digital para cotizaciones
+ */
+export interface DigitalSignature {
+  id: string;
+  dataUrl: string; // base64 image
+  signedAt: string;
+  signerName: string;
+  signerRole?: string;
+}
+
+/**
+ * Resumen de rentabilidad por proyecto/cotización
+ */
+export interface ProfitabilitySummary {
+  quoteNumber: string;
+  clientName: string;
+  totalCostCOP: number;
+  totalSalePriceCOP: number;
+  totalProfitCOP: number;
+  marginPercent: number;
+  items: ProfitabilityItem[];
+}
+
+export interface ProfitabilityItem {
+  equipmentName: string;
+  brand: string;
+  model: string;
+  quantity: number;
+  unitCostCOP: number;
+  unitSalePriceCOP: number;
+  totalCostCOP: number;
+  totalSalePriceCOP: number;
+  profitCOP: number;
+  marginPercent: number;
+}
+
+/**
+ * Pliego técnico generado para licitación
+ */
+export interface TechnicalTenderSpec {
+  id: string;
+  tenderNumber: string;
+  entityName: string;
+  equipmentItems: TenderEquipmentSpec[];
+  generalTerms: string;
+  generatedAt: string;
+}
+
+export interface TenderEquipmentSpec {
+  itemNumber: number;
+  name: string;
+  brand: string;
+  model: string;
+  quantity: number;
+  technicalDescription: string;
+  keyFeatures: string[];
+  complianceRequirements: string[];
 }
 
 export type BotActionType =

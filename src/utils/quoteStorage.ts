@@ -3,6 +3,8 @@ import { extractDateCode, getTodayDateCode, incrementConsecutive, parseQuoteNumb
 import { saveQuoteToFirestore, deleteQuoteFromFirestore } from '../services/realtimeSync';
 import { saveOrUpdateClientRecord } from './clientStorage';
 import { isQuoteDeleted, markQuoteAsDeleted, unmarkQuoteAsDeleted } from './tombstones';
+import { recordPriceHistoryFromQuote } from './priceHistory';
+import { registerWarrantyAlertsFromQuote } from './warrantyAlerts';
 
 const QUOTES_STORAGE_KEY = 'syd_saved_quotes_database_v2';
 
@@ -142,6 +144,13 @@ export function saveOrUpdateQuote(
   persistQuotes(quotes);
   // Realtime Cloud Sync
   saveQuoteToFirestore(quoteRecord).catch(() => {});
+  
+  // Registrar historial de precios de los equipos de esta cotización
+  recordPriceHistoryFromQuote(header, quoteRecord.items);
+  
+  // Registrar alertas de garantía
+  registerWarrantyAlertsFromQuote(header, quoteRecord.items);
+  
   return quoteRecord;
 }
 
