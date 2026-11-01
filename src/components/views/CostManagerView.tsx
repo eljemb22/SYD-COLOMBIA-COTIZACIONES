@@ -1193,7 +1193,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
       {/* Sleek Top Bar with Centered Global Factor & Add Cost Controls + KPI Summary */}
       <div className="sticky top-0 z-20 bg-[var(--syd-body-bg,#0b1523)]/95 pt-1 pb-2 space-y-2 backdrop-blur-md">
         {/* Compact Top Action Bar: Global Factor, Add Cost, Client selector */}
-        <div className="view-toolbar bg-[#192b45] border border-[#334d6e] rounded-xl p-2.5 sm:p-3 shadow-md">
+        <div className="view-toolbar">
         {/* Left: Global Factor Applicator (Admin Only or Disabled) */}
         {!isReadOnly ? (
           <div className="view-toolbar-group" data-label="Factor global">
@@ -1246,7 +1246,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
         )}
 
         {/* Right: Quick Add Cost button and view toggles */}
-        <div className="view-toolbar-group ml-auto" data-label="Herramientas">
+        <div className="view-toolbar-group" data-label="Herramientas">
           <button
             type="button"
             onClick={() => setHideSummaryHeaders(!hideSummaryHeaders)}

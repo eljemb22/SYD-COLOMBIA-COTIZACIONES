@@ -1474,7 +1474,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Top Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] shadow-xl flex flex-wrap items-center justify-between gap-3 transition-colors">
+      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] shadow-xl flex flex-col gap-3 transition-colors">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-[var(--syd-accent-glow)] border border-[var(--syd-accent)] text-[var(--syd-accent)] shrink-0">
@@ -1491,6 +1491,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           </div>
         </div>
 
+        <div className="view-toolbar">
         <div className="view-toolbar-group" data-label="Acciones">
           <button
             type="button"
@@ -1557,6 +1558,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* Main Subtabs Navigation */}
@@ -1606,7 +1608,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           {/* Sticky Controls Container: Lifecycle Filter + Search & Filter bar */}
           <div className="sticky top-0 z-20 bg-[var(--syd-body-bg,#0b1523)]/95 pt-1 pb-2 space-y-2.5 backdrop-blur-md">
             {/* Lifecycle Filter: Activas vs Culminadas/Facturadas vs Todas las OVs (Permite activar/inactivar individualmente) */}
-            <div className="view-toolbar p-2.5 rounded-xl bg-slate-900 border border-slate-800 shadow-md">
+            <div className="view-toolbar">
               <div className="view-toolbar-group" data-label="Órdenes">
                 <button
                   type="button"
@@ -1660,7 +1662,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                 </button>
               </div>
 
-              <span className="text-[11px] text-slate-400 italic">
+              <div className="view-toolbar-note" data-label="Mostrando">
                 {showActiveOrders && showArchivedOrders
                   ? 'Mostrando todas las OVs (activas, terminadas y facturadas)'
                   : showActiveOrders
@@ -1668,11 +1670,12 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                   : showArchivedOrders
                   ? 'Mostrando únicamente órdenes culminadas / facturadas'
                   : 'Ambos filtros inactivados individualmente'}
-              </span>
+              </div>
             </div>
 
           {/* Search & Filter bar */}
-          <div className="view-toolbar p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+          <div className="view-toolbar">
+            <div className="view-toolbar-group" data-label="Buscar">
             <div className="relative flex-1 min-w-[240px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -1682,6 +1685,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                 placeholder="Buscar por N° OV, cotización, licitación, cliente o equipo..."
                 className="w-full pl-9 pr-3 py-2 bg-slate-800/80 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400"
               />
+            </div>
             </div>
 
             <div className="view-toolbar-group" data-label="Filtros y vista">

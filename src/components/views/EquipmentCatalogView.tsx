@@ -724,8 +724,9 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
           {/* Unified Search, Filter & Action Bar */}
           <div className="bg-[#1e314b]/95 backdrop-blur-md border border-[#334d6e] rounded-2xl p-3.5 sm:p-4 space-y-3.5 shadow-xl sticky top-0 z-20">
         {/* Row 1: Search (Left) + Filters, View Switcher & TRM (Right) */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <div className="view-toolbar">
           {/* Search Input */}
+          <div className="view-toolbar-group" data-label="Buscar">
           <div className="relative flex-1 min-w-[260px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
             <input
@@ -746,9 +747,10 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
               </button>
             )}
           </div>
+          </div>
 
           {/* Right Tools: Brand Filter + View Mode Switcher + Live TRM Badge */}
-          <div className="view-toolbar-group shrink-0" data-label="Vista y divisa">
+          <div className="view-toolbar-group" data-label="Vista y divisa">
             {/* Brand Filter */}
             <div className="flex items-center gap-1.5 bg-[#15253d] border border-[#334d6e] rounded-xl px-2.5 py-1.5 text-xs">
               <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -903,9 +905,9 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
         </div>
 
         {/* Row 2: Categories (Left) & Action Buttons (Right) */}
-        <div className="view-toolbar pt-2.5 border-t border-[#334d6e]/60">
+        <div className="view-toolbar view-toolbar--stack">
           {/* Category Pills */}
-          <div className="view-toolbar-group flex-1 min-w-[280px] md:min-w-[420px]" data-label="Categoría">
+          <div className="view-toolbar-group" data-label="Categoría">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin flex-1 min-w-0 pr-2">
             {categories.map((cat) => {
               const isSelected = selectedCategory === cat;

@@ -1037,7 +1037,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
           )}
 
           {/* GRUPO 3: FORMATO, EXPORTACIÓN E IMPRESIÓN */}
-          <div className="view-toolbar-group ml-auto" data-label="Formato y salida">
+          <div className="view-toolbar-group" data-label="Formato y salida">
             {/* Selector de formato de cotización */}
             <div className="flex items-center bg-[#0a1526] p-0.5 rounded-lg border border-[#223d60]">
               <button

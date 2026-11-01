@@ -2531,8 +2531,7 @@ export const MaintenanceScheduleManager: React.FC<MaintenanceScheduleManagerProp
           {/* Acciones Superiores: Selector de Año + BOTÓN ÚNICO DE DESCARGAR EXCEL */}
           <div className="view-toolbar">
             {/* Multi-Year Selector */}
-            <div className="flex items-center gap-1 bg-[#15253d] p-1 rounded-xl border border-[#334d6e]">
-              <span className="text-xs text-slate-400 font-bold px-2">Año:</span>
+            <div className="view-toolbar-group" data-label="Año">
               <div className="flex items-center gap-1">
                 {availableYears.map((yr) => (
                   <button
@@ -2588,8 +2587,8 @@ export const MaintenanceScheduleManager: React.FC<MaintenanceScheduleManagerProp
         </div>
 
         {/* BARRA DE FILTROS Y BÚSQUEDA DE CLIENTES */}
-        <div className="view-toolbar justify-between pt-2 border-t border-[#334d6e]/60">
-          <div className="flex items-center gap-1.5 bg-[#132035] p-1 rounded-xl border border-[#334d6e] text-xs">
+        <div className="view-toolbar">
+          <div className="view-toolbar-group" data-label="Filtros">
             <button
               type="button"
               onClick={() => setFilterType('all')}
@@ -2626,6 +2625,7 @@ export const MaintenanceScheduleManager: React.FC<MaintenanceScheduleManagerProp
             </button>
           </div>
 
+          <div className="view-toolbar-group" data-label="Buscar">
           <div className="relative min-w-[220px]">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
@@ -2635,6 +2635,7 @@ export const MaintenanceScheduleManager: React.FC<MaintenanceScheduleManagerProp
               onChange={(e) => setClientSearchQuery(e.target.value)}
               className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 outline-none focus:border-cyan-400"
             />
+          </div>
           </div>
         </div>
 
