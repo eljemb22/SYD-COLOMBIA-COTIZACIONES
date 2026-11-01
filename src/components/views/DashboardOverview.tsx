@@ -525,164 +525,345 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const currentGuide = windowGuides[selectedGuideTab] || windowGuides.ventas;
   const GuideIcon = currentGuide.icon;
 
+  const userName = currentUser?.name || currentUser?.username || 'Usuario';
+  const userInitial = (userName.trim().charAt(0) || 'U').toUpperCase();
+  const roleLabel =
+    currentUser?.role === 'admin' ? 'Administrador' : currentUser?.roleLabel || 'Usuario del sistema';
+
+  const heroStats = [
+    {
+      label: 'Cliente en cotizador',
+      value: quoteHeader.clientName || 'Sin asignar',
+      hint: 'Destinatario actual',
+      icon: Building2,
+      accent: '#38bdf8',
+    },
+    {
+      label: 'Cotización activa',
+      value: quoteHeader.quoteNumber,
+      hint: 'Documento en curso',
+      icon: FileText,
+      accent: '#818cf8',
+    },
+    {
+      label: 'Equipos en catálogo',
+      value: `${equipments.length} modelos`,
+      hint: 'Base maestra',
+      icon: Database,
+      accent: '#22d3ee',
+    },
+    {
+      label: 'Documentos técnicos',
+      value: `${documents.length} archivos`,
+      hint: 'En custodia',
+      icon: FileCheck2,
+      accent: '#34d399',
+    },
+  ];
+
+  const flowSteps = [
+    {
+      n: 1,
+      tab: 'catalogo' as ActiveTab,
+      label: 'Catálogo',
+      title: 'Elige los equipos',
+      text: 'Busca por marca, modelo o registro INVIMA y envíalos a Costos o Licitaciones.',
+      accent: '#60a5fa',
+      icon: BookOpen,
+    },
+    {
+      n: 2,
+      tab: 'costos' as ActiveTab,
+      label: 'Ventana 2',
+      title: 'Calcula el precio',
+      text: 'Ajusta accesorios y define la lista de margen (L1–L8 o factor libre).',
+      accent: '#fbbf24',
+      icon: PenLine,
+    },
+    {
+      n: 3,
+      tab: 'ventas' as ActiveTab,
+      label: 'Ventana 1 / 4',
+      title: 'Arma la propuesta',
+      text: 'Completa el cliente y revisa las hojas membretadas o el pliego técnico.',
+      accent: '#38bdf8',
+      icon: FileSpreadsheet,
+    },
+    {
+      n: 4,
+      tab: 'ventas' as ActiveTab,
+      label: 'Word / Excel',
+      title: 'Exporta y guarda',
+      text: 'Descarga el documento formal y guárdalo en el historial de cotizaciones.',
+      accent: '#34d399',
+      icon: PackageCheck,
+    },
+  ];
+
   return (
     <div id="dashboard-overview" className="space-y-6 animate-fadeIn w-full pb-10">
-      {/* 1. HERO BANNER - Clean, informative, strictly navigation-oriented */}
-      <div className="bg-gradient-to-br from-[#18283f] via-[#1a2e48] to-[#122033] border border-[#334d6e] rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-96 h-96 bg-[#38bdf8]/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+      {/* ===================================================================== */}
+      {/* 1. HERO — identidad, sesión y estado del sistema                      */}
+      {/* ===================================================================== */}
+      <section className="sys-hero relative overflow-hidden rounded-[28px] border border-sky-400/20 shadow-2xl">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#132742] via-[#0f1f33] to-[#0a1624]" />
+        <div className="sys-grid pointer-events-none absolute inset-0" />
+        <div className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-sky-500/25 blur-[100px]" />
+        <div className="pointer-events-none absolute -left-28 -bottom-24 h-72 w-72 rounded-full bg-indigo-500/20 blur-[100px]" />
 
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 relative z-10">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-[#38bdf8]/15 border border-[#38bdf8]/30 px-3 py-1 rounded-full text-[#38bdf8] text-xs font-bold mb-2.5">
-              <Building2 className="w-3.5 h-3.5" />
-              <span>SYD Colombia • Portal Principal de Navegación</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight bg-gradient-to-r from-white via-cyan-200 to-indigo-200 bg-clip-text text-transparent">
-              Centro de Gestión Comercial
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1.5 leading-relaxed">
-              Seleccione la ventana a la que desea ingresar para gestionar cotizaciones en Word, liquidar costos con márgenes, consultar el catálogo, preparar licitaciones o descargar documentación técnica.
-            </p>
-          </div>
-
-          {/* Quick status pill */}
-          <div className="flex items-center gap-3 bg-[#111c2e]/90 border border-[#334d6e] px-4 py-3 rounded-xl">
-            <div className="w-10 h-10 rounded-lg bg-[#38bdf8]/15 text-[#38bdf8] flex items-center justify-center font-bold">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div className="text-left">
-              <div className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
-                Usuario Activo
-              </div>
-              <div className="text-xs font-bold text-white">
-                {currentUser?.name || currentUser?.username || 'Usuario'}
-              </div>
-              <div className="text-[10px] text-emerald-400 font-medium">
-                {currentUser?.role === 'admin' ? 'Administrador' : currentUser?.roleLabel || 'Usuario del Sistema'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Informative metadata bar (Read-only summary of current state) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-5 pt-4 border-t border-[#334d6e]/60">
-          <div className="bg-[#111c2e]/70 p-3 rounded-xl border border-[#334d6e]/40">
-            <span className="text-[10.5px] uppercase tracking-wider font-semibold text-slate-400 block">
-              Cliente en Cotizador
-            </span>
-            <strong className="text-xs text-white truncate block mt-0.5" title={quoteHeader.clientName}>
-              {quoteHeader.clientName || 'Sin asignar'}
-            </strong>
-          </div>
-
-          <div className="bg-[#111c2e]/70 p-3 rounded-xl border border-[#334d6e]/40">
-            <span className="text-[10.5px] uppercase tracking-wider font-semibold text-slate-400 block">
-              Cotización N°
-            </span>
-            <strong className="text-xs text-[#38bdf8] font-mono block mt-0.5">
-              {quoteHeader.quoteNumber}
-            </strong>
-          </div>
-
-          <div className="bg-[#111c2e]/70 p-3 rounded-xl border border-[#334d6e]/40">
-            <span className="text-[10.5px] uppercase tracking-wider font-semibold text-slate-400 block">
-              Equipos en Catálogo
-            </span>
-            <strong className="text-xs text-slate-200 block mt-0.5">
-              {equipments.length} modelos disponibles
-            </strong>
-          </div>
-
-          <div className="bg-[#111c2e]/70 p-3 rounded-xl border border-[#334d6e]/40">
-            <span className="text-[10.5px] uppercase tracking-wider font-semibold text-slate-400 block">
-              Documentos Técnicos
-            </span>
-            <strong className="text-xs text-emerald-400 font-bold block mt-0.5">
-              {documents.length} archivos en custodia
-            </strong>
-          </div>
-        </div>
-
-        {/* Dynamic Enlace Web para Compartir y Abrir en Otros Dispositivos */}
-        <div className="mt-4 p-3.5 bg-gradient-to-r from-sky-950/70 via-slate-900/90 to-indigo-950/70 rounded-xl border border-sky-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/30 shrink-0">
-              <Globe className="w-4 h-4" />
-            </div>
+        <div className="relative p-5 sm:p-7 space-y-6">
+          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-white">
-                  Enlace Público Oficial para Abrir en Otros Equipos:
+              <span className="sys-chip">
+                <Building2 className="w-3.5 h-3.5" />
+                Portal corporativo · SYD Colombia
+              </span>
+
+              <h1 className="mt-3 text-2xl sm:text-[2rem] leading-tight font-black tracking-tight text-white">
+                Hola, <span className="sys-gradient-text">{userName}</span>
+              </h1>
+
+              <p className="mt-2 text-xs sm:text-sm text-slate-300/90 max-w-2xl leading-relaxed">
+                Este es el centro de mando de tu operación. Elige una ventana para cotizar, calcular
+                costos, preparar licitaciones o custodiar la documentación técnica.
+              </p>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="sys-chip sys-chip-muted">
+                  <Activity className="w-3 h-3" />
+                  Sistema operativo
                 </span>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  Acceso Público
+                <span className="sys-chip sys-chip-muted">
+                  <ShieldCheck className="w-3 h-3" />
+                  Acceso verificado
                 </span>
               </div>
-              <p className="text-[11px] text-cyan-300 font-mono truncate mt-0.5 font-semibold" title={currentWebUrl}>
-                {currentWebUrl}
-              </p>
+            </div>
+
+            {/* Tarjeta de sesión */}
+            <div className="sys-session">
+              <div className="w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-500 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg shadow-sky-500/30">
+                {userInitial}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9.5px] uppercase tracking-[0.18em] text-slate-400 font-bold">
+                  Sesión activa
+                </p>
+                <p className="text-sm font-bold text-white truncate" title={userName}>
+                  {userName}
+                </p>
+                <p className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {roleLabel}
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end flex-wrap">
-            <button
-              type="button"
-              onClick={handleCopyCurrentWebUrl}
-              className={`flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg transition shadow-md active:scale-95 cursor-pointer ${
-                copiedLink
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white border border-sky-400/40'
-              }`}
-            >
-              {copiedLink ? (
-                <>
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>¡Enlace Copiado!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Copiar Enlace</span>
-                </>
-              )}
-            </button>
+          {/* Estado del sistema */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {heroStats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div
+                  key={stat.label}
+                  className="sys-kpi"
+                  style={{ '--accent': stat.accent } as React.CSSProperties}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="block text-[10px] uppercase tracking-[0.14em] font-bold text-slate-400">
+                        {stat.label}
+                      </span>
+                      <strong
+                        className="block text-[13px] font-black text-white truncate mt-1"
+                        title={String(stat.value)}
+                      >
+                        {stat.value}
+                      </strong>
+                      <span className="block text-[10px] text-slate-500 mt-0.5">{stat.hint}</span>
+                    </div>
+                    <span className="sys-ico-sm">
+                      <Icon className="w-4 h-4" />
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-            <button
-              type="button"
-              onClick={handleOpenInNewTab}
-              title="Abrir enlace en una nueva pestaña"
-              className="flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer active:scale-95"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Probar ↗</span>
-            </button>
+          {/* Enlace público */}
+          <div className="sys-link-row">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="sys-ico-sm text-sky-400">
+                <Globe className="w-4 h-4" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-bold text-white uppercase tracking-wide">
+                    Enlace público del portal
+                  </span>
+                  <span className="text-[9.5px] bg-emerald-500/15 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    Acceso abierto
+                  </span>
+                </div>
+                <p
+                  className="text-[11px] text-cyan-300 font-mono truncate mt-0.5 font-semibold"
+                  title={currentWebUrl}
+                >
+                  {currentWebUrl}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+              <button
+                type="button"
+                onClick={handleCopyCurrentWebUrl}
+                className={`flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
+                  copiedLink
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                    : 'bg-white/10 hover:bg-white/15 text-white border border-white/15'
+                }`}
+              >
+                {copiedLink ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Enlace copiado</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copiar enlace</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenInNewTab}
+                title="Abrir el portal en una nueva pestaña"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-200 border border-sky-400/30 transition cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Abrir</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Global Interactive Workflow Pipeline Guide */}
+      {/* Guía global de flujo */}
       <WorkflowPipelineGuide currentTab="inicio" onNavigateToTab={onNavigate} />
 
-      {/* ========================================================================= */}
-      {/* 2. DIRECTORIO DE CLIENTES & COTIZACIONES EMITIDAS (FIRST SCREEN FEATURE) */}
-      {/* ========================================================================= */}
-      <div className="bg-[#18263a] border border-[#38bdf8]/40 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-[#334d6e]">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#38bdf8]/15 text-[#38bdf8] border border-[#38bdf8]/30">
-              <Users className="w-5 h-5" />
+      {/* ===================================================================== */}
+      {/* 2. VENTANAS DEL SISTEMA — navegación principal                        */}
+      {/* ===================================================================== */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 px-1">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="sys-ico-sm text-sky-400">
+                <Layers className="w-4 h-4" />
+              </span>
+              <h2 className="text-base font-black text-white tracking-tight">
+                Ventanas del sistema
+              </h2>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-black text-white">
-                  Directorio de Clientes &amp; Cotizaciones Emitidas
-                </h2>
-                <span className="text-xs bg-[#38bdf8]/20 text-[#38bdf8] px-2.5 py-0.5 rounded-full font-bold border border-[#38bdf8]/30">
-                  {allClients.length} Clientes
-                </span>
+            <p className="text-xs text-slate-400 mt-1">
+              Seis módulos conectados. Elige por dónde empezar hoy.
+            </p>
+          </div>
+          <span className="text-[10.5px] text-slate-400 bg-white/5 border border-white/10 rounded-full px-3 py-1 font-semibold self-start sm:self-auto">
+            5 módulos + catálogo maestro
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {windowsList.map((win) => {
+            const Icon = win.icon;
+            return (
+              <div
+                key={win.id}
+                id={`launch-card-${win.id}`}
+                onClick={() => onNavigate(win.id)}
+                style={{ '--accent': win.color } as React.CSSProperties}
+                className="sys-tile group relative overflow-hidden rounded-2xl p-5 cursor-pointer flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="sys-ico">
+                        <Icon className="w-[22px] h-[22px]" />
+                      </span>
+                      <div className="min-w-0">
+                        <span className="sys-badge">{win.badge}</span>
+                        <h3 className="text-[13.5px] font-bold text-white mt-1 leading-snug">
+                          {win.title}
+                        </h3>
+                      </div>
+                    </div>
+                    <span className="sys-arrow">
+                      <ArrowRight className="w-4 h-4" />
+                    </span>
+                  </div>
+
+                  <p className="text-[11.5px] text-slate-300/90 leading-relaxed mb-3.5">
+                    {win.description}
+                  </p>
+
+                  <div className="sys-tile-stats">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10.5px] text-slate-400">{win.statLabel}</span>
+                      <strong className="text-[11.5px] text-slate-100 text-right">
+                        {win.statValue}
+                      </strong>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 pt-1.5 mt-1.5 border-t border-white/10">
+                      <span className="text-[10.5px] text-slate-400">{win.totalLabel}</span>
+                      <strong className="text-[11px] font-bold text-right" style={{ color: win.color }}>
+                        {win.totalValue}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 mt-1 border-t border-white/10 flex items-center justify-between gap-2">
+                  <span
+                    className="text-[10.5px] text-slate-400 truncate"
+                    title={win.bestFor}
+                  >
+                    {win.subtitle}
+                  </span>
+                  <span className="text-[11px] font-bold sys-enter">
+                    Entrar
+                    <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-slate-300">
-                Consulte todos los clientes registrados, cuántas cotizaciones se han emitido y a qué número, fecha y valor corresponden.
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ===================================================================== */}
+      {/* 3. DIRECTORIO DE CLIENTES Y COTIZACIONES                              */}
+      {/* ===================================================================== */}
+      <section className="sys-panel p-5 sm:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <span className="sys-ico text-sky-400">
+              <Users className="w-[22px] h-[22px]" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base font-black text-white tracking-tight">
+                  Clientes y cotizaciones
+                </h2>
+                <span className="sys-badge">{allClients.length} clientes</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Consulta cuántas propuestas se han emitido y a qué número, fecha y valor corresponden.
               </p>
             </div>
           </div>
@@ -690,81 +871,90 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           <div className="flex items-center gap-2 self-stretch sm:self-auto">
             <button
               onClick={() => setIsFullDirectoryModalOpen(true)}
-              className="inline-flex items-center justify-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-md cursor-pointer flex-1 sm:flex-initial"
+              className="inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/15 text-white font-bold text-xs px-3.5 py-2 rounded-xl border border-white/15 transition cursor-pointer flex-1 sm:flex-initial"
             >
               <Users className="w-4 h-4" />
-              <span>Ver Directorio Completo</span>
+              <span>Directorio</span>
             </button>
             <button
               onClick={() => onNavigate('ventas')}
-              className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-md cursor-pointer flex-1 sm:flex-initial"
+              className="inline-flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-lg shadow-emerald-500/20 cursor-pointer flex-1 sm:flex-initial"
             >
               <Plus className="w-4 h-4" />
-              <span>Nueva Cotización</span>
+              <span>Nueva cotización</span>
             </button>
           </div>
         </div>
 
-        {/* Quick KPI Stats Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="bg-[#111c2e] border border-[#334d6e] rounded-xl p-3">
-            <span className="text-[11px] text-slate-400 font-semibold uppercase block">Clientes Totales</span>
-            <span className="text-lg font-black text-white">{allClients.length}</span>
+        {/* KPIs */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="sys-kpi" style={{ '--accent': '#38bdf8' } as React.CSSProperties}>
+            <span className="block text-[10px] uppercase tracking-[0.14em] font-bold text-slate-400">
+              Clientes totales
+            </span>
+            <span className="block text-xl font-black text-white mt-1">{allClients.length}</span>
           </div>
-          <div className="bg-[#111c2e] border border-[#334d6e] rounded-xl p-3">
-            <span className="text-[11px] text-slate-400 font-semibold uppercase block">Con Cotizaciones</span>
-            <span className="text-lg font-black text-[#38bdf8]">{clientsWithQuotesCount}</span>
+          <div className="sys-kpi" style={{ '--accent': '#818cf8' } as React.CSSProperties}>
+            <span className="block text-[10px] uppercase tracking-[0.14em] font-bold text-slate-400">
+              Con cotizaciones
+            </span>
+            <span className="block text-xl font-black text-indigo-300 mt-1">
+              {clientsWithQuotesCount}
+            </span>
           </div>
-          <div className="bg-[#111c2e] border border-[#334d6e] rounded-xl p-3">
-            <span className="text-[11px] text-slate-400 font-semibold uppercase block">Cotizaciones Emitidas</span>
-            <span className="text-lg font-black text-emerald-400">{activeSavedQuotes.length}</span>
+          <div className="sys-kpi" style={{ '--accent': '#34d399' } as React.CSSProperties}>
+            <span className="block text-[10px] uppercase tracking-[0.14em] font-bold text-slate-400">
+              Cotizaciones emitidas
+            </span>
+            <span className="block text-xl font-black text-emerald-300 mt-1">
+              {activeSavedQuotes.length}
+            </span>
           </div>
-          <div className="bg-[#111c2e] border border-[#334d6e] rounded-xl p-3">
-            <span className="text-[11px] text-slate-400 font-semibold uppercase block">Total Cotizado</span>
-            <span className="text-xs sm:text-sm font-black text-emerald-300 truncate block mt-1">
+          <div className="sys-kpi" style={{ '--accent': '#fbbf24' } as React.CSSProperties}>
+            <span className="block text-[10px] uppercase tracking-[0.14em] font-bold text-slate-400">
+              Total cotizado
+            </span>
+            <span className="block text-[13px] font-black text-amber-200 mt-1.5 truncate">
               ${formatCOP(totalQuotedValue)} COP
             </span>
           </div>
         </div>
 
-        {/* Search & Filter Controls */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#111c2e] p-3 rounded-xl border border-[#334d6e]">
+        {/* Buscador y filtro */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Buscar cliente por nombre, NIT, municipio o contacto..."
+              placeholder="Buscar por nombre, NIT, municipio o contacto..."
               value={clientSearchTerm}
               onChange={(e) => setClientSearchTerm(e.target.value)}
-              className="w-full bg-[#192b45] border border-[#334d6e] rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-hidden focus:border-[#38bdf8]"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400/70 focus:bg-white/[0.07] transition"
             />
           </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={clientDeptFilter}
-              onChange={(e) => setClientDeptFilter(e.target.value)}
-              className="bg-[#192b45] border border-[#334d6e] rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-hidden focus:border-[#38bdf8]"
-            >
-              <option value="all">Todos los Departamentos</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={clientDeptFilter}
+            onChange={(e) => setClientDeptFilter(e.target.value)}
+            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-400/70 transition"
+          >
+            <option value="all">Todos los departamentos</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Client Cards Display */}
+        {/* Listado */}
         {filteredClients.length === 0 ? (
-          <div className="p-8 text-center bg-[#111c2e] rounded-xl border border-[#334d6e] space-y-2">
-            <Users className="w-8 h-8 text-slate-500 mx-auto" />
+          <div className="p-10 text-center bg-white/[0.03] rounded-2xl border border-dashed border-white/10 space-y-2">
+            <Users className="w-8 h-8 text-slate-600 mx-auto" />
             <p className="text-xs font-bold text-slate-300">No se encontraron clientes</p>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500">
               {clientSearchTerm
                 ? `Ningún cliente coincide con "${clientSearchTerm}".`
-                : 'No hay clientes registrados en el sistema.'}
+                : 'Aún no hay clientes registrados en el sistema.'}
             </p>
           </div>
         ) : (
@@ -777,41 +967,39 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               return (
                 <div
                   key={client.id}
-                  className="bg-[#111c2e] border border-[#334d6e] hover:border-[#38bdf8]/60 rounded-xl p-3.5 transition flex flex-col justify-between shadow-sm space-y-2.5"
+                  className="sys-client-card"
                 >
-                  <div className="space-y-1.5">
-                    {/* Header: Name + Badge */}
+                  <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="text-xs font-black text-white leading-tight uppercase line-clamp-2">
+                      <h4 className="text-[12px] font-black text-white leading-tight uppercase line-clamp-2">
                         {client.name}
                       </h4>
                       <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap shrink-0 ${
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap shrink-0 border ${
                           quotesForClient.length > 0
-                            ? 'bg-[#38bdf8]/20 text-[#38bdf8] border border-[#38bdf8]/40'
-                            : 'bg-slate-800 text-slate-400'
+                            ? 'bg-sky-500/15 text-sky-300 border-sky-400/30'
+                            : 'bg-white/5 text-slate-400 border-white/10'
                         }`}
                       >
-                        {quotesForClient.length} {quotesForClient.length === 1 ? 'Cotización' : 'Cotizaciones'}
+                        {quotesForClient.length}{' '}
+                        {quotesForClient.length === 1 ? 'cotización' : 'cotizaciones'}
                       </span>
                     </div>
 
-                    {/* Metadata: NIT and Location */}
                     <div className="flex flex-wrap items-center gap-1.5 text-[10.5px]">
                       {client.nit && (
-                        <span className="font-mono bg-[#192b45] text-slate-300 px-1.5 py-0.2 rounded border border-[#334d6e]">
-                          NIT: {client.nit}
+                        <span className="font-mono bg-white/5 text-slate-300 px-1.5 py-0.5 rounded border border-white/10">
+                          NIT {client.nit}
                         </span>
                       )}
                       {client.department && (
-                        <span className="text-[#38bdf8] bg-[#38bdf8]/10 px-1.5 py-0.2 rounded border border-[#38bdf8]/20 font-medium flex items-center gap-1">
+                        <span className="text-sky-300 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-400/20 font-medium flex items-center gap-1">
                           <MapPin className="w-2.5 h-2.5" />
                           {client.city ? `${client.city}, ${client.department}` : client.department}
                         </span>
                       )}
                     </div>
 
-                    {/* Contact row */}
                     {client.contactPerson && (
                       <p className="text-[11px] text-slate-400 truncate">
                         <strong className="text-slate-300">Contacto:</strong> {client.contactPerson}
@@ -819,39 +1007,37 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                     )}
                   </div>
 
-                  {/* Quotes List / Expandable Accordion */}
-                  <div className="pt-2 border-t border-[#334d6e]/70 space-y-2">
+                  <div className="pt-2 mt-2 border-t border-white/10 space-y-2">
                     <button
                       type="button"
                       onClick={() => setExpandedOverviewClientId(isExpanded ? null : client.id)}
                       className="w-full flex items-center justify-between text-[11px] font-bold text-slate-300 hover:text-white py-1 transition cursor-pointer"
                     >
-                      <span className="flex items-center gap-1">
-                        <FileText className="w-3 h-3 text-[#38bdf8]" />
+                      <span className="flex items-center gap-1.5">
+                        <FileText className="w-3 h-3 text-sky-400" />
                         <span>
                           {quotesForClient.length > 0
-                            ? `Ver ${quotesForClient.length} cotización(es) asociadas`
-                            : 'Sin cotizaciones emitidas aún'}
+                            ? `${quotesForClient.length} propuesta(s) asociada(s)`
+                            : 'Sin cotizaciones emitidas'}
                         </span>
                       </span>
                       {quotesForClient.length > 0 &&
                         (isExpanded ? (
-                          <ChevronUp className="w-3 h-3 text-[#38bdf8]" />
+                          <ChevronUp className="w-3 h-3 text-sky-400" />
                         ) : (
-                          <ChevronDown className="w-3 h-3 text-[#38bdf8]" />
+                          <ChevronDown className="w-3 h-3 text-sky-400" />
                         ))}
                     </button>
 
-                    {/* Expanded details */}
                     {isExpanded && quotesForClient.length > 0 && (
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto bg-[#0d1624] p-2 rounded-lg border border-[#334d6e] animate-fadeIn scrollbar-thin">
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto sys-scroll bg-[#0b1626] p-2 rounded-xl border border-white/10 animate-fadeIn">
                         {quotesForClient.map((q) => (
                           <div
                             key={q.id}
-                            className="bg-[#15253d] border border-[#334d6e] p-2 rounded-md space-y-1 text-[10.5px]"
+                            className="bg-white/[0.04] border border-white/10 p-2 rounded-lg space-y-1 text-[10.5px]"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="font-mono font-bold text-[#38bdf8]">{q.quoteNumber}</span>
+                              <span className="font-mono font-bold text-sky-300">{q.quoteNumber}</span>
                               <span className="text-slate-400 flex items-center gap-1">
                                 <Calendar className="w-2.5 h-2.5" /> {q.date}
                               </span>
@@ -870,9 +1056,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                                 onLoadQuoteIntoEditor?.(q);
                                 onNavigate('ventas');
                               }}
-                              className="w-full mt-1 py-0.5 bg-[#192b45] hover:bg-[#253e60] text-[#38bdf8] font-bold rounded text-[10px] border border-[#334d6e] flex items-center justify-center gap-1 transition cursor-pointer"
+                              className="w-full mt-1 py-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 font-bold rounded-md text-[10px] border border-sky-400/25 flex items-center justify-center gap-1 transition cursor-pointer"
                             >
-                              <span>Cargar / Ver Cotización</span>
+                              <span>Cargar en el editor</span>
                               <ArrowRight className="w-2.5 h-2.5" />
                             </button>
                           </div>
@@ -887,278 +1073,130 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         )}
 
         {filteredClients.length > 6 && (
-          <div className="pt-2 text-center">
+          <div className="pt-1 text-center">
             <button
               onClick={() => setIsFullDirectoryModalOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#38bdf8] hover:text-white bg-[#111c2e] hover:bg-[#192b45] border border-[#334d6e] px-4 py-2 rounded-xl transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-xl transition cursor-pointer"
             >
-              <span>Ver todos los {allClients.length} clientes en el directorio completo</span>
+              <span>Ver los {allClients.length} clientes del directorio completo</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* 3. MAIN WINDOW LAUNCHER (6 Direct Navigation Hub Cards) */}
-      <div>
-        <div className="flex items-center justify-between mb-3 px-1">
+      {/* ===================================================================== */}
+      {/* 4. TAREAS RÁPIDAS                                                     */}
+      {/* ===================================================================== */}
+      <section className="sys-panel p-5 sm:p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="sys-ico text-amber-400">
+            <Zap className="w-[22px] h-[22px]" />
+          </span>
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Layers className="w-4 h-4 text-[#38bdf8]" />
-              <span>Accesos Directos a las Ventanas del Sistema</span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              Haga clic en cualquiera de las opciones para ir directamente a la ventana correspondiente.
+            <h2 className="text-base font-black text-white tracking-tight">¿Qué necesitas hacer hoy?</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Elige tu objetivo y te llevamos directo al módulo correcto.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {windowsList.map((win) => {
-            const Icon = win.icon;
-            return (
-              <div
-                key={win.id}
-                id={`launch-card-${win.id}`}
-                onClick={() => onNavigate(win.id)}
-                className={`bg-[#18263a] border ${win.borderColor} ${win.hoverBorder} rounded-2xl p-5 shadow-lg flex flex-col justify-between cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-xl group`}
-              >
-                <div>
-                  {/* Top Bar with Icon & Badge */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-10 h-10 rounded-xl ${win.bgColor} ${win.accentColor} flex items-center justify-center font-bold group-hover:scale-110 transition`}>
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <span className={`text-[10.5px] font-extrabold uppercase px-2 py-0.5 rounded-full ${win.bgColor} ${win.accentColor} border ${win.borderColor}`}>
-                          {win.badge}
-                        </span>
-                        <h3 className="text-sm font-bold text-white mt-1 group-hover:text-[#38bdf8] transition">
-                          {win.title}
-                        </h3>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                    {win.description}
-                  </p>
-
-                  {/* Stat pills (read-only) */}
-                  <div className="bg-[#111c2e] rounded-xl p-3 border border-[#334d6e]/50 space-y-1.5 text-xs mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 text-[11px]">{win.statLabel}:</span>
-                      <strong className="text-slate-200">{win.statValue}</strong>
-                    </div>
-                    <div className="flex justify-between items-center pt-1 border-t border-[#334d6e]/40">
-                      <span className="text-slate-400 text-[11px]">{win.totalLabel}:</span>
-                      <strong className={`${win.accentColor} font-bold text-[11px]`}>{win.totalValue}</strong>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Direct Entry Button */}
-                <div className="pt-3 border-t border-[#334d6e]/60 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400 font-medium truncate max-w-[170px]" title={win.bestFor}>
-                    {win.subtitle}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onNavigate(win.id);
-                    }}
-                    className={`inline-flex items-center gap-1.5 text-xs font-bold ${win.accentColor} group-hover:translate-x-1 transition cursor-pointer`}
-                  >
-                    <span>Entrar</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. QUICK ONBOARDING & SCENARIO GUIDE: "¿Qué deseas hacer hoy?" */}
-      <div className="bg-[#152438] border border-[#334d6e] rounded-2xl p-5 sm:p-6 shadow-md">
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400">
-            <Zap className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-white">
-              Guía de Tareas Rápidas: ¿Qué deseas hacer hoy?
-            </h2>
-            <p className="text-xs text-slate-400">
-              Seleccione su objetivo actual para ser dirigido a la ventana adecuada con un solo clic.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {quickScenarios.map((sc, idx) => {
             const Icon = sc.icon;
             return (
               <div
                 key={idx}
                 onClick={() => onNavigate(sc.targetTab)}
-                className={`p-3.5 rounded-xl border ${sc.colorBg} flex flex-col justify-between transition cursor-pointer shadow-sm group`}
+                className="sys-scenario group"
               >
-                <div>
-                  <div className="flex items-start gap-2.5 mb-2">
-                    <Icon className={`w-4 h-4 ${sc.colorText} shrink-0 mt-0.5`} />
-                    <h4 className="text-xs font-bold text-white leading-snug">
-                      {sc.title}
-                    </h4>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed mb-3">
-                    {sc.stepSummary}
-                  </p>
+                <div className="flex items-start gap-2.5 mb-2">
+                  <span className={`sys-ico-sm shrink-0 ${sc.colorText}`}>
+                    <Icon className="w-4 h-4" />
+                  </span>
+                  <h4 className="text-[12px] font-bold text-white leading-snug">{sc.title}</h4>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-[#334d6e]/40">
-                  <span className={`text-xs font-bold ${sc.colorText} inline-flex items-center gap-1 group-hover:underline`}>
-                    {sc.actionText}
-                  </span>
-                  <ChevronRight className={`w-3.5 h-3.5 ${sc.colorText} group-hover:translate-x-1 transition`} />
+                <p className="text-[11px] text-slate-400 leading-relaxed mb-3">{sc.stepSummary}</p>
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                  <span className={`text-[11px] font-bold ${sc.colorText}`}>{sc.actionText}</span>
+                  <ChevronRight
+                    className={`w-3.5 h-3.5 ${sc.colorText} transition-transform group-hover:translate-x-1`}
+                  />
                 </div>
               </div>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* 4. WORKFLOW EXPLAINER (Flujo Recomendado de Trabajo en 4 Pasos) */}
-      <div className="bg-[#18263a] border border-[#334d6e] rounded-2xl p-5 sm:p-6 shadow-md">
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="p-2 rounded-xl bg-sky-500/15 text-[#38bdf8]">
-            <Compass className="w-5 h-5" />
-          </div>
+      {/* ===================================================================== */}
+      {/* 5. FLUJO RECOMENDADO EN 4 PASOS                                       */}
+      {/* ===================================================================== */}
+      <section className="sys-panel p-5 sm:p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <span className="sys-ico text-sky-400">
+            <Compass className="w-[22px] h-[22px]" />
+          </span>
           <div>
-            <h2 className="text-base font-bold text-white">
-              Flujo de Trabajo Recomendado (Paso a Paso)
-            </h2>
-            <p className="text-xs text-slate-400">
-              Guía secuencial sugerida para preparar propuestas y ofertas técnicas sin errores.
+            <h2 className="text-base font-black text-white tracking-tight">Flujo recomendado</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Cuatro pasos para preparar una propuesta sin errores.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
-          {/* Step 1 */}
-          <div
-            onClick={() => onNavigate('catalogo')}
-            className="bg-[#111c2e] border border-[#334d6e] hover:border-blue-400 p-4 rounded-xl transition cursor-pointer group"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="w-6 h-6 rounded-full bg-blue-500/20 border border-blue-500/40 text-blue-400 text-xs font-black flex items-center justify-center">
-                1
-              </span>
-              <span className="text-[10px] text-blue-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded-full">
-                Catálogo
-              </span>
-            </div>
-            <h3 className="text-xs font-bold text-white mb-1 group-hover:text-blue-300 transition">
-              Explorar Catálogo
-            </h3>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Busca los equipos médicos necesarios por marca o especialidad y envíalos a Costos o Licitaciones.
-            </p>
-          </div>
-
-          {/* Step 2 */}
-          <div
-            onClick={() => onNavigate('costos')}
-            className="bg-[#111c2e] border border-[#334d6e] hover:border-amber-400 p-4 rounded-xl transition cursor-pointer group"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-xs font-black flex items-center justify-center">
-                2
-              </span>
-              <span className="text-[10px] text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full">
-                Ventana 2
-              </span>
-            </div>
-            <h3 className="text-xs font-bold text-white mb-1 group-hover:text-amber-300 transition">
-              Liquidar Costos &amp; Margen
-            </h3>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Ajusta accesorios y elige la lista de precios (L1–L8 o factor libre) para determinar el precio de venta.
-            </p>
-          </div>
-
-          {/* Step 3 */}
-          <div
-            onClick={() => onNavigate('ventas')}
-            className="bg-[#111c2e] border border-[#334d6e] hover:border-sky-400 p-4 rounded-xl transition cursor-pointer group"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="w-6 h-6 rounded-full bg-sky-500/20 border border-sky-500/40 text-[#38bdf8] text-xs font-black flex items-center justify-center">
-                3
-              </span>
-              <span className="text-[10px] text-sky-400 font-bold bg-sky-500/10 px-2 py-0.5 rounded-full">
-                Ventana 1 / 4
-              </span>
-            </div>
-            <h3 className="text-xs font-bold text-white mb-1 group-hover:text-sky-300 transition">
-              Elaborar Propuesta
-            </h3>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Completa los datos del cliente, verifica las 3 hojas oficiales membretadas o el pliego de licitación.
-            </p>
-          </div>
-
-          {/* Step 4 */}
-          <div
-            onClick={() => onNavigate('ventas')}
-            className="bg-[#111c2e] border border-[#334d6e] hover:border-emerald-400 p-4 rounded-xl transition cursor-pointer group"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-black flex items-center justify-center">
-                4
-              </span>
-              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                Word / Excel
-              </span>
-            </div>
-            <h3 className="text-xs font-bold text-white mb-1 group-hover:text-emerald-300 transition">
-              Exportar &amp; Guardar
-            </h3>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Descarga la cotización formal en Word (.doc) y guárdala en el historial para control y seguimiento.
-            </p>
-          </div>
+        <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {flowSteps.map((step) => {
+            const Icon = step.icon;
+            return (
+              <div
+                key={step.n}
+                onClick={() => onNavigate(step.tab)}
+                style={{ '--accent': step.accent } as React.CSSProperties}
+                className="sys-step group relative"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="sys-step-num">{step.n}</span>
+                  <span className="sys-step-label">{step.label}</span>
+                </div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Icon className="w-4 h-4" style={{ color: step.accent }} />
+                  <h3 className="text-[12.5px] font-bold text-white">{step.title}</h3>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">{step.text}</p>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </section>
 
-      {/* 5. INTERACTIVE KNOWLEDGE BASE / WINDOW DETAIL TABS */}
-      <div className="bg-[#18263a] border border-[#334d6e] rounded-2xl p-5 sm:p-6 shadow-md">
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="p-2 rounded-xl bg-purple-500/15 text-purple-400">
-            <HelpCircle className="w-5 h-5" />
-          </div>
+      {/* ===================================================================== */}
+      {/* 6. GUÍA DETALLADA POR VENTANA                                         */}
+      {/* ===================================================================== */}
+      <section className="sys-panel p-5 sm:p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="sys-ico text-violet-400">
+            <HelpCircle className="w-[22px] h-[22px]" />
+          </span>
           <div>
-            <h2 className="text-base font-bold text-white">
-              Guía Detallada de Cada Ventana
-            </h2>
-            <p className="text-xs text-slate-400">
-              Seleccione una ventana para ver su funcionamiento paso a paso y mejores prácticas.
+            <h2 className="text-base font-black text-white tracking-tight">Guía de cada ventana</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Selecciona un módulo para ver su funcionamiento paso a paso y buenas prácticas.
             </p>
           </div>
         </div>
 
-        {/* Tab buttons */}
-        <div className="flex flex-wrap gap-2 pb-3 border-b border-[#334d6e]">
+        <div className="flex gap-2 pb-4 overflow-x-auto sys-scroll">
           {[
-            { id: 'ventas' as ActiveTab, label: 'Ventana 1: Cotizaciones', icon: ShoppingCart },
-            { id: 'costos' as ActiveTab, label: 'Ventana 2: Costos', icon: PenLine },
-            { id: 'catalogo' as ActiveTab, label: 'Ventana 3: Catálogo', icon: BookOpen },
-            { id: 'licitaciones' as ActiveTab, label: 'Ventana 4: Licitaciones y Contratos', icon: FileSpreadsheet },
-            { id: 'seguimiento_oc' as ActiveTab, label: 'Ventana 5: Seguimiento OC', icon: Truck },
-            { id: 'ordenes_venta' as ActiveTab, label: 'Ventana 6: Facturas & Órdenes', icon: PackageCheck },
-            { id: 'documentacion' as ActiveTab, label: 'Ventana 7: Documentación', icon: FolderArchive },
+            { id: 'ventas' as ActiveTab, label: 'Cotizaciones', icon: ShoppingCart },
+            { id: 'costos' as ActiveTab, label: 'Costos', icon: PenLine },
+            { id: 'catalogo' as ActiveTab, label: 'Catálogo', icon: BookOpen },
+            { id: 'licitaciones' as ActiveTab, label: 'Licitaciones', icon: FileSpreadsheet },
+            { id: 'seguimiento_oc' as ActiveTab, label: 'Seguimiento OC', icon: Truck },
+            { id: 'ordenes_venta' as ActiveTab, label: 'Órdenes y facturas', icon: PackageCheck },
+            { id: 'documentacion' as ActiveTab, label: 'Documentación', icon: FolderArchive },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = selectedGuideTab === tab.id;
@@ -1167,10 +1205,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setSelectedGuideTab(tab.id)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3.5 py-2 rounded-xl text-[11.5px] font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer border ${
                   isActive
-                    ? 'bg-[#38bdf8] text-slate-950 shadow-md'
-                    : 'bg-[#111c2e] text-slate-300 hover:bg-[#1f324d] hover:text-white border border-[#334d6e]'
+                    ? 'bg-sky-400 text-slate-950 border-sky-300 shadow-lg shadow-sky-500/25'
+                    : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border-white/10'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -1180,55 +1218,60 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           })}
         </div>
 
-        {/* Tab Content Display */}
-        <div className="mt-4 bg-[#111c2e] border border-[#334d6e]/70 rounded-xl p-4 sm:p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#334d6e]/50 mb-4">
+        <div className="sys-guide-body">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10 mb-4">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-sky-500/15 text-[#38bdf8]">
-                <GuideIcon className="w-5 h-5" />
-              </div>
+              <span className="sys-ico-sm text-sky-400">
+                <GuideIcon className="w-4 h-4" />
+              </span>
               <div>
                 <h3 className="text-sm font-bold text-white">{currentGuide.title}</h3>
-                <p className="text-xs text-slate-400">{currentGuide.subtitle}</p>
+                <p className="text-[11px] text-slate-400">{currentGuide.subtitle}</p>
               </div>
             </div>
 
             <button
               type="button"
               onClick={() => onNavigate(selectedGuideTab)}
-              className="inline-flex items-center justify-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-bold text-xs px-4 py-2 rounded-xl shadow transition cursor-pointer shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 bg-sky-400 hover:bg-sky-300 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl shadow-lg shadow-sky-500/20 transition cursor-pointer shrink-0"
             >
-              <span>Abrir esta Ventana</span>
+              <span>Abrir esta ventana</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Steps Column */}
             <div className="lg:col-span-2 space-y-2.5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <h4 className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Instrucciones y Funcionamiento:</span>
+                <span>Instrucciones y funcionamiento</span>
               </h4>
               <div className="space-y-2">
                 {currentGuide.steps.map((st, i) => (
-                  <div key={i} className="flex items-start gap-2 bg-[#15253d] p-2.5 rounded-lg border border-[#334d6e]/40 text-xs text-slate-300">
-                    <span className="text-[#38bdf8] font-bold shrink-0">•</span>
+                  <div
+                    key={i}
+                    className="flex items-start gap-2.5 bg-white/[0.04] p-3 rounded-xl border border-white/10 text-[11.5px] text-slate-300 hover:border-sky-400/30 transition"
+                  >
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-sky-500/15 text-sky-300 text-[10px] font-black flex items-center justify-center border border-sky-400/25">
+                      {i + 1}
+                    </span>
                     <span className="leading-relaxed">{st}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Tips Column */}
             <div className="space-y-2.5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+              <h4 className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-amber-300 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Consejos Útiles:</span>
+                <span>Consejos útiles</span>
               </h4>
               <div className="space-y-2">
                 {currentGuide.tips.map((tip, i) => (
-                  <div key={i} className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-xs text-amber-200 leading-relaxed">
+                  <div
+                    key={i}
+                    className="bg-amber-500/[0.08] border border-amber-400/20 p-3 rounded-xl text-[11.5px] text-amber-100/90 leading-relaxed"
+                  >
                     {tip}
                   </div>
                 ))}
@@ -1236,9 +1279,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* FULL CLIENT DIRECTORY MODAL */}
+      {/* MODAL DIRECTORIO COMPLETO */}
       {isFullDirectoryModalOpen && (
         <ClientDirectoryModal
           isOpen={isFullDirectoryModalOpen}
