@@ -108,6 +108,11 @@ const BOT_QUICK_PROMPTS = [
   '¿Cómo calcular el precio con Margen L3?',
   '¿Cómo registrar un nuevo equipo biomédico?',
   '¿Cómo cerrar ventanas con la tecla ESC?',
+  'Llévame a la ventana 6: Órdenes de Venta',
+  'Crea una nueva cotización comercial',
+  'Registra un nuevo equipo biomédico',
+  '¿Cuál es la TRM en vivo hoy?',
+  '¿Cómo facturar una orden de venta?',
 ];
 
 export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
@@ -201,6 +206,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   const [isBotThinking, setIsBotThinking] = useState(false);
   const [pendingAction, setPendingAction] = useState<BotActionOption | null>(null);
   const [isExecutingAuto, setIsExecutingAuto] = useState(false);
+  const [showMaraHelp, setShowMaraHelp] = useState(false);
 
   // Team User Chat state
   const [teamMessages, setTeamMessages] = useState<UserChatMessage[]>(() => getStoredTeamMessages());
@@ -929,6 +935,15 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   </div>
                   <button
                     type="button"
+                    onClick={() => setShowMaraHelp(!showMaraHelp)}
+                    title="Ver ejemplos de uso y capacidades de Mara"
+                    className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-cyan-300 bg-[#0d1726] hover:bg-[#1a2b42] px-2 py-1 rounded-lg border border-[#233852] hover:border-cyan-500/40 transition cursor-pointer font-medium"
+                  >
+                    <HelpCircle className="w-3 h-3" />
+                    <span>Ayuda</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleClearBotHistory}
                     title="Reiniciar y limpiar conversación con Mara"
                     className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-amber-300 bg-[#0d1726] hover:bg-[#1a2b42] px-2 py-1 rounded-lg border border-[#233852] hover:border-amber-500/40 transition cursor-pointer font-medium"
@@ -1048,6 +1063,62 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Panel de Ayuda: Ejemplos de Uso y Capacidades de Mara */}
+              {showMaraHelp && (
+                <div className="px-3.5 py-3 border-t border-[#31507a]/70 bg-[#0c1422]/95 rounded-b-2xl space-y-2.5 max-h-[45vh] overflow-y-auto">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-bold text-cyan-300 uppercase tracking-wider">¿Qué puede hacer Mara IA?</span>
+                  </div>
+
+                  <div className="space-y-1.5 text-[10.5px] leading-relaxed text-slate-300">
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-sky-400 text-[9px] mt-0.5">▸</span>
+                      <span className="font-medium text-slate-100">Navegar por ventanas:</span>
+                      <span className="text-slate-400">"Llévame a la ventana 6", "Abre Cotizaciones", "Ir a Documentación"</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-sky-400 text-[9px] mt-0.5">▸</span>
+                      <span className="font-medium text-slate-100">Ejecutar acciones automáticamente:</span>
+                      <span className="text-slate-400">"Crea una nueva cotización", "Registra un nuevo equipo", "Nueva Orden de Compra"</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-sky-400 text-[9px] mt-0.5">▸</span>
+                      <span className="font-medium text-slate-100">Consultar información del sistema:</span>
+                      <span className="text-slate-400">"¿Cuál es la TRM hoy?", "¿Cuántos equipos hay?", "¿Qué proveedores tengo?"</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-sky-400 text-[9px] mt-0.5">▸</span>
+                      <span className="font-medium text-slate-100">Cálculos y cotizaciones:</span>
+                      <span className="text-slate-400">"Cuánto es 4.500.000 con margen L3 y IVA 19%", "Calcula precio de venta"</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-sky-400 text-[9px] mt-0.5">▸</span>
+                      <span className="font-medium text-slate-100">Asesoría técnica y comercial:</span>
+                      <span className="text-slate-400">"¿Cómo optimizar especificaciones para SECOP II?", "¿Qué margen usar?"</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-sky-400 text-[9px] mt-0.5">▸</span>
+                      <span className="font-medium text-slate-100">Acciones críticas con confirmación:</span>
+                      <span className="text-slate-400">"Facturar orden", "Eliminar registro" (te pedirá confirmar)</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-[#2c476f]/50">
+                    <span className="text-[9px] text-slate-500 font-semibold">💡 Tip:</span>
+                    <span className="text-[9.5px] text-slate-400 ml-1">Escribe cualquier acción o consulta y Mara responderá o la ejecutará por ti.</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowMaraHelp(false)}
+                    className="mt-2 w-full text-[10px] text-slate-400 hover:text-cyan-300 underline underline-offset-4 hover:underline decoration-cyan-500/30 transition"
+                  >
+                    Cerrar ayuda
+                  </button>
                 </div>
               )}
 
