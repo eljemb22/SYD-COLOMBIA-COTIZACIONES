@@ -49,6 +49,7 @@ import { DefaultDocumentSignature } from '../common/SyDLetterhead';
 import { getOfficialSyDLetterheadDataUrl, OFFICIAL_SYD_LETTERHEAD_SVG_PATH } from '../../utils/sydDefaultLetterhead';
 import { ClientDirectoryModal } from '../modals/ClientDirectoryModal';
 import { InternetImageSearchModal } from '../modals/InternetImageSearchModal';
+import { DigitalSignatureModal } from '../modals/DigitalSignatureModal';
 import { chunkQuoteItemsForPages } from '../../utils/paginationUtils';
 import { findSpellingErrorsInText, ignoreWord, autoCorrectText } from '../../utils/spellChecker';
 import {
@@ -396,6 +397,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
   const [storedClients, setStoredClients] = useState<ClientRecord[]>(() => getStoredClients());
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [clientNameError, setClientNameError] = useState(false);
   const [tableEmptyError, setTableEmptyError] = useState(false);
@@ -1132,6 +1134,17 @@ export const SalesView: React.FC<SalesViewProps> = ({
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Imprimir</span>
+            </button>
+
+            <button
+              type="button"
+              id="btn-sign-digital-main"
+              onClick={() => setIsSignatureModalOpen(true)}
+              title="Firmar digitalmente la cotización"
+              className="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm shadow-emerald-500/20 transition cursor-pointer"
+            >
+              <CheckCheck className="w-3.5 h-3.5" />
+              <span>Firmar Digital</span>
             </button>
           </div>
         </div>
@@ -2490,6 +2503,17 @@ export const SalesView: React.FC<SalesViewProps> = ({
           onSelectImage={(base64Url) => {
             onUpdateItem(internetSearchItem.id, { imageUrl: base64Url });
             setInternetSearchItem(null);
+          }}
+        />
+      )}
+      {isSignatureModalOpen && (
+        <DigitalSignatureModal
+          isOpen={isSignatureModalOpen}
+          onClose={() => setIsSignatureModalOpen(false)}
+          onSaveSignature={(actionData) => {
+            setIsSignatureModalOpen(false);
+            console.log('Firma guardada:', actionData);
+            // Aquí se puede guardar la firma en la cotización
           }}
         />
       )}

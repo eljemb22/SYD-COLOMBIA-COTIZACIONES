@@ -10,7 +10,6 @@ import { OCTrackingView } from './components/views/OCTrackingView';
 import { SalesOrdersView } from './components/views/SalesOrdersView';
 import { DocumentationView } from './components/views/DocumentationView';
 import { GmailPurchasingHubView } from './components/views/GmailPurchasingHubView';
-import { AdvancedToolsView } from './components/views/AdvancedToolsView';
 import { FloatingAlertsWidget } from './components/alerts/FloatingAlertsWidget';
 import { FloatingChatWidget } from './components/chat/FloatingChatWidget';
 import { RateLimitToast } from './components/common/RateLimitToast';
@@ -1573,10 +1572,6 @@ export default function App() {
               initialTenderToConvert={initialTenderToConvert}
               onClearInitialTenderToConvert={handleClearInitialTenderToConvert}
             />
-          )}
-
-          {activeTab === 'herramientas' && (
-            <AdvancedToolsView />
           )}
 
           {activeTab === 'gmail_compras' && (
