@@ -748,7 +748,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
       )}
 
       {/* Top Header & Layout Mode Switcher Bar */}
-      <div className="bg-[#192b45]/95 backdrop-blur-md border border-[#334d6e] rounded-2xl p-3.5 flex flex-col gap-3 shadow-xl sticky top-0 z-20">
+      <div className="bg-[#192b45]/95 backdrop-blur-md border border-[#334d6e] rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-xl sticky top-0 z-20">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
             <Award className="w-5 h-5 text-amber-300" />

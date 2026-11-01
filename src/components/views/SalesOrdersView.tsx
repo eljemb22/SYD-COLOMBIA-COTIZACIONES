@@ -1474,7 +1474,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Top Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] shadow-xl flex flex-col gap-3 transition-colors">
+      <div className="p-4 sm:p-5 rounded-2xl bg-[var(--syd-card-bg)] border border-[var(--syd-border-color)] shadow-xl flex flex-col gap-2.5 transition-colors">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-[var(--syd-accent-glow)] border border-[var(--syd-accent)] text-[var(--syd-accent)] shrink-0">
