@@ -1471,3 +1471,37 @@ select[class*="bg-["] {
     background-image: none !important;
   }
 }
+
+/* =====================================================================
+   CONTADORES DEL MENÚ LATERAL
+   Números compactos que nunca desbordan: ancho máximo fijo, cifras
+   tabulares y puntos suspensivos como última defensa.
+   ===================================================================== */
+.nav-badge {
+  display: inline-block;
+  min-width: 20px;
+  max-width: 78px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-size: 9.5px;
+  line-height: 1.25;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+#main-sidebar-navigation button:hover .nav-badge {
+  transform: scale(1.04);
+}
+
+@media (max-width: 400px) {
+  .nav-badge {
+    max-width: 62px;
+  }
+}

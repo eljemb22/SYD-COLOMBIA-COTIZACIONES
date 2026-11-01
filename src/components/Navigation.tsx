@@ -34,6 +34,19 @@ import { CURRENT_APP_VERSION } from '../utils/versionCheck';
 
 export type { ActiveTab };
 
+/**
+ * Abrevia números grandes (1.234 → 1,2k) para que los contadores del menú
+ * lateral nunca cambien de tamaño ni se salgan de su espacio.
+ */
+const compactCount = (value: number): string => {
+  const n = Math.abs(Math.round(value || 0));
+  if (n < 1000) return String(n);
+  if (n < 10000) return `${(n / 1000).toFixed(1).replace('.', ',')}k`;
+  if (n < 1000000) return `${Math.round(n / 1000)}k`;
+  if (n < 10000000) return `${(n / 1000000).toFixed(1).replace('.', ',')}M`;
+  return `${Math.round(n / 1000000)}M`;
+};
+
 interface NavigationProps {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
@@ -105,6 +118,48 @@ export const Navigation: React.FC<NavigationProps> = ({
   const isEffectiveExpanded = !isCollapsed || isHovered;
   const isEffectiveCollapsed = !isEffectiveExpanded;
 
+  // Contadores compactos del menú: número corto visible + detalle completo en tooltip.
+  const quoteBadge =
+    quoteItemsCount > 0 && savedQuotesCount > 0
+      ? {
+          text: `${compactCount(quoteItemsCount)}·📁${compactCount(savedQuotesCount)}`,
+          title: `${quoteItemsCount} equipos en la cotización · ${savedQuotesCount} cotizaciones guardadas`,
+        }
+      : quoteItemsCount > 0
+      ? {
+          text: compactCount(quoteItemsCount),
+          title: `${quoteItemsCount} equipos en la cotización`,
+        }
+      : savedQuotesCount > 0
+      ? {
+          text: `📁${compactCount(savedQuotesCount)}`,
+          title: `${savedQuotesCount} cotizaciones guardadas`,
+        }
+      : { text: null as string | null, title: '' };
+
+  const ocBadge =
+    ocAlertsCount > 0
+      ? {
+          text: `⚠️${compactCount(ocAlertsCount)}`,
+          title: `${ocAlertsCount} alertas en órdenes de compra`,
+        }
+      : ocItemsCount > 0
+      ? { text: compactCount(ocItemsCount), title: `${ocItemsCount} órdenes de compra` }
+      : { text: null as string | null, title: '' };
+
+  const ordersBadge =
+    salesOrdersCount > 0
+      ? salesInvoicesCount > 0
+        ? {
+            text: `${compactCount(salesOrdersCount)}·🧾${compactCount(salesInvoicesCount)}`,
+            title: `${salesOrdersCount} órdenes de venta · ${salesInvoicesCount} facturas`,
+          }
+        : {
+            text: compactCount(salesOrdersCount),
+            title: `${salesOrdersCount} órdenes de venta`,
+          }
+      : { text: null as string | null, title: '' };
+
   const toggleSection = (sectionName: string) => {
     setCollapsedSections((prev) => ({
       ...prev,
@@ -121,14 +176,8 @@ export const Navigation: React.FC<NavigationProps> = ({
           name: '1. Cotizaciones',
           subtitle: '',
           icon: ShoppingCart,
-          badge:
-            quoteItemsCount > 0 && savedQuotesCount > 0
-              ? `${quoteItemsCount} • 📁${savedQuotesCount}`
-              : quoteItemsCount > 0
-              ? quoteItemsCount
-              : savedQuotesCount > 0
-              ? `📁 ${savedQuotesCount}`
-              : null,
+          badge: quoteBadge.text,
+          badgeTitle: quoteBadge.title,
           badgeColor: 'bg-[#38bdf8] text-slate-950 font-bold',
           activeClass: 'bg-[#38bdf8]/15 border-[#38bdf8] text-white shadow-sm shadow-[#38bdf8]/10',
           iconBg: 'bg-[#38bdf8] text-slate-950',
@@ -144,7 +193,8 @@ export const Navigation: React.FC<NavigationProps> = ({
           name: '2. Costos y Rentabilidad',
           subtitle: '',
           icon: PenLine,
-          badge: costItemsCount > 0 ? costItemsCount : null,
+          badge: costItemsCount > 0 ? compactCount(costItemsCount) : null,
+          badgeTitle: costItemsCount > 0 ? `${costItemsCount} ítems en costos` : '',
           badgeColor: 'bg-amber-400 text-slate-950 font-bold',
           activeClass: 'bg-amber-400/15 border-amber-400 text-white shadow-sm shadow-amber-400/10',
           iconBg: 'bg-amber-400 text-slate-950',
@@ -159,7 +209,9 @@ export const Navigation: React.FC<NavigationProps> = ({
           name: '3. Creación Equipos',
           subtitle: '',
           icon: BookOpen,
-          badge: catalogItemsCount > 0 ? catalogItemsCount : null,
+          badge: catalogItemsCount > 0 ? compactCount(catalogItemsCount) : null,
+          badgeTitle:
+            catalogItemsCount > 0 ? `${catalogItemsCount} equipos en el catálogo` : '',
           badgeColor: 'bg-blue-400 text-slate-950 font-bold',
           activeClass: 'bg-blue-500/15 border-blue-400 text-white shadow-sm shadow-blue-500/10',
           iconBg: 'bg-blue-400 text-slate-950',
@@ -174,7 +226,8 @@ export const Navigation: React.FC<NavigationProps> = ({
           name: '4. Licitaciones y Contratos',
           subtitle: '',
           icon: FileSpreadsheet,
-          badge: tenderItemsCount > 0 ? tenderItemsCount : null,
+          badge: tenderItemsCount > 0 ? compactCount(tenderItemsCount) : null,
+          badgeTitle: tenderItemsCount > 0 ? `${tenderItemsCount} ítems en licitaciones` : '',
           badgeColor: 'bg-purple-400 text-slate-950 font-bold',
           activeClass: 'bg-purple-400/15 border-purple-400 text-white shadow-sm shadow-purple-400/10',
           iconBg: 'bg-purple-400 text-slate-950',
@@ -189,7 +242,8 @@ export const Navigation: React.FC<NavigationProps> = ({
           name: '5. Seguimiento de OC',
           subtitle: '',
           icon: Truck,
-          badge: (ocAlertsCount && ocAlertsCount > 0) ? `⚠️ ${ocAlertsCount}` : (ocItemsCount && ocItemsCount > 0 ? ocItemsCount : null),
+          badge: ocBadge.text,
+          badgeTitle: ocBadge.title,
           badgeColor: (ocAlertsCount && ocAlertsCount > 0) ? 'bg-rose-500 text-white font-black animate-pulse' : 'bg-sky-400 text-slate-950 font-bold',
           activeClass: 'bg-sky-500/15 border-sky-400 text-white shadow-sm shadow-sky-500/10',
           iconBg: 'bg-sky-400 text-slate-950',
@@ -200,6 +254,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           subtitle: '',
           icon: Mail,
           badge: 'Gmail',
+          badgeTitle: 'Integración con Gmail',
           badgeColor: 'bg-rose-400 text-slate-950 font-bold',
           activeClass: 'bg-rose-500/15 border-rose-400 text-white shadow-sm shadow-rose-500/10',
           iconBg: 'bg-rose-400 text-slate-950',
@@ -214,7 +269,8 @@ export const Navigation: React.FC<NavigationProps> = ({
           name: '6. Órdenes de Venta y Facturación',
           subtitle: '',
           icon: PackageCheck,
-          badge: salesOrdersCount > 0 ? (salesInvoicesCount > 0 ? `${salesOrdersCount} • 🧾${salesInvoicesCount}` : salesOrdersCount) : null,
+          badge: ordersBadge.text,
+          badgeTitle: ordersBadge.title,
           badgeColor: 'bg-teal-400 text-slate-950 font-bold',
           activeClass: 'bg-teal-400/15 border-teal-400 text-white shadow-sm shadow-teal-400/10',
           iconBg: 'bg-teal-400 text-slate-950',
@@ -229,7 +285,8 @@ export const Navigation: React.FC<NavigationProps> = ({
           name: '7. Documentación',
           subtitle: '',
           icon: FolderArchive,
-          badge: docItemsCount > 0 ? docItemsCount : null,
+          badge: docItemsCount > 0 ? compactCount(docItemsCount) : null,
+          badgeTitle: docItemsCount > 0 ? `${docItemsCount} documentos técnicos` : '',
           badgeColor: 'bg-emerald-400 text-slate-950 font-bold',
           activeClass: 'bg-emerald-400/15 border-emerald-400 text-white shadow-sm shadow-emerald-400/10',
           iconBg: 'bg-emerald-400 text-slate-950',
@@ -711,6 +768,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                             {tab.badge !== null && (
                               <span
+                                title={(tab as any).badgeTitle || String(tab.badge)}
                                 style={
                                   !isAlertBadge
                                     ? {
@@ -719,7 +777,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                                       }
                                     : undefined
                                 }
-                                className={`ml-1 px-1.5 py-0.2 rounded-full text-[9.5px] shrink-0 font-bold ${
+                                className={`nav-badge ml-1 shrink-0 ${
                                   isAlertBadge ? tab.badgeColor : isActive ? '' : tab.badgeColor
                                 }`}
                               >
