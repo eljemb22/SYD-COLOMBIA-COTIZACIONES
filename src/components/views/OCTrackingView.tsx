@@ -22,6 +22,8 @@ import {
   exportOCTrackingToExcel,
   autoRegisterSupplierIfNotExists,
 } from '../../utils/ocTrackingStorage';
+import { PriceHistoryModal } from '../modals/PriceHistoryModal';
+import { PriceHistoryModal } from '../modals/PriceHistoryModal';
 import {
   getStoredSalesOrders,
   saveStoredSalesOrders,
@@ -2028,7 +2030,12 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
           </div>
         </div>
       )}
+      <PriceHistoryModal
+        isOpen={isPriceHistoryModalOpen}
+        onClose={() => setIsPriceHistoryModalOpen(false)}
+      />
     </div>
   );
 };
 export default OCTrackingView;
+

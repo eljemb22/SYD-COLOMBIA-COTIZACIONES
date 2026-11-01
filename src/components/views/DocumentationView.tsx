@@ -23,7 +23,9 @@ import {
   RefreshCw,
   Maximize2,
   Minimize2,
+  LayoutGrid,
 } from 'lucide-react';
+import { WarrantyAlertsWidget } from '../modals/WarrantyAlertsWidget';
 import {
   TechnicalDocument,
   MedicalEquipment,
@@ -167,6 +169,7 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
   const [drivePreviewError, setDrivePreviewError] = useState<string | null>(null);
   const [isFullscreenPreview, setIsFullscreenPreview] = useState<boolean>(false);
   const [previewSourceMode, setPreviewSourceMode] = useState<'canvas' | 'drive_iframe'>('canvas');
+  const [isWarrantyAlertsModalOpen, setIsWarrantyAlertsModalOpen] = useState(false);
 
   // Generate object URL and binary Blob whenever previewDoc changes
   useEffect(() => {
@@ -1148,6 +1151,11 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
         </div>,
         document.body
       )}
+
+      <WarrantyAlertsWidget
+        isOpen={isWarrantyAlertsModalOpen}
+        onClose={() => setIsWarrantyAlertsModalOpen(false)}
+      />
     </div>
   );
 };

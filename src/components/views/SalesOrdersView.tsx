@@ -46,6 +46,7 @@ import {
   Check,
   GitFork,
 } from 'lucide-react';
+import { ProfitabilityCalculator } from '../modals/ProfitabilityCalculator';
 import {
   SalesOrderRecord,
   SalesOrderItem,
@@ -513,6 +514,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   const [printingOrder, setPrintingOrder] = useState<SalesOrderRecord | null>(null);
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isProfitabilityModalOpen, setIsProfitabilityModalOpen] = useState(false);
   const [viewingOrder, setViewingOrder] = useState<SalesOrderRecord | null>(null);
 
   // Helper to resolve live item status and styled badge from linked OC Tracking contracts
@@ -3721,3 +3723,4 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
     </div>
   );
 };
+

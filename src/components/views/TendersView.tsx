@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { TenderSpecGenerator } from '../modals/TenderSpecGenerator';
 import { createPortal } from 'react-dom';
 import {
   FileSpreadsheet,
@@ -315,6 +316,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [clientModalMode, setClientModalMode] = useState<'tender' | 'direct_oc'>('tender');
   const [isLinkQuoteModalOpen, setIsLinkQuoteModalOpen] = useState(false);
+  const [isTenderModalOpen, setIsTenderModalOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState<TenderClientProject | null>(null);
   const [clientToDelete, setClientToDelete] = useState<TenderClientProject | null>(null);
 
@@ -1546,6 +1548,12 @@ export const TendersView: React.FC<TendersViewProps> = ({
         </div>,
         document.body
       )}
+
+      <TenderSpecGenerator
+        isOpen={isTenderModalOpen}
+        onClose={() => setIsTenderModalOpen(false)}
+      />
     </div>
   );
 };
+
