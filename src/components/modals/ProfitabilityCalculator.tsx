@@ -9,7 +9,6 @@ import {
   FileText,
   Copy,
 } from 'lucide-react';
-import { BotChatMessage, BotActionOption } from '../types';
 import { getPriceStatsForEquipment } from '../../utils/priceHistory';
 
 export interface ProfitabilityCalculatorProps {
@@ -210,7 +209,7 @@ export const ProfitabilityCalculator: React.FC<ProfitabilityCalculatorProps> = (
                 <tbody className="divide-y divide-[#2d4972]">
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="p-6 text-center text-slate-500">
+                      <td colSpan={9} className="p-6 text-center text-slate-500">
                         No hay equipos agregados.
                       </td>
                     </tr>

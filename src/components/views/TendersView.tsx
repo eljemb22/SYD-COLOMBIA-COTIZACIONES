@@ -174,6 +174,8 @@ interface TendersViewProps {
   ) => void;
   onDeleteRequirement?: (clientId: string, itemId: string, requirementId: string) => void;
   onNavigateToOCTracking?: () => void;
+  onNavigateToQuote?: () => void;
+  onNavigateToCatalog?: () => void;
   onSyncTenderItemToCatalog?: (item: TenderItem, createNewDuplicate?: boolean) => void;
   onBatchSyncTenderItemsToCatalog?: (items: TenderItem[]) => void;
   contracts?: OCTrackingContract[];

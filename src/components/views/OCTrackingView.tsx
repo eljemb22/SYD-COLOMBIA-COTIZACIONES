@@ -113,6 +113,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
   // Modals state
   const [isNewOCModalOpen, setIsNewOCModalOpen] = useState(false);
   const [isSuppliersModalOpen, setIsSuppliersModalOpen] = useState(false);
+  const [isPriceHistoryModalOpen, setIsPriceHistoryModalOpen] = useState(false);
   const [targetContractForNewOC, setTargetContractForNewOC] = useState<OCTrackingContract | null>(null);
   const [editingOCHeaderState, setEditingOCHeaderState] = useState<OCTrackingContract | null>(null);
   const [editingItemState, setEditingItemState] = useState<{ contractId: string; item: OCTrackingItem } | null>(null);
@@ -1644,6 +1645,7 @@ export const OCTrackingView: React.FC<OCTrackingViewProps> = ({
             setIsNewOCModalOpen(true);
           }}
           onOpenSuppliersModal={() => setIsSuppliersModalOpen(true)}
+          onOpenPriceHistory={() => setIsPriceHistoryModalOpen(true)}
           onExportExcel={handleExportExcel}
           onSyncAwarded={handleSyncAwarded}
         />

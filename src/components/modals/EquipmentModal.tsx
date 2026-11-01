@@ -23,7 +23,7 @@ import {
   ChevronDown,
   Zap,
 } from 'lucide-react';
-import { MedicalEquipment, MarginListKey, SupplierProfile, ProductGroup } from '../../types';
+import { MedicalEquipment, MarginListKey, SupplierProfile, ProductGroup, StandardAccessory } from '../../types';
 import { fetchLiveTRM, getCachedTRM, getRecommendedTRMRate, TrmData } from '../../utils/trmService';
 import {
   getStoredSupplierProfiles,
@@ -129,7 +129,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
   const [specs, setSpecs] = useState<string[]>([]);
 
   // Standard Accessories management (EMPTY by default - NEVER automatically populated)
-  const [accessories, setAccessories] = useState<{ name: string; costCOP: number; included: boolean }[]>([]);
+  const [accessories, setAccessories] = useState<StandardAccessory[]>([]);
   const [newAccName, setNewAccName] = useState('');
   const [newAccCost, setNewAccCost] = useState<number>(0);
   const [newAccIncluded, setNewAccIncluded] = useState<boolean>(true);
@@ -327,13 +327,13 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
         setSupplier(equipmentToEdit.supplier || '');
         setModel(equipmentToEdit.model || '');
         setCategory(equipmentToEdit.category || 'Monitoreo');
-        setProductGroup(equipmentToEdit.productGroup || 'Equipos Médicos');
+        setProductGroup((equipmentToEdit.productGroup || 'Equipos Médicos') as ProductGroup);
 
         const cop = equipmentToEdit.baseCostCOP ?? 0;
         setBaseCostCOP(cop);
         setBaseCostUSD(equipmentToEdit.baseCostUSD ?? (cop > 0 ? Math.round(cop / (trm > 0 ? trm : recRate)) : 0));
 
-        setDefaultMarginList(equipmentToEdit.defaultMarginList || 'L4');
+        setDefaultMarginList((equipmentToEdit.defaultMarginList || 'L4') as MarginListKey);
 
         const hasInvima = Boolean(
           equipmentToEdit.invimaRecordNumber &&

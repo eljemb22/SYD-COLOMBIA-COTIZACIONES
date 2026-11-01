@@ -10,7 +10,7 @@ import {
   BarChart,
   LineChart,
 } from 'lucide-react';
-import { PriceHistoryEntry, PriceHistoryStats } from '../types';
+import { PriceHistoryEntry } from '../../types';
 import {
   getPriceHistory,
   getPriceHistoryForEquipment,
@@ -30,7 +30,7 @@ export const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({
   currentUser,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEquipment, setSelectedEquipment] = useState<string>('');
+  const [selectedEquipment, setSelectedEquipment] = useState<{ name: string; brand: string; model: string } | null>(null);
 
   const history = getPriceHistory();
   const filteredHistory = searchQuery
@@ -185,7 +185,7 @@ export const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({
               <tbody className="text-slate-300 divide-y divide-[#2d4972]">
                 {filteredHistory.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="p-6 text-center text-slate-500">
+                    <td colSpan={9} className="p-6 text-center text-slate-500">
                       No se encontraron registros.
                     </td>
                   </tr>

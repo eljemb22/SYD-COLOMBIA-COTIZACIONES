@@ -6,8 +6,6 @@ import {
   Trash2,
   Loader2,
 } from 'lucide-react';
-import { BotChatMessage } from '../types';
-
 export interface DigitalSignatureModalProps {
   isOpen: boolean;
   onClose: () => void;

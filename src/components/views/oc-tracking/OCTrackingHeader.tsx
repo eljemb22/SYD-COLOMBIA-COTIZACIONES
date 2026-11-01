@@ -56,6 +56,7 @@ interface OCTrackingHeaderProps {
   };
   onOpenNewOCModal?: () => void;
   onOpenSuppliersModal: () => void;
+  onOpenPriceHistory?: () => void;
   onExportExcel: () => void;
   onSyncAwarded: () => void;
   isReadOnly?: boolean;
@@ -82,6 +83,7 @@ export const OCTrackingHeader: React.FC<OCTrackingHeaderProps> = ({
   distinctSuppliers,
   kpis,
   onOpenSuppliersModal,
+  onOpenPriceHistory,
   onExportExcel,
   isReadOnly = false,
 }) => {
@@ -108,26 +110,38 @@ export const OCTrackingHeader: React.FC<OCTrackingHeaderProps> = ({
   return (
     <div className="space-y-3.5">
       {/* Top Action Bar */}
-      <div className="flex items-center justify-end flex-wrap gap-2.5 pb-2 border-b border-[#334d6e]">
-        <button
-          type="button"
-          onClick={onOpenSuppliersModal}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition shadow-sm cursor-pointer"
-          title="Directorio de proveedores, modificar información, ver OCs ligadas y trazabilidad"
-        >
-          <Building2 className="w-4 h-4 text-purple-400" />
-          <span>Directorio de Proveedores</span>
-        </button>
+      <div className="view-toolbar pb-2 border-b border-[#334d6e]">
+        <div className="view-toolbar-group" data-label="Seguimiento">
+          <button
+            type="button"
+            onClick={onOpenSuppliersModal}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition shadow-sm cursor-pointer"
+            title="Directorio de proveedores, modificar información, ver OCs ligadas y trazabilidad"
+          >
+            <Building2 className="w-4 h-4 text-purple-400" />
+            <span>Directorio de Proveedores</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={onExportExcel}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition cursor-pointer"
-          title="Exportar base completa a Excel"
-        >
-          <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-          <span>Exportar Excel</span>
-        </button>
+          <button
+            type="button"
+            onClick={onOpenPriceHistory}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition shadow-sm cursor-pointer"
+            title="Historial de precios de los equipos medicales registrados en las cotizaciones"
+          >
+            <Clock className="w-4 h-4 text-cyan-400" />
+            <span>Historial de Precios</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onExportExcel}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition cursor-pointer"
+            title="Exportar base completa a Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <span>Exportar Excel</span>
+          </button>
+        </div>
       </div>
 
       {/* View Mode Selector + Filters Bar */}

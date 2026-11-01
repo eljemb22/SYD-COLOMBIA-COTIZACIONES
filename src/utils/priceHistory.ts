@@ -4,7 +4,7 @@
  * consultar cómo han variado los precios de costo y venta con el tiempo.
  */
 
-import { QuoteItem, QuoteHeader, SavedQuote } from '../types';
+import { QuoteItem, QuoteHeader, SavedQuote, PriceHistoryEntry } from '../types';
 
 const PRICE_HISTORY_STORAGE_KEY = 'syd_price_history_database';
 

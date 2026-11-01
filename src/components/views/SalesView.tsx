@@ -1143,7 +1143,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
               title="Firmar digitalmente la cotización"
               className="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm shadow-emerald-500/20 transition cursor-pointer"
             >
-              <CheckCheck className="w-3.5 h-3.5" />
+              <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Firmar Digital</span>
             </button>
           </div>

@@ -8,6 +8,11 @@ import { exportQuoteToPdf, printQuoteDocument } from '../../utils/pdfAndPrintUti
 import { DefaultDocumentSignature } from '../common/SyDLetterhead';
 import { getOfficialSyDLetterheadDataUrl, OFFICIAL_SYD_LETTERHEAD_SVG_PATH } from '../../utils/sydDefaultLetterhead';
 import { generateClinicalEquipmentGraphicDataUrl } from '../../utils/clinicalEquipmentGraphic';
+import {
+  getBiomedicalHeuristicSpecs,
+  isGenericFiller,
+  extractEquipmentAndAccessories,
+} from '../../services/geminiEquipmentService';
 
 interface PrintModalProps {
   isOpen: boolean;

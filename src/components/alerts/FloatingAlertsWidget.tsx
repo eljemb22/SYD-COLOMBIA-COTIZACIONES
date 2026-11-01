@@ -327,8 +327,8 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
     }
 
     // If it's a catalog cost alert and we have the equipment, open the edit modal directly
-    if (alert.category === 'costo_catalogo' && alert.details?.equipmentId && onEditEquipment) {
-      const eq = equipments.find((e) => e.id === alert.details?.equipmentId);
+    if (alert.category === 'costo_catalogo' && (alert.details as any)?.equipmentId && onEditEquipment) {
+      const eq = equipments.find((e) => e.id === (alert.details as any)?.equipmentId);
       if (eq) {
         onNavigateTab('catalogo');
         setTimeout(() => {

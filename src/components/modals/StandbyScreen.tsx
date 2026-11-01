@@ -18,20 +18,20 @@ import { STANDBY_TIMEOUT_OPTIONS } from '../../hooks/useIdleStandby';
 
 interface StandbyScreenProps {
   isOpen: boolean;
-  currentUser: AuthUser | null;
+  currentUser?: AuthUser | null;
   onWakeUp: () => void;
-  onLogout: () => void;
-  timeoutMinutes: number;
-  onTimeoutChange: (minutes: number) => void;
+  onLogout?: () => void;
+  timeoutMinutes?: number;
+  onTimeoutChange?: (minutes: number) => void;
 }
 
 export const StandbyScreen: React.FC<StandbyScreenProps> = ({
   isOpen,
-  currentUser,
+  currentUser = null,
   onWakeUp,
-  onLogout,
-  timeoutMinutes,
-  onTimeoutChange,
+  onLogout = () => {},
+  timeoutMinutes = 15,
+  onTimeoutChange = () => {},
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');

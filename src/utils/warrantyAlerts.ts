@@ -2,7 +2,7 @@
  * Gestión de alertas de garantía por vencer para equipos médicos vendidos.
  */
 
-import { QuoteItem, QuoteHeader } from '../types';
+import { QuoteItem, QuoteHeader, WarrantyAlert } from '../types';
 
 const WARRANTY_ALERTS_STORAGE_KEY = 'syd_warranty_alerts_database';
 

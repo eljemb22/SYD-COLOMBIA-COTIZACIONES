@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Bell,
   Minimize2,
@@ -14,7 +14,7 @@ import {
   getUpcomingWarrantyAlerts,
   dismissWarrantyAlert,
 } from '../../utils/warrantyAlerts';
-import { WarrantyAlert } from '../types';
+import { WarrantyAlert } from '../../types';
 
 export interface WarrantyAlertsWidgetProps {
   isOpen: boolean;
@@ -28,7 +28,7 @@ export const WarrantyAlertsWidget: React.FC<WarrantyAlertsWidgetProps> = ({
   const [alerts, setAlerts] = useState<WarrantyAlert[]>([]);
   const [filter, setFilter] = useState<'all' | 'critical' | 'upcoming'>('all');
 
-  useState(() => {
+  useEffect(() => {
     setAlerts(getWarrantyAlerts());
   }, []);
 
@@ -137,7 +137,7 @@ export const WarrantyAlertsWidget: React.FC<WarrantyAlertsWidgetProps> = ({
               <tbody className="text-slate-300 divide-y divide-[#2d4972]">
                 {filteredAlerts.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="p-6 text-center text-slate-500">
+                    <td colSpan={9} className="p-6 text-center text-slate-500">
                       No hay alertas de garantía pendientes.
                     </td>
                   </tr>

@@ -1500,6 +1500,9 @@ export function validateBackupJson(parsed: any): {
 
 export interface RestoreCallbacks {
   onRestoreQuotes?: (quotes: SavedQuote[]) => void;
+  onQuotesRestored?: (quotes: SavedQuote[]) => void;
+  onEquipmentsRestored?: (equipments: MedicalEquipment[]) => void;
+  onTendersRestored?: (tenders: TenderClientProject[]) => void;
   onRestoreEquipments?: (equipments: MedicalEquipment[]) => void;
   onRestoreTenders?: (tenders: TenderClientProject[]) => void;
   onRestoreOCContracts?: (contracts: OCTrackingContract[]) => void;

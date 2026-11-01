@@ -1485,8 +1485,11 @@ export function subscribeToCreatedSheetParts(callback: (codes: string[]) => void
 
 export interface RealtimeDataCallbacks {
   onQuotesChange?: (quotes: SavedQuote[]) => void;
+  onQuotesUpdate?: (quotes: SavedQuote[]) => void;
   onEquipmentsChange?: (equipments: MedicalEquipment[]) => void;
+  onEquipmentsUpdate?: (equipments: MedicalEquipment[]) => void;
   onTendersChange?: (tenders: TenderClientProject[]) => void;
+  onTendersUpdate?: (tenders: TenderClientProject[]) => void;
   onOCContractsChange?: (contracts: OCTrackingContract[]) => void;
   onSalesOrdersChange?: (orders: SalesOrderRecord[]) => void;
   onSalesInvoicesChange?: (invoices: SalesInvoiceRecord[]) => void;

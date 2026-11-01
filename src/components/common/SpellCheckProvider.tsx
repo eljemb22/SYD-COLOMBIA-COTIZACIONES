@@ -15,6 +15,7 @@ interface ActiveCorrection {
   word: string;
   start: number;
   end: number;
+  suggestions?: string[];
   targetElement?: HTMLInputElement | HTMLTextAreaElement;
   onApply?: (replacement: string) => void;
 }

@@ -30,9 +30,9 @@ export interface ViewerPermissions {
   canManageBackups: boolean;
   canAccessSqlAnalytics: boolean;
   canManageGmailPurchases: boolean;
-  canManageGoogleWorkspace: boolean;
-  canQuoteEmergencyParts: boolean;
-  canSplitSalesOrders: boolean;
+  canManageGoogleWorkspace?: boolean;
+  canQuoteEmergencyParts?: boolean;
+  canSplitSalesOrders?: boolean;
 }
 
 export interface AuthUser {
@@ -44,6 +44,7 @@ export interface AuthUser {
   roleLabel: string;
   department: string;
   avatarColor?: string;
+  avatarPhotoUrl?: string;
   permissions?: ViewerPermissions;
 }
 
@@ -51,6 +52,7 @@ export interface StoredUserAccount extends AuthUser {
   password?: string;
   createdAt?: string;
   lastLogin?: string;
+  avatarPhotoUrl?: string;
 }
 
 export type CanvasThemeKey =
@@ -142,7 +144,12 @@ export type ProductGroup =
   | 'Cuidado crítico'
   | 'Neonatología'
   | 'Accesorios y consumibles'
-  | 'Otros';
+  | 'Otros'
+  // Alias heredados usados por el importador de Excel y el catalogo maestro
+  | 'Equipos Médicos'
+  | 'Instrumental Quirúrgico'
+  | 'Muebles Hospitalarios'
+  | 'Dispositivos Médicos';
 
 export type MarginListKey =
   | 'L1'
@@ -159,15 +166,31 @@ export type MarginListKey =
   | 'custom';
 
 export interface SupplierPriceQuote {
-  supplierName: string;
-  priceCOP: number;
+  supplierName?: string;
+  supplier?: string;
+  priceCOP?: number;
+  costCOP?: number;
+  costUSD?: number;
   priceUSD?: number;
   contactName?: string;
   phone?: string;
   email?: string;
   validUntil?: string;
+  date?: string;
   notes?: string;
   updatedAt?: string;
+}
+
+/**
+ * Accesorio estandar de un equipo medico del catalogo.
+ * Puede venir como texto simple (importacion por Excel) o como objeto
+ * con costo e indicador de inclusion en la configuracion base.
+ */
+export interface StandardAccessory {
+  name: string;
+  costCOP?: number;
+  included?: boolean;
+  [key: string]: unknown;
 }
 
 export interface MedicalEquipment {
@@ -181,7 +204,9 @@ export interface MedicalEquipment {
   supplier?: string;
   allSuppliers?: string[];
   alternateSuppliers?: string[];
-  supplierPrices?: Record<string, number>;
+  customFactor?: number;
+  manufacturer?: string;
+  supplierPrices?: SupplierPriceQuote[];
   baseCostCOP: number;
   baseCostUSD?: number;
   defaultMarginList?: MarginListKey | string;
@@ -194,7 +219,7 @@ export interface MedicalEquipment {
   originCountry?: string;
   description: string;
   technicalSpecs: string[];
-  standardAccessories?: string[];
+  standardAccessories?: StandardAccessory[];
   subReferences?: string[];
   hasDocSheet?: boolean;
   hasInvimaDoc?: boolean;
@@ -217,6 +242,7 @@ export interface QuoteItemAccessory {
   quantity: number;
   unitCostCOP?: number;
   unitSalePriceCOP?: number;
+  includedInBase?: boolean;
   notes?: string;
 }
 
@@ -357,8 +383,14 @@ export type Client = ClientRecord;
 export interface TechnicalRequirement {
   id: string;
   requirement: string;
-  compliance: boolean;
-  response: string;
+  compliance?: boolean;
+  response?: string;
+  offeredSpec?: string;
+  complies?: boolean;
+  isUnique?: boolean;
+  workRange?: string;
+  hasWorkRange?: boolean;
+  folioRef?: string;
   weight?: number;
   sourceDocPage?: number;
   category?: string;
@@ -378,6 +410,7 @@ export interface TenderItem {
   unitBudgetCOP?: number;
   totalBudgetCOP?: number;
   unitOfferCOP?: number;
+  offeredUnitPrice?: number;
   totalOfferCOP?: number;
   unitPriceCOP?: number;
   warrantyMonths?: number;
@@ -385,6 +418,13 @@ export interface TenderItem {
   compliancePercentage?: number;
   invoicedStatus?: string;
   invoicedNumber?: string;
+  supplier?: string;
+  supplierName?: string;
+  observations?: string;
+  taxRate?: number;
+  originCountry?: string;
+  invimaRecord?: string;
+  invimaRecordNumber?: string;
   notes?: string;
   accessories?: string[];
 }
@@ -452,8 +492,29 @@ export type OCStatus =
   | (string & {});
 
 export type OCLogisticsStatus = OCStatus;
-export type OCPaymentTerms = 'Anticipo 50/50' | '100% Anticipado' | 'Contraentrega' | 'Crédito 30 días' | 'Crédito 60 días';
-export type OCPaymentStatus = 'Pendiente' | 'Anticipo Pagado' | 'Pagada 100%' | 'En Mora';
+export type OCPaymentTerms =
+  | 'Anticipo 50/50'
+  | '100% Anticipado'
+  | 'Contraentrega'
+  | 'Crédito 30 días'
+  | 'Crédito 60 días'
+  | 'Crédito 90 días'
+  | 'Contado / Anticipado (100%)'
+  | '50% Anticipo - 50% Contra Entrega'
+  | '30% Anticipo - 70% Contra Entrega'
+  | 'Contra Entrega (100%)'
+  | 'Carta de Crédito (L/C)'
+  | 'Personalizado / Otro';
+
+export type OCPaymentStatus =
+  | 'Pendiente'
+  | 'Anticipo Pagado'
+  | 'Pagada 100%'
+  | 'En Mora'
+  | 'En Trámite de Tesorería'
+  | 'Crédito Vigente (Por Vencer)'
+  | 'Pagado Total'
+  | 'Vencido';
 
 export interface OCStatusLogEntry {
   id: string;
@@ -463,7 +524,19 @@ export interface OCStatusLogEntry {
   user?: string;
 }
 
-export type SerialUnitStatus = 'en_bodega' | 'entregado' | 'en_mantenimiento' | 'baja';
+export type SerialUnitStatus =
+  | 'en_bodega'
+  | 'entregado'
+  | 'en_mantenimiento'
+  | 'baja'
+  | 'En Bodega'
+  | 'En Pruebas Técnicas'
+  | 'Listo para Despacho'
+  | 'Despachado'
+  | 'Entregado e Instalado'
+  | 'Cerrado / Concluido'
+  | 'Entregado al Cliente'
+  | 'Pendiente de OC';
 
 export interface IndividualSerialDoc {
   id: string;
@@ -484,6 +557,16 @@ export interface ItemSerialNumberRecord {
   warrantyEndDate?: string;
   clientLocation?: string;
   responsibleStaff?: string;
+  receptionDate?: string;
+  documents?: any[];
+  inventoryPlate?: string;
+  dianImportDeclaration?: string;
+  dianDeclarationNumber?: string;
+  dianDeclarationDate?: string;
+  dianDate?: string;
+  identifierType?: string;
+  technicianName?: string;
+  locationInHospital?: string;
   individualDocs?: IndividualSerialDoc[];
   notes?: string;
 }
@@ -508,7 +591,7 @@ export interface OCTrackingItem {
   actualDeliveryDate?: string;
   carrierTrackingNumber?: string;
   carrierName?: string;
-  serialNumbers?: string[];
+  serialNumbers?: ItemSerialNumberRecord[];
   serialNumber?: string;
   serializedUnits?: ItemSerialNumberRecord[];
   salesOrderId?: string;
@@ -517,9 +600,20 @@ export interface OCTrackingItem {
   ocNumber?: string;
   notes?: string;
   lastUpdatedAt?: string;
+  createdAt?: string;
   invoiceNumber?: string;
   paymentStatus?: string;
   paymentTerms?: string;
+  deliveryDate?: string;
+  installedDate?: string;
+  supplierInvoices?: SupplierInvoiceAttachment[];
+  assignedSerialNumbers?: string[];
+  supplierContact?: string;
+  receptionDate?: string;
+  trackingNumber?: string;
+  carrierName?: string;
+  dispatchDate?: string;
+  technicianName?: string;
   history?: any[];
 }
 
@@ -527,13 +621,16 @@ export interface OCTrackingContract {
   id: string;
   tenderClientId?: string;
   salesOrderId?: string;
+  salesOrderIds?: string[];
   salesOrderNumber?: string;
+  salesOrderNumbers?: string[];
   quoteId?: string;
   quoteNumber?: string;
   contractNumber: string;
   supplierName: string;
   supplier?: string;
   supplierNit?: string;
+  supplierContact?: string;
   clientName: string;
   nit?: string;
   city?: string;
@@ -549,6 +646,16 @@ export interface OCTrackingContract {
   statusLogs: OCStatusLogEntry[];
   invoiceNumber?: string;
   attachedInvoiceFile?: any;
+  supplierInvoices?: SupplierInvoiceAttachment[];
+  purchaseOrders?: any[];
+  isDirectOC?: boolean;
+  actualDeliveryDate?: string;
+  deliveryDate?: string;
+  totalCostCOP?: number;
+  sourceType?: string;
+  ocNumber?: string;
+  globalStatus?: string;
+  lastUpdatedAt?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -591,7 +698,11 @@ export type SalesOrderStatus =
   | 'Entregada Parcial'
   | 'Entregada Total'
   | 'Facturada'
-  | 'Cancelada';
+  | 'Cancelada'
+  // Estados extendidos usados en las ordenes de venta
+  | 'Equipos en Bodega'
+  | 'Entregada al Cliente'
+  | 'Listo para Facturar';
 
 export type SalesOrderEquipmentStatus = 'Pendiente' | 'Asignado' | 'Despachado' | 'Instalado';
 
@@ -600,6 +711,7 @@ export interface AttachedSalesDoc {
   name: string;
   type: string;
   data?: string;
+  dataUrl?: string;
   url?: string;
   uploadedAt: string;
 }
@@ -622,7 +734,6 @@ export interface SalesOrderItem {
   paymentStatus?: string;
   supplierOCRef?: string;
   linkedSupplierOCNumber?: string;
-  supplier?: string;
   preferredSupplier?: string;
   assignedSerialNumbers?: any[];
   serialNumbers?: string[];
@@ -651,6 +762,12 @@ export interface SalesOrderRecord {
   orderDate: string;
   estimatedDeliveryDate?: string;
   actualDeliveryDate?: string;
+  deliveryDate?: string;
+  installedDate?: string;
+  clientContactPerson?: string;
+  clientContactPhone?: string;
+  clientContactEmail?: string;
+  clientContact?: string;
   status: SalesOrderStatus;
   invoicedStatus?: string;
   items: SalesOrderItem[];
@@ -663,6 +780,12 @@ export interface SalesOrderRecord {
   remisionNumber?: string;
   invoiceNumber?: string;
   invoiceDate?: string;
+  invoiceId?: string;
+  invoiceIds?: string[];
+  dispatchDate?: string;
+  trackingNumber?: string;
+  carrierName?: string;
+  clientAddress?: string;
   attachedInvoiceFile?: any;
   notes?: string;
   renewedFromSalesOrderNumber?: string;
@@ -692,6 +815,7 @@ export interface SalesInvoiceRecord {
   invoiceNumber: string;
   salesOrderId?: string;
   salesOrderNumber?: string;
+  contractId?: string;
   contractNumber?: string;
   clientName: string;
   clientNit?: string;
@@ -701,7 +825,6 @@ export interface SalesInvoiceRecord {
   subtotalCOP?: number;
   taxCOP?: number;
   paymentStatus: SalesInvoicePaymentStatus;
-  items?: any[];
   attachedInvoiceFile?: any;
   radicadoProofDoc?: any;
   items?: SalesInvoiceItemAllocation[];
@@ -714,10 +837,13 @@ export interface SupplierInvoiceAttachment {
   id: string;
   invoiceNumber: string;
   supplierName: string;
+  supplier?: string;
+  ocNumber?: string;
   amountCOP: number;
   issueDate: string;
   fileUrl?: string;
   fileData?: string;
+  fileName?: string;
   notes?: string;
 }
 
@@ -738,7 +864,7 @@ export interface TechnicalDocument {
   equipmentName?: string;
   equipmentBrand?: string;
   equipmentModel?: string;
-  type: TechnicalDocumentType;
+  type?: TechnicalDocumentType;
   title: string;
   fileName?: string;
   fileUrl?: string;
@@ -747,50 +873,144 @@ export interface TechnicalDocument {
   driveFolderName?: string;
   mimeType?: string;
   sizeBytes?: number;
+  fileSize?: string;
+  fileType?: string;
+  docType?: string;
+  invimaNumber?: string;
+  isCloudLink?: boolean;
+  uploadDate?: string;
+  downloadUrl?: string;
+  cloudProvider?: string;
+  validUntil?: string;
+  status?: string;
   version?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+  uploadedBy?: string;
   notes?: string;
 }
 
 export interface EquipmentLifeSheetData {
   id: string;
-  equipmentId: string;
+  equipmentId?: string;
+  formatCode: string;
+  formatVersion: string;
+
+  // Identificacion de la institucion
   institutionName: string;
-  serviceArea: string;
-  location: string;
+  institutionNit: string;
+  departmentCity: string;
+  serviceLocation: string;
+
+  // Identificacion del equipo
+  equipmentName: string;
+  brand: string;
+  model: string;
   serialNumber: string;
-  inventoryNumber: string;
-  riskClass: 'I' | 'IIa' | 'IIb' | 'III';
+  inventoryPlate: string;
+  invimaRecord: string;
+  riskClassification: string;
   biomedicalClassification: string;
+  technologyType: string;
+  usefulLifeYears: number;
+
+  // Adquisicion e instalacion
   acquisitionDate: string;
   installationDate: string;
-  warrantyExpiryDate: string;
-  acquisitionCostCOP: number;
-  powerSupply: string;
-  operatingVoltage: string;
-  currentConsumption: string;
-  frequency: string;
-  operatingTech: string;
-  maintenanceFrequency: 'Trimestral' | 'Cuatrimestral' | 'Semestral' | 'Anual';
-  calibrationFrequency: 'Semestral' | 'Anual' | 'No Requiere';
+  supplier: string;
+  supplierPhone: string;
+  commercialValueCOP: number;
+  warrantyStatus: string;
+  warrantyExpiration: string;
+  purchaseInvoiceOrOC: string;
+
+  // Especificaciones tecnicas / electricas
+  voltageVolts: string;
+  currentAmperes: string;
+  frequencyHz: string;
+  powerWatts: string;
+  batteryType: string;
+  operatingPressure: string;
+  operatingTemperature: string;
+  humidityRange: string;
+  weightDimensions: string;
+
+  // Mantenimiento y calibracion
+  maintenanceFrequency: MaintenanceFrequencyType;
+  requiresCalibration: boolean;
+  calibrationFrequency: string;
+  calibrationVariable: string;
+  manualsAvailable: {
+    userManual: boolean;
+    serviceManual: boolean;
+    technicalSheet: boolean;
+  };
+  accessoriesIncluded: string;
+
+  interventions: MaintenanceIntervention[];
+
+  // Responsables
+  biomedicalEngineerName: string;
+  biomedicalEngineerTitle: string;
+  biomedicalEngineerLicense: string;
+  maintenanceManagerName: string;
+  maintenanceManagerTitle: string;
+
+  // Archivos
+  imageUrl: string;
+  logoUrl: string;
+  createdAt: string;
+  updatedAt: string;
+
+  // Campos heredados conservados por compatibilidad
+  serviceArea?: string;
+  location?: string;
+  inventoryNumber?: string;
+  riskClass?: 'I' | 'IIa' | 'IIb' | 'III';
+  warrantyExpiryDate?: string;
+  acquisitionCostCOP?: number;
+  powerSupply?: string;
+  operatingVoltage?: string;
+  currentConsumption?: string;
+  frequency?: string;
+  operatingTech?: string;
+  calibrationFrequencyLegacy?: string;
   lastPreventiveDate?: string;
   nextPreventiveDate?: string;
-  supplierName: string;
-  supplierPhone: string;
-  supplierEmail: string;
+  supplierName?: string;
+  supplierEmail?: string;
 }
 
-export type MaintenanceFrequencyType = 'Semestral' | 'Cuatrimestral' | 'Trimestral' | 'Anual';
-export type ScheduleMonthStatus = 'none' | 'scheduled' | 'executed' | 'pending';
+export type MaintenanceFrequencyType =
+  | 'Mensual'
+  | 'Bimestral'
+  | 'Trimestral'
+  | 'Cuatrimestral'
+  | 'Semestral'
+  | 'Anual';
+export type ScheduleMonthStatus = 'none' | 'scheduled' | 'executed' | 'pending' | 'E' | 'P' | 'C';
 
 export interface MaintenanceIntervention {
   id: string;
-  month: number;
-  type: 'preventivo' | 'correctivo' | 'calibracion' | 'capacitacion';
-  status: 'programado' | 'realizado' | 'cancelado';
+  month?: number;
+  type:
+    | 'preventivo'
+    | 'correctivo'
+    | 'calibracion'
+    | 'capacitacion'
+    | 'Preventivo'
+    | 'Correctivo'
+    | 'Calibración'
+    | 'Capacitación'
+    | 'Instalación'
+    | string;
+  status: 'programado' | 'realizado' | 'cancelado' | 'Operativo' | string;
   date?: string;
+  description?: string;
+  partsReplaced?: string;
   engineerName?: string;
+  professionalLicense?: string;
+  costCOP?: number;
   reportNumber?: string;
   notes?: string;
 }
@@ -825,10 +1045,26 @@ export interface SystemAlertItem {
   title: string;
   message: string;
   severity: AlertSeverity;
-  category: 'garantia' | 'mantenimiento' | 'aduana' | 'facturacion' | 'actualizacion_sistema' | 'general';
+  category:
+    | 'garantia'
+    | 'mantenimiento'
+    | 'aduana'
+    | 'facturacion'
+    | 'actualizacion_sistema'
+    | 'nueva_parte_drive'
+    | 'costo_catalogo'
+    | 'oc_retraso'
+    | 'oc_pago'
+    | 'licitacion_sin_oc'
+    | 'ov_sin_oc'
+    | 'general';
   actionLabel?: string;
   actionTab?: ActiveTab;
-  relatedEntityId?: string;
+  targetTab?: ActiveTab;
+  relatedEntityId?: string | Record<string, any>;
+  entityId?: string | Record<string, any>;
+  sourceModule?: string;
+  details?: string | Record<string, any>;
   timestamp: number;
 }
 
@@ -963,12 +1199,17 @@ export interface BotChatMessage {
   text: string;
   timestamp: string;
   actions?: BotActionOption[];
+  suggestedAction?: BotActionOption;
 }
 
 export interface UserChatMessage {
   id: string;
   senderId: string;
   senderName: string;
+  senderRoleLabel?: string;
+  senderAvatarColor?: string;
+  isRead?: boolean;
+  readAt?: string;
   recipientId?: string;
   text: string;
   timestamp: string;

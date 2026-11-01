@@ -23,15 +23,15 @@ import { makeImageBackgroundTransparent } from '../../utils/imageTransparencyUti
 
 interface SuspensionLockScreenProps {
   isOpen: boolean;
-  isSuspended: boolean;
+  isSuspended?: boolean;
   currentUser: AuthUser | null;
   onUnlock: (user: AuthUser) => void;
-  onSwitchUser: () => void;
+  onSwitchUser?: () => void;
 }
 
 export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
   isOpen,
-  isSuspended,
+  isSuspended = true,
   currentUser,
   onUnlock,
   onSwitchUser,
