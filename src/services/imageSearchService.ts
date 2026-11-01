@@ -87,7 +87,7 @@ export async function proxyAndConvertImageToBase64(imageUrl: string): Promise<st
 
 /**
  * Builds multiple specific search queries to find accurate biomedical equipment images.
- * Tries combinations like: "Name Brand Model medical", "Brand Model medical", "Name medical", etc.
+ * Prioritizes exact brand+model matches to ensure real equipment images, not generic ones.
  */
 function buildSearchQueries(
   equipmentName: string,
@@ -99,32 +99,29 @@ function buildSearchQueries(
   const cleanBrand = (brand || '').trim();
   const cleanModel = (model || '').trim();
 
-  // Most specific: Name + Brand + Model + medical
-  if (cleanName && cleanBrand && cleanModel) {
-    queries.push(`${cleanName} ${cleanBrand} ${cleanModel} medical equipment`);
-    queries.push(`${cleanBrand} ${cleanModel} ${cleanName} medical`);
-  }
-  // Brand + Model + medical
+  // PRIORITY 1: Most specific - Brand + Model + exact name (for real equipment photos)
   if (cleanBrand && cleanModel) {
     queries.push(`${cleanBrand} ${cleanModel} medical equipment`);
     queries.push(`${cleanBrand} ${cleanModel} hospital`);
+    queries.push(`${cleanBrand} ${cleanModel}`);
   }
-  // Name + Brand + medical
+  // PRIORITY 2: Name + Brand + Model
+  if (cleanName && cleanBrand && cleanModel) {
+    queries.push(`${cleanName} ${cleanBrand} ${cleanModel} medical`);
+    queries.push(`${cleanBrand} ${cleanModel} ${cleanName} medical`);
+  }
+  // PRIORITY 3: Name + Brand
   if (cleanName && cleanBrand) {
     queries.push(`${cleanName} ${cleanBrand} medical equipment`);
   }
-  // Name + Model + medical
+  // PRIORITY 4: Name + Model
   if (cleanName && cleanModel) {
     queries.push(`${cleanName} ${cleanModel} medical equipment`);
   }
-  // Just Name + medical
+  // PRIORITY 5: Just Name + medical
   if (cleanName) {
     queries.push(`${cleanName} medical equipment`);
     queries.push(`${cleanName} hospital equipment`);
-  }
-  // Just Brand + Model
-  if (cleanBrand && cleanModel) {
-    queries.push(`${cleanBrand} ${cleanModel}`);
   }
 
   // Deduplicate while preserving order
@@ -139,7 +136,8 @@ function buildSearchQueries(
 
 /**
  * Automatically retrieves the best matching image for biomedical equipment from internet sources.
- * Tries multiple specific queries to find an accurate match, avoiding wrong images.
+ * Tries multiple specific queries ordered by specificity to find real equipment images,
+ * avoiding generic or wrong images (like control panels instead of actual equipment).
  */
 export async function getAutoEquipmentImageUrl(
   equipmentName: string,
@@ -149,6 +147,9 @@ export async function getAutoEquipmentImageUrl(
   try {
     const queries = buildSearchQueries(equipmentName, brand, model);
     if (queries.length === 0) return null;
+
+    // Track tried URLs to avoid duplicates
+    const triedUrls = new Set<string>();
 
     // Try each query until we find a valid image
     for (const query of queries) {
@@ -161,18 +162,14 @@ export async function getAutoEquipmentImageUrl(
         );
 
         if (options && options.length > 0) {
-          // Try the first 3 options from this query
-          for (const opt of options.slice(0, 3)) {
+          // Try options from most relevant to least
+          for (const opt of options.slice(0, 5)) {
             if (!opt.url) continue;
+            if (triedUrls.has(opt.url)) continue;
+            triedUrls.add(opt.url);
+
             const b64 = await proxyAndConvertImageToBase64(opt.url);
             if (b64) return b64;
-          }
-          // Return the first URL as proxy
-          const first = options[0];
-          if (first.url) {
-            return first.url.startsWith('/') || first.url.startsWith('data:')
-              ? first.url
-              : `/api/proxy-image?url=${encodeURIComponent(first.url)}`;
           }
         }
       } catch (err) {
