@@ -313,7 +313,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                           }}
                         />
                       ) : (
-                        <SyDLogo size="lg" showText={false} themeSettings={themeSettings} />
+                        <SyDLogo size="sm" showText={false} themeSettings={themeSettings} />
                       )}
                     </div>
                   </div>
@@ -461,7 +461,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     }}
                   />
                 ) : (
-                  <SyDLogo size="lg" showText={false} themeSettings={themeSettings} />
+                  <SyDLogo size="sm" showText={false} themeSettings={themeSettings} />
                 )}
               </div>
 
