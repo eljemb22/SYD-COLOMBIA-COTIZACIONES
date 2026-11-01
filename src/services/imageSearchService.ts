@@ -86,7 +86,60 @@ export async function proxyAndConvertImageToBase64(imageUrl: string): Promise<st
 }
 
 /**
- * Automatically retrieves the best matching image for biomedical equipment from catalog/internet sources.
+ * Builds multiple specific search queries to find accurate biomedical equipment images.
+ * Tries combinations like: "Name Brand Model medical", "Brand Model medical", "Name medical", etc.
+ */
+function buildSearchQueries(
+  equipmentName: string,
+  brand?: string,
+  model?: string
+): string[] {
+  const queries: string[] = [];
+  const cleanName = (equipmentName || '').trim();
+  const cleanBrand = (brand || '').trim();
+  const cleanModel = (model || '').trim();
+
+  // Most specific: Name + Brand + Model + medical
+  if (cleanName && cleanBrand && cleanModel) {
+    queries.push(`${cleanName} ${cleanBrand} ${cleanModel} medical equipment`);
+    queries.push(`${cleanBrand} ${cleanModel} ${cleanName} medical`);
+  }
+  // Brand + Model + medical
+  if (cleanBrand && cleanModel) {
+    queries.push(`${cleanBrand} ${cleanModel} medical equipment`);
+    queries.push(`${cleanBrand} ${cleanModel} hospital`);
+  }
+  // Name + Brand + medical
+  if (cleanName && cleanBrand) {
+    queries.push(`${cleanName} ${cleanBrand} medical equipment`);
+  }
+  // Name + Model + medical
+  if (cleanName && cleanModel) {
+    queries.push(`${cleanName} ${cleanModel} medical equipment`);
+  }
+  // Just Name + medical
+  if (cleanName) {
+    queries.push(`${cleanName} medical equipment`);
+    queries.push(`${cleanName} hospital equipment`);
+  }
+  // Just Brand + Model
+  if (cleanBrand && cleanModel) {
+    queries.push(`${cleanBrand} ${cleanModel}`);
+  }
+
+  // Deduplicate while preserving order
+  const seen = new Set<string>();
+  return queries.filter((q) => {
+    const key = q.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * Automatically retrieves the best matching image for biomedical equipment from internet sources.
+ * Tries multiple specific queries to find an accurate match, avoiding wrong images.
  */
 export async function getAutoEquipmentImageUrl(
   equipmentName: string,
@@ -94,18 +147,37 @@ export async function getAutoEquipmentImageUrl(
   model?: string
 ): Promise<string | null> {
   try {
-    const options = await searchEquipmentImagesFromInternet(equipmentName, brand, model);
-    if (options && options.length > 0) {
-      for (const opt of options.slice(0, 3)) {
-        if (!opt.url) continue;
-        const b64 = await proxyAndConvertImageToBase64(opt.url);
-        if (b64) return b64;
-      }
-      const first = options[0];
-      if (first.url) {
-        return first.url.startsWith('/') || first.url.startsWith('data:')
-          ? first.url
-          : `/api/proxy-image?url=${encodeURIComponent(first.url)}`;
+    const queries = buildSearchQueries(equipmentName, brand, model);
+    if (queries.length === 0) return null;
+
+    // Try each query until we find a valid image
+    for (const query of queries) {
+      try {
+        const options = await searchEquipmentImagesFromInternet(
+          equipmentName,
+          brand,
+          model,
+          query
+        );
+
+        if (options && options.length > 0) {
+          // Try the first 3 options from this query
+          for (const opt of options.slice(0, 3)) {
+            if (!opt.url) continue;
+            const b64 = await proxyAndConvertImageToBase64(opt.url);
+            if (b64) return b64;
+          }
+          // Return the first URL as proxy
+          const first = options[0];
+          if (first.url) {
+            return first.url.startsWith('/') || first.url.startsWith('data:')
+              ? first.url
+              : `/api/proxy-image?url=${encodeURIComponent(first.url)}`;
+          }
+        }
+      } catch (err) {
+        console.warn(`Image search failed for query "${query}":`, err);
+        continue;
       }
     }
   } catch (err) {
