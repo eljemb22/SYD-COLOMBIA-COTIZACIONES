@@ -916,9 +916,9 @@ export const SalesView: React.FC<SalesViewProps> = ({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-[#334d6e]">
+        <div className="view-toolbar pb-3 border-b border-[#334d6e]">
           {/* GRUPO 1: GESTIÓN DE COTIZACIÓN Y CLIENTES */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="view-toolbar-group" data-label="Cotización">
             {!isReadOnly && (
               editingQuoteId ? (
                 <>
@@ -970,7 +970,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
 
           {/* GRUPO 2: MEMBRETE Y HOJA EN BLANCO */}
           {!isReadOnly && (
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="view-toolbar-group" data-label="Membrete">
               {effectiveLetterhead ? (
                 <>
                   <div className="inline-flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold px-2.5 py-1.5 rounded-lg shadow-2xs">
@@ -1037,7 +1037,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
           )}
 
           {/* GRUPO 3: FORMATO, EXPORTACIÓN E IMPRESIÓN */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="view-toolbar-group ml-auto" data-label="Formato y salida">
             {/* Selector de formato de cotización */}
             <div className="flex items-center bg-[#0a1526] p-0.5 rounded-lg border border-[#223d60]">
               <button

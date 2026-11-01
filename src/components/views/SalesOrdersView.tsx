@@ -1491,7 +1491,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="view-toolbar-group" data-label="Acciones">
           <button
             type="button"
             onClick={toggleKpiMinimized}
@@ -1606,8 +1606,8 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
           {/* Sticky Controls Container: Lifecycle Filter + Search & Filter bar */}
           <div className="sticky top-0 z-20 bg-[var(--syd-body-bg,#0b1523)]/95 pt-1 pb-2 space-y-2.5 backdrop-blur-md">
             {/* Lifecycle Filter: Activas vs Culminadas/Facturadas vs Todas las OVs (Permite activar/inactivar individualmente) */}
-            <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-900 border border-slate-800 shadow-md">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="view-toolbar p-2.5 rounded-xl bg-slate-900 border border-slate-800 shadow-md">
+              <div className="view-toolbar-group" data-label="Órdenes">
                 <button
                   type="button"
                   onClick={() => setShowActiveOrders((prev) => !prev)}
@@ -1672,7 +1672,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
             </div>
 
           {/* Search & Filter bar */}
-          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="view-toolbar p-3.5 rounded-xl bg-slate-900 border border-slate-800">
             <div className="relative flex-1 min-w-[240px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -1684,7 +1684,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
               />
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="view-toolbar-group" data-label="Filtros y vista">
               {/* Origin filter */}
               <span className="text-xs text-slate-400 font-medium">Origen:</span>
               <select

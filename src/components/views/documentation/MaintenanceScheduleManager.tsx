@@ -2529,7 +2529,7 @@ export const MaintenanceScheduleManager: React.FC<MaintenanceScheduleManagerProp
           </div>
 
           {/* Acciones Superiores: Selector de Año + BOTÓN ÚNICO DE DESCARGAR EXCEL */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="view-toolbar">
             {/* Multi-Year Selector */}
             <div className="flex items-center gap-1 bg-[#15253d] p-1 rounded-xl border border-[#334d6e]">
               <span className="text-xs text-slate-400 font-bold px-2">Año:</span>
@@ -2559,6 +2559,7 @@ export const MaintenanceScheduleManager: React.FC<MaintenanceScheduleManagerProp
               </div>
             </div>
 
+            <div className="view-toolbar-group" data-label="Exportar">
             {/* BOTÓN ÚNICO DE DESCARGAR EXCEL */}
             <button
               type="button"
@@ -2582,11 +2583,12 @@ export const MaintenanceScheduleManager: React.FC<MaintenanceScheduleManagerProp
               <Printer className="w-4 h-4 text-cyan-400" />
               <span className="hidden sm:inline">Imprimir / PDF</span>
             </button>
+            </div>
           </div>
         </div>
 
         {/* BARRA DE FILTROS Y BÚSQUEDA DE CLIENTES */}
-        <div className="pt-2 border-t border-[#334d6e]/60 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="view-toolbar justify-between pt-2 border-t border-[#334d6e]/60">
           <div className="flex items-center gap-1.5 bg-[#132035] p-1 rounded-xl border border-[#334d6e] text-xs">
             <button
               type="button"

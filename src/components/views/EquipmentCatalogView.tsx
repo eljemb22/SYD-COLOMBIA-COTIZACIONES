@@ -748,7 +748,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
           </div>
 
           {/* Right Tools: Brand Filter + View Mode Switcher + Live TRM Badge */}
-          <div className="flex items-center justify-end flex-wrap gap-2 shrink-0">
+          <div className="view-toolbar-group shrink-0" data-label="Vista y divisa">
             {/* Brand Filter */}
             <div className="flex items-center gap-1.5 bg-[#15253d] border border-[#334d6e] rounded-xl px-2.5 py-1.5 text-xs">
               <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -903,8 +903,9 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
         </div>
 
         {/* Row 2: Categories (Left) & Action Buttons (Right) */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-2.5 border-t border-[#334d6e]/60">
+        <div className="view-toolbar pt-2.5 border-t border-[#334d6e]/60">
           {/* Category Pills */}
+          <div className="view-toolbar-group flex-1 min-w-[280px] md:min-w-[420px]" data-label="Categoría">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin flex-1 min-w-0 pr-2">
             {categories.map((cat) => {
               const isSelected = selectedCategory === cat;
@@ -923,9 +924,10 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
               );
             })}
           </div>
+          </div>
 
           {/* Action Buttons Group (Importar / Exportar Excel, Borrar Datos, Nuevo Equipo) - Aligned to the Right */}
-          <div className="flex items-center justify-end flex-wrap gap-2 shrink-0">
+          <div className="view-toolbar-group" data-label="Acciones">
             {!isReadOnly ? (
               <>
                 <button

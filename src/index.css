@@ -1505,3 +1505,76 @@ select[class*="bg-["] {
     max-width: 62px;
   }
 }
+
+/* =====================================================================
+   BARRAS DE ACCIONES ORDENADAS
+   Agrupa los botones por funcion en capsulas con un titulo pequeno,
+   para que ninguna ventana se vea amontonada.
+   ===================================================================== */
+.view-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.view-toolbar-group {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 9px 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(148, 197, 255, 0.1);
+  transition: background-color 0.22s ease, border-color 0.22s ease;
+}
+
+.view-toolbar-group:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(148, 197, 255, 0.22);
+}
+
+.view-toolbar-group[data-label]::before {
+  content: attr(data-label);
+  position: absolute;
+  top: 5px;
+  left: 10px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #8094ae;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.view-toolbar-group:not([data-label]) {
+  padding-top: 8px;
+}
+
+/* Subgrupo dentro de una capsula: separacion sin un segundo marco */
+.view-toolbar-subgroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-left: 9px;
+  border-left: 1px solid rgba(148, 197, 255, 0.18);
+}
+
+@media (max-width: 900px) {
+  .view-toolbar {
+    gap: 8px;
+  }
+
+  .view-toolbar-group {
+    padding: 17px 7px 6px;
+  }
+
+  .view-toolbar-group[data-label]::before {
+    left: 8px;
+  }
+}

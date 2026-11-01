@@ -766,9 +766,9 @@ export const TendersView: React.FC<TendersViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="view-toolbar">
           {/* Active vs Terminated Filter Switcher */}
-          <div className="flex items-center bg-[#15253d] p-1 rounded-xl border border-[#334d6e]">
+          <div className="view-toolbar-group" data-label="Estado">
             <button
               type="button"
               onClick={() => {
@@ -804,7 +804,8 @@ export const TendersView: React.FC<TendersViewProps> = ({
           </div>
 
           {/* View Mode Toggle: Workspace vs List */}
-          <div className="flex items-center bg-[#15253d] p-1 rounded-xl border border-[#334d6e]">
+          <div className="view-toolbar-group" data-label="Vista">
+            <div className="flex items-center bg-[#15253d] p-1 rounded-xl border border-[#334d6e]">
             <button
               type="button"
               onClick={() => setTendersViewLayout('workspace')}
@@ -831,10 +832,11 @@ export const TendersView: React.FC<TendersViewProps> = ({
               <List className="w-3.5 h-3.5" />
               <span>Lista General</span>
             </button>
+            </div>
           </div>
 
           {!isReadOnly && (
-            <div className="flex items-center gap-2">
+            <div className="view-toolbar-group" data-label="Acciones">
               {activeClient && (activeClient.linkedQuoteNumber || activeClient.linkedQuoteId || activeClient.header?.linkedQuoteNumber || activeClient.header?.linkedQuoteId) ? (
                 <button
                   type="button"

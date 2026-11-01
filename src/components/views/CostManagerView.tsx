@@ -1193,10 +1193,10 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
       {/* Sleek Top Bar with Centered Global Factor & Add Cost Controls + KPI Summary */}
       <div className="sticky top-0 z-20 bg-[var(--syd-body-bg,#0b1523)]/95 pt-1 pb-2 space-y-2 backdrop-blur-md">
         {/* Compact Top Action Bar: Global Factor, Add Cost, Client selector */}
-        <div className="bg-[#192b45] border border-[#334d6e] rounded-xl p-2 sm:p-2.5 shadow-md flex flex-wrap items-center justify-between gap-2">
+        <div className="view-toolbar bg-[#192b45] border border-[#334d6e] rounded-xl p-2.5 sm:p-3 shadow-md">
         {/* Left: Global Factor Applicator (Admin Only or Disabled) */}
         {!isReadOnly ? (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="view-toolbar-group" data-label="Factor global">
             <div className="flex items-center gap-1 text-xs font-bold text-amber-400">
               <Sliders className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Factor Masivo:</span>
@@ -1239,14 +1239,14 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 py-0.5">
+          <div className="view-toolbar-group" data-label="Factor global">
             <Lock className="w-3.5 h-3.5 text-amber-400" />
             <span>Factores protegidos por Administrador</span>
           </div>
         )}
 
         {/* Right: Quick Add Cost button and view toggles */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="view-toolbar-group ml-auto" data-label="Herramientas">
           <button
             type="button"
             onClick={() => setHideSummaryHeaders(!hideSummaryHeaders)}
@@ -1453,7 +1453,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
           </div>
 
           {!isReadOnly && (
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="view-toolbar-subgroup">
               <button
                 type="button"
                 onClick={() => setIsEmergencyModalOpen(true)}
