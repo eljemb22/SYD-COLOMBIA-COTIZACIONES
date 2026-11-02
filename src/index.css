@@ -1844,6 +1844,90 @@ select[class*="bg-["] {
   fill: var(--syd-accent) !important;
 }
 
+/* =====================================================================
+   CONSISTENCIA DE TEMA (3) - gradientes y sombras de acento
+   ===================================================================== */
+
+/* Gradient stops - from */
+[class*="from-sky-400"],
+[class*="from-sky-500"],
+[class*="from-sky-600"],
+[class*="from-cyan-400"],
+[class*="from-cyan-500"],
+[class*="from-cyan-600"],
+[class*="from-blue-400"],
+[class*="from-blue-500"],
+[class*="from-blue-600"],
+[class*="from-indigo-400"],
+[class*="from-indigo-500"],
+[class*="from-indigo-600"],
+[class*="from-violet-400"],
+[class*="from-violet-500"],
+[class*="from-violet-600"],
+[class*="from-purple-400"],
+[class*="from-purple-500"],
+[class*="from-purple-600"],
+[class*="from-teal-400"],
+[class*="from-teal-500"],
+[class*="from-teal-600"] {
+  --tw-gradient-from: var(--syd-accent) !important;
+  --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position)) !important;
+}
+
+/* Gradient stops - to */
+[class*="to-sky-400"],
+[class*="to-sky-500"],
+[class*="to-sky-600"],
+[class*="to-cyan-400"],
+[class*="to-cyan-500"],
+[class*="to-cyan-600"],
+[class*="to-blue-400"],
+[class*="to-blue-500"],
+[class*="to-blue-600"],
+[class*="to-indigo-400"],
+[class*="to-indigo-500"],
+[class*="to-indigo-600"],
+[class*="to-violet-400"],
+[class*="to-violet-500"],
+[class*="to-violet-600"],
+[class*="to-purple-400"],
+[class*="to-purple-500"],
+[class*="to-purple-600"],
+[class*="to-teal-400"],
+[class*="to-teal-500"],
+[class*="to-teal-600"] {
+  --tw-gradient-to: var(--syd-accent) !important;
+}
+
+/* Gradient stops - via */
+[class*="via-sky-400"],
+[class*="via-sky-500"],
+[class*="via-cyan-400"],
+[class*="via-cyan-500"],
+[class*="via-blue-400"],
+[class*="via-blue-500"],
+[class*="via-indigo-400"],
+[class*="via-indigo-500"],
+[class*="via-violet-400"],
+[class*="via-violet-500"],
+[class*="via-purple-400"],
+[class*="via-purple-500"],
+[class*="via-teal-400"],
+[class*="via-teal-500"] {
+  --tw-gradient-via: var(--syd-accent) !important;
+}
+
+/* Shadow color */
+[class*="shadow-sky"],
+[class*="shadow-cyan"],
+[class*="shadow-blue"],
+[class*="shadow-indigo"],
+[class*="shadow-violet"],
+[class*="shadow-purple"],
+[class*="shadow-teal"] {
+  --tw-shadow-color: var(--syd-accent) !important;
+}
+
 [class~="stroke-indigo-400"],
 [class~="stroke-violet-400"],
 [class~="stroke-purple-400"],
