@@ -83,7 +83,7 @@ const compressImageForOcr = async (file: File): Promise<{ base64: string; mimeTy
           return;
         }
 
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = 'var(--syd-text-primary)';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 

@@ -9,7 +9,7 @@ export const SyDOfficialIsoLogo: React.FC<SyDOfficialIsoLogoProps> = ({
   className = 'w-full h-auto',
   isDarkTheme = true,
 }) => {
-  const navyColor = isDarkTheme ? '#ffffff' : '#1E2B6D';
+  const navyColor = isDarkTheme ? 'var(--syd-text-primary)' : '#1E2B6D';
   const subtextColor = isDarkTheme ? 'var(--syd-accent)' : '#1E2B6D';
 
   return (
@@ -82,10 +82,10 @@ export const SyDOfficialIsoLogo: React.FC<SyDOfficialIsoLogoProps> = ({
         <rect x="0" y="0" width="56" height="74" rx="8" fill="#0084C9" />
 
         {/* icontec Circular Nested Logo */}
-        <g transform="translate(28, 18)" stroke="#FFFFFF" fill="none" strokeWidth="1.8">
+        <g transform="translate(28, 18)" stroke="var(--syd-text-primary)" fill="none" strokeWidth="1.8">
           <circle cx="0" cy="0" r="9.5" strokeDasharray="50 7" />
           <circle cx="0" cy="0" r="5.5" strokeDasharray="28 5" />
-          <circle cx="0" cy="0" r="2.2" fill="#FFFFFF" />
+          <circle cx="0" cy="0" r="2.2" fill="var(--syd-text-primary)" />
         </g>
 
         {/* icontec Text */}
@@ -95,7 +95,7 @@ export const SyDOfficialIsoLogo: React.FC<SyDOfficialIsoLogoProps> = ({
           fontFamily="'Segoe UI', Arial, sans-serif"
           fontSize="8.5"
           fontWeight="bold"
-          fill="#FFFFFF"
+          fill="var(--syd-text-primary)"
           textAnchor="middle"
           letterSpacing="0.2"
         >
@@ -105,7 +105,7 @@ export const SyDOfficialIsoLogo: React.FC<SyDOfficialIsoLogoProps> = ({
         {/* Dark Shield Bottom Section matching app background */}
         <path
           d="M 4 42 C 12 39 44 39 52 42 L 52 64 C 52 68 48 70 44 70 L 12 70 C 8 70 4 68 4 64 Z"
-          fill="#15253d"
+          fill="var(--syd-card-bg)"
         />
 
         {/* ISO 9001 text inside section */}
@@ -166,7 +166,7 @@ export const SyDOfficialIsoLogo: React.FC<SyDOfficialIsoLogoProps> = ({
           fontFamily="'Segoe UI', Arial, sans-serif"
           fontSize="14"
           fontWeight="900"
-          fill="#FFFFFF"
+          fill="var(--syd-text-primary)"
           textAnchor="middle"
           letterSpacing="0.8"
         >
@@ -180,7 +180,7 @@ export const SyDOfficialIsoLogo: React.FC<SyDOfficialIsoLogoProps> = ({
           fontFamily="'Segoe UI', Arial, sans-serif"
           fontSize="5.2"
           fontWeight="bold"
-          fill="#FFFFFF"
+          fill="var(--syd-text-primary)"
           textAnchor="middle"
           letterSpacing="0.4"
         >

@@ -61,7 +61,7 @@ export const AuthenticEmailTable: React.FC<AuthenticEmailTableProps> = ({ table,
       data-email-canvas="true"
       className="authentic-email-table email-preview-canvas email-sheet-paper my-3 overflow-hidden rounded-xs border border-black shadow-md bg-white text-black"
       style={{
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--syd-text-primary)',
         color: '#000000',
         colorScheme: 'light',
       }}
@@ -73,7 +73,7 @@ export const AuthenticEmailTable: React.FC<AuthenticEmailTableProps> = ({ table,
           style={{
             borderCollapse: 'collapse',
             border: '1px solid #000000',
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--syd-text-primary)',
             color: '#000000',
             fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           }}
@@ -117,7 +117,7 @@ export const AuthenticEmailTable: React.FC<AuthenticEmailTableProps> = ({ table,
               <tr
                 key={rIdx}
                 className="hover:bg-sky-50/40 transition-colors"
-                style={{ backgroundColor: '#ffffff' }}
+                style={{ backgroundColor: 'var(--syd-text-primary)' }}
               >
                 {table.headers.map((header, cIdx) => {
                   const cellValue = row.cells[cIdx] !== undefined ? row.cells[cIdx] : '';
@@ -139,7 +139,7 @@ export const AuthenticEmailTable: React.FC<AuthenticEmailTableProps> = ({ table,
                         border: '1px solid #000000',
                         color: '#000000',
                         padding: '8px 10px',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--syd-text-primary)',
                       }}
                     >
                       {cellValue ? (

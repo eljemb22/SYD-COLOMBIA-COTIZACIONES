@@ -3113,14 +3113,14 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
             {/* Email Body Preview Document (High Contrast White Paper Sheet) */}
             <div
               className="email-sheet-paper rounded-xl p-6 sm:p-8 shadow-md border border-slate-300 text-xs space-y-5 max-w-5xl mx-auto"
-              style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
+              style={{ backgroundColor: 'var(--syd-text-primary)', color: 'var(--syd-body-bg)' }}
             >
               {/* Header Greeting & Prompt */}
-              <div className="space-y-2" style={{ color: '#0f172a' }}>
-                <p className="text-base font-bold" style={{ color: '#0f172a', margin: 0 }}>
+              <div className="space-y-2" style={{ color: 'var(--syd-body-bg)' }}>
+                <p className="text-base font-bold" style={{ color: 'var(--syd-body-bg)', margin: 0 }}>
                   {getTimeBasedGreeting()},
                 </p>
-                <p className="text-sm font-semibold" style={{ color: '#1e293b', margin: 0 }}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--syd-card-bg)', margin: 0 }}>
                   {newPartForm.parts.length > 1
                     ? 'Favor crear las siguientes partes:'
                     : 'Favor crear la siguiente parte:'}
@@ -3132,24 +3132,24 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                 <table className="w-full text-left border-collapse text-xs">
                   <thead style={{ backgroundColor: '#f1f5f9' }}>
                     <tr className="border-b-2 border-slate-300">
-                      <th className="p-2.5 text-center w-8 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#e2e8f0' }}>#</th>
-                      <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider min-w-[120px]" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Referencias / Sub-partes</th>
-                      <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider min-w-[160px]" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Nombre de Parte / Equipo</th>
-                      <th className="p-2.5 text-center w-12 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Cant.</th>
-                      <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Marca</th>
-                      <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Modelo</th>
-                      <th className="p-2.5 text-right border-r border-slate-300 whitespace-nowrap font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Precio Base (COP)</th>
-                      <th className="p-2.5 text-center border-r border-slate-300 whitespace-nowrap font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Régimen IVA</th>
-                      <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Proveedor</th>
-                      <th className="p-2.5 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Notas / Motivo</th>
+                      <th className="p-2.5 text-center w-8 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#e2e8f0' }}>#</th>
+                      <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider min-w-[120px]" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Referencias / Sub-partes</th>
+                      <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider min-w-[160px]" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Nombre de Parte / Equipo</th>
+                      <th className="p-2.5 text-center w-12 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Cant.</th>
+                      <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Marca</th>
+                      <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Modelo</th>
+                      <th className="p-2.5 text-right border-r border-slate-300 whitespace-nowrap font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Precio Base (COP)</th>
+                      <th className="p-2.5 text-center border-r border-slate-300 whitespace-nowrap font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Régimen IVA</th>
+                      <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Proveedor</th>
+                      <th className="p-2.5 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Notas / Motivo</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200" style={{ backgroundColor: '#ffffff' }}>
+                  <tbody className="divide-y divide-slate-200" style={{ backgroundColor: 'var(--syd-text-primary)' }}>
                     {newPartForm.parts.map((p, idx) => (
                       <tr key={p.id || `preview-${idx}`} className="hover:bg-slate-50 transition-colors">
                         <td
                           className="p-2.5 text-center font-bold border-r border-slate-200"
-                          style={{ color: 'var(--syd-accent-light)', backgroundColor: '#f8fafc' }}
+                          style={{ color: 'var(--syd-accent-light)', backgroundColor: 'var(--syd-text-primary)' }}
                         >
                           {idx + 1}
                         </td>
@@ -3157,35 +3157,35 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                           {p.subReferences && p.subReferences.trim() ? (
                             <span>{p.subReferences}</span>
                           ) : (
-                            <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: 'normal' }}>
+                            <span style={{ color: 'var(--syd-text-secondary)', fontStyle: 'italic', fontWeight: 'normal' }}>
                               (Sin referencia)
                             </span>
                           )}
                         </td>
-                        <td className="p-2.5 font-bold border-r border-slate-200" style={{ color: '#0f172a' }}>
+                        <td className="p-2.5 font-bold border-r border-slate-200" style={{ color: 'var(--syd-body-bg)' }}>
                           {p.partName && p.partName.trim() ? (
                             p.partName
                           ) : (
-                            <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: 'normal' }}>
+                            <span style={{ color: 'var(--syd-text-secondary)', fontStyle: 'italic', fontWeight: 'normal' }}>
                               (Sin ingresar nombre)
                             </span>
                           )}
                         </td>
-                        <td className="p-2.5 text-center font-bold border-r border-slate-200" style={{ color: '#0f172a' }}>
+                        <td className="p-2.5 text-center font-bold border-r border-slate-200" style={{ color: 'var(--syd-body-bg)' }}>
                           {p.quantity || 1}
                         </td>
-                        <td className="p-2.5 border-r border-slate-200 font-medium" style={{ color: '#1e293b' }}>
+                        <td className="p-2.5 border-r border-slate-200 font-medium" style={{ color: 'var(--syd-card-bg)' }}>
                           {p.brand && p.brand.trim() ? (
                             p.brand
                           ) : (
-                            <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>SYD Colombia</span>
+                            <span style={{ color: 'var(--syd-text-secondary)', fontStyle: 'italic' }}>SYD Colombia</span>
                           )}
                         </td>
-                        <td className="p-2.5 border-r border-slate-200" style={{ color: '#334155' }}>
+                        <td className="p-2.5 border-r border-slate-200" style={{ color: 'var(--syd-border-color)' }}>
                           {p.model && p.model.trim() ? (
                             p.model
                           ) : (
-                            <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>---</span>
+                            <span style={{ color: 'var(--syd-text-secondary)', fontStyle: 'italic' }}>---</span>
                           )}
                         </td>
                         <td
@@ -3196,11 +3196,11 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                         </td>
                         <td
                           className="p-2.5 text-center text-xs whitespace-nowrap border-r border-slate-200"
-                          style={{ color: '#334155' }}
+                          style={{ color: 'var(--syd-border-color)' }}
                         >
                           {p.taxExempt ? 'Exento (0%)' : 'Aplica (19%)'}
                         </td>
-                        <td className="p-2.5 border-r border-slate-200" style={{ color: '#1e293b' }}>
+                        <td className="p-2.5 border-r border-slate-200" style={{ color: 'var(--syd-card-bg)' }}>
                           {p.supplier && p.supplier.trim() ? (
                             p.supplier
                           ) : (
@@ -3211,7 +3211,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                           {p.departmentNotes && p.departmentNotes.trim() ? (
                             p.departmentNotes
                           ) : (
-                            <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>---</span>
+                            <span style={{ color: 'var(--syd-text-secondary)', fontStyle: 'italic' }}>---</span>
                           )}
                         </td>
                       </tr>
@@ -3224,7 +3224,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
               <div className="flex justify-end pt-1">
                 <div
                   className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold"
-                  style={{ backgroundColor: '#f8fafc', color: '#1e293b' }}
+                  style={{ backgroundColor: 'var(--syd-text-primary)', color: 'var(--syd-card-bg)' }}
                 >
                   Suma Total Estimada:{' '}
                   <strong style={{ color: '#059669', fontSize: '13px' }}>
@@ -3267,28 +3267,28 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
               </div>
 
               {/* Closing and Signature */}
-              <div className="space-y-4 pt-3" style={{ color: '#0f172a' }}>
-                <p className="text-sm font-bold" style={{ color: '#0f172a', margin: 0 }}>
+              <div className="space-y-4 pt-3" style={{ color: 'var(--syd-body-bg)' }}>
+                <p className="text-sm font-bold" style={{ color: 'var(--syd-body-bg)', margin: 0 }}>
                   Atentamente,
                 </p>
 
                 {/* Corporate Signature Preview */}
                 <div
                   className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between"
-                  style={{ color: '#0f172a' }}
+                  style={{ color: 'var(--syd-body-bg)' }}
                 >
                   {/* Contact Details */}
                   <div
                     className="text-xs leading-snug space-y-0.5 border-l-2 border-cyan-600 pl-3.5"
-                    style={{ color: '#1e293b' }}
+                    style={{ color: 'var(--syd-card-bg)' }}
                   >
-                    <div className="font-bold text-sm" style={{ color: '#0f172a' }}>
+                    <div className="font-bold text-sm" style={{ color: 'var(--syd-body-bg)' }}>
                       Jairo E. Mendoza Bolívar
                     </div>
-                    <div className="font-medium" style={{ color: '#334155' }}>
+                    <div className="font-medium" style={{ color: 'var(--syd-border-color)' }}>
                       Asesor Línea Diagnóstica
                     </div>
-                    <div className="font-semibold" style={{ color: '#0f172a' }}>
+                    <div className="font-semibold" style={{ color: 'var(--syd-body-bg)' }}>
                       Suministro y Dotaciones Colombia S.A.
                     </div>
                     <div className="text-[11px]" style={{ color: '#475569', marginTop: '3px' }}>
@@ -3302,7 +3302,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                   {/* Official Logo Graphic Banner */}
                   <div
                     className="shrink-0 p-2.5 rounded-xl border border-slate-200 shadow-xs"
-                    style={{ backgroundColor: '#ffffff' }}
+                    style={{ backgroundColor: 'var(--syd-text-primary)' }}
                   >
                     <img
                       src="/logos/syd_colombia_iso_iqnet.svg"
@@ -3701,15 +3701,15 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
             <div
               className="email-preview-canvas email-sheet-paper bg-white text-slate-900 rounded-xl shadow-lg font-sans border border-slate-300 overflow-hidden"
               data-email-canvas="true"
-              style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
+              style={{ backgroundColor: 'var(--syd-text-primary)', color: 'var(--syd-body-bg)' }}
             >
               {/* Header Banner */}
               <div
                 className="p-4 sm:p-5 text-white flex flex-wrap items-center justify-between gap-2 shadow-sm"
-                style={{ background: 'linear-gradient(135deg, var(--syd-accent-light) 0%, #0369a1 100%)', color: '#ffffff' }}
+                style={{ background: 'linear-gradient(135deg, var(--syd-accent-light) 0%, #0369a1 100%)', color: 'var(--syd-text-primary)' }}
               >
                 <div>
-                  <h4 className="text-base font-extrabold tracking-wide uppercase m-0" style={{ color: '#ffffff', letterSpacing: '0.04em' }}>
+                  <h4 className="text-base font-extrabold tracking-wide uppercase m-0" style={{ color: 'var(--syd-text-primary)', letterSpacing: '0.04em' }}>
                     SOLICITUD DE ORDEN DE COMPRA
                   </h4>
                   <p className="text-xs font-semibold mt-0.5 mb-0" style={{ color: '#f0f9ff' }}>
@@ -3719,7 +3719,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                 <div className="text-right">
                   <span
                     className="text-xs px-3.5 py-1 rounded-full font-extrabold uppercase tracking-wider border shadow-xs"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.25)', borderColor: 'rgba(255,255,255,0.6)', color: '#ffffff' }}
+                    style={{ backgroundColor: 'rgba(255,255,255,0.25)', borderColor: 'rgba(255,255,255,0.6)', color: 'var(--syd-text-primary)' }}
                   >
                     Sede {poForm.locationCity}
                   </span>
@@ -3727,14 +3727,14 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
               </div>
 
               {/* Email Inner Body */}
-              <div className="p-6 sm:p-8 space-y-4 text-sm leading-relaxed" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>
+              <div className="p-6 sm:p-8 space-y-4 text-sm leading-relaxed" style={{ color: 'var(--syd-body-bg)', backgroundColor: 'var(--syd-text-primary)' }}>
                 {/* Greeting & Body Prompt */}
-                <p className="font-bold text-base m-0" style={{ color: '#0f172a' }}>
+                <p className="font-bold text-base m-0" style={{ color: 'var(--syd-body-bg)' }}>
                   {poForm.customGreeting || getTimeBasedGreeting()},
                 </p>
 
-                <p className="m-0 text-sm font-medium" style={{ color: '#1e293b' }}>
-                  Favor generar la <strong style={{ color: '#0f172a' }}>Orden de Compra (OC)</strong> por <strong style={{ color: '#0f172a' }}>{poForm.locationCity}</strong> para el proveedor <strong style={{ color: 'var(--syd-accent-light)' }}>{poForm.supplierName}</strong> con las siguientes partes e ítems requeridos:
+                <p className="m-0 text-sm font-medium" style={{ color: 'var(--syd-card-bg)' }}>
+                  Favor generar la <strong style={{ color: 'var(--syd-body-bg)' }}>Orden de Compra (OC)</strong> por <strong style={{ color: 'var(--syd-body-bg)' }}>{poForm.locationCity}</strong> para el proveedor <strong style={{ color: 'var(--syd-accent-light)' }}>{poForm.supplierName}</strong> con las siguientes partes e ítems requeridos:
                 </p>
 
                 {/* Items Table with sharp borders and high contrast */}
@@ -3742,32 +3742,32 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                   <table className="w-full text-left text-xs border-collapse">
                     <thead style={{ backgroundColor: '#f1f5f9' }}>
                       <tr className="border-b-2 border-slate-300">
-                        <th className="p-2.5 border-r border-slate-300 text-center w-8 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#e2e8f0' }}>#</th>
-                        <th className="p-2.5 border-r border-slate-300 w-28 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Parte</th>
-                        <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Nombre del Equipo / Descripción</th>
-                        <th className="p-2.5 border-r border-slate-300 text-center w-14 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Cant.</th>
-                        <th className="p-2.5 border-r border-slate-300 text-right w-28 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Precio (COP)</th>
-                        <th className="p-2.5 border-r border-slate-300 text-center w-20 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>IVA</th>
-                        <th className="p-2.5 border-r border-slate-300 w-36 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Proveedor</th>
-                        <th className="p-2.5 text-right w-32 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: '#0f172a', backgroundColor: '#f1f5f9' }}>Total (COP)</th>
+                        <th className="p-2.5 border-r border-slate-300 text-center w-8 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#e2e8f0' }}>#</th>
+                        <th className="p-2.5 border-r border-slate-300 w-28 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Parte</th>
+                        <th className="p-2.5 border-r border-slate-300 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Nombre del Equipo / Descripción</th>
+                        <th className="p-2.5 border-r border-slate-300 text-center w-14 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Cant.</th>
+                        <th className="p-2.5 border-r border-slate-300 text-right w-28 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Precio (COP)</th>
+                        <th className="p-2.5 border-r border-slate-300 text-center w-20 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>IVA</th>
+                        <th className="p-2.5 border-r border-slate-300 w-36 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Proveedor</th>
+                        <th className="p-2.5 text-right w-32 font-extrabold text-[11px] uppercase tracking-wider" style={{ color: 'var(--syd-body-bg)', backgroundColor: '#f1f5f9' }}>Total (COP)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200" style={{ backgroundColor: '#ffffff' }}>
+                    <tbody className="divide-y divide-slate-200" style={{ backgroundColor: 'var(--syd-text-primary)' }}>
                       {poForm.items.map((item, idx) => (
-                        <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                        <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? 'var(--syd-text-primary)' : 'var(--syd-text-primary)' }}>
                           <td className="p-2.5 border-r border-slate-200 text-center font-bold" style={{ color: 'var(--syd-accent-light)', backgroundColor: '#f1f5f9' }}>
                             {idx + 1}
                           </td>
                           <td className="p-2.5 border-r border-slate-200 font-mono font-bold" style={{ color: '#0369a1' }}>
                             {item.partCode || 'Pendiente'}
                           </td>
-                          <td className="p-2.5 border-r border-slate-200 font-semibold" style={{ color: '#0f172a' }}>
+                          <td className="p-2.5 border-r border-slate-200 font-semibold" style={{ color: 'var(--syd-body-bg)' }}>
                             {item.description}
                           </td>
-                          <td className="p-2.5 border-r border-slate-200 text-center font-bold" style={{ color: '#0f172a' }}>
+                          <td className="p-2.5 border-r border-slate-200 text-center font-bold" style={{ color: 'var(--syd-body-bg)' }}>
                             {item.quantity}
                           </td>
-                          <td className="p-2.5 border-r border-slate-200 text-right font-medium" style={{ color: '#0f172a' }}>
+                          <td className="p-2.5 border-r border-slate-200 text-right font-medium" style={{ color: 'var(--syd-body-bg)' }}>
                             ${Number(item.unitPriceCOP).toLocaleString('es-CO')}
                           </td>
                           <td className="p-2.5 border-r border-slate-200 text-center">
@@ -3782,10 +3782,10 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                               {item.taxExempt ? '0% Exento' : '19% IVA'}
                             </span>
                           </td>
-                          <td className="p-2.5 border-r border-slate-200 text-[11px] font-medium" style={{ color: '#334155' }}>
+                          <td className="p-2.5 border-r border-slate-200 text-[11px] font-medium" style={{ color: 'var(--syd-border-color)' }}>
                             {item.supplier || poForm.supplierName}
                           </td>
-                          <td className="p-2.5 text-right font-bold" style={{ color: '#0f172a' }}>
+                          <td className="p-2.5 text-right font-bold" style={{ color: 'var(--syd-body-bg)' }}>
                             ${Number(item.totalLineCOP).toLocaleString('es-CO')}
                           </td>
                         </tr>
@@ -3800,7 +3800,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                     <tbody>
                       <tr className="border-b border-slate-200">
                         <td className="p-2.5 font-bold" style={{ color: '#475569' }}>Subtotal:</td>
-                        <td className="p-2.5 text-right font-bold" style={{ color: '#0f172a' }}>
+                        <td className="p-2.5 text-right font-bold" style={{ color: 'var(--syd-body-bg)' }}>
                           ${Number(poForm.subtotalCOP).toLocaleString('es-CO')} COP
                         </td>
                       </tr>
@@ -3810,9 +3810,9 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                           ${Number(poForm.ivaTotalCOP).toLocaleString('es-CO')} COP
                         </td>
                       </tr>
-                      <tr style={{ background: 'linear-gradient(135deg, var(--syd-accent-light) 0%, #0369a1 100%)', color: '#ffffff' }}>
-                        <td className="p-2.5 text-xs font-black uppercase tracking-wider" style={{ color: '#ffffff' }}>TOTAL SOLICITUD:</td>
-                        <td className="p-2.5 text-right text-sm font-black" style={{ color: '#ffffff' }}>
+                      <tr style={{ background: 'linear-gradient(135deg, var(--syd-accent-light) 0%, #0369a1 100%)', color: 'var(--syd-text-primary)' }}>
+                        <td className="p-2.5 text-xs font-black uppercase tracking-wider" style={{ color: 'var(--syd-text-primary)' }}>TOTAL SOLICITUD:</td>
+                        <td className="p-2.5 text-right text-sm font-black" style={{ color: 'var(--syd-text-primary)' }}>
                           ${Number(poForm.grandTotalCOP).toLocaleString('es-CO')} COP
                         </td>
                       </tr>
@@ -3830,8 +3830,8 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                   </div>
                 )}
 
-                <div className="pt-2 font-medium" style={{ color: '#1e293b' }}>
-                  <p className="m-0" style={{ color: '#1e293b' }}>Atentamente,</p>
+                <div className="pt-2 font-medium" style={{ color: 'var(--syd-card-bg)' }}>
+                  <p className="m-0" style={{ color: 'var(--syd-card-bg)' }}>Atentamente,</p>
                 </div>
 
                 {/* Corporate Signature */}
@@ -3843,7 +3843,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                     <p className="text-xs font-semibold m-0" style={{ color: '#0f766e' }}>
                       Asesor Línea Diagnóstica
                     </p>
-                    <p className="text-xs font-semibold m-0" style={{ color: '#334155' }}>
+                    <p className="text-xs font-semibold m-0" style={{ color: 'var(--syd-border-color)' }}>
                       Suministro y Dotaciones Colombia S.A.
                     </p>
                     <p className="text-[11px] mt-1 mb-0" style={{ color: '#64748b' }}>

@@ -79,7 +79,7 @@ const SinglePageCanvas: React.FC<{
         canvas.style.height = `${Math.floor(viewport.height)}px`;
 
         context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-        context.fillStyle = '#ffffff';
+        context.fillStyle = 'var(--syd-text-primary)';
         context.fillRect(0, 0, viewport.width, viewport.height);
 
         const renderContext: any = {

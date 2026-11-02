@@ -419,7 +419,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                           ? {
                               backgroundColor: 'var(--syd-accent)',
                               borderColor: 'var(--syd-accent)',
-                              color: '#ffffff',
+                              color: 'var(--syd-text-primary)',
                               boxShadow: '0 0 12px var(--syd-accent-glow), 0 2px 4px rgba(0,0,0,0.25)',
                             }
                           : {
@@ -533,7 +533,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                       ? {
                           backgroundColor: 'var(--syd-accent)',
                           borderColor: 'var(--syd-accent)',
-                          color: '#ffffff',
+                          color: 'var(--syd-text-primary)',
                           boxShadow: '0 0 12px var(--syd-accent-glow), 0 2px 4px rgba(0,0,0,0.25)',
                         }
                       : {

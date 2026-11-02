@@ -313,7 +313,7 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
               className="w-full py-3.5 px-4 rounded-xl text-white font-extrabold text-sm shadow-xl flex items-center justify-center gap-2.5 cursor-pointer active:scale-95 hover:brightness-110 disabled:opacity-50 border border-cyan-300/50 relative overflow-hidden group transition-all duration-200"
               style={{
                 background: 'linear-gradient(135deg, var(--syd-accent-light) 0%, var(--syd-accent-light) 45%, var(--syd-accent) 100%)',
-                color: '#ffffff',
+                color: 'var(--syd-text-primary)',
                 boxShadow: '0 0 30px color-mix(in srgb, var(--syd-accent) 55%, transparent), 0 4px 20px rgba(2, 132, 199, 0.5)',
                 textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
               }}

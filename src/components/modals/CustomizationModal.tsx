@@ -935,7 +935,7 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                     <div className="flex items-center gap-1.5 flex-1">
                       <input
                         type="color"
-                        value={theme.customCanvasHex || '#0f1a2e'}
+                        value={theme.customCanvasHex || 'var(--syd-body-bg)'}
                         onChange={(e) => {
                           updateFields({
                             customCanvasHex: e.target.value,
@@ -946,14 +946,14 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                       />
                       <input
                         type="text"
-                        value={theme.customCanvasHex || '#0f1a2e'}
+                        value={theme.customCanvasHex || 'var(--syd-body-bg)'}
                         onChange={(e) => {
                           updateFields({
                             customCanvasHex: e.target.value,
                             canvasTheme: 'custom',
                           });
                         }}
-                        placeholder="#0f1a2e"
+                        placeholder="var(--syd-body-bg)"
                         className="flex-1 px-2 py-0.5 text-[10.5px] border rounded font-mono uppercase bg-slate-800/40 border-slate-600 text-white"
                       />
                     </div>

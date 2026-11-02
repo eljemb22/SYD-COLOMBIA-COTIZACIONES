@@ -102,9 +102,9 @@ export const SyDLogo: React.FC<SyDLogoProps> = ({
             {/* Medical Shield Badge Outline */}
             <path
               d="M20 4L32 9V19C32 27 26.5 33.5 20 36C13.5 33.5 8 27 8 19V9L20 4Z"
-              fill="#0f172a"
+              fill="var(--syd-body-bg)"
               fillOpacity="0.88"
-              stroke="#ffffff"
+              stroke="var(--syd-text-primary)"
               strokeWidth="1.2"
               strokeLinejoin="round"
             />
@@ -119,7 +119,7 @@ export const SyDLogo: React.FC<SyDLogoProps> = ({
             {/* Pulse heartbeat peak */}
             <path
               d="M12 20H15L17.5 14L21.5 25L24 18.5L25.5 20H28"
-              stroke="#ffffff"
+              stroke="var(--syd-text-primary)"
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"

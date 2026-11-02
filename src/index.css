@@ -1723,3 +1723,285 @@ select[class*="bg-["] {
   stroke: var(--syd-accent) !important;
 }
 
+
+/* =====================================================================
+   CONSISTENCIA DE TEMA - superficies, bordes y texto siguen las variables
+   ===================================================================== */
+[class~="bg-[#0369a1]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#060b14]"] { background-color: var(--syd-body-bg) !important; }
+[class~="bg-[#070b14]"] { background-color: var(--syd-body-bg) !important; }
+[class~="bg-[#07111e]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#080d16]"] { background-color: var(--syd-body-bg) !important; }
+[class~="bg-[#080f1a]"] { background-color: var(--syd-body-bg) !important; }
+[class~="bg-[#090d16]"] { background-color: var(--syd-body-bg) !important; }
+[class~="bg-[#09121d]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#091320]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#091424]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a0f1d]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a111a]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a111c]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a121c]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a121e]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a1220]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a1320]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a1322]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a1422]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a1524]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a1526]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a1628]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0a1826]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1220]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1320]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1322]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1329]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1420]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1422]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1424]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1624]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1625]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1626]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0b1727]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0c1422]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0c1524]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0c1626]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0c182b]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0c1c2e]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0d1624]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0d1626]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0d1726]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0d1827]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0d1828]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0d1829]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0d1a2c]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0d1a2d]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0d1b30]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0e1726]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0e1828]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0e1927]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0e1929]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0e192a]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0e1b2c]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0f172a]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0f192b]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0f1a2a]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0f1a2d]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0f1a2e]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0f1b2b]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0f1b2c]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0f1b2d]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#0f1d30]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#101a2b]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#101b2b]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#101b2c]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#101b2d]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#101c2d]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#101c2e]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#101e30]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#111c2e]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#111e30]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#111e31]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#111e33]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#111f33]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#112237]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#121c2e]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#121e30]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#121e31]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#121e33]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#121f33]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#121f35]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#122033]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#122137]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#122138]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#122238]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#12233e]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#122525]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#131b2e]"] { background-color: var(--syd-sidebar-bg) !important; }
+[class~="bg-[#131f33]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#132035]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#132235]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#132237]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#132238]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#13233a]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#13233b]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#142338]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#142339]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#14233a]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#14233c]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#14263d]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#152336]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#152338]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#152438]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#15243b]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#15253d]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#15273f]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#16243a]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#16253d]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#16273e]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#162740]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#162742]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#17253b]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#17263c]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#172a44]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#172b44]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#172b47]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#18263a]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#182840]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#182942]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#182a44]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#182b45]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#192a40]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#192b45]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#193256]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1a2b42]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1a2c47]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1a2d46]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1a2d47]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1a2d48]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1a2e48]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1a2e4c]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1a2f4c]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1a2f4e]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1a314f]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1b2b42]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1b2d46]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1b2d48]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1b2e49]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1b2f4c]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1c2e47]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1c3252]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1d3350]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1e293b]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1e2f47]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1e314b]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1e3250]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1e3450]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1e3452]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1e3455]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1f334d]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1f3350]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1f3552]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1f3554]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#1f3555]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#20375a]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#22aae6]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#253d5e]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#2b2f42]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#334d6e]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#6b5ca5]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#d9e2f3]"] { background-color: var(--syd-card-bg) !important; }
+[class~="bg-[#e11d48]"] { background-color: var(--syd-card-bg) !important; }
+[class~="border-[#0f172a]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#111c2e]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#18293d]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1a2c42]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1b2f4a]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1c324e]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1e2f47]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1e3149]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1e324d]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1e334d]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1e3450]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1e3453]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1e3455]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1f334f]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1f3450]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1f3552]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#1f3755]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#20324c]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#20334c]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#20344d]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#203657]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#203754]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#203a5c]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#213550]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#213753]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#213854]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#223652]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#223752]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#223854]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#223955]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#223956]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#22395d]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#223d60]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#233852]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#233854]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#233a57]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#233a59]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#233a5d]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#233b5c]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#233d62]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#243a56]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#243b5a]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#243c5a]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#243c5e]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#243d5c]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#253952]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#254164]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#263c5a]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#263e5e]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#264063]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#28466d]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#294263]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#294266]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2a4263]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2a4365]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2a4366]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2b415f]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2b4160]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2b4465]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2b4466]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2b4468]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2b446a]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2c4467]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2c476f]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2d4363]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2d4666]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2d466b]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2d4769]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2d476c]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2d4970]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2d4972]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2d4973]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2e476b]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#2f4a6e]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#31507a]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#334d6e]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#335077]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#355785]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#3a5477]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#3b5e8c]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#4b6a94]"] { border-color: var(--syd-border-color) !important; }
+[class~="border-[#6b5ca5]"] { border-color: var(--syd-border-color) !important; }
+[class~="text-[#0f172a]"] { color: var(--syd-accent) !important; }
+[class~="text-[#0f2744]"] { color: var(--syd-accent) !important; }
+[class~="text-[#c4b5fd]"] { color: var(--syd-text-secondary) !important; }
+
+
+/* =====================================================================
+   CONSISTENCIA DE TEMA - clases Tailwind comunes de texto/superficie
+   ===================================================================== */
+/* Texto secundario */
+[class~="text-slate-300"],
+[class~="text-slate-400"] {
+  color: var(--syd-text-secondary) !important;
+}
+
+/* Fondo del body */
+body {
+  background-color: var(--syd-body-bg) !important;
+}
+
+/* Bordes comunes */
+[class~="border-slate-700"],
+[class~="border-slate-800"] {
+  border-color: var(--syd-border-color) !important;
+}
+
+/* Sidebar y header (fondo) */
+#main-sidebar-navigation {
+  background-color: var(--syd-sidebar-bg) !important;
+}
+
+#app-topbar {
+  background-color: var(--syd-header-bg) !important;
+}
