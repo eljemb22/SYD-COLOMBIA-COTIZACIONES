@@ -1343,6 +1343,7 @@ export default function App() {
       >
         {/* Top Header Bar Container */}
         <div
+          id="app-topbar"
           className="px-4 py-3 sm:px-6 lg:px-8 border-b shrink-0 transition-colors"
           style={{
             backgroundColor: 'var(--syd-header-bg)',
