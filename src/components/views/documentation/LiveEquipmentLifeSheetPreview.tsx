@@ -120,7 +120,7 @@ export const LiveEquipmentLifeSheetPreview: React.FC<LiveEquipmentLifeSheetPrevi
             </tr>
             <tr className="border-b border-slate-300" style={{ borderColor: '#cbd5e1' }}>
               <td className="p-1.5 font-bold" style={{ backgroundColor: '#f1f5f9', color: 'var(--syd-border-color)' }}>Clasificación de Riesgo:</td>
-              <td className="p-1.5 font-bold" style={{ color: '#047857' }}>
+              <td className="p-1.5 font-bold" style={{ color: 'var(--syd-accent)' }}>
                 <span className="px-1.5 py-0.5 rounded-sm bg-emerald-100 border border-emerald-300 font-black" style={{ backgroundColor: '#d1fae5', color: '#065f46', borderColor: '#6ee7b7' }}>
                   {data.riskClassification || 'Clase I'}
                 </span>
@@ -189,7 +189,7 @@ export const LiveEquipmentLifeSheetPreview: React.FC<LiveEquipmentLifeSheetPrevi
             {Boolean(data.commercialValueCOP && data.commercialValueCOP > 0) && (
               <tr className="border-t border-slate-300" style={{ borderColor: '#cbd5e1' }}>
                 <td className="p-1.5 font-bold" style={{ backgroundColor: '#f1f5f9', color: 'var(--syd-border-color)' }}>Valor Comercial (COP):</td>
-                <td className="p-1.5 font-mono font-bold text-emerald-700" colSpan={3} style={{ color: '#047857' }}>
+                <td className="p-1.5 font-mono font-bold text-emerald-700" colSpan={3} style={{ color: 'var(--syd-accent)' }}>
                   {formatCOP(data.commercialValueCOP)}
                 </td>
               </tr>

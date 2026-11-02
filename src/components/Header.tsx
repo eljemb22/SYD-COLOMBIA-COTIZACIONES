@@ -272,9 +272,9 @@ export const Header: React.FC<HeaderProps> = ({
           disabled={isRefreshing}
           title="Refrescar sistema y optimizar rendimiento (sincroniza datos en tiempo real)"
           style={{
-            backgroundColor: showSuccessToast ? 'rgba(16, 185, 129, 0.2)' : 'var(--syd-card-bg)',
-            borderColor: showSuccessToast ? 'rgba(16, 185, 129, 0.4)' : 'var(--syd-border-color)',
-            color: showSuccessToast ? '#10b981' : 'var(--syd-text-primary)',
+            backgroundColor: showSuccessToast ? 'color-mix(in srgb, var(--syd-accent) 20%, transparent)' : 'var(--syd-card-bg)',
+            borderColor: showSuccessToast ? 'color-mix(in srgb, var(--syd-accent) 40%, transparent)' : 'var(--syd-border-color)',
+            color: showSuccessToast ? 'var(--syd-accent)' : 'var(--syd-text-primary)',
             borderRadius: 'var(--syd-btn-radius)',
           }}
           className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 border text-xs font-bold transition cursor-pointer active:scale-95 shadow-xs hover:brightness-110 hover:border-[var(--syd-accent)]/50"

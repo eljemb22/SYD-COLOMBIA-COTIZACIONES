@@ -314,7 +314,7 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
               style={{
                 background: 'linear-gradient(135deg, var(--syd-accent-light) 0%, var(--syd-accent-light) 45%, var(--syd-accent) 100%)',
                 color: 'var(--syd-text-primary)',
-                boxShadow: '0 0 30px color-mix(in srgb, var(--syd-accent) 55%, transparent), 0 4px 20px rgba(2, 132, 199, 0.5)',
+                boxShadow: '0 0 30px color-mix(in srgb, var(--syd-accent) 55%, transparent), 0 4px 20px color-mix(in srgb, var(--syd-accent) 50%, transparent)',
                 textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
               }}
             >

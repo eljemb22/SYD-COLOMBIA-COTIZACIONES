@@ -38,7 +38,7 @@ export const MaraAvatar: React.FC<MaraAvatarProps> = ({
         <defs>
           <linearGradient id="maraBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#0369a1" />
-            <stop offset="45%" stopColor="#4338ca" />
+            <stop offset="45%" stopColor="var(--syd-accent)" />
             <stop offset="100%" stopColor="#6d28d9" />
           </linearGradient>
           <linearGradient id="maraSkinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -48,8 +48,8 @@ export const MaraAvatar: React.FC<MaraAvatarProps> = ({
           <linearGradient id="maraHairGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#fef08a" />
             <stop offset="25%" stopColor="#fde047" />
-            <stop offset="60%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#b45309" />
+            <stop offset="60%" stopColor="var(--syd-accent)" />
+            <stop offset="100%" stopColor="var(--syd-accent)" />
           </linearGradient>
           <linearGradient id="maraHairHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#fef9c3" />
@@ -60,7 +60,7 @@ export const MaraAvatar: React.FC<MaraAvatarProps> = ({
             <stop offset="100%" stopColor="#cbd5e1" />
           </linearGradient>
           <linearGradient id="maraScrubGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#06b6d4" />
+            <stop offset="0%" stopColor="var(--syd-accent)" />
             <stop offset="100%" stopColor="var(--syd-accent-light)" />
           </linearGradient>
         </defs>

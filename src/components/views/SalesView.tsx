@@ -1114,7 +1114,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
               className={`inline-flex items-center gap-1.5 ${
                 isExportingPdf
                   ? 'bg-rose-700 text-white cursor-wait opacity-90'
-                  : 'bg-[#e11d48] hover:bg-[#be123c] text-white cursor-pointer'
+                  : 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent)] text-white cursor-pointer'
               } font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm transition`}
               title="Descargar cotización en formato PDF idéntico a las hojas"
             >
@@ -1889,7 +1889,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                                             onDragOver={(e) => handleImageDragOver(item.id, e)}
                                             onDragLeave={handleImageDragLeave}
                                             onDrop={(e) => handleImageDrop(item.id, e)}
-                                            style={{ outline: 'none', ...(dragOverItemId === item.id ? { border: '2px dashed var(--syd-accent-light)', borderRadius: '8px', backgroundColor: 'rgba(14, 165, 233, 0.1)' } : {} ) }}
+                                            style={{ outline: 'none', ...(dragOverItemId === item.id ? { border: '2px dashed var(--syd-accent-light)', borderRadius: '8px', backgroundColor: 'color-mix(in srgb, var(--syd-accent) 10%, transparent)' } : {} ) }}
                                           >
                                             {!imgUrl && (
                                               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-xs opacity-50">

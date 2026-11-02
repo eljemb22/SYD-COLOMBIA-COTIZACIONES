@@ -228,8 +228,8 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
               disabled={isLoading}
               className="group relative w-full mt-2 py-3.5 px-4 rounded-2xl text-white font-black text-sm flex items-center justify-center gap-2.5 overflow-hidden transition-all duration-300 transform active:scale-[0.97] disabled:opacity-50 cursor-pointer"
               style={{
-                background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #6366f1 100%)',
-                boxShadow: '0 10px 30px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
+                background: 'linear-gradient(135deg, var(--syd-accent) 0%, var(--syd-accent) 50%, var(--syd-accent) 100%)',
+                boxShadow: '0 10px 30px color-mix(in srgb, var(--syd-accent) 40%, transparent), 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
               }}
             >
               <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-[300%] transition-transform duration-1000 ease-in-out pointer-events-none" />

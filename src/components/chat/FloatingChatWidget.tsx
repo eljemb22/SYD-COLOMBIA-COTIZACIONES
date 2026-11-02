@@ -1351,7 +1351,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
           className="relative group p-1 rounded-full bg-linear-to-tr from-[var(--syd-accent-light)] via-[var(--syd-accent-light)] to-[var(--syd-accent)] shadow-2xl transition-transform duration-200 hover:scale-110 active:scale-95 cursor-grab active:cursor-grabbing border-2 border-sky-300/60 touch-none select-none overflow-hidden"
           style={{
             borderRadius: '9999px',
-            boxShadow: '0 8px 25px rgba(14, 165, 233, 0.5), 0 0 20px color-mix(in srgb, var(--syd-accent) 40%, transparent)',
+            boxShadow: '0 8px 25px color-mix(in srgb, var(--syd-accent) 50%, transparent), 0 0 20px color-mix(in srgb, var(--syd-accent) 40%, transparent)',
             touchAction: 'none',
           }}
           title={isOpen ? 'Cerrar asistente Mara' : 'Mara IA - Arrastra libremente para mover o clic para abrir'}

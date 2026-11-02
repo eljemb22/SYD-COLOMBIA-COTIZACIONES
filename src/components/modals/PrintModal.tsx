@@ -159,7 +159,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             <button
               onClick={handlePdf}
               disabled={isExportingPdf}
-              className="inline-flex items-center gap-1 bg-[#e11d48] hover:bg-[#be123c] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent)] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg cursor-pointer shadow-xs"
             >
               {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
               <span>PDF</span>

@@ -1722,9 +1722,9 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
             style={
               activeSubTab === 'detected_orders'
                 ? {
-                    backgroundColor: 'var(--syd-accent, #06b6d4)',
+                    backgroundColor: 'var(--syd-accent, var(--syd-accent))',
                     color: 'var(--syd-btn-text, #0f172a)',
-                    borderColor: 'var(--syd-accent, #06b6d4)',
+                    borderColor: 'var(--syd-accent, var(--syd-accent))',
                   }
                 : {
                     backgroundColor: 'var(--syd-sidebar-bg)',
@@ -1741,7 +1741,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                 activeSubTab === 'detected_orders'
                   ? {
                       backgroundColor: 'var(--syd-card-bg)',
-                      color: 'var(--syd-accent, #06b6d4)',
+                      color: 'var(--syd-accent, var(--syd-accent))',
                     }
                   : {
                       backgroundColor: 'var(--syd-card-bg)',
@@ -1759,9 +1759,9 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
             style={
               activeSubTab === 'new_part_template'
                 ? {
-                    backgroundColor: 'var(--syd-accent, #06b6d4)',
+                    backgroundColor: 'var(--syd-accent, var(--syd-accent))',
                     color: 'var(--syd-btn-text, #0f172a)',
-                    borderColor: 'var(--syd-accent, #06b6d4)',
+                    borderColor: 'var(--syd-accent, var(--syd-accent))',
                   }
                 : {
                     backgroundColor: 'var(--syd-sidebar-bg)',
@@ -1780,9 +1780,9 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
             style={
               activeSubTab === 'purchase_order_template'
                 ? {
-                    backgroundColor: 'var(--syd-accent, #06b6d4)',
+                    backgroundColor: 'var(--syd-accent, var(--syd-accent))',
                     color: 'var(--syd-btn-text, #0f172a)',
-                    borderColor: 'var(--syd-accent, #06b6d4)',
+                    borderColor: 'var(--syd-accent, var(--syd-accent))',
                   }
                 : {
                     backgroundColor: 'var(--syd-sidebar-bg)',
@@ -1801,9 +1801,9 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
             style={
               activeSubTab === 'sent_history'
                 ? {
-                    backgroundColor: 'var(--syd-accent, #06b6d4)',
+                    backgroundColor: 'var(--syd-accent, var(--syd-accent))',
                     color: 'var(--syd-btn-text, #0f172a)',
-                    borderColor: 'var(--syd-accent, #06b6d4)',
+                    borderColor: 'var(--syd-accent, var(--syd-accent))',
                   }
                 : {
                     backgroundColor: 'var(--syd-sidebar-bg)',
@@ -1820,7 +1820,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                 activeSubTab === 'sent_history'
                   ? {
                       backgroundColor: 'var(--syd-card-bg)',
-                      color: 'var(--syd-accent, #06b6d4)',
+                      color: 'var(--syd-accent, var(--syd-accent))',
                     }
                   : {
                       backgroundColor: 'var(--syd-card-bg)',
@@ -3153,7 +3153,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                         >
                           {idx + 1}
                         </td>
-                        <td className="p-2.5 font-mono text-xs border-r border-slate-200 font-semibold" style={{ color: '#b45309', backgroundColor: '#fffbeb' }}>
+                        <td className="p-2.5 font-mono text-xs border-r border-slate-200 font-semibold" style={{ color: 'var(--syd-accent)', backgroundColor: '#fffbeb' }}>
                           {p.subReferences && p.subReferences.trim() ? (
                             <span>{p.subReferences}</span>
                           ) : (
@@ -3190,7 +3190,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                         </td>
                         <td
                           className="p-2.5 font-bold text-right whitespace-nowrap border-r border-slate-200"
-                          style={{ color: '#059669' }}
+                          style={{ color: 'var(--syd-accent)' }}
                         >
                           {formatCOP(p.estimatedPriceCOP || 0)} COP
                         </td>
@@ -3227,7 +3227,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                   style={{ backgroundColor: 'var(--syd-text-primary)', color: 'var(--syd-card-bg)' }}
                 >
                   Suma Total Estimada:{' '}
-                  <strong style={{ color: '#059669', fontSize: '13px' }}>
+                  <strong style={{ color: 'var(--syd-accent)', fontSize: '13px' }}>
                     {formatCOP(newPartForm.parts.reduce((acc, p) => acc + (Number(p.estimatedPriceCOP) || 0), 0))} COP
                   </strong>
                 </div>
@@ -3822,7 +3822,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
 
                 {/* Observations Block if provided */}
                 {poForm.observations && (
-                  <div className="p-3.5 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg text-xs space-y-1" style={{ backgroundColor: '#fffbeb', borderColor: '#f59e0b', color: '#78350f' }}>
+                  <div className="p-3.5 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg text-xs space-y-1" style={{ backgroundColor: '#fffbeb', borderColor: 'var(--syd-accent)', color: '#78350f' }}>
                     <strong className="block font-bold uppercase text-[10px] tracking-wider" style={{ color: '#92400e' }}>
                       Observaciones:
                     </strong>
@@ -3840,7 +3840,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                     <p className="text-sm font-extrabold uppercase tracking-wide m-0" style={{ color: '#0f4c5c' }}>
                       Jairo E. Mendoza Bolívar
                     </p>
-                    <p className="text-xs font-semibold m-0" style={{ color: '#0f766e' }}>
+                    <p className="text-xs font-semibold m-0" style={{ color: 'var(--syd-accent)' }}>
                       Asesor Línea Diagnóstica
                     </p>
                     <p className="text-xs font-semibold m-0" style={{ color: 'var(--syd-border-color)' }}>

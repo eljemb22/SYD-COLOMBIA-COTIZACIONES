@@ -2424,10 +2424,30 @@ select[class*="bg-["] {
 /* =====================================================================
    CONSISTENCIA DE TEMA - clases Tailwind comunes de texto/superficie
    ===================================================================== */
+/* Texto primario */
+[class~="text-slate-100"],
+[class~="text-slate-200"] {
+  color: var(--syd-text-primary) !important;
+}
+
 /* Texto secundario */
 [class~="text-slate-300"],
 [class~="text-slate-400"] {
   color: var(--syd-text-secondary) !important;
+}
+
+/* Fondos de tarjeta/superficie */
+[class~="bg-slate-700"],
+[class~="bg-slate-800"],
+[class~="bg-slate-900"],
+[class~="bg-slate-950"] {
+  background-color: var(--syd-card-bg) !important;
+}
+
+/* Bordes comunes */
+[class~="border-slate-700"],
+[class~="border-slate-800"] {
+  border-color: var(--syd-border-color) !important;
 }
 
 /* Fondo del body */

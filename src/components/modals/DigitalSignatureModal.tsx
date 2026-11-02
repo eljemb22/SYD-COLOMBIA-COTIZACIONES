@@ -233,7 +233,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
               type="button"
               onClick={handleSave}
               disabled={!hasSignature || !signerName.trim() || isSaving}
-              className="px-6 py-2 rounded-lg text-sm font-bold text-white bg-linear-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 shadow-[0_0_15px_rgba(14,165,233,0.4)] disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="px-6 py-2 rounded-lg text-sm font-bold text-white bg-linear-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 shadow-[0_0_15px_color-mix(in srgb, var(--syd-accent) 40%, transparent)] disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               {isSaving ? (
                 <div className="flex items-center gap-2">
