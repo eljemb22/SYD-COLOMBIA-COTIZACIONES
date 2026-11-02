@@ -516,8 +516,8 @@ export const MasterCatalogDocumentationTab: React.FC<MasterCatalogDocumentationT
                   className="bg-[#1e314b] border border-[#334d6e] hover:border-emerald-500/50 rounded-xl p-2.5 shadow-sm space-y-1.5 transition"
                 >
                   {/* Line 1: Badges, Title, Upload Actions */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <div className="space-y-0.5 min-w-0 flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap justify-between gap-1.5">
+                    <div className="space-y-0.5 min-w-[200px] flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-mono text-[10.5px] font-bold text-emerald-400 bg-[#15253d] px-1.5 py-0.2 rounded border border-[#334d6e]">
                           {eq.code}
