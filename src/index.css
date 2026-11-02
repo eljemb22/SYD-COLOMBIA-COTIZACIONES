@@ -2570,3 +2570,48 @@ body {
 #app-topbar {
   background-color: var(--syd-header-bg) !important;
 }
+
+/* Opacity variants */
+[class~="bg-[#060b14]/95"] { background-color: color-mix(in srgb, var(--syd-body-bg) 95%, transparent) !important; }
+[class~="bg-[#07111e]/90"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 90%, transparent) !important; }
+[class~="bg-[#080d16]/80"] { background-color: color-mix(in srgb, var(--syd-body-bg) 80%, transparent) !important; }
+[class~="bg-[#09121d]/90"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 90%, transparent) !important; }
+[class~="bg-[#0a1322]/80"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 80%, transparent) !important; }
+[class~="bg-[#0a1422]/80"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 80%, transparent) !important; }
+[class~="bg-[#0c1422]/90"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 90%, transparent) !important; }
+[class~="bg-[#0c1422]/95"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 95%, transparent) !important; }
+[class~="bg-[#0c1626]/70"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 70%, transparent) !important; }
+[class~="bg-[#0c1626]/80"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 80%, transparent) !important; }
+[class~="bg-[#0c1626]/90"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 90%, transparent) !important; }
+[class~="bg-[#0c1c2e]/60"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 60%, transparent) !important; }
+[class~="bg-[#0d1827]/70"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 70%, transparent) !important; }
+[class~="bg-[#0f172a]/95"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 95%, transparent) !important; }
+[class~="bg-[#101b2b]/60"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 60%, transparent) !important; }
+[class~="bg-[#111c2e]/50"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 50%, transparent) !important; }
+[class~="bg-[#111c2e]/60"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 60%, transparent) !important; }
+[class~="bg-[#111c2e]/70"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 70%, transparent) !important; }
+[class~="bg-[#111c2e]/90"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 90%, transparent) !important; }
+[class~="bg-[#111c2e]/95"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 95%, transparent) !important; }
+[class~="bg-[#111e33]/95"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 95%, transparent) !important; }
+[class~="bg-[#121e31]/95"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 95%, transparent) !important; }
+[class~="bg-[#131b2e]/60"] { background-color: color-mix(in srgb, var(--syd-sidebar-bg) 60%, transparent) !important; }
+[class~="bg-[#132238]/95"] { background-color: color-mix(in srgb, var(--syd-card-bg) 95%, transparent) !important; }
+[class~="bg-[#142339]/80"] { background-color: color-mix(in srgb, var(--syd-card-bg) 80%, transparent) !important; }
+[class~="bg-[#15253d]/40"] { background-color: color-mix(in srgb, var(--syd-card-bg) 40%, transparent) !important; }
+[class~="bg-[#15253d]/50"] { background-color: color-mix(in srgb, var(--syd-card-bg) 50%, transparent) !important; }
+[class~="bg-[#15253d]/60"] { background-color: color-mix(in srgb, var(--syd-card-bg) 60%, transparent) !important; }
+[class~="bg-[#15253d]/70"] { background-color: color-mix(in srgb, var(--syd-card-bg) 70%, transparent) !important; }
+[class~="bg-[#15253d]/80"] { background-color: color-mix(in srgb, var(--syd-card-bg) 80%, transparent) !important; }
+[class~="bg-[#15253d]/90"] { background-color: color-mix(in srgb, var(--syd-card-bg) 90%, transparent) !important; }
+[class~="bg-[#18263a]/95"] { background-color: color-mix(in srgb, var(--syd-card-bg) 95%, transparent) !important; }
+[class~="bg-[#182a44]/60"] { background-color: color-mix(in srgb, var(--syd-card-bg) 60%, transparent) !important; }
+[class~="bg-[#192b45]/95"] { background-color: color-mix(in srgb, var(--syd-card-bg) 95%, transparent) !important; }
+[class~="bg-[#1a2c47]/70"] { background-color: color-mix(in srgb, var(--syd-card-bg) 70%, transparent) !important; }
+[class~="bg-[#1a2f4c]/50"] { background-color: color-mix(in srgb, var(--syd-card-bg) 50%, transparent) !important; }
+[class~="bg-[#1e314b]/30"] { background-color: color-mix(in srgb, var(--syd-card-bg) 30%, transparent) !important; }
+[class~="bg-[#1e314b]/50"] { background-color: color-mix(in srgb, var(--syd-card-bg) 50%, transparent) !important; }
+[class~="bg-[#1e314b]/95"] { background-color: color-mix(in srgb, var(--syd-card-bg) 95%, transparent) !important; }
+[class~="bg-[#1f3555]/50"] { background-color: color-mix(in srgb, var(--syd-card-bg) 50%, transparent) !important; }
+[class~="bg-[#334d6e]/40"] { background-color: color-mix(in srgb, var(--syd-card-bg) 40%, transparent) !important; }
+[class~="bg-[#6b5ca5]/40"] { background-color: color-mix(in srgb, var(--syd-card-bg) 40%, transparent) !important; }
+
