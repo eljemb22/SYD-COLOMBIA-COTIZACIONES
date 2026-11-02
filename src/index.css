@@ -1723,6 +1723,134 @@ select[class*="bg-["] {
   stroke: var(--syd-accent) !important;
 }
 
+/* =====================================================================
+   CONSISTENCIA DE TEMA (2) - otros colores de acento (indigo, violet,
+   purple, teal) tambien siguen --syd-accent. Los colores semanticos
+   (emerald=exito, rose=error, amber=advertencia) se conservan.
+   ===================================================================== */
+
+/* Texto */
+[class~="text-indigo-300"],
+[class~="text-indigo-400"],
+[class~="text-indigo-500"],
+[class~="text-violet-300"],
+[class~="text-violet-400"],
+[class~="text-violet-500"],
+[class~="text-purple-300"],
+[class~="text-purple-400"],
+[class~="text-purple-500"],
+[class~="text-teal-300"],
+[class~="text-teal-400"],
+[class~="text-teal-500"],
+[class~="text-cyan-300"] {
+  color: var(--syd-accent) !important;
+}
+
+/* Fondos solidos */
+[class~="bg-indigo-400"],
+[class~="bg-indigo-500"],
+[class~="bg-indigo-600"],
+[class~="bg-violet-400"],
+[class~="bg-violet-500"],
+[class~="bg-violet-600"],
+[class~="bg-purple-400"],
+[class~="bg-purple-500"],
+[class~="bg-purple-600"],
+[class~="bg-teal-400"],
+[class~="bg-teal-500"],
+[class~="bg-teal-600"] {
+  background-color: var(--syd-accent) !important;
+}
+
+/* Fondos con opacidad */
+[class~="bg-indigo-500/20"],
+[class~="bg-violet-500/20"],
+[class~="bg-purple-500/20"],
+[class~="bg-teal-500/20"] {
+  background-color: color-mix(in srgb, var(--syd-accent) 20%, transparent) !important;
+}
+
+/* Bordes */
+[class~="border-indigo-400"],
+[class~="border-indigo-500"],
+[class~="border-violet-400"],
+[class~="border-violet-500"],
+[class~="border-purple-400"],
+[class~="border-purple-500"],
+[class~="border-teal-400"],
+[class~="border-teal-500"] {
+  border-color: var(--syd-accent) !important;
+}
+
+/* Hover texto */
+[class~="hover:text-indigo-300"]:hover,
+[class~="hover:text-indigo-400"]:hover,
+[class~="hover:text-indigo-500"]:hover,
+[class~="hover:text-violet-300"]:hover,
+[class~="hover:text-violet-400"]:hover,
+[class~="hover:text-violet-500"]:hover,
+[class~="hover:text-purple-300"]:hover,
+[class~="hover:text-purple-400"]:hover,
+[class~="hover:text-purple-500"]:hover,
+[class~="hover:text-teal-300"]:hover,
+[class~="hover:text-teal-400"]:hover,
+[class~="hover:text-teal-500"]:hover,
+[class~="hover:text-cyan-300"]:hover {
+  color: var(--syd-accent) !important;
+}
+
+/* Hover fondo */
+[class~="hover:bg-indigo-400"]:hover,
+[class~="hover:bg-indigo-500"]:hover,
+[class~="hover:bg-violet-400"]:hover,
+[class~="hover:bg-violet-500"]:hover,
+[class~="hover:bg-purple-400"]:hover,
+[class~="hover:bg-purple-500"]:hover,
+[class~="hover:bg-teal-400"]:hover,
+[class~="hover:bg-teal-500"]:hover {
+  background-color: var(--syd-accent) !important;
+}
+
+/* Hover borde */
+[class~="hover:border-indigo-400"]:hover,
+[class~="hover:border-indigo-500"]:hover,
+[class~="hover:border-violet-400"]:hover,
+[class~="hover:border-violet-500"]:hover,
+[class~="hover:border-purple-400"]:hover,
+[class~="hover:border-purple-500"]:hover,
+[class~="hover:border-teal-400"]:hover,
+[class~="hover:border-teal-500"]:hover {
+  border-color: var(--syd-accent) !important;
+}
+
+/* Group hover */
+.group:hover [class~="group-hover:text-indigo-400"],
+.group:hover [class~="group-hover:text-violet-400"],
+.group:hover [class~="group-hover:text-purple-400"],
+.group:hover [class~="group-hover:text-teal-400"],
+.group:hover [class~="group-hover:bg-indigo-400"],
+.group:hover [class~="group-hover:bg-violet-400"],
+.group:hover [class~="group-hover:bg-purple-400"],
+.group:hover [class~="group-hover:bg-teal-400"] {
+  color: var(--syd-accent) !important;
+  background-color: var(--syd-accent) !important;
+}
+
+/* Fill y stroke */
+[class~="fill-indigo-400"],
+[class~="fill-violet-400"],
+[class~="fill-purple-400"],
+[class~="fill-teal-400"] {
+  fill: var(--syd-accent) !important;
+}
+
+[class~="stroke-indigo-400"],
+[class~="stroke-violet-400"],
+[class~="stroke-purple-400"],
+[class~="stroke-teal-400"] {
+  stroke: var(--syd-accent) !important;
+}
+
 
 /* =====================================================================
    CONSISTENCIA DE TEMA - superficies, bordes y texto siguen las variables
