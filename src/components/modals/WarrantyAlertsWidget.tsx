@@ -112,7 +112,7 @@ export const WarrantyAlertsWidget: React.FC<WarrantyAlertsWidgetProps> = ({
             <button
               type="button"
               onClick={refreshAlerts}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 bg-[#15243b] border border-[#2d4972] hover:text-white hover:border-[#38bdf8] transition"
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 bg-[#15243b] border border-[#2d4972] hover:text-white hover:border-[var(--syd-accent)] transition"
             >
               <RefreshCw className="w-4 h-4 mr-1" />
               Actualizar

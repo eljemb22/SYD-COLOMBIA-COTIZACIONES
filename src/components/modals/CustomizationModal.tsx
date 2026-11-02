@@ -1031,7 +1031,7 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                     <div className="flex items-center gap-1.5 flex-1">
                       <input
                         type="color"
-                        value={theme.customAccentHex || '#38bdf8'}
+                        value={theme.customAccentHex || 'var(--syd-accent)'}
                         onChange={(e) => {
                           updateFields({
                             customAccentHex: e.target.value,
@@ -1044,7 +1044,7 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                       />
                       <input
                         type="text"
-                        value={theme.customAccentHex || '#38bdf8'}
+                        value={theme.customAccentHex || 'var(--syd-accent)'}
                         onChange={(e) => {
                           updateFields({
                             customAccentHex: e.target.value,
@@ -1053,7 +1053,7 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({
                             buttonColor: 'custom',
                           });
                         }}
-                        placeholder="#38bdf8"
+                        placeholder="var(--syd-accent)"
                         className="flex-1 px-2 py-0.5 text-[10.5px] border rounded font-mono uppercase bg-slate-800/40 border-slate-600 text-white"
                       />
                     </div>

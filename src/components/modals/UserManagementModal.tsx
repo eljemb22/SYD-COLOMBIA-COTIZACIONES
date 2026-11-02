@@ -572,7 +572,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#334d6e] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-[#38bdf8] to-[#0284c7] text-white shadow-md shrink-0">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-[var(--syd-accent)] to-[var(--syd-accent-light)] text-white shadow-md shrink-0">
               {isAdmin ? <Users className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
             </div>
             <div className="min-w-0">
@@ -668,7 +668,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     onClick={() => selectUser(u)}
                     className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between gap-2.5 relative group ${
                       isSelected
-                        ? 'bg-[#192b45] border-[#38bdf8] shadow-md shadow-[#38bdf8]/10 ring-1 ring-[#38bdf8]'
+                        ? 'bg-[#192b45] border-[var(--syd-accent)] shadow-md shadow-[var(--syd-accent)]/10 ring-1 ring-[var(--syd-accent)]'
                         : 'bg-[#15253d]/60 border-[#334d6e] hover:bg-[#192b45] hover:border-slate-500 text-slate-300'
                     }`}
                   >
@@ -714,7 +714,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
                     <div className="flex items-center gap-1 shrink-0">
                       {isSelected && (
-                        <div className="w-5 h-5 rounded-full bg-[#38bdf8] text-slate-950 flex items-center justify-center">
+                        <div className="w-5 h-5 rounded-full bg-[var(--syd-accent)] text-slate-950 flex items-center justify-center">
                           <Check className="w-3 h-3 stroke-[3]" />
                         </div>
                       )}
@@ -809,7 +809,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Ej: Daniel Sánchez"
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
 
@@ -824,7 +824,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
                   placeholder="Ej: danielsanchez"
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
 
@@ -840,7 +840,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl pl-3 pr-8 py-2 text-xs text-white font-mono font-bold focus:border-[#38bdf8] outline-none"
+                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl pl-3 pr-8 py-2 text-xs text-white font-mono font-bold focus:border-[var(--syd-accent)] outline-none"
                   />
                   <button
                     type="button"
@@ -862,7 +862,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   placeholder="ejemplo@syd.com.co"
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
 
@@ -886,7 +886,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                       setNewPermissions({ ...DEFAULT_VIEWER_PERMISSIONS });
                     }
                   }}
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-[var(--syd-accent)] outline-none"
                 >
                   <option value="viewer">🔍 Investigador / Consultor (Permisos Personalizables)</option>
                   <option value="admin">👑 Administrador Total (Acceso Completo Sin Restricciones)</option>
@@ -903,7 +903,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   value={newDepartment}
                   onChange={(e) => setNewDepartment(e.target.value)}
                   placeholder="Ej: Licitaciones & Consultas"
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
             </div>
@@ -1065,7 +1065,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Usuario de Acceso: <strong className="font-mono text-[#38bdf8]">@{selectedUser.username}</strong> | Área: <span className="text-slate-300">{selectedUser.department}</span>
+                    Usuario de Acceso: <strong className="font-mono text-[var(--syd-accent)]">@{selectedUser.username}</strong> | Área: <span className="text-slate-300">{selectedUser.department}</span>
                   </p>
                 </div>
               </div>
@@ -1075,7 +1075,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             <form onSubmit={handleSaveCredentials} className="bg-[#15253d] p-5 rounded-xl border border-[#334d6e] space-y-4">
               <div className="flex items-center justify-between border-b border-[#334d6e]/70 pb-2.5">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Key className="w-4 h-4 text-[#38bdf8]" />
+                  <Key className="w-4 h-4 text-[var(--syd-accent)]" />
                   <span>Cambiar Mi Contraseña Personal</span>
                 </h3>
                 <span className="text-[11px] text-slate-400">
@@ -1095,7 +1095,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                       value={formPassword}
                       onChange={(e) => setFormPassword(e.target.value)}
                       placeholder="Ingrese su nueva contraseña"
-                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl pl-3 pr-9 py-2 text-xs text-white font-mono font-bold focus:border-[#38bdf8] outline-none"
+                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl pl-3 pr-9 py-2 text-xs text-white font-mono font-bold focus:border-[var(--syd-accent)] outline-none"
                     />
                     <button
                       type="button"
@@ -1108,7 +1108,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-bold text-xs px-4 py-2 rounded-xl shadow-md transition cursor-pointer shrink-0"
+                    className="inline-flex items-center gap-1.5 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-bold text-xs px-4 py-2 rounded-xl shadow-md transition cursor-pointer shrink-0"
                   >
                     <Save className="w-4 h-4" />
                     <span>Guardar Mi Clave</span>
@@ -1189,10 +1189,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           <form onSubmit={handleSaveCredentials} className="bg-[#15253d] p-5 rounded-xl border border-[#334d6e] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#334d6e]/70 pb-2.5">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Key className="w-4 h-4 text-[#38bdf8]" />
+                <Key className="w-4 h-4 text-[var(--syd-accent)]" />
                 <span>
                   Modificar Datos &amp; Contraseña de:{' '}
-                  <strong className="text-[#38bdf8]">{selectedUser.name}</strong>
+                  <strong className="text-[var(--syd-accent)]">{selectedUser.name}</strong>
                 </span>
               </h3>
               <div className="flex items-center gap-2">
@@ -1215,7 +1215,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="Ej: Jairo o Fabian"
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
 
@@ -1230,7 +1230,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   value={formUsername}
                   onChange={(e) => setFormUsername(e.target.value)}
                   placeholder="Ej: Jairo o Fabian"
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
 
@@ -1246,7 +1246,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     value={formPassword}
                     onChange={(e) => setFormPassword(e.target.value)}
                     placeholder="Nueva contraseña"
-                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl pl-3 pr-8 py-2 text-xs text-white font-mono font-bold focus:border-[#38bdf8] outline-none"
+                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl pl-3 pr-8 py-2 text-xs text-white font-mono font-bold focus:border-[var(--syd-accent)] outline-none"
                   />
                   <button
                     type="button"
@@ -1276,7 +1276,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                       setPermissions({ ...DEFAULT_VIEWER_PERMISSIONS });
                     }
                   }}
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white font-bold focus:border-[var(--syd-accent)] outline-none"
                 >
                   <option value="viewer">🔍 Investigador / Consultor</option>
                   <option value="admin">👑 Administrador Total</option>
@@ -1292,7 +1292,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   value={formRoleLabel}
                   onChange={(e) => setFormRoleLabel(e.target.value)}
                   placeholder="Ej: Investigador & Descargas"
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
 
@@ -1305,7 +1305,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   value={formDepartment}
                   onChange={(e) => setFormDepartment(e.target.value)}
                   placeholder="Ej: Licitaciones & Consultas"
-                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 text-xs text-white focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
             </div>
@@ -1313,7 +1313,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-bold text-xs px-4 py-2 rounded-xl shadow-md transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-bold text-xs px-4 py-2 rounded-xl shadow-md transition cursor-pointer"
               >
                 <Save className="w-4 h-4" />
                 <span>Guardar Cambios de Usuario</span>

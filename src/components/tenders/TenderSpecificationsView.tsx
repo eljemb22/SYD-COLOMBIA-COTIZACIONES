@@ -341,7 +341,7 @@ export const TenderSpecificationsView: React.FC<TenderSpecificationsViewProps> =
     <div className="space-y-3 animate-fadeIn">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#38bdf8] text-slate-950 font-black text-xs px-4 py-2 rounded-xl shadow-2xl animate-scaleUp flex items-center gap-2 border border-white/20">
+        <div className="fixed bottom-6 right-6 z-50 bg-[var(--syd-accent)] text-slate-950 font-black text-xs px-4 py-2 rounded-xl shadow-2xl animate-scaleUp flex items-center gap-2 border border-white/20">
           <Check className="w-3.5 h-3.5 stroke-[3]" />
           <span>{toastMessage}</span>
         </div>
@@ -372,7 +372,7 @@ export const TenderSpecificationsView: React.FC<TenderSpecificationsViewProps> =
             <button
               type="button"
               onClick={handleExportWord}
-              className="inline-flex items-center gap-1 text-[11px] text-slate-950 bg-[#38bdf8] hover:bg-[#0284c7] px-2.5 py-1 rounded-lg font-black transition cursor-pointer shadow-xs active:scale-95"
+              className="inline-flex items-center gap-1 text-[11px] text-slate-950 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] px-2.5 py-1 rounded-lg font-black transition cursor-pointer shadow-xs active:scale-95"
               title="Descargar anexo en Microsoft Word (.docx)"
             >
               <FileDown className="w-3 h-3" />
@@ -468,7 +468,7 @@ export const TenderSpecificationsView: React.FC<TenderSpecificationsViewProps> =
                       : 'bg-[#111c2e] text-slate-300 hover:bg-[#15253d] border border-[#334d6e]'
                   }`}
                 >
-                  <span className="font-mono text-[9.5px] text-[#38bdf8]">#{idx + 1}</span>
+                  <span className="font-mono text-[9.5px] text-[var(--syd-accent)]">#{idx + 1}</span>
                   <span className="truncate max-w-[120px]">{it.name}</span>
                   <span className="text-[9.5px] bg-slate-800 px-1 py-0.2 rounded font-mono text-purple-200">
                     {count}
@@ -490,7 +490,7 @@ export const TenderSpecificationsView: React.FC<TenderSpecificationsViewProps> =
           <button
             type="button"
             onClick={onSwitchToAwardedTab}
-            className="inline-flex items-center gap-1 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer shadow-xs"
+            className="inline-flex items-center gap-1 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer shadow-xs"
           >
             <span>Ir a Licitaciones & Contratos Adjudicados</span>
             <ArrowRight className="w-3 h-3" />
@@ -532,7 +532,7 @@ export const TenderSpecificationsView: React.FC<TenderSpecificationsViewProps> =
                         <ChevronUp className="w-3.5 h-3.5" />
                       )}
                     </div>
-                    <span className="font-mono text-[10px] font-bold text-[#38bdf8] bg-[#111c2e] px-1.5 py-0.5 rounded border border-[#334d6e]">
+                    <span className="font-mono text-[10px] font-bold text-[var(--syd-accent)] bg-[#111c2e] px-1.5 py-0.5 rounded border border-[#334d6e]">
                       {item.code}
                     </span>
                     <h4 className="text-xs sm:text-sm font-black text-white truncate max-w-sm">{item.name}</h4>
@@ -655,7 +655,7 @@ export const TenderSpecificationsView: React.FC<TenderSpecificationsViewProps> =
                             onClick={() => handleAddQuickReq(item)}
                             className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[11px] font-black transition cursor-pointer shrink-0 active:scale-95 ${
                               quickText.trim()
-                                ? 'bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 shadow-xs'
+                                ? 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 shadow-xs'
                                 : 'bg-[#15253d] text-slate-500 border border-[#334d6e] cursor-not-allowed'
                             }`}
                           >
@@ -713,7 +713,7 @@ export const TenderSpecificationsView: React.FC<TenderSpecificationsViewProps> =
                               >
                                 <div className="flex items-center justify-between gap-2 border-b border-[#334d6e] pb-1.5">
                                   <span className="text-[11px] font-black text-purple-300 flex items-center gap-1">
-                                    <Edit3 className="w-3 h-3 text-[#38bdf8]" />
+                                    <Edit3 className="w-3 h-3 text-[var(--syd-accent)]" />
                                     <span>Modificar Especificación #{rIdx + 1}</span>
                                   </span>
                                   <div className="flex items-center gap-1.5">
@@ -818,7 +818,7 @@ export const TenderSpecificationsView: React.FC<TenderSpecificationsViewProps> =
                                             showToast('✓ Rango extraído');
                                           }
                                         }}
-                                        className="text-[9.5px] text-[#38bdf8] hover:underline font-mono"
+                                        className="text-[9.5px] text-[var(--syd-accent)] hover:underline font-mono"
                                       >
                                         Auto-detectar
                                       </button>
@@ -845,7 +845,7 @@ export const TenderSpecificationsView: React.FC<TenderSpecificationsViewProps> =
                                   <button
                                     type="button"
                                     onClick={() => handleSaveEditReq(item.id, req.id)}
-                                    className="inline-flex items-center gap-1 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-[11px] px-3 py-1 rounded-lg transition cursor-pointer shadow-xs active:scale-95"
+                                    className="inline-flex items-center gap-1 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-black text-[11px] px-3 py-1 rounded-lg transition cursor-pointer shadow-xs active:scale-95"
                                   >
                                     <Check className="w-3 h-3 stroke-[3]" />
                                     <span>Guardar</span>

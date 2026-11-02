@@ -60,7 +60,7 @@ export const SyDLogo: React.FC<SyDLogoProps> = ({
               {companyName}
             </span>
             {companySubtitle && (
-              <span className={`text-[#38bdf8] font-bold tracking-tight truncate ${dimensions.subSize}`}>
+              <span className={`text-[var(--syd-accent)] font-bold tracking-tight truncate ${dimensions.subSize}`}>
                 {companySubtitle}
               </span>
             )}
@@ -78,7 +78,7 @@ export const SyDLogo: React.FC<SyDLogoProps> = ({
     >
       {/* Icon Graphic Container */}
       <div
-        className={`${dimensions.iconSize} rounded-xl bg-gradient-to-br from-[#38bdf8] via-[#0284c7] to-[#0369a1] p-0.5 shadow-lg shadow-[#38bdf8]/20 flex items-center justify-center shrink-0 text-slate-950 relative overflow-hidden transition-transform duration-200 group-hover:scale-105`}
+        className={`${dimensions.iconSize} rounded-xl bg-gradient-to-br from-[var(--syd-accent)] via-[var(--syd-accent-light)] to-[#0369a1] p-0.5 shadow-lg shadow-[var(--syd-accent)]/20 flex items-center justify-center shrink-0 text-slate-950 relative overflow-hidden transition-transform duration-200 group-hover:scale-105`}
       >
         {/* Subtle decorative internal sheen */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-white/40 pointer-events-none" />
@@ -111,7 +111,7 @@ export const SyDLogo: React.FC<SyDLogoProps> = ({
             {/* Stylized 'S' & 'D' intertwining with Vital Pulse Wave */}
             <path
               d="M14 15C14 12.5 16.5 11 19.5 11C22.5 11 24.5 12.5 24.5 14.5C24.5 17 21.5 17.5 18.5 18.5C15.5 19.5 14 21 14 23.5C14 26 16.5 27.5 20 27.5C23.5 27.5 25.5 25.5 25.5 25.5"
-              stroke="#38bdf8"
+              stroke="var(--syd-accent)"
               strokeWidth="2.2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -135,7 +135,7 @@ export const SyDLogo: React.FC<SyDLogoProps> = ({
             {companyName}
           </span>
           {companySubtitle && (
-            <span className={`text-[#38bdf8] font-bold tracking-tight truncate ${dimensions.subSize}`}>
+            <span className={`text-[var(--syd-accent)] font-bold tracking-tight truncate ${dimensions.subSize}`}>
               {companySubtitle}
             </span>
           )}

@@ -96,7 +96,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
             src={LOGO_SRC}
             alt="SYD"
             className="relative w-[88vw] max-w-[38rem] h-auto object-contain animate-logoReveal"
-            style={{ filter: 'drop-shadow(0 14px 40px rgba(56,189,248,0.35))' }}
+            style={{ filter: 'drop-shadow(0 14px 40px color-mix(in srgb, var(--syd-accent) 35%, transparent))' }}
           />
 
           <p className="animate-introTextUp mt-6 text-center text-[11px] sm:text-xs font-bold text-cyan-200/80 uppercase tracking-[0.3em]">
@@ -145,7 +145,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
                 src={LOGO_SRC}
                 alt="SUMINISTROS Y DOTACIONES DE COLOMBIA S.A.S."
                 style={{
-                  filter: 'drop-shadow(0 0 60px rgba(56,189,248,0.8))',
+                  filter: 'drop-shadow(0 0 60px color-mix(in srgb, var(--syd-accent) 80%, transparent))',
                 }}
                 className="w-full h-auto object-contain"
               />
@@ -188,7 +188,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
                     if (errorMsg) setErrorMsg(null);
                   }}
                   placeholder="Ingrese su nombre de usuario"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-3 text-sm text-white font-medium placeholder-slate-400 outline-none transition-all duration-300 focus:bg-white/10 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/15 focus:shadow-[0_0_24px_rgba(56,189,248,0.25)]"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-3 text-sm text-white font-medium placeholder-slate-400 outline-none transition-all duration-300 focus:bg-white/10 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/15 focus:shadow-[0_0_24px_color-mix(in srgb, var(--syd-accent) 25%, transparent)]"
                 />
               </div>
             </div>
@@ -210,7 +210,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
                     if (errorMsg) setErrorMsg(null);
                   }}
                   placeholder="Ingrese su contraseña"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-12 py-3 text-sm text-white font-medium placeholder-slate-400 outline-none transition-all duration-300 focus:bg-white/10 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/15 focus:shadow-[0_0_24px_rgba(56,189,248,0.25)]"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-12 py-3 text-sm text-white font-medium placeholder-slate-400 outline-none transition-all duration-300 focus:bg-white/10 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/15 focus:shadow-[0_0_24px_color-mix(in srgb, var(--syd-accent) 25%, transparent)]"
                 />
                 <button
                   type="button"

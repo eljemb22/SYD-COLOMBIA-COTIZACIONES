@@ -598,7 +598,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-5 shadow-2xl animate-scaleUp max-h-[92vh] h-[88vh] flex flex-col overflow-hidden my-auto">
+      <div className="bg-[#192b45] border border-[var(--syd-accent)]/50 rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-5 shadow-2xl animate-scaleUp max-h-[92vh] h-[88vh] flex flex-col overflow-hidden my-auto">
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-2.5 border-b border-[#334d6e] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -661,10 +661,10 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
           <div className="bg-[#15253d] p-3.5 rounded-xl border border-[#334d6e] space-y-2">
             <label className="text-slate-300 font-bold block flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-white">
-                <span className="text-[#38bdf8]">1.</span> Equipo Biomédico Destino *
+                <span className="text-[var(--syd-accent)]">1.</span> Equipo Biomédico Destino *
               </span>
               {currentEquipment && (
-                <span className="text-[11px] font-mono text-[#38bdf8] font-semibold">
+                <span className="text-[11px] font-mono text-[var(--syd-accent)] font-semibold">
                   {currentEquipment.code}
                 </span>
               )}
@@ -673,7 +673,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
             <select
               value={equipmentId}
               onChange={(e) => handleEquipmentChange(e.target.value)}
-              className="w-full bg-[#1e314b] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl p-2.5 text-white font-bold text-xs outline-none cursor-pointer"
+              className="w-full bg-[#1e314b] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl p-2.5 text-white font-bold text-xs outline-none cursor-pointer"
             >
               {equipments.map((eq) => {
                 const countDocs = existingDocuments.filter((d) => d.equipmentId === eq.id).length;
@@ -689,7 +689,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
           {/* Document Type Selector Grid */}
           <div className="space-y-2">
             <label className="text-slate-300 font-bold block flex items-center gap-1.5">
-              <span className="text-[#38bdf8]">2.</span> Tipo de Documento *
+              <span className="text-[var(--syd-accent)]">2.</span> Tipo de Documento *
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -888,7 +888,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ej: Ficha Técnica Oficial Mindray ePM 12M con Accesorios"
-              className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl p-2.5 text-white font-medium focus:border-[#38bdf8] outline-none"
+              className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl p-2.5 text-white font-medium focus:border-[var(--syd-accent)] outline-none"
             />
           </div>
 
@@ -918,7 +918,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
                   required
                   value={validUntil}
                   onChange={(e) => setValidUntil(e.target.value)}
-                  className="w-full bg-[#1e314b] border border-[#334d6e] rounded-xl p-2 text-white font-medium focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#1e314b] border border-[#334d6e] rounded-xl p-2 text-white font-medium focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
             </div>
@@ -931,7 +931,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl p-2.5 text-white font-bold focus:border-[#38bdf8] outline-none cursor-pointer"
+                className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl p-2.5 text-white font-bold focus:border-[var(--syd-accent)] outline-none cursor-pointer"
               >
                 <option value="Vigente">🟢 Vigente (Aprobado para Licitaciones)</option>
                 <option value="En Trámite">🟡 En Trámite / Renovación</option>
@@ -961,7 +961,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Notas sobre versión, accesorios incluidos o resoluciones..."
-              className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl p-2.5 text-white focus:border-[#38bdf8] outline-none resize-none"
+              className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl p-2.5 text-white focus:border-[var(--syd-accent)] outline-none resize-none"
             />
           </div>
 

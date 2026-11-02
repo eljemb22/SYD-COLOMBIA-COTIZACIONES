@@ -1053,7 +1053,7 @@ export const TenderClientModal: React.FC<TenderClientModalProps> = ({
               className={`inline-flex items-center gap-1.5 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-lg active:scale-95 ${
                 entryMode === 'direct_oc'
                   ? 'bg-amber-400 hover:bg-amber-300'
-                  : 'bg-[#38bdf8] hover:bg-[#0284c7]'
+                  : 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)]'
               }`}
             >
               <Save className="w-4 h-4" />

@@ -990,9 +990,9 @@ export const SalesView: React.FC<SalesViewProps> = ({
               id="btn-open-client-directory"
               onClick={() => setIsClientDirectoryOpen(true)}
               title="Abrir directorio general de clientes, consultar cotizaciones asociadas y cargar datos a la cotización"
-              className="inline-flex items-center gap-1.5 bg-[#15253d] hover:bg-[#1f375b] text-[#38bdf8] border border-[#38bdf8]/40 hover:border-[#38bdf8] text-[11.5px] font-medium px-3 py-1.5 rounded-lg transition cursor-pointer shadow-sm"
+              className="inline-flex items-center gap-1.5 bg-[#15253d] hover:bg-[#1f375b] text-[var(--syd-accent)] border border-[var(--syd-accent)]/40 hover:border-[var(--syd-accent)] text-[11.5px] font-medium px-3 py-1.5 rounded-lg transition cursor-pointer shadow-sm"
             >
-              <Users className="w-3.5 h-3.5 text-[#38bdf8]" />
+              <Users className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
               <span>Directorio Clientes</span>
             </button>
           </div>
@@ -1021,7 +1021,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                     type="button"
                     onClick={() => letterheadFileInputRef.current?.click()}
                     title="Cambiar la imagen del membrete o presionar Ctrl + V para pegar desde el portapapeles"
-                    className="inline-flex items-center gap-1 bg-[#15253d] hover:bg-[#1f375b] text-sky-300 border border-[#38bdf8]/40 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                    className="inline-flex items-center gap-1 bg-[#15253d] hover:bg-[#1f375b] text-sky-300 border border-[var(--syd-accent)]/40 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     <span>Cambiar (Ctrl+V)</span>
@@ -1074,7 +1074,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                 onClick={() => onUpdateHeader({ formatStyle: 'standard' })}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
                   (quoteHeader.formatStyle || 'standard') === 'standard'
-                    ? 'bg-[#0284c7] text-white shadow-xs'
+                    ? 'bg-[var(--syd-accent-light)] text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
                 title="Formato de cotización clásico en cuadrícula compacta"
@@ -1087,7 +1087,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                 onClick={() => onUpdateHeader({ formatStyle: 'with-images' })}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
                   quoteHeader.formatStyle === 'with-images'
-                    ? 'bg-[#0284c7] text-white shadow-xs'
+                    ? 'bg-[var(--syd-accent-light)] text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
                 title="Formato con fotografía y ficha técnica resumida debajo de cada equipo"
@@ -1101,7 +1101,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
               id="btn-export-word-main"
               onClick={handleExportWord}
               title="Descargar cotización en formato Microsoft Word (.docx)"
-              className="inline-flex items-center gap-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-[var(--syd-accent-light)] hover:bg-[#0369a1] text-white font-semibold text-[11.5px] px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
             >
               <FileDown className="w-3.5 h-3.5" />
               <span>Word (.docx)</span>
@@ -1208,10 +1208,10 @@ export const SalesView: React.FC<SalesViewProps> = ({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-300 font-bold flex items-center gap-1.5">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#38bdf8]" />
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                 Margen Superior (Subir / Bajar):
               </span>
-              <span className="font-mono text-[#38bdf8] font-bold bg-[#1e314b] px-2 py-0.5 rounded border border-[#334d6e]">
+              <span className="font-mono text-[var(--syd-accent)] font-bold bg-[#1e314b] px-2 py-0.5 rounded border border-[#334d6e]">
                 {subirBajar} px
               </span>
             </div>
@@ -1223,7 +1223,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
               step="2"
               value={subirBajar}
               onChange={(e) => setSubirBajar(Number(e.target.value))}
-              className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#38bdf8]"
+              className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[var(--syd-accent)]"
             />
             <div className="flex justify-between text-[10px] text-slate-500 font-mono">
               <span>40px (Arriba)</span>
@@ -1312,7 +1312,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
         {/* ========================================================================= */}
         <div className="w-full max-w-[850px]">
           <div className="flex items-center justify-between px-3 py-1.5 mb-2 text-xs text-slate-400">
-            <span className="font-bold uppercase tracking-wider text-[#38bdf8] flex items-center gap-1.5">
+            <span className="font-bold uppercase tracking-wider text-[var(--syd-accent)] flex items-center gap-1.5">
               <FileText className="w-4 h-4" />
               Página 1 de {totalPagesCount} — Presentación SYD Colombia
             </span>
@@ -1567,7 +1567,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
           return (
             <div key={`table-page-${pageChunk.pageIndex}`} className="w-full max-w-[850px]">
               <div className="flex items-center justify-between px-3 py-1.5 mb-2 text-xs text-slate-400">
-                <span className="font-bold uppercase tracking-wider text-[#38bdf8] flex items-center gap-1.5">
+                <span className="font-bold uppercase tracking-wider text-[var(--syd-accent)] flex items-center gap-1.5">
                   <FileText className="w-4 h-4" />
                   {pageTitle}
                 </span>
@@ -1711,7 +1711,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                               <button
                                 id="btn-add-equipment-to-quote"
                                 onClick={onNavigateToCostManager || onNavigateToCatalog}
-                                className="inline-flex items-center gap-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md transition cursor-pointer"
+                                className="inline-flex items-center gap-1.5 bg-[var(--syd-accent-light)] hover:bg-[#0369a1] text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md transition cursor-pointer"
                               >
                                 <PlusCircle className="w-4 h-4" />
                                 <span>Agregar equipo a la cotización</span>
@@ -1889,7 +1889,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                                             onDragOver={(e) => handleImageDragOver(item.id, e)}
                                             onDragLeave={handleImageDragLeave}
                                             onDrop={(e) => handleImageDrop(item.id, e)}
-                                            style={{ outline: 'none', ...(dragOverItemId === item.id ? { border: '2px dashed #0ea5e9', borderRadius: '8px', backgroundColor: 'rgba(14, 165, 233, 0.1)' } : {} ) }}
+                                            style={{ outline: 'none', ...(dragOverItemId === item.id ? { border: '2px dashed var(--syd-accent-light)', borderRadius: '8px', backgroundColor: 'rgba(14, 165, 233, 0.1)' } : {} ) }}
                                           >
                                             {!imgUrl && (
                                               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-xs opacity-50">
@@ -2174,7 +2174,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
         {hasStandaloneConditionsPage && (
           <div className="w-full max-w-[850px]">
             <div className="flex items-center justify-between px-3 py-1.5 mb-2 text-xs text-slate-400">
-              <span className="font-bold uppercase tracking-wider text-[#38bdf8] flex items-center gap-1.5">
+              <span className="font-bold uppercase tracking-wider text-[var(--syd-accent)] flex items-center gap-1.5">
                 <FileText className="w-4 h-4" />
                 Página {totalPagesCount} de {totalPagesCount} — Condiciones Comerciales y Firma
               </span>
@@ -2342,11 +2342,11 @@ export const SalesView: React.FC<SalesViewProps> = ({
               if (e.target === e.currentTarget) setIsClientModalOpen(false);
             }}
           >
-            <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-xl w-full shadow-2xl animate-scaleUp overflow-hidden flex flex-col text-slate-200">
+            <div className="bg-[#192b45] border border-[var(--syd-accent)]/50 rounded-2xl max-w-xl w-full shadow-2xl animate-scaleUp overflow-hidden flex flex-col text-slate-200">
               {/* Modal Header */}
               <div className="flex items-center justify-between px-5 py-4 bg-[#15253d] border-b border-[#334d6e]">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-[#38bdf8]">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--syd-accent)]/15 border border-[var(--syd-accent)]/30 flex items-center justify-center text-[var(--syd-accent)]">
                     <Building2 className="w-4 h-4" />
                   </div>
                   <div>
@@ -2379,7 +2379,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                     disabled={isReadOnly}
                     onChange={(e) => onUpdateHeader({ clientName: e.target.value })}
                     placeholder="Ej: HOSPITAL REGIONAL SAN JERONIMO"
-                    className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[#38bdf8] rounded-lg px-3 py-2 text-white text-xs outline-none uppercase font-bold"
+                    className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-lg px-3 py-2 text-white text-xs outline-none uppercase font-bold"
                   />
                 </div>
 
@@ -2394,7 +2394,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                       disabled={isReadOnly}
                       onChange={(e) => onUpdateHeader({ nit: e.target.value })}
                       placeholder="Ej: 892.115.347-1"
-                      className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[#38bdf8] rounded-lg px-3 py-2 text-white text-xs outline-none font-mono font-semibold"
+                      className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-lg px-3 py-2 text-white text-xs outline-none font-mono font-semibold"
                     />
                   </div>
 
@@ -2408,13 +2408,13 @@ export const SalesView: React.FC<SalesViewProps> = ({
                       disabled={isReadOnly}
                       onChange={(e) => onUpdateHeader({ city: e.target.value })}
                       placeholder="Ej: Barranquilla, Atlántico"
-                      className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[#38bdf8] rounded-lg px-3 py-2 text-white text-xs outline-none"
+                      className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-lg px-3 py-2 text-white text-xs outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="border-t border-[#334d6e] pt-3 space-y-3">
-                  <h4 className="text-[11px] font-bold text-[#38bdf8] uppercase tracking-wider">
+                  <h4 className="text-[11px] font-bold text-[var(--syd-accent)] uppercase tracking-wider">
                     Datos de Contacto
                   </h4>
 
@@ -2428,7 +2428,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                       disabled={isReadOnly}
                       onChange={(e) => onUpdateHeader({ contactPerson: e.target.value })}
                       placeholder="Ej: Dra. María Elena Gómez - Subgerente Administrativa"
-                      className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[#38bdf8] rounded-lg px-3 py-2 text-white text-xs outline-none"
+                      className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-lg px-3 py-2 text-white text-xs outline-none"
                     />
                   </div>
 
@@ -2443,7 +2443,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                         disabled={isReadOnly}
                         onChange={(e) => onUpdateHeader({ contactPhone: e.target.value })}
                         placeholder="Ej: (605) 300-1234 / 310-0000000"
-                        className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[#38bdf8] rounded-lg px-3 py-2 text-white text-xs outline-none"
+                        className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-lg px-3 py-2 text-white text-xs outline-none"
                       />
                     </div>
 
@@ -2457,7 +2457,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                         disabled={isReadOnly}
                         onChange={(e) => onUpdateHeader({ contactEmail: e.target.value })}
                         placeholder="Ej: compras@hospital.gov.co"
-                        className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[#38bdf8] rounded-lg px-3 py-2 text-white text-xs outline-none"
+                        className="w-full bg-[#111f33] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-lg px-3 py-2 text-white text-xs outline-none"
                       />
                     </div>
                   </div>
@@ -2472,7 +2472,7 @@ export const SalesView: React.FC<SalesViewProps> = ({
                     setIsClientModalOpen(false);
                     setIsClientDirectoryOpen(true);
                   }}
-                  className="text-xs text-[#38bdf8] hover:underline cursor-pointer flex items-center gap-1 font-medium"
+                  className="text-xs text-[var(--syd-accent)] hover:underline cursor-pointer flex items-center gap-1 font-medium"
                 >
                   <Users className="w-3.5 h-3.5" />
                   <span>Ver en Directorio General</span>

@@ -61,7 +61,7 @@ export const MaraAvatar: React.FC<MaraAvatarProps> = ({
           </linearGradient>
           <linearGradient id="maraScrubGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#06b6d4" />
-            <stop offset="100%" stopColor="#0284c7" />
+            <stop offset="100%" stopColor="var(--syd-accent-light)" />
           </linearGradient>
         </defs>
 
@@ -69,7 +69,7 @@ export const MaraAvatar: React.FC<MaraAvatarProps> = ({
         <circle cx="50" cy="50" r="50" fill="url(#maraBgGrad)" />
 
         {/* Halo Glow */}
-        <circle cx="50" cy="50" r="48" fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeOpacity="0.4" />
+        <circle cx="50" cy="50" r="48" fill="none" stroke="var(--syd-accent)" strokeWidth="1.5" strokeOpacity="0.4" />
 
         {/* Back Hair - Blonde volume */}
         <path d="M 26 44 C 24 25 35 15 50 15 C 65 15 76 25 74 44 C 75 58 72 70 70 76 C 65 72 63 60 63 50 C 37 50 35 72 30 76 C 28 70 25 58 26 44 Z" fill="url(#maraHairGrad)" />
@@ -108,9 +108,9 @@ export const MaraAvatar: React.FC<MaraAvatarProps> = ({
         <circle cx="56.2" cy="42" r="0.4" fill="#ffffff" />
 
         {/* Glasses / Modern Tech Frame */}
-        <rect x="37" y="37" width="11" height="8" rx="2.5" fill="none" stroke="#38bdf8" strokeWidth="1" strokeOpacity="0.9" />
-        <rect x="52" y="37" width="11" height="8" rx="2.5" fill="none" stroke="#38bdf8" strokeWidth="1" strokeOpacity="0.9" />
-        <path d="M 48 40 L 52 40" fill="none" stroke="#38bdf8" strokeWidth="1" />
+        <rect x="37" y="37" width="11" height="8" rx="2.5" fill="none" stroke="var(--syd-accent)" strokeWidth="1" strokeOpacity="0.9" />
+        <rect x="52" y="37" width="11" height="8" rx="2.5" fill="none" stroke="var(--syd-accent)" strokeWidth="1" strokeOpacity="0.9" />
+        <path d="M 48 40 L 52 40" fill="none" stroke="var(--syd-accent)" strokeWidth="1" />
 
         {/* Nose */}
         <path d="M 50 43 L 49.5 47 L 51 47" fill="none" stroke="#e09277" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
@@ -119,17 +119,17 @@ export const MaraAvatar: React.FC<MaraAvatarProps> = ({
         <path d="M 46 51 Q 50 55 54 51" fill="none" stroke="#c2410c" strokeWidth="1.2" strokeLinecap="round" />
 
         {/* Headset / Sensor */}
-        <path d="M 32 44 Q 31 38 34 35 Q 36 32 37 32" fill="none" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" />
-        <circle cx="32" cy="44" r="2" fill="#38bdf8" />
+        <path d="M 32 44 Q 31 38 34 35 Q 36 32 37 32" fill="none" stroke="var(--syd-accent)" strokeWidth="1.2" strokeLinecap="round" />
+        <circle cx="32" cy="44" r="2" fill="var(--syd-accent)" />
         <circle cx="32" cy="44" r="0.8" fill="#ffffff" />
-        <path d="M 32 46 Q 34 52 38 54" fill="none" stroke="#38bdf8" strokeWidth="1" strokeLinecap="round" strokeDasharray="1 1" />
+        <path d="M 32 46 Q 34 52 38 54" fill="none" stroke="var(--syd-accent)" strokeWidth="1" strokeLinecap="round" strokeDasharray="1 1" />
 
         {/* Stethoscope */}
-        <path d="M 39 74 C 40 84 60 84 61 74" fill="none" stroke="#0284c7" strokeWidth="1.5" strokeLinecap="round" />
-        <circle cx="50" cy="83" r="2.5" fill="#e2e8f0" stroke="#0284c7" strokeWidth="1" />
+        <path d="M 39 74 C 40 84 60 84 61 74" fill="none" stroke="var(--syd-accent-light)" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="50" cy="83" r="2.5" fill="#e2e8f0" stroke="var(--syd-accent-light)" strokeWidth="1" />
 
         {/* AI Sparkle */}
-        <path d="M 72 22 L 73.5 26 L 77.5 27.5 L 73.5 29 L 72 33 L 70.5 29 L 66.5 27.5 L 70.5 26 Z" fill="#38bdf8" />
+        <path d="M 72 22 L 73.5 26 L 77.5 27.5 L 73.5 29 L 72 33 L 70.5 29 L 66.5 27.5 L 70.5 26 Z" fill="var(--syd-accent)" />
         <circle cx="72" cy="27.5" r="1.2" fill="#ffffff" />
       </svg>
 

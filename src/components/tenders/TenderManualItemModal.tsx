@@ -1478,14 +1478,14 @@ export const TenderManualItemModal: React.FC<TenderManualItemModalProps> = ({
               <button
                 type="button"
                 onClick={() => handleSaveItem(false)}
-                className="inline-flex items-center gap-1.5 bg-[#1e3452] hover:bg-[#28456c] text-[#38bdf8] border border-[#38bdf8]/40 font-bold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-sm active:scale-95"
+                className="inline-flex items-center gap-1.5 bg-[#1e3452] hover:bg-[#28456c] text-[var(--syd-accent)] border border-[var(--syd-accent)]/40 font-bold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-sm active:scale-95"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Guardar y Agregar Otro</span>
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-xs px-4 py-1.5 rounded-xl transition cursor-pointer shadow-md active:scale-95"
+                className="inline-flex items-center gap-1.5 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-black text-xs px-4 py-1.5 rounded-xl transition cursor-pointer shadow-md active:scale-95"
               >
                 <Save className="w-4 h-4" />
                 <span>Guardar y Cerrar</span>

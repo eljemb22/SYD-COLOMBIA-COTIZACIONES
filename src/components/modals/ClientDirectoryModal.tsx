@@ -206,11 +206,11 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-5xl w-full shadow-2xl animate-scaleUp max-h-[92vh] flex flex-col overflow-hidden my-auto">
+      <div className="bg-[#192b45] border border-[var(--syd-accent)]/50 rounded-2xl max-w-5xl w-full shadow-2xl animate-scaleUp max-h-[92vh] flex flex-col overflow-hidden my-auto">
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#334d6e] flex items-center justify-between gap-3 bg-[#15253d] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#38bdf8]/20 text-[#38bdf8] border border-[#38bdf8]/30">
+            <div className="p-2.5 rounded-xl bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] border border-[var(--syd-accent)]/30">
               <Users className="w-5 h-5" />
             </div>
             <div>
@@ -218,7 +218,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                 <h3 className="text-base font-black text-white">
                   Directorio de Clientes &amp; Entidades
                 </h3>
-                <span className="text-xs bg-[#38bdf8]/20 text-[#38bdf8] px-2.5 py-0.5 rounded-full font-bold border border-[#38bdf8]/30">
+                <span className="text-xs bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] px-2.5 py-0.5 rounded-full font-bold border border-[var(--syd-accent)]/30">
                   {clients.length} Registrados
                 </span>
                 {pendingCount > 0 && (
@@ -271,7 +271,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
               onClick={() => setSelectedStatusFilter('all')}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                 selectedStatusFilter === 'all'
-                  ? 'bg-[#38bdf8] text-[#0f172a] shadow-sm'
+                  ? 'bg-[var(--syd-accent)] text-[#0f172a] shadow-sm'
                   : 'bg-[#192b45] text-slate-300 hover:text-white border border-[#334d6e]'
               }`}
             >
@@ -377,7 +377,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                 placeholder="Buscar por cliente, NIT, ciudad, contacto o email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-[#192b45] border border-[#334d6e] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-hidden focus:border-[#38bdf8]"
+                className="w-full bg-[#192b45] border border-[#334d6e] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-hidden focus:border-[var(--syd-accent)]"
               />
             </div>
 
@@ -386,7 +386,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
               <select
                 value={selectedDeptFilter}
                 onChange={(e) => setSelectedDeptFilter(e.target.value)}
-                className="bg-[#192b45] border border-[#334d6e] rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-hidden focus:border-[#38bdf8]"
+                className="bg-[#192b45] border border-[#334d6e] rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-hidden focus:border-[var(--syd-accent)]"
               >
                 <option value="all">Todos los Departamentos</option>
                 {departments.map((dept) => (
@@ -400,7 +400,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
               <select
                 value={selectedSourceFilter}
                 onChange={(e) => setSelectedSourceFilter(e.target.value)}
-                className="bg-[#192b45] border border-[#334d6e] rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-hidden focus:border-[#38bdf8]"
+                className="bg-[#192b45] border border-[#334d6e] rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-hidden focus:border-[var(--syd-accent)]"
               >
                 <option value="all">Todas las Fuentes</option>
                 <option value="cotizacion">Cotizaciones</option>
@@ -416,10 +416,10 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#15253d] scrollbar-thin">
           {/* New / Edit Form Drawer */}
           {isEditing && editingClient && (
-            <form onSubmit={handleSaveForm} className="bg-[#111c2e] border-2 border-[#38bdf8] rounded-xl p-4 mb-4 space-y-4 shadow-xl animate-fadeIn">
+            <form onSubmit={handleSaveForm} className="bg-[#111c2e] border-2 border-[var(--syd-accent)] rounded-xl p-4 mb-4 space-y-4 shadow-xl animate-fadeIn">
               <div className="flex items-center justify-between border-b border-[#334d6e] pb-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-[#38bdf8]/20 text-[#38bdf8]">
+                  <div className="p-1.5 rounded-lg bg-[var(--syd-accent)]/20 text-[var(--syd-accent)]">
                     <Building2 className="w-4 h-4" />
                   </div>
                   <div>
@@ -462,7 +462,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                     value={editingClient.name || ''}
                     onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
                     placeholder="Ej: E.S.E. Hospital San Jerónimo de Montería"
-                    className="w-full bg-[#192b45] border border-[#334d6e] focus:border-[#38bdf8] rounded-lg px-3 py-1.5 text-xs text-white uppercase font-bold focus:outline-hidden"
+                    className="w-full bg-[#192b45] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-lg px-3 py-1.5 text-xs text-white uppercase font-bold focus:outline-hidden"
                   />
                 </div>
 
@@ -485,7 +485,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                     onChange={(e) => setEditingClient({ ...editingClient, nit: e.target.value })}
                     placeholder="Ej: 890.123.456-7"
                     className={`w-full bg-[#192b45] border rounded-lg px-3 py-1.5 text-xs text-white font-mono font-semibold focus:outline-hidden ${
-                      !editingClient.nit?.trim() ? 'border-amber-500/60 focus:border-amber-400' : 'border-[#334d6e] focus:border-[#38bdf8]'
+                      !editingClient.nit?.trim() ? 'border-amber-500/60 focus:border-amber-400' : 'border-[#334d6e] focus:border-[var(--syd-accent)]'
                     }`}
                   />
                 </div>
@@ -508,7 +508,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                     value={editingClient.city || ''}
                     onChange={(e) => setEditingClient({ ...editingClient, city: e.target.value })}
                     placeholder="Ej: Barranquilla"
-                    className="w-full bg-[#192b45] border border-[#334d6e] focus:border-[#38bdf8] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-hidden"
+                    className="w-full bg-[#192b45] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-hidden"
                   />
                 </div>
 
@@ -521,7 +521,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                     value={editingClient.department || ''}
                     onChange={(e) => setEditingClient({ ...editingClient, department: e.target.value })}
                     placeholder="Ej: Atlántico"
-                    className="w-full bg-[#192b45] border border-[#334d6e] focus:border-[#38bdf8] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-hidden"
+                    className="w-full bg-[#192b45] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-hidden"
                   />
                 </div>
 
@@ -544,7 +544,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                     onChange={(e) => setEditingClient({ ...editingClient, contactPerson: e.target.value })}
                     placeholder="Ej: Dra. María Gómez - Compras"
                     className={`w-full bg-[#192b45] border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-hidden ${
-                      !editingClient.contactPerson?.trim() ? 'border-amber-500/60 focus:border-amber-400' : 'border-[#334d6e] focus:border-[#38bdf8]'
+                      !editingClient.contactPerson?.trim() ? 'border-amber-500/60 focus:border-amber-400' : 'border-[#334d6e] focus:border-[var(--syd-accent)]'
                     }`}
                   />
                 </div>
@@ -568,7 +568,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                     onChange={(e) => setEditingClient({ ...editingClient, contactPhone: e.target.value })}
                     placeholder="Ej: (605) 300-1234 / 310-0000000"
                     className={`w-full bg-[#192b45] border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-hidden ${
-                      !editingClient.contactPhone?.trim() ? 'border-amber-500/60 focus:border-amber-400' : 'border-[#334d6e] focus:border-[#38bdf8]'
+                      !editingClient.contactPhone?.trim() ? 'border-amber-500/60 focus:border-amber-400' : 'border-[#334d6e] focus:border-[var(--syd-accent)]'
                     }`}
                   />
                 </div>
@@ -592,7 +592,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                     onChange={(e) => setEditingClient({ ...editingClient, contactEmail: e.target.value })}
                     placeholder="Ej: compras@hospital.gov.co"
                     className={`w-full bg-[#192b45] border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-hidden ${
-                      !editingClient.contactEmail?.trim() ? 'border-amber-500/60 focus:border-amber-400' : 'border-[#334d6e] focus:border-[#38bdf8]'
+                      !editingClient.contactEmail?.trim() ? 'border-amber-500/60 focus:border-amber-400' : 'border-[#334d6e] focus:border-[var(--syd-accent)]'
                     }`}
                   />
                 </div>
@@ -604,7 +604,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                     value={editingClient.address || ''}
                     onChange={(e) => setEditingClient({ ...editingClient, address: e.target.value })}
                     placeholder="Ej: Cra 50 # 80-100"
-                    className="w-full bg-[#192b45] border border-[#334d6e] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-hidden focus:border-[#38bdf8]"
+                    className="w-full bg-[#192b45] border border-[#334d6e] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-hidden focus:border-[var(--syd-accent)]"
                   />
                 </div>
               </div>
@@ -671,7 +671,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                         ) : null}
 
                         {client.department && (
-                          <span className="text-[10px] bg-[#0284c7]/20 text-[#38bdf8] px-2 py-0.5 rounded-md border border-[#0284c7]/40 font-semibold flex items-center gap-1">
+                          <span className="text-[10px] bg-[var(--syd-accent-light)]/20 text-[var(--syd-accent)] px-2 py-0.5 rounded-md border border-[var(--syd-accent-light)]/40 font-semibold flex items-center gap-1">
                             <MapPin className="w-2.5 h-2.5" />
                             {client.city ? `${client.city}, ${client.department}` : client.department}
                           </span>
@@ -705,7 +705,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                                 setEditingClient(client);
                                 setIsEditing(true);
                               }}
-                              className="text-[10px] font-bold text-[#38bdf8] hover:text-white underline ml-1 cursor-pointer flex items-center gap-0.5"
+                              className="text-[10px] font-bold text-[var(--syd-accent)] hover:text-white underline ml-1 cursor-pointer flex items-center gap-0.5"
                             >
                               <Edit2 className="w-2.5 h-2.5" /> Completar datos
                             </button>
@@ -727,7 +727,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
 
                         {client.contactPhone ? (
                           <span className="flex items-center gap-1 text-slate-300">
-                            <Phone className="w-3 h-3 text-[#38bdf8]" />
+                            <Phone className="w-3 h-3 text-[var(--syd-accent)]" />
                             {client.contactPhone}
                           </span>
                         ) : (
@@ -738,7 +738,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
 
                         {client.contactEmail ? (
                           <span className="flex items-center gap-1 text-slate-300">
-                            <Mail className="w-3 h-3 text-[#38bdf8]" />
+                            <Mail className="w-3 h-3 text-[var(--syd-accent)]" />
                             {client.contactEmail}
                           </span>
                         ) : (
@@ -757,7 +757,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                         onClick={() => setExpandedClientId(isExpanded ? null : client.id)}
                         className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl border transition cursor-pointer ${
                           quotesForClient.length > 0
-                            ? 'bg-[#38bdf8]/15 border-[#38bdf8]/40 text-[#38bdf8] hover:bg-[#38bdf8]/25'
+                            ? 'bg-[var(--syd-accent)]/15 border-[var(--syd-accent)]/40 text-[var(--syd-accent)] hover:bg-[var(--syd-accent)]/25'
                             : 'bg-[#192b45] border-[#334d6e] text-slate-400 hover:text-slate-200'
                         }`}
                         title="Ver cotizaciones asociadas a este cliente"
@@ -818,7 +818,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                     <div className="mt-2.5 pt-2.5 border-t border-[#334d6e] space-y-2 bg-[#0d1624] rounded-lg p-3 animate-fadeIn">
                       <div className="flex items-center justify-between text-xs font-bold text-slate-200">
                         <span className="flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-[#38bdf8]" />
+                          <FileText className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                           Cotizaciones Emitidas a este Cliente ({quotesForClient.length}):
                         </span>
                       </div>
@@ -832,10 +832,10 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                           {quotesForClient.map((q) => (
                             <div
                               key={q.id}
-                              className="bg-[#15253d] border border-[#334d6e] hover:border-[#38bdf8] rounded-lg p-2.5 transition flex flex-col justify-between gap-1.5"
+                              className="bg-[#15253d] border border-[#334d6e] hover:border-[var(--syd-accent)] rounded-lg p-2.5 transition flex flex-col justify-between gap-1.5"
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <span className="font-mono font-bold text-xs text-[#38bdf8]">
+                                <span className="font-mono font-bold text-xs text-[var(--syd-accent)]">
                                   {q.quoteNumber}
                                 </span>
                                 <span
@@ -873,7 +873,7 @@ export const ClientDirectoryModal: React.FC<ClientDirectoryModalProps> = ({
                                     onViewQuote(q);
                                     onClose();
                                   }}
-                                  className="w-full mt-1 py-1 bg-[#192b45] hover:bg-[#253e60] text-[#38bdf8] text-[11px] font-bold rounded-md border border-[#334d6e] transition flex items-center justify-center gap-1 cursor-pointer"
+                                  className="w-full mt-1 py-1 bg-[#192b45] hover:bg-[#253e60] text-[var(--syd-accent)] text-[11px] font-bold rounded-md border border-[#334d6e] transition flex items-center justify-center gap-1 cursor-pointer"
                                 >
                                   <span>Abrir / Cargar Cotización</span>
                                   <ArrowRight className="w-3 h-3" />

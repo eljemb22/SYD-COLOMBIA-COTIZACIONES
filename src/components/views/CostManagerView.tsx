@@ -1255,7 +1255,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
           >
             {hideSummaryHeaders ? (
               <>
-                <Eye className="w-3 h-3 text-[#38bdf8]" />
+                <Eye className="w-3 h-3 text-[var(--syd-accent)]" />
                 <span>Ver Resumen</span>
               </>
             ) : (
@@ -1278,7 +1278,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
               }`}
               title="Configurar qué columnas mostrar u ocultar en la tabla"
             >
-              <Sliders className="w-3 h-3 text-[#38bdf8]" />
+              <Sliders className="w-3 h-3 text-[var(--syd-accent)]" />
               <span>Columnas ({visibleColumnCount}/{ALL_COST_COLUMNS.length})</span>
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
@@ -1286,10 +1286,10 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
             {isColumnManagerOpen && (
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="absolute right-0 mt-1.5 w-64 bg-[#111c2e] border border-[#38bdf8]/60 rounded-xl shadow-2xl p-2.5 z-50 text-xs text-white animate-fadeIn"
+                className="absolute right-0 mt-1.5 w-64 bg-[#111c2e] border border-[var(--syd-accent)]/60 rounded-xl shadow-2xl p-2.5 z-50 text-xs text-white animate-fadeIn"
               >
                 <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#334d6e]">
-                  <span className="text-[11px] font-bold text-[#38bdf8] flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-[var(--syd-accent)] flex items-center gap-1.5">
                     <Sliders className="w-3.5 h-3.5" />
                     <span>Columnas Visibles</span>
                   </span>
@@ -1320,12 +1320,12 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                             disabled={isLocked}
                             checked={isVisible}
                             onChange={() => handleToggleColumn(col.key)}
-                            className="rounded border-[#334d6e] bg-[#15253d] text-[#38bdf8] focus:ring-0 cursor-pointer"
+                            className="rounded border-[#334d6e] bg-[#15253d] text-[var(--syd-accent)] focus:ring-0 cursor-pointer"
                           />
                           <span className={isVisible ? 'font-medium' : ''}>{col.label}</span>
                         </div>
                         {isVisible ? (
-                          <Eye className="w-3 h-3 text-[#38bdf8]" />
+                          <Eye className="w-3 h-3 text-[var(--syd-accent)]" />
                         ) : (
                           <EyeOff className="w-3 h-3 text-slate-500" />
                         )}
@@ -1353,10 +1353,10 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
             <button
               type="button"
               onClick={() => setIsTrmPopoverOpen(!isTrmPopoverOpen)}
-              className="inline-flex items-center gap-1.5 bg-[#15253d] hover:bg-[#1f3555] text-slate-200 border border-[#334d6e] hover:border-[#38bdf8]/60 text-[11px] font-bold px-2.5 py-1 rounded-lg transition cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 bg-[#15253d] hover:bg-[#1f3555] text-slate-200 border border-[#334d6e] hover:border-[var(--syd-accent)]/60 text-[11px] font-bold px-2.5 py-1 rounded-lg transition cursor-pointer shadow-xs"
               title="Ver análisis de volatilidad del dólar y TRM recomendada"
             >
-              <Globe className="w-3.5 h-3.5 text-[#38bdf8]" />
+              <Globe className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
               <span className="text-slate-400">TRM:</span>
               <span className="font-mono text-emerald-400 font-bold">${trmData.rate.toLocaleString()}</span>
               <span className="text-slate-500">•</span>
@@ -1369,11 +1369,11 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
             {isTrmPopoverOpen && (
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="absolute right-0 mt-1.5 w-84 bg-[#0f1a2a] border border-[#38bdf8]/70 rounded-xl shadow-2xl p-3 z-50 text-xs text-white animate-fadeIn"
+                className="absolute right-0 mt-1.5 w-84 bg-[#0f1a2a] border border-[var(--syd-accent)]/70 rounded-xl shadow-2xl p-3 z-50 text-xs text-white animate-fadeIn"
               >
                 <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-[#334d6e]">
-                  <span className="font-bold text-[#38bdf8] flex items-center gap-1.5 text-xs">
-                    <Globe className="w-4 h-4 text-[#38bdf8]" />
+                  <span className="font-bold text-[var(--syd-accent)] flex items-center gap-1.5 text-xs">
+                    <Globe className="w-4 h-4 text-[var(--syd-accent)]" />
                     <span>Análisis Cambiario del Dólar (TRM)</span>
                   </span>
                   <button
@@ -1466,7 +1466,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
 
               <button
                 onClick={() => setIsAddEquipmentDrawerOpen(!isAddEquipmentDrawerOpen)}
-                className="inline-flex items-center gap-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs px-3 py-1 rounded-lg shadow-sm transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[var(--syd-accent-light)] hover:bg-[#0369a1] text-white font-bold text-xs px-3 py-1 rounded-lg shadow-sm transition cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Agregar costo</span>
@@ -1484,11 +1484,11 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
             if (e.target === e.currentTarget) setIsAddEquipmentDrawerOpen(false);
           }}
         >
-          <div className="bg-[#192b45] border border-[#38bdf8]/60 rounded-2xl max-w-4xl w-full max-h-[90vh] h-[86vh] flex flex-col shadow-2xl overflow-hidden animate-scaleUp my-auto">
+          <div className="bg-[#192b45] border border-[var(--syd-accent)]/60 rounded-2xl max-w-4xl w-full max-h-[90vh] h-[86vh] flex flex-col shadow-2xl overflow-hidden animate-scaleUp my-auto">
             {/* Modal Header */}
             <div className="px-4 py-3 border-b border-[#334d6e] flex items-center justify-between gap-3 bg-[#15253d] shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="p-2 rounded-xl bg-[#0284c7]/20 text-[#38bdf8] border border-[#0284c7]/30 shrink-0">
+                <div className="p-2 rounded-xl bg-[var(--syd-accent-light)]/20 text-[var(--syd-accent)] border border-[var(--syd-accent-light)]/30 shrink-0">
                   <PackagePlus className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
@@ -1544,7 +1544,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                     value={costSearchQuery}
                     onChange={(e) => setCostSearchQuery(e.target.value)}
                     placeholder="Buscar por nombre, marca, modelo, parte o INVIMA..."
-                    className="w-full bg-[#192b45] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl pl-8 pr-7 py-1.5 text-xs text-white placeholder-slate-400 outline-none"
+                    className="w-full bg-[#192b45] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl pl-8 pr-7 py-1.5 text-xs text-white placeholder-slate-400 outline-none"
                     autoFocus
                   />
                   {costSearchQuery && (
@@ -1558,11 +1558,11 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1 text-xs text-slate-300 font-bold shrink-0">
-                  <Filter className="w-3 h-3 text-[#38bdf8]" />
+                  <Filter className="w-3 h-3 text-[var(--syd-accent)]" />
                   <select
                     value={costCategoryFilter}
                     onChange={(e) => setCostCategoryFilter(e.target.value)}
-                    className="bg-[#192b45] border border-[#334d6e] rounded-xl px-2.5 py-1.5 text-xs text-white focus:border-[#38bdf8] outline-none cursor-pointer"
+                    className="bg-[#192b45] border border-[#334d6e] rounded-xl px-2.5 py-1.5 text-xs text-white focus:border-[var(--syd-accent)] outline-none cursor-pointer"
                   >
                     <option value="Todos">Todas las Categorías</option>
                     {Array.from(new Set(equipments.map((e) => e.category).filter(Boolean))).map((cat) => (
@@ -1609,11 +1609,11 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                   return (
                     <div
                       key={`search-eq-${eq.id || eq.code || 'item'}-${eqIdx}`}
-                      className="bg-[#111c2e] border border-[#334d6e] hover:border-[#38bdf8]/60 rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-3 transition group shadow-sm"
+                      className="bg-[#111c2e] border border-[#334d6e] hover:border-[var(--syd-accent)]/60 rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-3 transition group shadow-sm"
                     >
                       <div className="space-y-0.5 flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-mono text-[10.5px] font-black bg-[#0284c7]/20 text-[#38bdf8] px-1.5 py-0.5 rounded border border-[#0284c7]/30">
+                          <span className="font-mono text-[10.5px] font-black bg-[var(--syd-accent-light)]/20 text-[var(--syd-accent)] px-1.5 py-0.5 rounded border border-[var(--syd-accent-light)]/30">
                             {eq.code}
                           </span>
                           <span className="text-[10.5px] font-bold text-white bg-[#192b45] px-2 py-0.5 rounded border border-[#334d6e]">
@@ -1631,7 +1631,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                           )}
                         </div>
 
-                        <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-[#38bdf8] transition truncate">
+                        <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-[var(--syd-accent)] transition truncate">
                           {eq.name}
                         </h4>
 
@@ -1713,7 +1713,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                           <button
                             type="button"
                             onClick={() => handleAddEquipmentFromCatalog(eq)}
-                            className="inline-flex items-center gap-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white font-black text-xs px-3.5 py-1.5 rounded-lg shadow-md transition cursor-pointer active:scale-95 whitespace-nowrap"
+                            className="inline-flex items-center gap-1.5 bg-[var(--syd-accent-light)] hover:bg-[#0369a1] text-white font-black text-xs px-3.5 py-1.5 rounded-lg shadow-md transition cursor-pointer active:scale-95 whitespace-nowrap"
                           >
                             <Plus className="w-4 h-4 stroke-[3]" />
                             <span>Agregar</span>
@@ -1730,7 +1730,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
             <div className="px-4 py-2.5 bg-[#111c2e] border-t border-[#334d6e] flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300 shrink-0">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="text-[11px] text-slate-400">{equipments.length} equipos en catálogo</span>
-                <span className="inline-flex items-center gap-1.5 bg-[#0284c7]/20 border border-[#0284c7]/40 text-[#38bdf8] px-2.5 py-0.5 rounded-full font-bold text-[11px]">
+                <span className="inline-flex items-center gap-1.5 bg-[var(--syd-accent-light)]/20 border border-[var(--syd-accent-light)]/40 text-[var(--syd-accent)] px-2.5 py-0.5 rounded-full font-bold text-[11px]">
                   <ShoppingCart className="w-3 h-3" />
                   <span>{quoteItems.length} ítems ({quoteItems.reduce((s, it) => s + it.quantity, 0)} uds) en cotización</span>
                 </span>
@@ -1945,7 +1945,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
           className={`border text-xs px-4 py-2.5 rounded-xl flex items-center justify-between gap-2 animate-fadeIn shadow ${
             actionAlert.type === 'success'
               ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-200'
-              : 'bg-[#15253d] border-[#38bdf8]/60 text-slate-200'
+              : 'bg-[#15253d] border-[var(--syd-accent)]/60 text-slate-200'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -2134,7 +2134,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                       {columnVisibility.equipment && (
                         <td className="py-2 px-2">
                           <div className="font-bold text-white leading-tight text-xs">{item.name}</div>
-                          <div className="text-[10px] text-[#38bdf8] font-mono mt-0.5">
+                          <div className="text-[10px] text-[var(--syd-accent)] font-mono mt-0.5">
                             {item.code} • <span className="text-slate-300">{item.brand} ({item.model})</span>
                           </div>
 
@@ -2149,7 +2149,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                               className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border inline-flex items-center gap-1 shadow-xs cursor-default select-none transition ${
                                 accessoriesExtraCost > 0
                                   ? 'bg-amber-500/20 text-amber-300 border-amber-400/50 hover:bg-amber-500/30'
-                                  : 'bg-[#15253d] text-slate-300 border-[#334d6e] hover:border-[#38bdf8]'
+                                  : 'bg-[#15253d] text-slate-300 border-[#334d6e] hover:border-[var(--syd-accent)]'
                               }`}
                               title="Pase el cursor para ver la lista de accesorios"
                             >
@@ -2555,19 +2555,19 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
 
                     {/* EXPANDABLE ACCESSORIES MANAGER AND COST SIMULATOR - Compact */}
                     {editingAccessoryId === item.id && (
-                      <tr className="bg-[#0e1927] border-y-2 border-[#38bdf8]/50">
+                      <tr className="bg-[#0e1927] border-y-2 border-[var(--syd-accent)]/50">
                         <td colSpan={visibleColumnCount} className="p-2 sm:p-2.5">
-                          <div className="bg-[#15253d] p-2.5 sm:p-3 rounded-xl border border-[#38bdf8]/40 shadow-xl space-y-2.5">
+                          <div className="bg-[#15253d] p-2.5 sm:p-3 rounded-xl border border-[var(--syd-accent)]/40 shadow-xl space-y-2.5">
                             {/* Header */}
                             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#334d6e] pb-1.5">
                               <div className="flex items-center gap-2">
-                                <div className="p-1 rounded-lg bg-[#38bdf8]/20 text-[#38bdf8] border border-[#38bdf8]/30">
+                                <div className="p-1 rounded-lg bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] border border-[var(--syd-accent)]/30">
                                   <Settings className="w-3.5 h-3.5" />
                                 </div>
                                 <div>
                                   <h4 className="font-bold text-white text-xs flex items-center gap-1.5 flex-wrap">
                                     <span>Accesorios &amp; Configuración</span>
-                                    <span className="px-1.5 py-0.2 rounded text-[10.5px] font-mono font-bold bg-[#38bdf8]/20 text-[#38bdf8] border border-[#38bdf8]/40">
+                                    <span className="px-1.5 py-0.2 rounded text-[10.5px] font-mono font-bold bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] border border-[var(--syd-accent)]/40">
                                       {item.name} • {item.brand} ({item.model})
                                     </span>
                                   </h4>
@@ -2628,7 +2628,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
 
                             {/* Top Summary Bar - Ultra Compact */}
                             <div className="bg-[#122033] p-2 rounded-lg border border-[#334d6e] flex flex-wrap items-center justify-between gap-2 text-xs">
-                              <div className="flex items-center gap-1.5 text-[#38bdf8] font-bold">
+                              <div className="flex items-center gap-1.5 text-[var(--syd-accent)] font-bold">
                                 <Sliders className="w-3.5 h-3.5" />
                                 <span>Configuración de Accesorios: <span className="text-white">{item.name}</span></span>
                               </div>
@@ -2650,9 +2650,9 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                             </div>
 
                             {/* Form: Agregar Nuevo Accesorio - Compact */}
-                            <div className="bg-[#15253d] p-2 rounded-lg border border-[#38bdf8]/30 space-y-2">
+                            <div className="bg-[#15253d] p-2 rounded-lg border border-[var(--syd-accent)]/30 space-y-2">
                               <div className="flex flex-wrap items-center justify-between gap-1">
-                                <span className="text-[11px] font-bold text-[#38bdf8] flex items-center gap-1">
+                                <span className="text-[11px] font-bold text-[var(--syd-accent)] flex items-center gap-1">
                                   <Plus className="w-3.5 h-3.5" />
                                   <span>Nuevo Accesorio</span>
                                 </span>
@@ -2710,7 +2710,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') handleAddAccessoryToItem(item);
                                     }}
-                                    className="w-full bg-[#0f1a2e] border border-[#334d6e] rounded-md px-2 py-1 text-xs text-white placeholder-slate-500 focus:border-[#38bdf8] outline-none font-medium"
+                                    className="w-full bg-[#0f1a2e] border border-[#334d6e] rounded-md px-2 py-1 text-xs text-white placeholder-slate-500 focus:border-[var(--syd-accent)] outline-none font-medium"
                                   />
                                 </div>
 
@@ -2730,7 +2730,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                                         quantity: Math.max(1, parseInt(e.target.value) || 1),
                                       }))
                                     }
-                                    className="w-full bg-[#0f1a2e] border border-[#334d6e] rounded-md px-1.5 py-1 text-xs text-center font-bold text-white focus:border-[#38bdf8] outline-none font-mono"
+                                    className="w-full bg-[#0f1a2e] border border-[#334d6e] rounded-md px-1.5 py-1 text-xs text-center font-bold text-white focus:border-[var(--syd-accent)] outline-none font-mono"
                                   />
                                 </div>
 
@@ -2764,7 +2764,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                                 <div className="sm:col-span-2">
                                   <button
                                     onClick={() => handleAddAccessoryToItem(item)}
-                                    className="w-full bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs py-1 px-2 rounded-md shadow-xs transition cursor-pointer flex items-center justify-center gap-1"
+                                    className="w-full bg-[var(--syd-accent-light)] hover:bg-[#0369a1] text-white font-bold text-xs py-1 px-2 rounded-md shadow-xs transition cursor-pointer flex items-center justify-center gap-1"
                                   >
                                     <Plus className="w-3.5 h-3.5" />
                                     <span>Añadir</span>
@@ -2824,7 +2824,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                                                   handleUpdateAccessoryField(item, acc.id, 'name', e.target.value)
                                                 }
                                                 placeholder="Nombre del accesorio"
-                                                className="w-full bg-[#0f1a2e] border border-[#334d6e] rounded px-1.5 py-0.5 text-xs text-white focus:border-[#38bdf8] outline-none font-medium"
+                                                className="w-full bg-[#0f1a2e] border border-[#334d6e] rounded px-1.5 py-0.5 text-xs text-white focus:border-[var(--syd-accent)] outline-none font-medium"
                                               />
                                             </td>
 
@@ -2842,7 +2842,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                                                     Math.max(1, parseInt(e.target.value) || 1)
                                                   )
                                                 }
-                                                className="w-10 bg-[#0f1a2e] border border-[#334d6e] rounded px-1 py-0.5 text-xs text-center font-bold text-white focus:border-[#38bdf8] outline-none font-mono"
+                                                className="w-10 bg-[#0f1a2e] border border-[#334d6e] rounded px-1 py-0.5 text-xs text-center font-bold text-white focus:border-[var(--syd-accent)] outline-none font-mono"
                                               />
                                             </td>
 
@@ -3107,7 +3107,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                             <div className="bg-[#192b45] rounded-xl border border-[#334d6e] overflow-hidden">
                               <div className="bg-[#15253d] px-4 py-2.5 border-b border-[#334d6e] flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <Layers className="w-4 h-4 text-[#38bdf8]" />
+                                  <Layers className="w-4 h-4 text-[var(--syd-accent)]" />
                                   <span className="font-bold text-white text-xs">
                                     Simulación Comparativa de Listas de Precios (L1 a L8) vs Precio Techo ({formatCOP(ceilingValue)})
                                   </span>
@@ -3141,7 +3141,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                                             comp.isBestFit
                                               ? 'bg-amber-500/10 hover:bg-amber-500/20'
                                               : isSelected
-                                              ? 'bg-[#0284c7]/15 hover:bg-[#0284c7]/25'
+                                              ? 'bg-[var(--syd-accent-light)]/15 hover:bg-[var(--syd-accent-light)]/25'
                                               : 'hover:bg-[#15253d]'
                                           }`}
                                         >
@@ -3159,7 +3159,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                                               )}
 
                                               {isSelected && (
-                                                <span className="bg-[#0284c7] text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full">
+                                                <span className="bg-[var(--syd-accent-light)] text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full">
                                                   Activa
                                                 </span>
                                               )}
@@ -3220,7 +3220,7 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                                                   ? 'bg-amber-400 hover:bg-amber-500 text-slate-950 shadow-sm'
                                                   : comp.status === 'over'
                                                   ? 'bg-[#15253d] hover:bg-rose-900/40 text-rose-300 border border-rose-500/30'
-                                                  : 'bg-[#15253d] hover:bg-[#0284c7] text-white border border-[#334d6e]'
+                                                  : 'bg-[#15253d] hover:bg-[var(--syd-accent-light)] text-white border border-[#334d6e]'
                                               }`}
                                             >
                                               {isSelected ? 'Seleccionada' : 'Aplicar'}
@@ -3324,11 +3324,11 @@ export const CostManagerView: React.FC<CostManagerViewProps> = ({
                   left: `${leftPos}px`,
                   zIndex: 9999,
                 }}
-                className="min-w-[230px] max-w-[330px] bg-[#0b1422] border border-[#38bdf8]/70 rounded-xl p-3 shadow-2xl backdrop-blur-md pointer-events-none animate-fadeIn"
+                className="min-w-[230px] max-w-[330px] bg-[#0b1422] border border-[var(--syd-accent)]/70 rounded-xl p-3 shadow-2xl backdrop-blur-md pointer-events-none animate-fadeIn"
               >
-                <div className="text-[10.5px] font-bold text-[#38bdf8] uppercase tracking-wider mb-2 flex items-center justify-between border-b border-[#334d6e]/70 pb-1.5">
+                <div className="text-[10.5px] font-bold text-[var(--syd-accent)] uppercase tracking-wider mb-2 flex items-center justify-between border-b border-[#334d6e]/70 pb-1.5">
                   <span className="flex items-center gap-1.5">
-                    <Sliders className="w-3 h-3 text-[#38bdf8]" />
+                    <Sliders className="w-3 h-3 text-[var(--syd-accent)]" />
                     <span>Accesorios del Equipo ({item.accessories?.length || 0})</span>
                   </span>
                 </div>

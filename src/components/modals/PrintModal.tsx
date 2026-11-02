@@ -108,7 +108,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
       <div className="bg-[#112237] border border-[#223d60] rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-6 space-y-4 shadow-2xl animate-scaleUp max-h-[92vh] overflow-y-auto my-auto">
         <div className="flex items-center justify-between pb-3 border-b border-[#223d60] no-print flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Printer className="w-5 h-5 text-[#38bdf8]" />
+            <Printer className="w-5 h-5 text-[var(--syd-accent)]" />
             <h3 className="text-sm sm:text-base font-bold text-white">Vista Previa de Impresión Oficial</h3>
           </div>
 
@@ -119,7 +119,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               onClick={() => setFormatStyle('standard')}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
                 formatStyle === 'standard'
-                  ? 'bg-[#0284c7] text-white shadow-xs'
+                  ? 'bg-[var(--syd-accent-light)] text-white shadow-xs'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -131,7 +131,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               onClick={() => setFormatStyle('with-images')}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
                 formatStyle === 'with-images'
-                  ? 'bg-[#0284c7] text-white shadow-xs'
+                  ? 'bg-[var(--syd-accent-light)] text-white shadow-xs'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -152,7 +152,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
               }
               className="inline-flex items-center gap-1 bg-[#15253d] hover:bg-[#1f375b] text-slate-200 border border-[#223d60] text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg cursor-pointer"
             >
-              <FileDown className="w-3.5 h-3.5 text-[#38bdf8]" />
+              <FileDown className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
               <span className="hidden sm:inline">Word (.docx)</span>
               <span className="sm:hidden">Word</span>
             </button>
@@ -166,7 +166,7 @@ export const PrintModal: React.FC<PrintModalProps> = ({
             </button>
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-bold text-xs px-3 sm:px-3.5 py-1.5 rounded-lg cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-bold text-xs px-3 sm:px-3.5 py-1.5 rounded-lg cursor-pointer shadow-xs"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Imprimir</span>

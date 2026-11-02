@@ -125,7 +125,7 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
     >
       <div className="w-full max-w-md bg-[#111c2e] border border-[#334d6e] rounded-3xl shadow-2xl overflow-hidden relative">
         {/* Subtle background glow */}
-        <div className="absolute -top-24 -right-24 w-60 h-60 bg-[#38bdf8]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-60 h-60 bg-[var(--syd-accent)]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Corporate Header */}
@@ -162,7 +162,7 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
           <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
             SUMINISTROS Y DOTACIONES DE COLOMBIA S.A.S.
           </h2>
-          <p className="text-xs text-[#38bdf8] font-bold tracking-widest uppercase mt-0.5">
+          <p className="text-xs text-[var(--syd-accent)] font-bold tracking-widest uppercase mt-0.5">
             {isSuspended ? '🔒 Sesión Suspendida por Seguridad' : 'Portal de Acceso Corporativo'}
           </p>
 
@@ -222,7 +222,7 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
               <button
                 type="button"
                 onClick={handleSwitchToFullLogin}
-                className="text-[11px] text-[#38bdf8] hover:text-white font-bold hover:underline shrink-0 px-2 py-1 rounded-lg transition"
+                className="text-[11px] text-[var(--syd-accent)] hover:text-white font-bold hover:underline shrink-0 px-2 py-1 rounded-lg transition"
               >
                 Cambiar
               </button>
@@ -259,7 +259,7 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
                       if (errorMsg) setErrorMsg(null);
                     }}
                     placeholder="Ej. Jairo o Fabian"
-                    className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl pl-9 pr-3 py-2.5 text-sm text-white font-medium focus:border-[#38bdf8] focus:ring-2 focus:ring-[#38bdf8]/20 outline-none transition"
+                    className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl pl-9 pr-3 py-2.5 text-sm text-white font-medium focus:border-[var(--syd-accent)] focus:ring-2 focus:ring-[var(--syd-accent)]/20 outline-none transition"
                   />
                 </div>
               </div>
@@ -272,7 +272,7 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
                   {isQuickUnlockMode ? 'Contraseña para Desbloquear' : 'Contraseña'}
                 </label>
                 {isQuickUnlockMode && (
-                  <span className="text-[10px] text-[#38bdf8] font-mono">
+                  <span className="text-[10px] text-[var(--syd-accent)] font-mono">
                     Presione Enter para reanudar
                   </span>
                 )}
@@ -292,7 +292,7 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
                     if (errorMsg) setErrorMsg(null);
                   }}
                   placeholder="••••••••"
-                  className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl pl-9 pr-10 py-2.5 text-sm text-white font-medium focus:border-[#38bdf8] focus:ring-2 focus:ring-[#38bdf8]/20 outline-none transition font-mono tracking-wider"
+                  className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl pl-9 pr-10 py-2.5 text-sm text-white font-medium focus:border-[var(--syd-accent)] focus:ring-2 focus:ring-[var(--syd-accent)]/20 outline-none transition font-mono tracking-wider"
                 />
                 <button
                   type="button"
@@ -312,9 +312,9 @@ export const SuspensionLockScreen: React.FC<SuspensionLockScreenProps> = ({
               disabled={isLoading}
               className="w-full py-3.5 px-4 rounded-xl text-white font-extrabold text-sm shadow-xl flex items-center justify-center gap-2.5 cursor-pointer active:scale-95 hover:brightness-110 disabled:opacity-50 border border-cyan-300/50 relative overflow-hidden group transition-all duration-200"
               style={{
-                background: 'linear-gradient(135deg, #0284c7 0%, #0ea5e9 45%, #38bdf8 100%)',
+                background: 'linear-gradient(135deg, var(--syd-accent-light) 0%, var(--syd-accent-light) 45%, var(--syd-accent) 100%)',
                 color: '#ffffff',
-                boxShadow: '0 0 30px rgba(56, 189, 248, 0.55), 0 4px 20px rgba(2, 132, 199, 0.5)',
+                boxShadow: '0 0 30px color-mix(in srgb, var(--syd-accent) 55%, transparent), 0 4px 20px rgba(2, 132, 199, 0.5)',
                 textShadow: '0 1px 2px rgba(0, 0, 0, 0.4)',
               }}
             >

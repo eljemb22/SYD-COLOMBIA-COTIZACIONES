@@ -173,7 +173,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
               className={`w-full bg-[#101b2b] border rounded-lg p-2 text-white font-bold outline-none ${
                 !isValidOCNumber(formData.ocNumber)
                   ? 'opacity-40 border-slate-700 cursor-not-allowed bg-slate-900 text-slate-400'
-                  : 'border-[#334d6e] focus:border-[#38bdf8] cursor-pointer'
+                  : 'border-[#334d6e] focus:border-[var(--syd-accent)] cursor-pointer'
               }`}
               title={!isValidOCNumber(formData.ocNumber) ? 'Debe asignar primero el número de OC abajo' : 'Cambiar estado del equipo'}
             >
@@ -203,7 +203,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
                   list="item-supplier-list"
                   value={formData.supplier}
                   onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                  className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg p-2 text-white font-bold outline-none focus:border-[#38bdf8]"
+                  className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg p-2 text-white font-bold outline-none focus:border-[var(--syd-accent)]"
                 />
                 <datalist id="item-supplier-list">
                   {Array.from(new Set([...distinctSuppliers, ...COMMON_SUPPLIERS])).map((s, sIdx) => (
@@ -219,7 +219,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
                   value={formData.ocNumber}
                   onChange={(e) => setFormData({ ...formData, ocNumber: e.target.value })}
                   placeholder="Ej: OC-9021 o 10452"
-                  className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg p-2 text-sky-300 font-mono font-bold outline-none focus:border-[#38bdf8]"
+                  className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg p-2 text-sky-300 font-mono font-bold outline-none focus:border-[var(--syd-accent)]"
                 />
               </div>
             </div>
@@ -292,7 +292,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
                 <select
                   value={formData.paymentTerms}
                   onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value as OCPaymentTerms })}
-                  className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg p-2 text-sky-300 font-bold outline-none focus:border-[#38bdf8] cursor-pointer"
+                  className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg p-2 text-sky-300 font-bold outline-none focus:border-[var(--syd-accent)] cursor-pointer"
                 >
                   {PAYMENT_TERMS_OPTIONS.map((opt) => (
                     <option key={opt.terms} value={opt.terms}>
@@ -313,7 +313,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
                   <select
                     value={formData.paymentStatus}
                     onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value as OCPaymentStatus })}
-                    className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg p-2 text-emerald-300 font-bold outline-none focus:border-[#38bdf8] cursor-pointer"
+                    className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg p-2 text-emerald-300 font-bold outline-none focus:border-[var(--syd-accent)] cursor-pointer"
                   >
                     {PAYMENT_STATUS_OPTIONS.map((opt) => (
                       <option key={opt.status} value={opt.status}>
@@ -335,7 +335,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
                 min="1"
                 value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
-                className="w-full bg-[#15253d] border border-[#334d6e] rounded-lg p-2 text-white font-bold outline-none focus:border-[#38bdf8]"
+                className="w-full bg-[#15253d] border border-[#334d6e] rounded-lg p-2 text-white font-bold outline-none focus:border-[var(--syd-accent)]"
               />
             </div>
 
@@ -346,7 +346,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
                 min="0"
                 value={formData.costPriceCOP}
                 onChange={(e) => setFormData({ ...formData, costPriceCOP: parseFloat(e.target.value) || 0 })}
-                className="w-full bg-[#15253d] border border-[#334d6e] rounded-lg p-2 text-emerald-400 font-bold outline-none focus:border-[#38bdf8]"
+                className="w-full bg-[#15253d] border border-[#334d6e] rounded-lg p-2 text-emerald-400 font-bold outline-none focus:border-[var(--syd-accent)]"
               />
             </div>
           </div>
@@ -360,7 +360,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
                 placeholder="Ej: FE-990812"
                 value={formData.invoiceNumber}
                 onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
-                className="w-full bg-[#15253d] border border-[#334d6e] rounded-lg p-2 text-white font-mono outline-none focus:border-[#38bdf8]"
+                className="w-full bg-[#15253d] border border-[#334d6e] rounded-lg p-2 text-white font-mono outline-none focus:border-[var(--syd-accent)]"
               />
             </div>
 
@@ -371,7 +371,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
                 placeholder="Ej: DHL Express / Servientrega 109283"
                 value={formData.trackingNumber}
                 onChange={(e) => setFormData({ ...formData, trackingNumber: e.target.value })}
-                className="w-full bg-[#15253d] border border-[#334d6e] rounded-lg p-2 text-white outline-none focus:border-[#38bdf8]"
+                className="w-full bg-[#15253d] border border-[#334d6e] rounded-lg p-2 text-white outline-none focus:border-[var(--syd-accent)]"
               />
             </div>
           </div>
@@ -403,7 +403,7 @@ export const EditOCItemModal: React.FC<EditOCItemModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 rounded-xl bg-[#38bdf8] text-slate-950 font-black hover:bg-[#0284c7] transition shadow-md cursor-pointer text-xs"
+              className="px-4 py-1.5 rounded-xl bg-[var(--syd-accent)] text-slate-950 font-black hover:bg-[var(--syd-accent-light)] transition shadow-md cursor-pointer text-xs"
             >
               Guardar Cambios
             </button>

@@ -2080,7 +2080,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
             onClick={() => setMode('local')}
             className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-2 cursor-pointer ${
               mode === 'local'
-                ? 'bg-[#1e3450] text-[#38bdf8] shadow-md border border-[#38bdf8]/40'
+                ? 'bg-[#1e3450] text-[var(--syd-accent)] shadow-md border border-[var(--syd-accent)]/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -2093,7 +2093,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
             onClick={() => setMode('cloud_link')}
             className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-2 cursor-pointer ${
               mode === 'cloud_link'
-                ? 'bg-[#1e3450] text-[#38bdf8] shadow-md border border-[#38bdf8]/40'
+                ? 'bg-[#1e3450] text-[var(--syd-accent)] shadow-md border border-[var(--syd-accent)]/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -2130,8 +2130,8 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
           onDrop={handleLocalDrop}
           className={`border-2 border-dashed rounded-2xl p-6 text-center transition cursor-pointer min-h-[160px] flex flex-col items-center justify-center ${
             isDragging
-              ? 'border-[#38bdf8] bg-sky-950/30'
-              : 'border-[#263c5a] bg-[#0c1626]/70 hover:border-[#38bdf8]/60 hover:bg-[#0f1d33]'
+              ? 'border-[var(--syd-accent)] bg-sky-950/30'
+              : 'border-[#263c5a] bg-[#0c1626]/70 hover:border-[var(--syd-accent)]/60 hover:bg-[#0f1d33]'
           }`}
           onClick={() => fileInputRef.current?.click()}
         >
@@ -2185,7 +2185,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
                 value={cloudUrlInput}
                 onChange={(e) => setCloudUrlInput(e.target.value)}
                 placeholder="https://drive.google.com/file/d/..."
-                className="w-full bg-[#142338] border border-[#2c4467] focus:border-[#38bdf8] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition"
+                className="w-full bg-[#142338] border border-[#2c4467] focus:border-[var(--syd-accent)] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition"
               />
             </div>
           </div>
@@ -2200,7 +2200,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
                 value={customLinkName}
                 onChange={(e) => setCustomLinkName(e.target.value)}
                 placeholder="Ej: Ficha Técnica Oficial Mindray"
-                className="w-full bg-[#142338] border border-[#2c4467] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none transition"
+                className="w-full bg-[#142338] border border-[#2c4467] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none transition"
               />
             </div>
 
@@ -2213,7 +2213,7 @@ export const UnifiedAttachmentSelector: React.FC<UnifiedAttachmentSelectorProps>
                 value={customLinkSize}
                 onChange={(e) => setCustomLinkSize(e.target.value)}
                 placeholder="Ej: 3.5 MB • PDF Oficial"
-                className="w-full bg-[#142338] border border-[#2c4467] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none transition"
+                className="w-full bg-[#142338] border border-[#2c4467] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none transition"
               />
             </div>
           </div>

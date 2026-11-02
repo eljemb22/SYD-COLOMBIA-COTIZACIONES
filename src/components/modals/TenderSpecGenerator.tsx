@@ -170,7 +170,7 @@ export const TenderSpecGenerator: React.FC<TenderSpecGeneratorProps> = ({
                   value={tenderNumber}
                   onChange={(e) => setTenderNumber(e.target.value)}
                   placeholder="Ej: SECOP-II-2026-001"
-                  className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
               <div className="space-y-2">
@@ -180,7 +180,7 @@ export const TenderSpecGenerator: React.FC<TenderSpecGeneratorProps> = ({
                   value={entityName}
                   onChange={(e) => setEntityName(e.target.value)}
                   placeholder="Hospital, clínica o institución"
-                  className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
               <div className="space-y-2">
@@ -188,7 +188,7 @@ export const TenderSpecGenerator: React.FC<TenderSpecGeneratorProps> = ({
                 <select
                   value={processType}
                   onChange={(e) => setProcessType(e.target.value)}
-                  className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                 >
                   <option value="Licitación Pública">Licitación Pública</option>
                   <option value="Licitación Pública Abierta">Licitación Pública Abierta</option>
@@ -224,7 +224,7 @@ export const TenderSpecGenerator: React.FC<TenderSpecGeneratorProps> = ({
                       newItems.find((i) => i.id === item.id)!.name = e.target.value;
                       setItems(newItems);
                     }}
-                    className="w-full bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-sm text-white focus:border-[#38bdf8] outline-none"
+                    className="w-full bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                   />
                   <div className="flex gap-2">
                     <input
@@ -236,7 +236,7 @@ export const TenderSpecGenerator: React.FC<TenderSpecGeneratorProps> = ({
                         ni.find((i) => i.id === item.id)!.brand = e.target.value;
                         setItems(ni);
                       }}
-                      className="w-1/3 bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-sm text-white focus:border-[#38bdf8] outline-none"
+                      className="w-1/3 bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                     />
                     <input
                       type="text"
@@ -247,7 +247,7 @@ export const TenderSpecGenerator: React.FC<TenderSpecGeneratorProps> = ({
                         ni.find((i) => i.id === item.id)!.model = e.target.value;
                         setItems(ni);
                       }}
-                      className="w-1/3 bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-sm text-white focus:border-[#38bdf8] outline-none"
+                      className="w-1/3 bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                     />
                     <input
                       type="number"
@@ -258,7 +258,7 @@ export const TenderSpecGenerator: React.FC<TenderSpecGeneratorProps> = ({
                         ni.find((i) => i.id === item.id)!.quantity = parseInt(e.target.value) || 1;
                         setItems(ni);
                       }}
-                      className="w-1/3 bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-sm text-white focus:border-[#38bdf8] outline-none"
+                      className="w-1/3 bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                     />
                   </div>
                   <div className="mt-2">
@@ -271,7 +271,7 @@ export const TenderSpecGenerator: React.FC<TenderSpecGeneratorProps> = ({
                         setItems(ni);
                       }}
                       rows={2}
-                      className="w-full bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-xs text-white focus:border-[#38bdf8] outline-none"
+                      className="w-full bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-xs text-white focus:border-[var(--syd-accent)] outline-none"
                       placeholder="Especificaciones técnicas principales..."
                     ></textarea>
                   </div>
@@ -281,7 +281,7 @@ export const TenderSpecGenerator: React.FC<TenderSpecGeneratorProps> = ({
                       <input
                         type="text"
                         placeholder="Ej: Pantalla LCD, Batería recargable"
-                        className="w-full bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-xs text-white focus:border-[#38bdf8] outline-none"
+                        className="w-full bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-xs text-white focus:border-[var(--syd-accent)] outline-none"
                         onChange={(e) => {
                           const ni = [...items];
                           ni.find((i) => i.id === item.id)!.keyFeatures = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
@@ -294,7 +294,7 @@ export const TenderSpecGenerator: React.FC<TenderSpecGeneratorProps> = ({
                       <input
                         type="text"
                         placeholder="Ej: Registro INVIMA vigente"
-                        className="w-full bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-xs text-white focus:border-[#38bdf8] outline-none"
+                        className="w-full bg-[#14233a] border border-[#2d4972] rounded px-2 py-1 text-xs text-white focus:border-[var(--syd-accent)] outline-none"
                         onChange={(e) => {
                           const ni = [...items];
                           ni.find((i) => i.id === item.id)!.complianceRequirements = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);

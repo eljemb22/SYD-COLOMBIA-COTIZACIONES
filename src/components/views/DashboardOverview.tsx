@@ -197,7 +197,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       title: 'Cotizaciones',
       subtitle: 'Propuesta comercial formal en Word e historial de cotizaciones',
       icon: ShoppingCart,
-      color: '#38bdf8',
+      color: 'var(--syd-accent)',
       bgColor: 'bg-sky-500/10',
       borderColor: 'border-sky-500/30',
       hoverBorder: 'hover:border-sky-400',
@@ -273,7 +273,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       title: 'Seguimiento de OC',
       subtitle: 'Gestión de órdenes de compra a proveedores y auditoría logística',
       icon: Truck,
-      color: '#38bdf8',
+      color: 'var(--syd-accent)',
       bgColor: 'bg-sky-500/10',
       borderColor: 'border-sky-500/30',
       hoverBorder: 'hover:border-sky-400',
@@ -536,7 +536,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       value: quoteHeader.clientName || 'Sin asignar',
       hint: 'Destinatario actual',
       icon: Building2,
-      accent: '#38bdf8',
+      accent: 'var(--syd-accent)',
     },
     {
       label: 'Cotización activa',
@@ -586,7 +586,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       label: 'Ventana 1 / 4',
       title: 'Arma la propuesta',
       text: 'Completa el cliente y revisa las hojas membretadas o el pliego técnico.',
-      accent: '#38bdf8',
+      accent: 'var(--syd-accent)',
       icon: FileSpreadsheet,
     },
     {
@@ -888,7 +888,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-          <div className="sys-kpi" style={{ '--accent': '#38bdf8' } as React.CSSProperties}>
+          <div className="sys-kpi" style={{ '--accent': 'var(--syd-accent)' } as React.CSSProperties}>
             <span className="block text-[10px] uppercase tracking-[0.14em] font-bold text-slate-400">
               Clientes totales
             </span>

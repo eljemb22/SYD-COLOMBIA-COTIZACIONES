@@ -285,7 +285,7 @@ export const TenderLinkQuoteModal: React.FC<TenderLinkQuoteModalProps> = ({
                           <button
                             type="button"
                             onClick={handleLinkToActive}
-                            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-bold text-xs transition cursor-pointer active:scale-98"
+                            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-bold text-xs transition cursor-pointer active:scale-98"
                           >
                             <Link2 className="w-3.5 h-3.5 stroke-[2.5]" />
                             <span>Vincular con {activeClient.header.processNumber || activeClient.clientName}</span>

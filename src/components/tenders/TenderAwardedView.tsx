@@ -1262,7 +1262,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
               className="inline-flex items-center gap-1 text-[11px] text-slate-300 bg-[#111c2e] hover:bg-[#1e314b] hover:text-white px-2.5 py-1.5 rounded-lg border border-[#334d6e] font-bold transition cursor-pointer"
               title="Descargar plantilla Excel"
             >
-              <Download className="w-3.5 h-3.5 text-[#38bdf8]" />
+              <Download className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
               <span className="hidden sm:inline">Plantilla Excel</span>
             </button>
 
@@ -1443,7 +1443,7 @@ export const TenderAwardedView: React.FC<TenderAwardedViewProps> = ({
                                   ? "line-through text-slate-500 decoration-rose-400/80 decoration-2 font-semibold"
                                   : isPending
                                   ? "text-amber-400 font-bold"
-                                  : "text-[#38bdf8]"
+                                  : "text-[var(--syd-accent)]"
                               }
                             >
                               {displayCode}

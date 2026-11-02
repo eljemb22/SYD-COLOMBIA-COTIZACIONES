@@ -106,9 +106,9 @@ const STATUS_CONFIG: Record<
   },
   Enviada: {
     label: 'Enviada',
-    bg: 'bg-[#38bdf8]/15',
-    text: 'text-[#38bdf8]',
-    border: 'border-[#38bdf8]/40',
+    bg: 'bg-[var(--syd-accent)]/15',
+    text: 'text-[var(--syd-accent)]',
+    border: 'border-[var(--syd-accent)]/40',
     icon: Clock,
   },
   Aprobada: {
@@ -316,7 +316,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
             <p className="text-2xl font-black text-white mt-0.5">{totalQuotesCount}</p>
             <p className="text-[11px] text-slate-400">Guardadas en el sistema</p>
           </div>
-          <div className="p-3 bg-[#0284c7]/20 border border-[#0284c7]/40 rounded-xl text-[#38bdf8]">
+          <div className="p-3 bg-[var(--syd-accent-light)]/20 border border-[var(--syd-accent-light)]/40 rounded-xl text-[var(--syd-accent)]">
             <Layers className="w-5 h-5" />
           </div>
         </div>
@@ -346,7 +346,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar por N° consecutivo, cliente, NIT, contacto o equipo..."
-            className="w-full bg-[#15253d] text-white text-xs pl-9 pr-3.5 py-2.5 rounded-xl border border-[#334d6e] focus:border-[#38bdf8] outline-none transition"
+            className="w-full bg-[#15253d] text-white text-xs pl-9 pr-3.5 py-2.5 rounded-xl border border-[#334d6e] focus:border-[var(--syd-accent)] outline-none transition"
           />
         </div>
 
@@ -357,7 +357,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
             id="filter-status-select"
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="bg-[#15253d] text-slate-200 text-xs px-3 py-2.5 rounded-xl border border-[#334d6e] focus:border-[#38bdf8] outline-none cursor-pointer"
+            className="bg-[#15253d] text-slate-200 text-xs px-3 py-2.5 rounded-xl border border-[#334d6e] focus:border-[var(--syd-accent)] outline-none cursor-pointer"
           >
             <option value="all">Todos los Estados</option>
             <option value="Borrador">Borrador</option>
@@ -375,7 +375,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
             id="sort-quotes-select"
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value as any)}
-            className="bg-[#15253d] text-slate-200 text-xs px-3 py-2.5 rounded-xl border border-[#334d6e] focus:border-[#38bdf8] outline-none cursor-pointer"
+            className="bg-[#15253d] text-slate-200 text-xs px-3 py-2.5 rounded-xl border border-[#334d6e] focus:border-[var(--syd-accent)] outline-none cursor-pointer"
           >
             <option value="recent">Más Recientes Primero</option>
             <option value="highest">Mayor Valor ($)</option>
@@ -472,7 +472,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
                       {/* Consecutivo */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-black text-sm text-[#38bdf8] bg-[#0284c7]/10 px-2 py-0.5 rounded border border-[#0284c7]/30">
+                          <span className="font-mono font-black text-sm text-[var(--syd-accent)] bg-[var(--syd-accent-light)]/10 px-2 py-0.5 rounded border border-[var(--syd-accent-light)]/30">
                             {quote.quoteNumber}
                           </span>
                         </div>
@@ -511,7 +511,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
                             </span>
                           ))}
                           {quote.items.length > 2 && (
-                            <span className="text-[10px] bg-[#0284c7]/20 text-[#38bdf8] px-1.5 py-0.5 rounded font-bold">
+                            <span className="text-[10px] bg-[var(--syd-accent-light)]/20 text-[var(--syd-accent)] px-1.5 py-0.5 rounded font-bold">
                               +{quote.items.length - 2} más
                             </span>
                           )}
@@ -582,7 +582,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
                               id={`btn-edit-quote-${quote.id}`}
                               onClick={() => onLoadQuoteIntoEditor(quote)}
                               title={isReadOnly ? "Visualizar en formato de ventas" : "Cargar y editar en Vista de Ventas"}
-                              className="p-1.5 rounded-lg text-[#38bdf8] hover:text-white hover:bg-[#0284c7] transition cursor-pointer"
+                              className="p-1.5 rounded-lg text-[var(--syd-accent)] hover:text-white hover:bg-[var(--syd-accent-light)] transition cursor-pointer"
                             >
                               {isReadOnly ? <Eye className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
                             </button>
@@ -668,7 +668,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
             {/* Modal Header */}
             <div className="p-4 border-b border-[#334d6e] flex items-center justify-between bg-[#15253d]">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#0284c7]/20 border border-[#0284c7]/40 rounded-xl text-[#38bdf8]">
+                <div className="p-2 bg-[var(--syd-accent-light)]/20 border border-[var(--syd-accent-light)]/40 rounded-xl text-[var(--syd-accent)]">
                   <Layers className="w-5 h-5" />
                 </div>
                 <div>
@@ -719,7 +719,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
 
                 <button
                   onClick={() => handleExportWordForQuote(previewQuote)}
-                  className="inline-flex items-center gap-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold px-3 py-1.5 rounded-lg transition cursor-pointer shadow"
+                  className="inline-flex items-center gap-1.5 bg-[var(--syd-accent-light)] hover:bg-[#0369a1] text-white text-xs font-bold px-3 py-1.5 rounded-lg transition cursor-pointer shadow"
                 >
                   <FileDown className="w-3.5 h-3.5" />
                   <span>Descargar Word</span>
@@ -750,7 +750,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
               {/* Client and Commercial Data Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#15253d] p-4 rounded-xl border border-[#334d6e]">
                 <div>
-                  <h4 className="font-bold text-[#38bdf8] mb-2 uppercase tracking-wider text-[11px]">
+                  <h4 className="font-bold text-[var(--syd-accent)] mb-2 uppercase tracking-wider text-[11px]">
                     Datos del Cliente / Institución
                   </h4>
                   <div className="space-y-1 text-slate-300">
@@ -764,7 +764,7 @@ export const QuotesHistoryView: React.FC<QuotesHistoryViewProps> = ({
                 </div>
 
                 <div>
-                  <h4 className="font-bold text-[#38bdf8] mb-2 uppercase tracking-wider text-[11px]">
+                  <h4 className="font-bold text-[var(--syd-accent)] mb-2 uppercase tracking-wider text-[11px]">
                     Condiciones Comerciales
                   </h4>
                   <div className="space-y-1 text-slate-300">

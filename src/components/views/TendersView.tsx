@@ -745,7 +745,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
     <div id="tenders-view-container" className="space-y-4 animate-fadeIn">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#38bdf8] text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-2xl animate-scaleUp flex items-center gap-2 border border-white/20">
+        <div className="fixed bottom-6 right-6 z-50 bg-[var(--syd-accent)] text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-2xl animate-scaleUp flex items-center gap-2 border border-white/20">
           <Check className="w-4 h-4 stroke-[3]" />
           <span>{toastMessage}</span>
         </div>
@@ -884,7 +884,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
                   setClientModalMode('tender');
                   setIsClientModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-md active:scale-95"
+                className="inline-flex items-center gap-1.5 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-md active:scale-95"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[3]" />
                 <span>Nueva Licitación</span>
@@ -1147,7 +1147,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
                               setClientToEdit(client);
                               setIsClientModalOpen(true);
                             }}
-                            className="p-1 rounded-lg text-slate-400 hover:text-[#38bdf8] hover:bg-[#38bdf8]/10 transition cursor-pointer"
+                            className="p-1 rounded-lg text-slate-400 hover:text-[var(--syd-accent)] hover:bg-[var(--syd-accent)]/10 transition cursor-pointer"
                             title="Editar contrato / licitación"
                           >
                             <Pencil className="w-3 h-3" />
@@ -1231,7 +1231,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
                       : 'text-slate-300 hover:text-white hover:bg-[#15253d]'
                   }`}
                 >
-                  <Sliders className="w-4 h-4 text-[#38bdf8]" />
+                  <Sliders className="w-4 h-4 text-[var(--syd-accent)]" />
                   <span>2. Especificaciones Técnicas & Anexos</span>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold border transition-colors ${
@@ -1418,7 +1418,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
                     >
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono text-[10.5px] font-bold text-[#38bdf8] bg-[#15253d] px-1.5 py-0.5 rounded border border-[#334d6e]">
+                          <span className="font-mono text-[10.5px] font-bold text-[var(--syd-accent)] bg-[#15253d] px-1.5 py-0.5 rounded border border-[#334d6e]">
                             {eq.code}
                           </span>
                           <span className="text-[10.5px] font-bold bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded">
@@ -1448,7 +1448,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer shadow-md shrink-0 active:scale-95 ${
                           alreadyIn
                             ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                            : 'bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950'
+                            : 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950'
                         }`}
                       >
                         <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -1469,7 +1469,7 @@ export const TendersView: React.FC<TendersViewProps> = ({
                   setIsCatalogModalOpen(false);
                   setCatalogSearchQuery('');
                 }}
-                className="px-4 py-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-xs rounded-xl shadow-lg transition cursor-pointer"
+                className="px-4 py-1.5 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-black text-xs rounded-xl shadow-lg transition cursor-pointer"
               >
                 Listo / Finalizar
               </button>

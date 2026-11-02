@@ -54,9 +54,9 @@ export const WorkflowPipelineGuide: React.FC<WorkflowPipelineGuideProps> = ({
       subtitle: 'Propuesta comercial con equipos, accesorios y márgenes',
       icon: FileText,
       color: 'sky',
-      activeBorder: 'border-[#38bdf8]',
-      activeBg: 'bg-[#0284c7]/20',
-      activeText: 'text-[#38bdf8]',
+      activeBorder: 'border-[var(--syd-accent)]',
+      activeBg: 'bg-[var(--syd-accent-light)]/20',
+      activeText: 'text-[var(--syd-accent)]',
     },
     {
       num: 2,
@@ -113,7 +113,7 @@ export const WorkflowPipelineGuide: React.FC<WorkflowPipelineGuideProps> = ({
     <div className="bg-[#14233a] border border-[#2b4466] rounded-2xl p-3.5 sm:p-4 shadow-xl mb-4">
       <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#2b4466]">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-gradient-to-br from-[#0284c7]/30 to-purple-600/30 text-[#38bdf8] border border-[#38bdf8]/30">
+          <div className="p-1.5 rounded-lg bg-gradient-to-br from-[var(--syd-accent-light)]/30 to-purple-600/30 text-[var(--syd-accent)] border border-[var(--syd-accent)]/30">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
@@ -152,7 +152,7 @@ export const WorkflowPipelineGuide: React.FC<WorkflowPipelineGuideProps> = ({
                 onClick={() => onNavigateToTab(step.tab)}
                 className={`text-left p-3 rounded-xl border transition-all cursor-pointer relative group flex flex-col justify-between ${
                   isCurrent
-                    ? `${step.activeBg} ${step.activeBorder} shadow-lg shadow-[#0284c7]/10 scale-[1.02]`
+                    ? `${step.activeBg} ${step.activeBorder} shadow-lg shadow-[var(--syd-accent-light)]/10 scale-[1.02]`
                     : 'bg-[#182a44]/60 border-[#2b4466] hover:bg-[#1f3554] hover:border-slate-500'
                 }`}
               >
@@ -187,7 +187,7 @@ export const WorkflowPipelineGuide: React.FC<WorkflowPipelineGuideProps> = ({
                 </div>
 
                 <div className="mt-2.5 pt-2 border-t border-[#2b4466]/60 flex items-center justify-between text-[10px] text-slate-400">
-                  <span className="group-hover:text-[#38bdf8] font-semibold transition">
+                  <span className="group-hover:text-[var(--syd-accent)] font-semibold transition">
                     Ir al módulo
                   </span>
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />

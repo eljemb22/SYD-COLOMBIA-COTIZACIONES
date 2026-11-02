@@ -294,13 +294,13 @@ export function ExcelFilterPopover<T>({
     <div
       ref={popoverRef}
       style={popoverStyle}
-      className="bg-[#121f33] text-slate-100 border border-[#38bdf8]/50 rounded-xl shadow-2xl overflow-hidden font-sans text-xs animate-in fade-in zoom-in-95 duration-150 select-none flex flex-col max-h-[460px]"
+      className="bg-[#121f33] text-slate-100 border border-[var(--syd-accent)]/50 rounded-xl shadow-2xl overflow-hidden font-sans text-xs animate-in fade-in zoom-in-95 duration-150 select-none flex flex-col max-h-[460px]"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header bar */}
       <div className="bg-[#162740] px-3 py-2 border-b border-[#243a56] flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <Filter className="w-3.5 h-3.5 text-[#38bdf8] shrink-0" />
+          <Filter className="w-3.5 h-3.5 text-[var(--syd-accent)] shrink-0" />
           <span className="font-bold text-white truncate text-[11.5px]" title={column.label}>
             Filtro: {column.label}
           </span>
@@ -322,7 +322,7 @@ export function ExcelFilterPopover<T>({
             onClick={() => onApplySort(column.id, isCurrentSortAsc ? null : 'asc')}
             className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition cursor-pointer ${
               isCurrentSortAsc
-                ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold border border-[#38bdf8]/40'
+                ? 'bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] font-bold border border-[var(--syd-accent)]/40'
                 : 'text-slate-200 hover:bg-[#182b45] hover:text-white'
             }`}
           >
@@ -330,7 +330,7 @@ export function ExcelFilterPopover<T>({
             <span className="flex-1">
               {isNumeric ? 'Ordenar de menor a mayor' : 'Ordenar de A a Z'}
             </span>
-            {isCurrentSortAsc && <Check className="w-3 h-3 text-[#38bdf8]" />}
+            {isCurrentSortAsc && <Check className="w-3 h-3 text-[var(--syd-accent)]" />}
           </button>
 
           <button
@@ -338,7 +338,7 @@ export function ExcelFilterPopover<T>({
             onClick={() => onApplySort(column.id, isCurrentSortDesc ? null : 'desc')}
             className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition cursor-pointer ${
               isCurrentSortDesc
-                ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold border border-[#38bdf8]/40'
+                ? 'bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] font-bold border border-[var(--syd-accent)]/40'
                 : 'text-slate-200 hover:bg-[#182b45] hover:text-white'
             }`}
           >
@@ -346,7 +346,7 @@ export function ExcelFilterPopover<T>({
             <span className="flex-1">
               {isNumeric ? 'Ordenar de mayor a menor' : 'Ordenar de Z a A'}
             </span>
-            {isCurrentSortDesc && <Check className="w-3 h-3 text-[#38bdf8]" />}
+            {isCurrentSortDesc && <Check className="w-3 h-3 text-[var(--syd-accent)]" />}
           </button>
 
           {isFiltered && (
@@ -371,7 +371,7 @@ export function ExcelFilterPopover<T>({
             value={searchValue}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Buscar valores..."
-            className="w-full bg-[#182a44] text-white placeholder-slate-400 border border-[#334d6e] rounded-lg pl-7 pr-7 py-1.5 text-xs focus:outline-none focus:border-[#38bdf8] transition"
+            className="w-full bg-[#182a44] text-white placeholder-slate-400 border border-[#334d6e] rounded-lg pl-7 pr-7 py-1.5 text-xs focus:outline-none focus:border-[var(--syd-accent)] transition"
             autoFocus
           />
           {searchValue && (
@@ -397,9 +397,9 @@ export function ExcelFilterPopover<T>({
             <div
               className={`w-4 h-4 rounded border flex items-center justify-center transition ${
                 allVisibleSelected
-                  ? 'bg-[#38bdf8] border-[#38bdf8] text-slate-950'
+                  ? 'bg-[var(--syd-accent)] border-[var(--syd-accent)] text-slate-950'
                   : someVisibleSelected
-                  ? 'bg-[#38bdf8]/40 border-[#38bdf8] text-white'
+                  ? 'bg-[var(--syd-accent)]/40 border-[var(--syd-accent)] text-white'
                   : 'border-[#4b6a94] bg-[#0e1726]'
               }`}
             >
@@ -440,7 +440,7 @@ export function ExcelFilterPopover<T>({
                   <div
                     className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition shrink-0 ${
                       isChecked
-                        ? 'bg-[#38bdf8] border-[#38bdf8] text-slate-950'
+                        ? 'bg-[var(--syd-accent)] border-[var(--syd-accent)] text-slate-950'
                         : 'border-[#4b6a94] bg-[#0e1726]'
                     }`}
                   >
@@ -494,7 +494,7 @@ export function ExcelFilterPopover<T>({
           <button
             type="button"
             onClick={handleApply}
-            className="px-3 py-1 text-[11px] font-bold bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 rounded-lg transition shadow-xs cursor-pointer active:scale-95"
+            className="px-3 py-1 text-[11px] font-bold bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 rounded-lg transition shadow-xs cursor-pointer active:scale-95"
           >
             Aceptar
           </button>
@@ -571,7 +571,7 @@ export function ExcelColumnHeader<T = any>({
           onClick={handleOpen}
           className={`p-1 rounded-md transition-all cursor-pointer shrink-0 flex items-center gap-0.5 ${
             isFiltered
-              ? 'bg-[#38bdf8] text-slate-950 font-bold shadow-xs ring-1 ring-[#38bdf8]/50'
+              ? 'bg-[var(--syd-accent)] text-slate-950 font-bold shadow-xs ring-1 ring-[var(--syd-accent)]/50'
               : isSorted
               ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
               : 'text-slate-400 hover:text-white hover:bg-slate-700/60 opacity-70 group-hover/header:opacity-100'

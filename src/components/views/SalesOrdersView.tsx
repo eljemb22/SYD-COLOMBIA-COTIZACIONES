@@ -1542,10 +1542,10 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                 setIsNewOrderModalOpen(true);
               }}
               style={{
-                backgroundColor: 'var(--syd-btn-bg, #38bdf8)',
+                backgroundColor: 'var(--syd-btn-bg, var(--syd-accent))',
                 color: 'var(--syd-btn-text, #0f172a)',
                 borderRadius: 'var(--syd-btn-radius, 14px)',
-                borderColor: 'var(--syd-btn-bg, #38bdf8)',
+                borderColor: 'var(--syd-btn-bg, var(--syd-accent))',
               }}
               className="px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 border"
             >

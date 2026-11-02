@@ -513,7 +513,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                       placeholder="Ej: Hospital San Ignacio"
                       value={newClientName}
                       onChange={(e) => setNewClientName(e.target.value)}
-                      className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-white outline-none focus:border-[#38bdf8] text-xs"
+                      className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-white outline-none focus:border-[var(--syd-accent)] text-xs"
                     />
                   </div>
 
@@ -524,7 +524,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                       placeholder="Ej: PED-2026-001 o Venta Directa"
                       value={newContractNumber}
                       onChange={(e) => setNewContractNumber(e.target.value)}
-                      className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-purple-300 font-mono outline-none focus:border-[#38bdf8] text-xs"
+                      className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-purple-300 font-mono outline-none focus:border-[var(--syd-accent)] text-xs"
                     />
                   </div>
 
@@ -536,14 +536,14 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                         placeholder="NIT: 860.012.345-1"
                         value={newNit}
                         onChange={(e) => setNewNit(e.target.value)}
-                        className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2 py-1 text-slate-300 font-mono outline-none focus:border-[#38bdf8] text-xs"
+                        className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2 py-1 text-slate-300 font-mono outline-none focus:border-[var(--syd-accent)] text-xs"
                       />
                       <input
                         type="text"
                         placeholder="Ciudad"
                         value={newCity}
                         onChange={(e) => setNewCity(e.target.value)}
-                        className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2 py-1 text-white outline-none focus:border-[#38bdf8] text-xs"
+                        className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2 py-1 text-white outline-none focus:border-[var(--syd-accent)] text-xs"
                       />
                     </div>
                   </div>
@@ -608,7 +608,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                         setSupplier(e.target.value);
                         setShowSupplierDropdown(true);
                       }}
-                      className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-white font-bold outline-none focus:border-[#38bdf8] text-xs"
+                      className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-white font-bold outline-none focus:border-[var(--syd-accent)] text-xs"
                     />
 
                     {/* Floating Autocomplete Dropdown */}
@@ -667,7 +667,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                     placeholder="Digitar N° Consecutivo de OC (ej: OC-1045)..."
                     value={ocNumber}
                     onChange={(e) => setOcNumber(e.target.value)}
-                    className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-sky-300 font-mono font-bold outline-none focus:border-[#38bdf8] text-xs"
+                    className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-sky-300 font-mono font-bold outline-none focus:border-[var(--syd-accent)] text-xs"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
                     Número consecutivo asignado en el sistema interno de la empresa.
@@ -744,7 +744,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                   placeholder="Observaciones de compra / promesa de entrega de fábrica (opcional)..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-white text-[11px] outline-none focus:border-[#38bdf8]"
+                  className="w-full bg-[#101b2b] border border-[#334d6e] rounded-lg px-2.5 py-1 text-white text-[11px] outline-none focus:border-[var(--syd-accent)]"
                 />
               </div>
             </div>
@@ -802,7 +802,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                 <button
                   type="button"
                   onClick={handleAddBlankRow}
-                  className="inline-flex items-center gap-1 bg-[#38bdf8]/20 hover:bg-[#38bdf8]/30 text-sky-300 border border-sky-400/40 text-[11px] font-bold px-2 py-0.5 rounded-lg transition cursor-pointer"
+                  className="inline-flex items-center gap-1 bg-[var(--syd-accent)]/20 hover:bg-[var(--syd-accent)]/30 text-sky-300 border border-sky-400/40 text-[11px] font-bold px-2 py-0.5 rounded-lg transition cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>Agregar Fila</span>
@@ -847,7 +847,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                             placeholder="Nombre del equipo..."
                             value={row.name}
                             onChange={(e) => handleUpdateItem(idx, 'name', e.target.value)}
-                            className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[#38bdf8] text-xs"
+                            className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[var(--syd-accent)] text-xs"
                           />
                         </td>
                         <td className="py-1 px-1.5">
@@ -857,7 +857,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                             placeholder="Marca..."
                             value={row.brand}
                             onChange={(e) => handleUpdateItem(idx, 'brand', e.target.value)}
-                            className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[#38bdf8] text-xs font-semibold"
+                            className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[var(--syd-accent)] text-xs font-semibold"
                           />
                         </td>
                         <td className="py-1 px-1.5">
@@ -867,7 +867,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                             placeholder="Modelo..."
                             value={row.model}
                             onChange={(e) => handleUpdateItem(idx, 'model', e.target.value)}
-                            className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[#38bdf8] text-xs"
+                            className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[var(--syd-accent)] text-xs"
                           />
                         </td>
                         <td className="py-1 px-1 text-center">
@@ -877,7 +877,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                             required
                             value={row.quantity}
                             onChange={(e) => handleUpdateItem(idx, 'quantity', parseInt(e.target.value) || 1)}
-                            className="w-10 text-center bg-[#101b2b] border border-[#334d6e] rounded py-0.5 text-white font-black outline-none focus:border-[#38bdf8] text-xs"
+                            className="w-10 text-center bg-[#101b2b] border border-[#334d6e] rounded py-0.5 text-white font-black outline-none focus:border-[var(--syd-accent)] text-xs"
                           />
                         </td>
                         <td className="py-1 px-1.5 text-right">
@@ -891,7 +891,7 @@ export const NewSupplierOCModal: React.FC<NewSupplierOCModalProps> = ({
                             className={`w-full text-right bg-[#101b2b] border rounded px-1.5 py-0.5 font-bold outline-none text-xs ${
                               (row.costPriceCOP || 0) <= 0
                                 ? 'border-rose-500/70 text-rose-300 focus:border-rose-400'
-                                : 'border-[#334d6e] text-emerald-400 focus:border-[#38bdf8]'
+                                : 'border-[#334d6e] text-emerald-400 focus:border-[var(--syd-accent)]'
                             }`}
                           />
                         </td>

@@ -583,7 +583,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
 
       {/* Feedback Toast Notification when imported via Excel */}
       {importSuccessFeedback && (
-        <div className="p-3 bg-[#38bdf8] text-slate-950 border border-sky-300 rounded-xl text-xs font-bold flex flex-wrap items-center justify-between gap-3 shadow-xl animate-scaleUp">
+        <div className="p-3 bg-[var(--syd-accent)] text-slate-950 border border-sky-300 rounded-xl text-xs font-bold flex flex-wrap items-center justify-between gap-3 shadow-xl animate-scaleUp">
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 stroke-[3] text-emerald-950" />
             <span>
@@ -735,7 +735,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
               placeholder="Buscar por equipo, parte, proveedor, marca, modelo o INVIMA..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-400 outline-none font-medium transition"
+              className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[var(--syd-accent)] focus:ring-1 focus:ring-[var(--syd-accent)] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-400 outline-none font-medium transition"
             />
             {searchQuery && (
               <button
@@ -772,7 +772,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 rounded-lg transition cursor-pointer ${
-                  viewMode === 'grid' ? 'bg-[#38bdf8] text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+                  viewMode === 'grid' ? 'bg-[var(--syd-accent)] text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
                 title="Vista de Tarjetas"
               >
@@ -781,7 +781,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
               <button
                 onClick={() => setViewMode('table')}
                 className={`p-1.5 rounded-lg transition cursor-pointer ${
-                  viewMode === 'table' ? 'bg-[#38bdf8] text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+                  viewMode === 'table' ? 'bg-[var(--syd-accent)] text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
                 title="Vista de Tabla / Lista Rápida"
               >
@@ -793,10 +793,10 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
             <div className="relative">
               <div
                 onClick={() => setIsTrmPopoverOpen(!isTrmPopoverOpen)}
-                className="bg-[#15253d] hover:bg-[#1b3150] border border-[#334d6e] hover:border-[#38bdf8]/60 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs transition cursor-pointer shadow-xs select-none"
+                className="bg-[#15253d] hover:bg-[#1b3150] border border-[#334d6e] hover:border-[var(--syd-accent)]/60 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs transition cursor-pointer shadow-xs select-none"
                 title="Haga clic para ver el análisis de volatilidad y la TRM recomendada para cotizaciones"
               >
-                <Globe className="w-3.5 h-3.5 text-[#38bdf8]" />
+                <Globe className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                 <span className="text-slate-400 hidden sm:inline">TRM:</span>
                 <span className="text-emerald-400 font-mono font-bold">${trmData.rate.toLocaleString()}</span>
                 <span className="text-slate-500 hidden md:inline">•</span>
@@ -819,11 +819,11 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
               {isTrmPopoverOpen && (
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute right-0 mt-1.5 w-84 bg-[#0f1a2a] border border-[#38bdf8]/70 rounded-xl shadow-2xl p-3 z-50 text-xs text-white animate-fadeIn"
+                  className="absolute right-0 mt-1.5 w-84 bg-[#0f1a2a] border border-[var(--syd-accent)]/70 rounded-xl shadow-2xl p-3 z-50 text-xs text-white animate-fadeIn"
                 >
                   <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-[#334d6e]">
-                    <span className="font-bold text-[#38bdf8] flex items-center gap-1.5 text-xs">
-                      <Globe className="w-4 h-4 text-[#38bdf8]" />
+                    <span className="font-bold text-[var(--syd-accent)] flex items-center gap-1.5 text-xs">
+                      <Globe className="w-4 h-4 text-[var(--syd-accent)]" />
                       <span>Análisis Cambiario del Dólar (TRM)</span>
                     </span>
                     <button
@@ -935,10 +935,10 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                 <button
                   id="btn-import-catalog-excel"
                   onClick={() => setIsImportModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 bg-[#15253d] hover:bg-[#1f375a] text-slate-100 border border-[#38bdf8]/60 hover:border-[#38bdf8] font-bold text-xs px-3 py-2 rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap active:scale-95"
+                  className="inline-flex items-center gap-1.5 bg-[#15253d] hover:bg-[#1f375a] text-slate-100 border border-[var(--syd-accent)]/60 hover:border-[var(--syd-accent)] font-bold text-xs px-3 py-2 rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap active:scale-95"
                   title="Importar masivamente desde archivo Excel (.xlsx / .xls)"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-[#38bdf8]" />
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                   <span>Importar Excel</span>
                 </button>
 
@@ -980,7 +980,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                 <button
                   id="btn-open-create-equipment"
                   onClick={onOpenNewEquipmentModal}
-                  className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl shadow-md transition cursor-pointer whitespace-nowrap active:scale-95"
+                  className="inline-flex items-center gap-1.5 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl shadow-md transition cursor-pointer whitespace-nowrap active:scale-95"
                 >
                   <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>Nuevo Equipo</span>
@@ -1015,7 +1015,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                 {(searchQuery || selectedCategory !== 'Todos' || selectedBrand !== 'Todos' || filterMissingCostOnly) && (
                   <button
                     onClick={handleResetFilters}
-                    className="inline-flex items-center gap-1.5 bg-[#1e314b] hover:bg-[#253d5e] text-slate-200 border border-[#38bdf8]/40 hover:border-[#38bdf8] font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer shadow-xs active:scale-95"
+                    className="inline-flex items-center gap-1.5 bg-[#1e314b] hover:bg-[#253d5e] text-slate-200 border border-[var(--syd-accent)]/40 hover:border-[var(--syd-accent)] font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer shadow-xs active:scale-95"
                   >
                     <span>Limpiar Filtros de Búsqueda</span>
                   </button>
@@ -1028,11 +1028,11 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
               return (
                 <div
                   key={`eq-card-${eq.id || eq.code || 'item'}-${idx}`}
-                  className="bg-[#1e314b] border border-[#334d6e] hover:border-[#38bdf8]/70 rounded-xl p-3.5 flex flex-col justify-between transition-all duration-200 shadow-md group relative hover:shadow-lg"
+                  className="bg-[#1e314b] border border-[#334d6e] hover:border-[var(--syd-accent)]/70 rounded-xl p-3.5 flex flex-col justify-between transition-all duration-200 shadow-md group relative hover:shadow-lg"
                 >
                   <div className="space-y-2.5">
                     {/* Name */}
-                    <h3 className="text-xs font-bold text-white group-hover:text-[#38bdf8] transition line-clamp-2 leading-snug">
+                    <h3 className="text-xs font-bold text-white group-hover:text-[var(--syd-accent)] transition line-clamp-2 leading-snug">
                       {eq.name}
                     </h3>
 
@@ -1050,7 +1050,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                       </div>
                       <div className="flex items-center justify-between gap-1 text-slate-300">
                         <span className="text-slate-400 font-medium flex items-center gap-1">
-                          <Building2 className="w-3 h-3 text-[#38bdf8] shrink-0" />
+                          <Building2 className="w-3 h-3 text-[var(--syd-accent)] shrink-0" />
                           Proveedor:
                         </span>
                         <span className="truncate font-medium text-slate-200">
@@ -1155,9 +1155,9 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
         <div className="bg-[#192b45] border border-[#334d6e] rounded-xl overflow-hidden shadow-md">
           <div className="p-3 bg-[#142338] border-b border-[#334d6e] flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-[#38bdf8]" />
+              <FileSpreadsheet className="w-4 h-4 text-[var(--syd-accent)]" />
               <span className="text-xs font-bold text-white">
-                Vista de Catálogo en Tabla — <strong className="text-[#38bdf8]">{filteredEquipments.length} Equipos</strong>
+                Vista de Catálogo en Tabla — <strong className="text-[var(--syd-accent)]">{filteredEquipments.length} Equipos</strong>
                 {filteredEquipments.length !== equipments.length && (
                   <span className="text-slate-400 font-normal ml-1">({equipments.length} total)</span>
                 )}
@@ -1295,7 +1295,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                         {(searchQuery || selectedCategory !== 'Todos' || selectedBrand !== 'Todos' || filterMissingCostOnly) && (
                           <button
                             onClick={handleResetFilters}
-                            className="inline-flex items-center gap-1.5 bg-[#1e314b] hover:bg-[#253d5e] text-slate-200 border border-[#38bdf8]/40 hover:border-[#38bdf8] font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer shadow-xs active:scale-95"
+                            className="inline-flex items-center gap-1.5 bg-[#1e314b] hover:bg-[#253d5e] text-slate-200 border border-[var(--syd-accent)]/40 hover:border-[var(--syd-accent)] font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer shadow-xs active:scale-95"
                           >
                             <span>Limpiar Filtros de Búsqueda</span>
                           </button>
@@ -1308,7 +1308,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                   const costWithIva = eq.taxExempt ? eq.baseCostCOP : Math.round(eq.baseCostCOP * 1.19);
                   return (
                     <tr key={`eq-row-${eq.id || eq.code || 'item'}-${idx}`} className="hover:bg-[#1e314b] transition">
-                      <td className="p-3 font-mono font-bold text-[#38bdf8] whitespace-nowrap">
+                      <td className="p-3 font-mono font-bold text-[var(--syd-accent)] whitespace-nowrap">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span>{eq.code}</span>
                           {eq.isInactive && (
@@ -1741,7 +1741,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({
                         className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow-md shrink-0 ${
                           alreadyHasEq
                             ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                            : 'bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950'
+                            : 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950'
                         }`}
                       >
                         <Plus className="w-4 h-4 stroke-[2.5]" />

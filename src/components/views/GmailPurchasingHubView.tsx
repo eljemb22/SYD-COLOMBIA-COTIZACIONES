@@ -1670,10 +1670,10 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                   onClick={handleConnectGmail}
                   disabled={isAuthenticating}
                   style={{
-                    backgroundColor: 'var(--syd-btn-bg, #38bdf8)',
+                    backgroundColor: 'var(--syd-btn-bg, var(--syd-accent))',
                     color: 'var(--syd-btn-text, #0f172a)',
                     borderRadius: 'var(--syd-btn-radius, 14px)',
-                    borderColor: 'var(--syd-btn-bg, #38bdf8)',
+                    borderColor: 'var(--syd-btn-bg, var(--syd-accent))',
                   }}
                   className="w-full inline-flex items-center justify-center gap-2 font-bold text-xs py-2.5 px-3 rounded-lg shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50 border"
                   title="Inicia sesión con Google (OAuth 2.0)"
@@ -3149,7 +3149,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                       <tr key={p.id || `preview-${idx}`} className="hover:bg-slate-50 transition-colors">
                         <td
                           className="p-2.5 text-center font-bold border-r border-slate-200"
-                          style={{ color: '#0284c7', backgroundColor: '#f8fafc' }}
+                          style={{ color: 'var(--syd-accent-light)', backgroundColor: '#f8fafc' }}
                         >
                           {idx + 1}
                         </td>
@@ -3706,7 +3706,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
               {/* Header Banner */}
               <div
                 className="p-4 sm:p-5 text-white flex flex-wrap items-center justify-between gap-2 shadow-sm"
-                style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff' }}
+                style={{ background: 'linear-gradient(135deg, var(--syd-accent-light) 0%, #0369a1 100%)', color: '#ffffff' }}
               >
                 <div>
                   <h4 className="text-base font-extrabold tracking-wide uppercase m-0" style={{ color: '#ffffff', letterSpacing: '0.04em' }}>
@@ -3734,7 +3734,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                 </p>
 
                 <p className="m-0 text-sm font-medium" style={{ color: '#1e293b' }}>
-                  Favor generar la <strong style={{ color: '#0f172a' }}>Orden de Compra (OC)</strong> por <strong style={{ color: '#0f172a' }}>{poForm.locationCity}</strong> para el proveedor <strong style={{ color: '#0284c7' }}>{poForm.supplierName}</strong> con las siguientes partes e ítems requeridos:
+                  Favor generar la <strong style={{ color: '#0f172a' }}>Orden de Compra (OC)</strong> por <strong style={{ color: '#0f172a' }}>{poForm.locationCity}</strong> para el proveedor <strong style={{ color: 'var(--syd-accent-light)' }}>{poForm.supplierName}</strong> con las siguientes partes e ítems requeridos:
                 </p>
 
                 {/* Items Table with sharp borders and high contrast */}
@@ -3755,7 +3755,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                     <tbody className="divide-y divide-slate-200" style={{ backgroundColor: '#ffffff' }}>
                       {poForm.items.map((item, idx) => (
                         <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                          <td className="p-2.5 border-r border-slate-200 text-center font-bold" style={{ color: '#0284c7', backgroundColor: '#f1f5f9' }}>
+                          <td className="p-2.5 border-r border-slate-200 text-center font-bold" style={{ color: 'var(--syd-accent-light)', backgroundColor: '#f1f5f9' }}>
                             {idx + 1}
                           </td>
                           <td className="p-2.5 border-r border-slate-200 font-mono font-bold" style={{ color: '#0369a1' }}>
@@ -3810,7 +3810,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                           ${Number(poForm.ivaTotalCOP).toLocaleString('es-CO')} COP
                         </td>
                       </tr>
-                      <tr style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff' }}>
+                      <tr style={{ background: 'linear-gradient(135deg, var(--syd-accent-light) 0%, #0369a1 100%)', color: '#ffffff' }}>
                         <td className="p-2.5 text-xs font-black uppercase tracking-wider" style={{ color: '#ffffff' }}>TOTAL SOLICITUD:</td>
                         <td className="p-2.5 text-right text-sm font-black" style={{ color: '#ffffff' }}>
                           ${Number(poForm.grandTotalCOP).toLocaleString('es-CO')} COP

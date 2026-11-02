@@ -401,7 +401,7 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
                 <div className="pt-0.5 flex items-center gap-1.5">
                   <button
                     onClick={() => handleActionClick(currentToast)}
-                    className="bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 px-1.5 py-0.5 rounded text-[9px] font-black transition cursor-pointer flex items-center gap-0.5 shadow-xs"
+                    className="bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 px-1.5 py-0.5 rounded text-[9px] font-black transition cursor-pointer flex items-center gap-0.5 shadow-xs"
                   >
                     <span>{currentToast.actionLabel || 'Resolver'}</span>
                     <ArrowRight className="w-2.5 h-2.5" />
@@ -445,8 +445,8 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
               : currentSummary.media > 0
               ? 'bg-amber-950/95 hover:bg-amber-900 border-amber-500 text-white shadow-amber-950/60 ring-2 ring-amber-500/40'
               : currentSummary.total > 0
-              ? 'bg-[#1e314b]/95 hover:bg-[#253f63] border-[#38bdf8]/80 text-white shadow-cyan-950/50 ring-2 ring-cyan-500/30'
-              : 'bg-[#132238]/95 hover:bg-[#1c3252] border-[#38bdf8]/50 text-slate-300 hover:text-white shadow-xl hover:border-[#38bdf8]'
+              ? 'bg-[#1e314b]/95 hover:bg-[#253f63] border-[var(--syd-accent)]/80 text-white shadow-cyan-950/50 ring-2 ring-cyan-500/30'
+              : 'bg-[#132238]/95 hover:bg-[#1c3252] border-[var(--syd-accent)]/50 text-slate-300 hover:text-white shadow-xl hover:border-[var(--syd-accent)]'
           }`}
           title={
             hasSystemUpdate
@@ -464,7 +464,7 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
                 ? 'text-amber-400 animate-pulse'
                 : currentSummary.total > 0
                 ? 'text-cyan-300'
-                : 'text-[#38bdf8]'
+                : 'text-[var(--syd-accent)]'
             }`}
           />
           {currentSummary.total > 0 ? (
@@ -476,7 +476,7 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
                   ? 'bg-rose-500 text-white animate-pulse'
                   : currentSummary.media > 0
                   ? 'bg-amber-500 text-slate-950 font-bold'
-                  : 'bg-[#38bdf8] text-slate-950 font-bold'
+                  : 'bg-[var(--syd-accent)] text-slate-950 font-bold'
               }`}
             >
               {currentSummary.total}
@@ -509,13 +509,13 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
             {/* Header */}
             <div className="px-3.5 py-2.5 bg-[#182840] border-b border-[#334d6e] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-[#38bdf8]/20 text-[#38bdf8] rounded-lg border border-[#38bdf8]/40">
+                <div className="p-1.5 bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] rounded-lg border border-[var(--syd-accent)]/40">
                   <ShieldAlert className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-xs font-black text-white flex items-center gap-1.5 leading-tight">
                     <span>Alertas del Sistema</span>
-                    <span className="bg-[#38bdf8] text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                    <span className="bg-[var(--syd-accent)] text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full">
                       {currentSummary.total}
                     </span>
                   </h3>
@@ -540,7 +540,7 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
                   onClick={() => setActiveFilter('todas')}
                   className={`px-2 py-0.5 rounded text-[10.5px] font-bold transition cursor-pointer ${
                     activeFilter === 'todas'
-                      ? 'bg-[#38bdf8] text-slate-950'
+                      ? 'bg-[var(--syd-accent)] text-slate-950'
                       : 'bg-[#192b45] text-slate-300 hover:text-white'
                   }`}
                 >
@@ -683,7 +683,7 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
                               ? 'bg-rose-500 hover:bg-rose-600 text-white'
                               : isMedia
                               ? 'bg-amber-400 hover:bg-amber-500 text-slate-950'
-                              : 'bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950'
+                              : 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950'
                           }`}
                         >
                           <span>{alert.actionLabel || 'Resolver'}</span>

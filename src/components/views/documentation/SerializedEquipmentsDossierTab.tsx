@@ -550,7 +550,7 @@ export const SerializedEquipmentsDossierTab: React.FC<SerializedEquipmentsDossie
               placeholder="Buscar por S/N Serial, Placa, DIAN, Modelo, Marca, Equipo, Cliente o Contrato..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl pl-9 pr-4 py-1.5 text-xs text-white placeholder-slate-500 focus:border-[#38bdf8] outline-none font-medium"
+              className="w-full bg-[#15253d] border border-[#334d6e] rounded-xl pl-9 pr-4 py-1.5 text-xs text-white placeholder-slate-500 focus:border-[var(--syd-accent)] outline-none font-medium"
             />
           </div>
 
@@ -560,7 +560,7 @@ export const SerializedEquipmentsDossierTab: React.FC<SerializedEquipmentsDossie
             <select
               value={selectedClient}
               onChange={(e) => setSelectedClient(e.target.value)}
-              className="bg-[#15253d] border border-[#334d6e] rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 focus:border-[#38bdf8] outline-none cursor-pointer"
+              className="bg-[#15253d] border border-[#334d6e] rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 focus:border-[var(--syd-accent)] outline-none cursor-pointer"
             >
               <option value="ALL">Todos los Clientes / Hospitales</option>
               {uniqueClients.map((cli) => (
@@ -579,7 +579,7 @@ export const SerializedEquipmentsDossierTab: React.FC<SerializedEquipmentsDossie
               onChange={(e) =>
                 setFilterDianStatus(e.target.value as 'ALL' | 'WITH_DIAN' | 'WITHOUT_DIAN')
               }
-              className="bg-[#15253d] border border-[#334d6e] rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 focus:border-[#38bdf8] outline-none cursor-pointer"
+              className="bg-[#15253d] border border-[#334d6e] rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 focus:border-[var(--syd-accent)] outline-none cursor-pointer"
             >
               <option value="ALL">Filtro DIAN: Todos</option>
               <option value="WITH_DIAN">✅ Con Declaración DIAN</option>
@@ -595,7 +595,7 @@ export const SerializedEquipmentsDossierTab: React.FC<SerializedEquipmentsDossie
               onChange={(e) =>
                 setFilterDocStatus(e.target.value as 'ALL' | 'COMPLETE' | 'PENDING')
               }
-              className="bg-[#15253d] border border-[#334d6e] rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 focus:border-[#38bdf8] outline-none cursor-pointer"
+              className="bg-[#15253d] border border-[#334d6e] rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 focus:border-[var(--syd-accent)] outline-none cursor-pointer"
             >
               <option value="ALL">Dossier: Todos</option>
               <option value="COMPLETE">🌟 Dossier Completo (100%)</option>

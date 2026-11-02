@@ -115,7 +115,7 @@ export const QuotesView: React.FC<QuotesViewProps> = ({
             onClick={() => setActiveSubTab('editor')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
               activeSubTab === 'editor'
-                ? 'bg-[#38bdf8] text-slate-950 shadow-md'
+                ? 'bg-[var(--syd-accent)] text-slate-950 shadow-md'
                 : 'text-slate-300 hover:text-white hover:bg-[#15253d]'
             }`}
           >
@@ -125,8 +125,8 @@ export const QuotesView: React.FC<QuotesViewProps> = ({
               <span
                 className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                   activeSubTab === 'editor'
-                    ? 'bg-slate-950 text-[#38bdf8]'
-                    : 'bg-[#38bdf8]/20 text-[#38bdf8]'
+                    ? 'bg-slate-950 text-[var(--syd-accent)]'
+                    : 'bg-[var(--syd-accent)]/20 text-[var(--syd-accent)]'
                 }`}
               >
                 {quoteItems.length}
@@ -140,7 +140,7 @@ export const QuotesView: React.FC<QuotesViewProps> = ({
             onClick={() => setActiveSubTab('historial')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
               activeSubTab === 'historial'
-                ? 'bg-[#38bdf8] text-slate-950 shadow-md'
+                ? 'bg-[var(--syd-accent)] text-slate-950 shadow-md'
                 : 'text-slate-300 hover:text-white hover:bg-[#15253d]'
             }`}
           >
@@ -150,7 +150,7 @@ export const QuotesView: React.FC<QuotesViewProps> = ({
               <span
                 className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                   activeSubTab === 'historial'
-                    ? 'bg-slate-950 text-[#38bdf8]'
+                    ? 'bg-slate-950 text-[var(--syd-accent)]'
                     : 'bg-emerald-400/20 text-emerald-400'
                 }`}
               >

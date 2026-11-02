@@ -34,7 +34,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
     if (!ctx) return;
 
     // Configurar estilo de dibujo
-    ctx.strokeStyle = '#0ea5e9';
+    ctx.strokeStyle = 'var(--syd-accent-light)';
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -172,7 +172,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                 value={signerName}
                 onChange={(e) => setSignerName(e.target.value)}
                 placeholder="Juan Pérez"
-                className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
               />
             </div>
             <div className="flex-1 min-w-[200px]">
@@ -182,7 +182,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                 value={signerRole}
                 onChange={(e) => setSignerRole(e.target.value)}
                 placeholder="Gerente de Ventas"
-                className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
               />
             </div>
           </div>
@@ -225,7 +225,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="px-4 py-2 rounded-lg text-sm font-bold text-slate-400 hover:text-slate-200 bg-[#0f1a2e] border border-[#2d4972] hover:border-[#38bdf8] disabled:opacity-50 transition"
+              className="px-4 py-2 rounded-lg text-sm font-bold text-slate-400 hover:text-slate-200 bg-[#0f1a2e] border border-[#2d4972] hover:border-[var(--syd-accent)] disabled:opacity-50 transition"
             >
               Cancelar
             </button>

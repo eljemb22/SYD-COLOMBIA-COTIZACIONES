@@ -10,7 +10,7 @@ export const SyDOfficialIsoLogo: React.FC<SyDOfficialIsoLogoProps> = ({
   isDarkTheme = true,
 }) => {
   const navyColor = isDarkTheme ? '#ffffff' : '#1E2B6D';
-  const subtextColor = isDarkTheme ? '#38bdf8' : '#1E2B6D';
+  const subtextColor = isDarkTheme ? 'var(--syd-accent)' : '#1E2B6D';
 
   return (
     <svg
@@ -28,10 +28,10 @@ export const SyDOfficialIsoLogo: React.FC<SyDOfficialIsoLogoProps> = ({
         />
 
         {/* y (Body + Head Dot) */}
-        <circle cx="48" cy="16" r="4.5" fill={isDarkTheme ? '#38bdf8' : '#1E2B6D'} />
+        <circle cx="48" cy="16" r="4.5" fill={isDarkTheme ? 'var(--syd-accent)' : '#1E2B6D'} />
         <path
           d="M 36 26 C 40 26 44 30 46 34 L 50 43 L 56 26 L 65 26 L 54 50 C 50 58 44 64 36 65 C 32 65 29 63 29 63 L 31 55 C 31 55 34 56 37 55 C 41 53 43 49 44 45 L 34 26 Z"
-          fill={isDarkTheme ? '#38bdf8' : '#1E2B6D'}
+          fill={isDarkTheme ? 'var(--syd-accent)' : '#1E2B6D'}
         />
 
         {/* Dynamic Cyan Swoosh crossing y and D */}
@@ -115,7 +115,7 @@ export const SyDOfficialIsoLogo: React.FC<SyDOfficialIsoLogoProps> = ({
           fontFamily="'Segoe UI', Arial, sans-serif"
           fontSize="8.5"
           fontWeight="bold"
-          fill="#38bdf8"
+          fill="var(--syd-accent)"
           textAnchor="middle"
         >
           ISO 9001
@@ -138,7 +138,7 @@ export const SyDOfficialIsoLogo: React.FC<SyDOfficialIsoLogoProps> = ({
       {/* 3. IQNET International Certification Seal */}
       <g transform="translate(244, 4)">
         {/* Navy Circle */}
-        <circle cx="38" cy="38" r="36" fill="#152f5e" stroke="#38bdf8" strokeWidth="1.2" />
+        <circle cx="38" cy="38" r="36" fill="#152f5e" stroke="var(--syd-accent)" strokeWidth="1.2" />
 
         {/* Dotted Arc Pattern */}
         <g fill="#9ABAEB">

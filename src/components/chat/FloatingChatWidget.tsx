@@ -812,7 +812,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
               ? 'w-[94vw] sm:w-[650px] h-[85vh] max-h-[780px]'
               : 'w-[92vw] sm:w-[450px] h-[570px]'
           }`}
-          style={{ boxShadow: '0 20px 50px rgba(0, 0, 0, 0.65), 0 0 30px rgba(56, 189, 248, 0.2)' }}
+          style={{ boxShadow: '0 20px 50px rgba(0, 0, 0, 0.65), 0 0 30px color-mix(in srgb, var(--syd-accent) 20%, transparent)' }}
         >
           {/* Header Bar - Draggable across entire top area */}
           <div
@@ -1036,7 +1036,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
               {pendingAction && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={handleCancelPendingAction}>
                   <div
-                    className="bg-[#15243b] border border-[#38bdf8]/50 rounded-2xl p-5 shadow-2xl w-[90%] sm:w-[96px] max-w-[340px]"
+                    className="bg-[#15243b] border border-[var(--syd-accent)]/50 rounded-2xl p-5 shadow-2xl w-[90%] sm:w-[96px] max-w-[340px]"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex items-center gap-2 mb-3">
@@ -1151,7 +1151,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   placeholder="Escribe a Mara sobre cualquier acción, equipo o cálculo..."
                   value={botInput}
                   onChange={(e) => setBotInput(e.target.value)}
-                  className="flex-1 bg-[#14233a] border border-[#2d4972] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 outline-none"
+                  className="flex-1 bg-[#14233a] border border-[#2d4972] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 outline-none"
                 />
                 <button
                   type="submit"
@@ -1315,12 +1315,12 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   }
                   value={teamInput}
                   onChange={(e) => setTeamInput(e.target.value)}
-                  className="flex-1 bg-[#14233a] border border-[#2d4972] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 outline-none"
+                  className="flex-1 bg-[#14233a] border border-[#2d4972] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 outline-none"
                 />
                 <button
                   type="submit"
                   disabled={!teamInput.trim()}
-                  className="bg-[#38bdf8] hover:bg-[#22aae6] disabled:opacity-40 text-slate-950 p-2 rounded-xl font-bold transition cursor-pointer shadow-md shadow-sky-500/20 active:scale-95"
+                  className="bg-[var(--syd-accent)] hover:bg-[#22aae6] disabled:opacity-40 text-slate-950 p-2 rounded-xl font-bold transition cursor-pointer shadow-md shadow-sky-500/20 active:scale-95"
                   title="Enviar mensaje"
                 >
                   <Send className="w-4 h-4" />
@@ -1348,10 +1348,10 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
               setIsOpen(!isOpen);
             }
           }}
-          className="relative group p-1 rounded-full bg-linear-to-tr from-[#0284c7] via-[#0ea5e9] to-[#38bdf8] shadow-2xl transition-transform duration-200 hover:scale-110 active:scale-95 cursor-grab active:cursor-grabbing border-2 border-sky-300/60 touch-none select-none overflow-hidden"
+          className="relative group p-1 rounded-full bg-linear-to-tr from-[var(--syd-accent-light)] via-[var(--syd-accent-light)] to-[var(--syd-accent)] shadow-2xl transition-transform duration-200 hover:scale-110 active:scale-95 cursor-grab active:cursor-grabbing border-2 border-sky-300/60 touch-none select-none overflow-hidden"
           style={{
             borderRadius: '9999px',
-            boxShadow: '0 8px 25px rgba(14, 165, 233, 0.5), 0 0 20px rgba(56, 189, 248, 0.4)',
+            boxShadow: '0 8px 25px rgba(14, 165, 233, 0.5), 0 0 20px color-mix(in srgb, var(--syd-accent) 40%, transparent)',
             touchAction: 'none',
           }}
           title={isOpen ? 'Cerrar asistente Mara' : 'Mara IA - Arrastra libremente para mover o clic para abrir'}

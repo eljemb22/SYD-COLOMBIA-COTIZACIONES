@@ -40,7 +40,7 @@ export const LiveEquipmentLifeSheetPreview: React.FC<LiveEquipmentLifeSheetPrevi
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center p-1">
-                  <div className="w-10 h-10 rounded-lg bg-sky-600 text-white font-black flex items-center justify-center text-sm shadow-xs" style={{ backgroundColor: '#0284c7', color: '#ffffff' }}>
+                  <div className="w-10 h-10 rounded-lg bg-sky-600 text-white font-black flex items-center justify-center text-sm shadow-xs" style={{ backgroundColor: 'var(--syd-accent-light)', color: '#ffffff' }}>
                     SyD
                   </div>
                   <span className="text-[9px] font-bold text-slate-800 tracking-tight mt-1" style={{ color: '#1e293b' }}>
@@ -96,7 +96,7 @@ export const LiveEquipmentLifeSheetPreview: React.FC<LiveEquipmentLifeSheetPrevi
           <tbody>
             <tr className="border-b border-slate-300" style={{ borderColor: '#cbd5e1' }}>
               <td className="p-1.5 font-bold w-1/4" style={{ backgroundColor: '#f1f5f9', color: '#334155' }}>Nombre del Equipo:</td>
-              <td className="p-1.5 font-black w-1/4" colSpan={3} style={{ color: '#0284c7' }}>
+              <td className="p-1.5 font-black w-1/4" colSpan={3} style={{ color: 'var(--syd-accent-light)' }}>
                 {data.equipmentName || '—'}
               </td>
             </tr>
@@ -252,7 +252,7 @@ export const LiveEquipmentLifeSheetPreview: React.FC<LiveEquipmentLifeSheetPrevi
           <tbody>
             <tr className="border-b border-slate-300" style={{ borderColor: '#cbd5e1' }}>
               <td className="p-1.5 font-bold w-1/4" style={{ backgroundColor: '#f1f5f9', color: '#334155' }}>Frecuencia Preventivo:</td>
-              <td className="p-1.5 font-black" style={{ color: '#0284c7' }}>{data.maintenanceFrequency || 'Semestral'}</td>
+              <td className="p-1.5 font-black" style={{ color: 'var(--syd-accent-light)' }}>{data.maintenanceFrequency || 'Semestral'}</td>
               <td className="p-1.5 font-bold w-1/4" style={{ backgroundColor: '#f1f5f9', color: '#334155' }}>Requiere Calibración:</td>
               <td className="p-1.5 font-bold">
                 {data.requiresCalibration ? (

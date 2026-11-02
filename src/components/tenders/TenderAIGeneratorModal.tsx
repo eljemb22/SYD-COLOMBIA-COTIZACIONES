@@ -234,7 +234,7 @@ export const TenderAIGeneratorModal: React.FC<TenderAIGeneratorModalProps> = ({
                     : 'bg-[#15253d] border-[#334d6e] text-slate-300 hover:bg-[#192b45] hover:text-white'
                 }`}
               >
-                <Sliders className="w-4 h-4 text-[#38bdf8] shrink-0" />
+                <Sliders className="w-4 h-4 text-[var(--syd-accent)] shrink-0" />
                 <div className="truncate">
                   <div className="font-black">Parámetros & Rangos</div>
                   <div className="text-[9.5px] text-slate-400 truncate">Rangos numéricos holgados</div>
@@ -342,7 +342,7 @@ export const TenderAIGeneratorModal: React.FC<TenderAIGeneratorModalProps> = ({
                   onClick={() => handleGenerate('custom', customPrompt, specCount)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                     customPrompt.trim() && !isLoading
-                      ? 'bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 shadow-xs'
+                      ? 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 shadow-xs'
                       : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                   }`}
                 >
@@ -382,7 +382,7 @@ export const TenderAIGeneratorModal: React.FC<TenderAIGeneratorModalProps> = ({
                 onClick={handleAddNewBlankSpec}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#15253d] hover:bg-[#192b45] text-slate-300 hover:text-white border border-[#334d6e] transition cursor-pointer"
               >
-                <Plus className="w-3 h-3 text-[#38bdf8]" />
+                <Plus className="w-3 h-3 text-[var(--syd-accent)]" />
                 <span>Añadir Fila</span>
               </button>
 
@@ -416,7 +416,7 @@ export const TenderAIGeneratorModal: React.FC<TenderAIGeneratorModalProps> = ({
               <button
                 type="button"
                 onClick={() => handleGenerate('all', '', specCount)}
-                className="inline-flex items-center gap-1 bg-[#38bdf8] text-slate-950 font-black text-xs px-3 py-1 rounded-lg"
+                className="inline-flex items-center gap-1 bg-[var(--syd-accent)] text-slate-950 font-black text-xs px-3 py-1 rounded-lg"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Iniciar Generación</span>
@@ -538,7 +538,7 @@ export const TenderAIGeneratorModal: React.FC<TenderAIGeneratorModalProps> = ({
               onClick={() => handleApply('append')}
               className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer shadow-lg active:scale-95 ${
                 selectedCount > 0 && !isLoading
-                  ? 'bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 shadow-sky-500/20'
+                  ? 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 shadow-sky-500/20'
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed'
               }`}
             >

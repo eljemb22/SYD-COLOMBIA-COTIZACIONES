@@ -2070,7 +2070,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                   {orderToEdit ? 'Editar Orden de Venta (OV)' : 'Nueva Orden de Venta (OV)'}
                 </h2>
                 {quoteNumber && (
-                  <span className="px-2 py-0.5 rounded text-xs bg-[#38bdf8]/10 text-[#38bdf8] border border-[#38bdf8]/20 flex items-center gap-1 font-medium">
+                  <span className="px-2 py-0.5 rounded text-xs bg-[var(--syd-accent)]/10 text-[var(--syd-accent)] border border-[var(--syd-accent)]/20 flex items-center gap-1 font-medium">
                     <FileText className="w-3 h-3" />
                     Cotización {quoteNumber}
                   </span>
@@ -2145,7 +2145,7 @@ export const NewSalesOrderModal: React.FC<NewSalesOrderModalProps> = ({
                       }}
                       className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded font-semibold transition cursor-pointer ${
                         originType === 'quote'
-                          ? 'bg-[#38bdf8]/20 text-[#38bdf8] border border-[#38bdf8]/40 shadow-xs'
+                          ? 'bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] border border-[var(--syd-accent)]/40 shadow-xs'
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >

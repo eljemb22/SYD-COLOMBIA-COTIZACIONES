@@ -104,7 +104,7 @@ export const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({
                   placeholder="Buscar equipo, marca, modelo o cliente..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#14233a] border border-[#2d4972] rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#14233a] border border-[#2d4972] rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-[var(--syd-accent)] outline-none"
                 />
               </div>
             </div>
@@ -120,7 +120,7 @@ export const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({
                       setSelectedEquipment({ name, brand, model });
                     }
                   }}
-                  className="w-full bg-[#14233a] border border-[#2d4972] rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#38bdf8] outline-none"
+                  className="w-full bg-[#14233a] border border-[#2d4972] rounded-xl px-4 py-2.5 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                 >
                   <option value="">Seleccionar equipo para ver estadísticas</option>
                   {uniqueEquipments.map((eq) => (

@@ -285,7 +285,7 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
             {/* Countdown Badge */}
             <div className="flex flex-col items-center justify-center bg-[#0a1220] border border-[#334d6e] rounded-2xl px-4 py-2 shrink-0">
               <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Reinicio en</span>
-              <span className="text-2xl sm:text-3xl font-black text-[#38bdf8] font-mono animate-pulse">
+              <span className="text-2xl sm:text-3xl font-black text-[var(--syd-accent)] font-mono animate-pulse">
                 0{countdown}s
               </span>
             </div>
@@ -352,7 +352,7 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
             </div>
             {repairLogs.map((log, idx) => (
               <div key={idx} className="text-slate-300 flex items-start gap-1.5 leading-relaxed">
-                <span className="text-[#38bdf8]">›</span>
+                <span className="text-[var(--syd-accent)]">›</span>
                 <span>{log}</span>
               </div>
             ))}

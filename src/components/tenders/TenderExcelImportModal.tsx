@@ -544,7 +544,7 @@ export const TenderExcelImportModal: React.FC<TenderExcelImportModalProps> = ({
               <div className="bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <Download className="w-3.5 h-3.5 text-[#38bdf8] shrink-0" />
+                    <Download className="w-3.5 h-3.5 text-[var(--syd-accent)] shrink-0" />
                     <span className="font-bold text-white text-xs">Plantilla de Contratos:</span>
                     <span className="text-[11px] text-slate-300 hidden md:inline truncate">
                       Nombre del Cliente, NIT, N° Proceso, Valor Contrato ($ COP), Ciudad, Modalidad, Objeto, Plazo y Estado.
@@ -558,7 +558,7 @@ export const TenderExcelImportModal: React.FC<TenderExcelImportModalProps> = ({
                     onClick={() => setShowContractsGuide(!showContractsGuide)}
                     className="inline-flex items-center gap-1 bg-[#1e314b] hover:bg-[#284163] text-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-lg transition cursor-pointer border border-[#334d6e]"
                   >
-                    <HelpCircle className="w-3.5 h-3.5 text-[#38bdf8]" />
+                    <HelpCircle className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                     <span>{showContractsGuide ? 'Ocultar Formato' : '¿Cómo debe ser el formato?'}</span>
                     {showContractsGuide ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                   </button>
@@ -566,7 +566,7 @@ export const TenderExcelImportModal: React.FC<TenderExcelImportModalProps> = ({
                   <button
                     type="button"
                     onClick={downloadTenderContractsTemplate}
-                    className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-xs px-3 py-1.5 rounded-lg transition cursor-pointer shadow-sm active:scale-95"
+                    className="inline-flex items-center gap-1.5 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-black text-xs px-3 py-1.5 rounded-lg transition cursor-pointer shadow-sm active:scale-95"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Descargar Plantilla (.xlsx)</span>
@@ -576,9 +576,9 @@ export const TenderExcelImportModal: React.FC<TenderExcelImportModalProps> = ({
 
               {/* Collapsible Format Guide */}
               {showContractsGuide && (
-                <div className="bg-[#0b1322] border border-[#38bdf8]/30 rounded-xl p-2.5 space-y-1.5 text-[11px] text-slate-300 animate-fadeIn">
+                <div className="bg-[#0b1322] border border-[var(--syd-accent)]/30 rounded-xl p-2.5 space-y-1.5 text-[11px] text-slate-300 animate-fadeIn">
                   <p className="font-bold text-white text-xs flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5 text-[#38bdf8]" />
+                    <Info className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                     <span>Columnas requeridas en la Plantilla de Contratos:</span>
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5 text-[10.5px]">
@@ -631,8 +631,8 @@ export const TenderExcelImportModal: React.FC<TenderExcelImportModalProps> = ({
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-xl py-3 px-4 text-center cursor-pointer transition flex items-center justify-between gap-3 ${
                   dragActive
-                    ? 'border-[#38bdf8] bg-sky-950/30'
-                    : 'border-[#334d6e] hover:border-[#38bdf8]/80 bg-[#111c2e]/70 hover:bg-[#111c2e]'
+                    ? 'border-[var(--syd-accent)] bg-sky-950/30'
+                    : 'border-[#334d6e] hover:border-[var(--syd-accent)]/80 bg-[#111c2e]/70 hover:bg-[#111c2e]'
                 }`}
               >
                 <input
@@ -670,7 +670,7 @@ export const TenderExcelImportModal: React.FC<TenderExcelImportModalProps> = ({
               {/* Loading Indicator */}
               {isProcessing && (
                 <div className="p-3 text-center space-y-1 bg-[#111c2e] rounded-xl border border-[#334d6e]">
-                  <div className="w-5 h-5 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin mx-auto" />
+                  <div className="w-5 h-5 border-2 border-[var(--syd-accent)] border-t-transparent rounded-full animate-spin mx-auto" />
                   <p className="text-xs text-slate-300 font-bold">Procesando contratos del archivo Excel...</p>
                 </div>
               )}
@@ -690,7 +690,7 @@ export const TenderExcelImportModal: React.FC<TenderExcelImportModalProps> = ({
                   <div className="flex flex-wrap items-center justify-between gap-2 bg-[#111c2e] px-3 py-1.5 rounded-xl border border-[#334d6e]">
                     <div className="flex items-center gap-2 text-[11px] flex-wrap">
                       <span className="font-bold text-white flex items-center gap-1">
-                        <Building2 className="w-3 h-3 text-[#38bdf8]" />
+                        <Building2 className="w-3 h-3 text-[var(--syd-accent)]" />
                         <span>{totalContractsCount} Contratos</span>
                       </span>
                       <span className="text-slate-500">•</span>
@@ -757,7 +757,7 @@ export const TenderExcelImportModal: React.FC<TenderExcelImportModalProps> = ({
                               {c.clientName}
                             </td>
                             <td className="p-2 font-mono text-[11px] text-slate-300">{c.nit}</td>
-                            <td className="p-2 font-mono text-[11px] font-bold text-[#38bdf8]">{c.processNumber}</td>
+                            <td className="p-2 font-mono text-[11px] font-bold text-[var(--syd-accent)]">{c.processNumber}</td>
                             <td className="p-2 text-right font-mono text-[11px] font-bold text-emerald-300 whitespace-nowrap">
                               {c.budgetCOP && c.budgetCOP > 0 ? `$ ${c.budgetCOP.toLocaleString('es-CO')} COP` : '$ 0 COP'}
                             </td>
@@ -1175,7 +1175,7 @@ export const TenderExcelImportModal: React.FC<TenderExcelImportModalProps> = ({
                         {totalUnits} Unidades Totales
                       </span>
                       <span className="text-slate-500">•</span>
-                      <span className="text-[#38bdf8] font-bold flex items-center gap-1">
+                      <span className="text-[var(--syd-accent)] font-bold flex items-center gap-1">
                         <ListOrdered className="w-3 h-3" />
                         <span>{totalSpecsDetected} Requisitos Técnicos</span>
                       </span>

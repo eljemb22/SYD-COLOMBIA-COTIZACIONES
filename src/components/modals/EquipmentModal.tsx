@@ -649,7 +649,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[#192b45] border border-[#38bdf8]/50 rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-5 shadow-2xl animate-scaleUp max-h-[82vh] h-[80vh] flex flex-col overflow-hidden my-auto">
+      <div className="bg-[#192b45] border border-[var(--syd-accent)]/50 rounded-2xl max-w-5xl lg:max-w-6xl w-full p-4 sm:p-5 shadow-2xl animate-scaleUp max-h-[82vh] h-[80vh] flex flex-col overflow-hidden my-auto">
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-2.5 border-b border-[#334d6e] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -731,7 +731,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
             {/* SECTION 1: Datos Básicos, Marca, Modelo, Proveedor */}
             <div className="bg-[#15253d] p-4 rounded-xl border border-[#334d6e] space-y-3">
               <div className="flex items-center gap-2 text-white font-bold text-xs border-b border-[#334d6e]/60 pb-2">
-                <Tag className="w-4 h-4 text-[#38bdf8]" />
+                <Tag className="w-4 h-4 text-[var(--syd-accent)]" />
                 <span>1. Identificación, Marca, Modelo &amp; Proveedor</span>
               </div>
 
@@ -757,7 +757,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                         fetchDescriptionFromInternet(name, effectiveBrand, model);
                       }
                     }}
-                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-semibold focus:border-[#38bdf8] outline-none"
+                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-semibold focus:border-[var(--syd-accent)] outline-none"
                   />
                 </div>
 
@@ -765,7 +765,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                      <Tag className="w-3.5 h-3.5 text-[#38bdf8]" />
+                      <Tag className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                       <span>Parte / Código de Referencia *</span>
                     </label>
                     <button
@@ -776,7 +776,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                         const genCode = modelClean ? `${brandPrefix}-${modelClean}` : `EQ-${Date.now().toString().slice(-4)}`;
                         setCode(genCode);
                       }}
-                      className="text-[10.5px] text-[#38bdf8] hover:text-white transition cursor-pointer font-bold underline"
+                      className="text-[10.5px] text-[var(--syd-accent)] hover:text-white transition cursor-pointer font-bold underline"
                       title="Generar código sugerido basado en marca y modelo"
                     >
                       Auto-generar
@@ -788,7 +788,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                     placeholder="Ej: EQ-2960 / PACE-101 / REF-001"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    className="w-full bg-[#111c2e] border border-[#38bdf8]/70 focus:border-[#38bdf8] rounded-xl p-2.5 text-cyan-300 font-mono font-bold outline-none text-xs focus:ring-1 focus:ring-[#38bdf8]"
+                    className="w-full bg-[#111c2e] border border-[var(--syd-accent)]/70 focus:border-[var(--syd-accent)] rounded-xl p-2.5 text-cyan-300 font-mono font-bold outline-none text-xs focus:ring-1 focus:ring-[var(--syd-accent)]"
                   />
                   <span className="text-[10px] text-slate-400 mt-1 block">
                     Define o modifica el valor visible en la columna <strong>"Parte"</strong> del catálogo y cotizaciones.
@@ -803,7 +803,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                     placeholder="Ej: ePM 12M Pro / Aaron 2250 / PACE 101"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-medium focus:border-[#38bdf8] outline-none"
+                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-medium focus:border-[var(--syd-accent)] outline-none"
                   />
                 </div>
 
@@ -813,7 +813,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                     <select
                       value={brand}
                       onChange={(e) => setBrand(e.target.value)}
-                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-bold focus:border-[#38bdf8] outline-none cursor-pointer"
+                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-bold focus:border-[var(--syd-accent)] outline-none cursor-pointer"
                     >
                       <option value="SECA">SECA (Pesas, Balanzas, Tallímetros)</option>
                       <option value="MINDRAY">MINDRAY (Monitoreo, Anestesia, UCI)</option>
@@ -843,7 +843,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                         placeholder="Escriba el nombre de la marca..."
                         value={customBrand}
                         onChange={(e) => setCustomBrand(e.target.value)}
-                        className="w-full bg-[#111c2e] border border-[#38bdf8] rounded-xl p-2 text-white font-bold outline-none"
+                        className="w-full bg-[#111c2e] border border-[var(--syd-accent)] rounded-xl p-2 text-white font-bold outline-none"
                       />
                     )}
                   </div>
@@ -854,7 +854,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as MedicalEquipment['category'])}
-                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-medium focus:border-[#38bdf8] outline-none cursor-pointer"
+                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-medium focus:border-[var(--syd-accent)] outline-none cursor-pointer"
                   >
                     <option value="Monitoreo">Monitoreo</option>
                     <option value="Cirugía">Cirugía</option>
@@ -894,7 +894,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                 <div className="relative" ref={supplierContainerRef}>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-slate-300 font-bold flex items-center gap-1.5 text-xs">
-                      <Building2 className="w-4 h-4 text-[#38bdf8]" />
+                      <Building2 className="w-4 h-4 text-[var(--syd-accent)]" />
                       <span>Proveedor / Distribuidor Oficial *</span>
                     </label>
                     {supplier.trim() ? (
@@ -923,12 +923,12 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                         setSupplier(e.target.value);
                         setShowSupplierDropdown(true);
                       }}
-                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-medium focus:border-[#38bdf8] outline-none text-xs"
+                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-medium focus:border-[var(--syd-accent)] outline-none text-xs"
                     />
 
                     {/* Autocomplete Dropdown List */}
                     {showSupplierDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#101b2b] border border-[#38bdf8]/40 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto divide-y divide-[#334d6e]/40">
+                      <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#101b2b] border border-[var(--syd-accent)]/40 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto divide-y divide-[#334d6e]/40">
                         {/* Fuzzy Match Suggestion / Correction Banner */}
                         {(() => {
                           const matchRes = matchSupplierInDirectory(supplier, effectiveBrand);
@@ -1101,7 +1101,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                 {/* TRM Controller with Live Fetch from Internet */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5 text-[11px] bg-[#111c2e] px-2.5 py-1 rounded-lg border border-[#334d6e]">
-                    <Globe className="w-3.5 h-3.5 text-[#38bdf8]" />
+                    <Globe className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                     <span className="text-slate-400">TRM Aplicada:</span>
                     <input
                       type="number"
@@ -1117,7 +1117,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                     type="button"
                     onClick={() => handleFetchLiveTRM('usd')}
                     disabled={isFetchingTrm}
-                    className="inline-flex items-center gap-1 bg-[#192b45] hover:bg-[#253f68] text-[#38bdf8] border border-[#334d6e] px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer active:scale-95 disabled:opacity-50"
+                    className="inline-flex items-center gap-1 bg-[#192b45] hover:bg-[#253f68] text-[var(--syd-accent)] border border-[#334d6e] px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer active:scale-95 disabled:opacity-50"
                     title="Consultar y actualizar la TRM oficial en vivo de internet"
                   >
                     <RefreshCw className={`w-3 h-3 ${isFetchingTrm ? 'animate-spin text-amber-300' : ''}`} />
@@ -1284,7 +1284,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                     min={0}
                     value={warrantyMonths}
                     onChange={(e) => setWarrantyMonths(Number(e.target.value) || 0)}
-                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-bold focus:border-[#38bdf8] outline-none"
+                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white font-bold focus:border-[var(--syd-accent)] outline-none"
                   />
                 </div>
 
@@ -1295,7 +1295,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                     value={originCountry}
                     onChange={(e) => setOriginCountry(e.target.value)}
                     placeholder="Ej: Alemania / China / EE.UU."
-                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white focus:border-[#38bdf8] outline-none"
+                    className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white focus:border-[var(--syd-accent)] outline-none"
                   />
                 </div>
               </div>
@@ -1356,7 +1356,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                       type="date"
                       value={invimaExpiryDate}
                       onChange={(e) => setInvimaExpiryDate(e.target.value)}
-                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-lg p-2 text-white font-medium focus:border-[#38bdf8] outline-none"
+                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-lg p-2 text-white font-medium focus:border-[var(--syd-accent)] outline-none"
                     />
                   </div>
                   <div>
@@ -1364,7 +1364,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                     <select
                       value={invimaStatus}
                       onChange={(e) => setInvimaStatus(e.target.value as MedicalEquipment['invimaStatus'])}
-                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-lg p-2 text-white font-semibold focus:border-[#38bdf8] outline-none cursor-pointer"
+                      className="w-full bg-[#111c2e] border border-[#334d6e] rounded-lg p-2 text-white font-semibold focus:border-[var(--syd-accent)] outline-none cursor-pointer"
                     >
                       <option value="Vigente">Vigente</option>
                       <option value="En Renovación">En Renovación</option>
@@ -1548,7 +1548,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                   setDescriptionSource('manual');
                 }}
                 placeholder="Escriba la descripción comercial o ingrese el nombre del equipo arriba para obtener una descripción automática desde internet..."
-                className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white focus:border-[#38bdf8] outline-none resize-none leading-relaxed"
+                className="w-full bg-[#111c2e] border border-[#334d6e] rounded-xl p-2.5 text-white focus:border-[var(--syd-accent)] outline-none resize-none leading-relaxed"
               />
 
               {descriptionSource === 'ai' && description && (
@@ -1591,7 +1591,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
                 className={`font-black text-xs px-5 py-2.5 rounded-xl shadow-lg transition cursor-pointer flex items-center gap-1.5 ${
                   isEditing
                     ? 'bg-amber-400 hover:bg-amber-500 text-slate-950'
-                    : 'bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950'
+                    : 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950'
                 }`}
               >
                 {isEditing ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}

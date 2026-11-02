@@ -277,7 +277,7 @@ export const ProfitabilityCalculator: React.FC<ProfitabilityCalculatorProps> = (
                     <input
                       type="text"
                       placeholder="Nombre del equipo"
-                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                     />
                   </div>
                   <div>
@@ -285,7 +285,7 @@ export const ProfitabilityCalculator: React.FC<ProfitabilityCalculatorProps> = (
                     <input
                       type="text"
                       placeholder="Marca"
-                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                     />
                   </div>
                   <div>
@@ -293,7 +293,7 @@ export const ProfitabilityCalculator: React.FC<ProfitabilityCalculatorProps> = (
                     <input
                       type="text"
                       placeholder="Modelo"
-                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                     />
                   </div>
                   <div>
@@ -302,7 +302,7 @@ export const ProfitabilityCalculator: React.FC<ProfitabilityCalculatorProps> = (
                       type="number"
                       min="1"
                       value="1"
-                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                     />
                   </div>
                   <div>
@@ -311,7 +311,7 @@ export const ProfitabilityCalculator: React.FC<ProfitabilityCalculatorProps> = (
                       type="number"
                       min="0"
                       value="0"
-                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                     />
                   </div>
                   <div>
@@ -320,7 +320,7 @@ export const ProfitabilityCalculator: React.FC<ProfitabilityCalculatorProps> = (
                       type="number"
                       min="0"
                       value="0"
-                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[#38bdf8] outline-none"
+                      className="w-full bg-[#14233a] border border-[#2d4972] rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--syd-accent)] outline-none"
                     />
                   </div>
                 </div>

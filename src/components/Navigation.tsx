@@ -178,9 +178,9 @@ export const Navigation: React.FC<NavigationProps> = ({
           icon: ShoppingCart,
           badge: quoteBadge.text,
           badgeTitle: quoteBadge.title,
-          badgeColor: 'bg-[#38bdf8] text-slate-950 font-bold',
-          activeClass: 'bg-[#38bdf8]/15 border-[#38bdf8] text-white shadow-sm shadow-[#38bdf8]/10',
-          iconBg: 'bg-[#38bdf8] text-slate-950',
+          badgeColor: 'bg-[var(--syd-accent)] text-slate-950 font-bold',
+          activeClass: 'bg-[var(--syd-accent)]/15 border-[var(--syd-accent)] text-white shadow-sm shadow-[var(--syd-accent)]/10',
+          iconBg: 'bg-[var(--syd-accent)] text-slate-950',
           matchesTab: (currentTab: ActiveTab) => currentTab === 'ventas' || currentTab === 'historial',
         },
       ],
@@ -645,7 +645,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     }
                   : undefined
               }
-              className={`group w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 cursor-pointer text-left border hover:scale-[1.03] hover:shadow-[0_0_12px_rgba(56,189,248,0.25)] ${
+              className={`group w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 cursor-pointer text-left border hover:scale-[1.03] hover:shadow-[0_0_12px_color-mix(in srgb, var(--syd-accent) 25%, transparent)] ${
                 activeTab === 'inicio'
                   ? 'text-white shadow-sm font-black'
                   : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -732,7 +732,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                               }
                             : undefined
                         }
-                        className={`group w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 cursor-pointer text-left border hover:scale-[1.03] hover:shadow-[0_0_12px_rgba(56,189,248,0.25)] ${
+                        className={`group w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 cursor-pointer text-left border hover:scale-[1.03] hover:shadow-[0_0_12px_color-mix(in srgb, var(--syd-accent) 25%, transparent)] ${
                           isActive
                             ? 'text-white shadow-sm font-black'
                             : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60'

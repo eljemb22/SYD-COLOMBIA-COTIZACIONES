@@ -511,17 +511,17 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-[#192b45] border border-[#38bdf8]/60 rounded-2xl max-w-5xl lg:max-w-6xl w-full shadow-2xl animate-scaleUp max-h-[92vh] flex flex-col overflow-hidden my-auto">
+      <div className="bg-[#192b45] border border-[var(--syd-accent)]/60 rounded-2xl max-w-5xl lg:max-w-6xl w-full shadow-2xl animate-scaleUp max-h-[92vh] flex flex-col overflow-hidden my-auto">
         {/* Modal Header */}
         <div className="px-4 py-2.5 sm:px-5 sm:py-3 border-b border-[#334d6e] flex items-center justify-between gap-3 bg-[#15253d] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-2 rounded-xl bg-[#38bdf8]/20 text-[#38bdf8] border border-[#38bdf8]/30 shrink-0">
+            <div className="p-2 rounded-xl bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] border border-[var(--syd-accent)]/30 shrink-0">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div className="min-w-0">
               <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-2 truncate">
                 <span>Importación Masiva al Catálogo de Equipos</span>
-                <span className="text-[10px] bg-[#38bdf8]/20 text-[#38bdf8] px-2 py-0.5 rounded-full font-bold border border-[#38bdf8]/40">
+                <span className="text-[10px] bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] px-2 py-0.5 rounded-full font-bold border border-[var(--syd-accent)]/40">
                   Catálogo Maestro
                 </span>
               </h3>
@@ -538,7 +538,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                 className="hidden sm:inline-flex items-center gap-1.5 bg-[#192b45] hover:bg-[#223b5d] text-slate-200 border border-[#334d6e] font-semibold text-[11px] px-2.5 py-1 rounded-lg transition cursor-pointer"
                 title="Descargar plantilla Excel vacía con las columnas requeridas"
               >
-                <Download className="w-3 h-3 text-[#38bdf8]" />
+                <Download className="w-3 h-3 text-[var(--syd-accent)]" />
                 <span>Plantilla .xlsx</span>
               </button>
             )}
@@ -561,7 +561,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
               <div className="flex flex-wrap items-center justify-between gap-2.5">
                 <div className="space-y-0.5 min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 font-bold text-slate-200 text-xs">
-                    <Download className="w-3.5 h-3.5 text-[#38bdf8] shrink-0" />
+                    <Download className="w-3.5 h-3.5 text-[var(--syd-accent)] shrink-0" />
                     <span>Plantilla Excel en Blanco (Importar Equipos Nuevos):</span>
                   </div>
                   <p className="text-[10.5px] text-slate-300">
@@ -581,7 +581,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                   <button
                     type="button"
                     onClick={downloadCatalogEquipmentTemplate}
-                    className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-[11px] px-3.5 py-1.5 rounded-lg transition cursor-pointer shadow-sm active:scale-95"
+                    className="inline-flex items-center gap-1.5 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-black text-[11px] px-3.5 py-1.5 rounded-lg transition cursor-pointer shadow-sm active:scale-95"
                     title="Descargar plantilla Excel vacía con las 8 columnas requeridas"
                   >
                     <Download className="w-3 h-3 text-slate-950" />
@@ -592,15 +592,15 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
 
               {/* Interactive Guide Accordion */}
               {showGuide && (
-                <div className="bg-[#0b1322] border border-[#38bdf8]/40 rounded-xl p-3 space-y-2.5 animate-fadeIn text-xs text-slate-300">
+                <div className="bg-[#0b1322] border border-[var(--syd-accent)]/40 rounded-xl p-3 space-y-2.5 animate-fadeIn text-xs text-slate-300">
                   <div className="flex items-center gap-2 text-white font-bold pb-1.5 border-b border-[#334d6e]">
-                    <Info className="w-3.5 h-3.5 text-[#38bdf8]" />
+                    <Info className="w-3.5 h-3.5 text-[var(--syd-accent)]" />
                     <span className="text-xs">Estructura del Archivo Excel para Importación</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] leading-relaxed">
                     <div className="space-y-1.5 bg-[#15253d] p-2.5 rounded-lg border border-[#334d6e]">
-                      <h5 className="font-bold text-[#38bdf8] text-xs">
+                      <h5 className="font-bold text-[var(--syd-accent)] text-xs">
                         1. Las 8 Columnas del Excel
                       </h5>
                       <ul className="list-disc list-inside space-y-0.5 text-slate-300 pl-0.5">
@@ -615,7 +615,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                       </ul>
                     </div>
 
-                    <div className="space-y-1.5 bg-[#15253d] p-2.5 rounded-lg border border-[#38bdf8]/30">
+                    <div className="space-y-1.5 bg-[#15253d] p-2.5 rounded-lg border border-[var(--syd-accent)]/30">
                       <h5 className="font-bold text-emerald-300 text-xs flex items-center gap-1">
                         <Sparkles className="w-3 h-3 text-emerald-400" />
                         <span>2. Detección Inteligente</span>
@@ -643,8 +643,8 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl py-8 px-4 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 ${
                 dragActive
-                  ? 'border-[#38bdf8] bg-[#38bdf8]/10'
-                  : 'border-[#334d6e] hover:border-[#38bdf8]/80 bg-[#111c2e]/60 hover:bg-[#111c2e]'
+                  ? 'border-[var(--syd-accent)] bg-[var(--syd-accent)]/10'
+                  : 'border-[#334d6e] hover:border-[var(--syd-accent)]/80 bg-[#111c2e]/60 hover:bg-[#111c2e]'
               }`}
             >
               <input
@@ -654,7 +654,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                 onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
                 className="hidden"
               />
-              <div className="p-3 bg-[#38bdf8]/20 text-[#38bdf8] rounded-2xl border border-[#38bdf8]/30">
+              <div className="p-3 bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] rounded-2xl border border-[var(--syd-accent)]/30">
                 <UploadCloud className="w-7 h-7" />
               </div>
               <div className="space-y-0.5">
@@ -671,7 +671,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
           {/* Processing Spinner */}
           {isProcessing && (
             <div className="p-4 text-center space-y-2 bg-[#111c2e] rounded-xl border border-[#334d6e]">
-              <div className="w-6 h-6 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin mx-auto" />
+              <div className="w-6 h-6 border-2 border-[var(--syd-accent)] border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-xs text-slate-300 font-bold">Procesando, detectando existentes y asignando accesorios estándar...</p>
             </div>
           )}
@@ -693,7 +693,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
               {/* Ultra-Compact Control Bar: File Info + Stats + Actions */}
               <div className="bg-[#111c2e] border border-[#334d6e] rounded-xl px-3 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
                 <div className="flex flex-wrap items-center gap-2 min-w-0">
-                  <div className="p-1.5 bg-[#38bdf8]/20 text-[#38bdf8] rounded-lg border border-[#38bdf8]/30 shrink-0">
+                  <div className="p-1.5 bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] rounded-lg border border-[var(--syd-accent)]/30 shrink-0">
                     <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
                   </div>
                   <span className="font-bold text-slate-200 text-xs truncate max-w-[200px]" title={selectedFileName || 'Equipos.xlsx'}>
@@ -724,7 +724,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                     className="px-2.5 py-1 rounded-lg bg-[#192b45] hover:bg-[#223b5d] text-slate-300 border border-[#334d6e] text-[11px] font-semibold transition cursor-pointer flex items-center gap-1"
                   >
                     <span>{showSummaryKpis ? 'Ocultar Métricas' : 'Ver Métricas'}</span>
-                    {showSummaryKpis ? <ChevronUp className="w-3 h-3 text-[#38bdf8]" /> : <ChevronDown className="w-3 h-3 text-[#38bdf8]" />}
+                    {showSummaryKpis ? <ChevronUp className="w-3 h-3 text-[var(--syd-accent)]" /> : <ChevronDown className="w-3 h-3 text-[var(--syd-accent)]" />}
                   </button>
                   <button
                     type="button"
@@ -817,7 +817,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                         >
                           <div className="min-w-0 space-y-0.5">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-mono font-bold text-[#38bdf8] text-[10px] bg-[#192b45] px-1 py-0.2 rounded border border-[#334d6e]">
+                              <span className="font-mono font-bold text-[var(--syd-accent)] text-[10px] bg-[#192b45] px-1 py-0.2 rounded border border-[#334d6e]">
                                 {item.code}
                               </span>
                               <span className="font-bold text-white text-[11px]">{item.name}</span>
@@ -1100,7 +1100,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                     onClick={() => setSelectedProductGroupFilter('ALL')}
                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 cursor-pointer ${
                       selectedProductGroupFilter === 'ALL'
-                        ? 'bg-[#38bdf8] text-slate-950 shadow-xs font-black'
+                        ? 'bg-[var(--syd-accent)] text-slate-950 shadow-xs font-black'
                         : 'bg-[#111c2e] text-slate-300 border border-[#334d6e] hover:text-white'
                     }`}
                   >
@@ -1152,7 +1152,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                     placeholder="Buscar por equipo, marca, modelo, proveedor o parte..."
                     value={previewSearch}
                     onChange={(e) => setPreviewSearch(e.target.value)}
-                    className="w-full bg-[#111c2e] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 outline-none font-medium"
+                    className="w-full bg-[#111c2e] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 outline-none font-medium"
                   />
                   {previewSearch && (
                     <button
@@ -1185,7 +1185,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                     {filteredPreviewRows.map(({ row, originalIndex }) => (
                       <tr key={originalIndex} className="hover:bg-[#192b45] transition">
                         {/* Parte (Código) */}
-                        <td className="p-2.5 font-mono font-bold text-[#38bdf8] whitespace-nowrap">
+                        <td className="p-2.5 font-mono font-bold text-[var(--syd-accent)] whitespace-nowrap">
                           {row.code}
                         </td>
 
@@ -1193,7 +1193,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                         <td className="p-2.5 min-w-[260px]">
                           <p className="font-bold text-white leading-tight">{row.name}</p>
                           <div className="text-[10.5px] text-slate-300 mt-1 flex flex-wrap items-center gap-1.5">
-                            <span className="font-bold text-[#38bdf8]">{row.brand}</span>
+                            <span className="font-bold text-[var(--syd-accent)]">{row.brand}</span>
                             <span className="text-slate-500">•</span>
                             <span className="text-slate-200">{row.model}</span>
                             {row.invimaRecordNumber && (
@@ -1384,7 +1384,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                             <button
                               type="button"
                               onClick={() => handleOpenEditModal(originalIndex)}
-                              className="p-1.5 rounded-lg bg-[#111c2e] hover:bg-[#38bdf8]/20 text-slate-300 hover:text-[#38bdf8] border border-[#334d6e] transition cursor-pointer"
+                              className="p-1.5 rounded-lg bg-[#111c2e] hover:bg-[var(--syd-accent)]/20 text-slate-300 hover:text-[var(--syd-accent)] border border-[#334d6e] transition cursor-pointer"
                               title="Editar datos del equipo"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
@@ -1440,7 +1440,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
               type="button"
               onClick={handleConfirmImport}
               disabled={parsedRows.length === 0 || isProcessing}
-              className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] disabled:opacity-50 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-lg disabled:cursor-not-allowed active:scale-95"
+              className="inline-flex items-center gap-1.5 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] disabled:opacity-50 text-slate-950 font-black text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-lg disabled:cursor-not-allowed active:scale-95"
             >
               <Check className="w-4 h-4 stroke-[3]" />
               <span>Cargar {parsedRows.length} Equipos al Catálogo</span>
@@ -1591,11 +1591,11 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
           }}
           className="fixed inset-0 z-60 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-fadeIn"
         >
-          <div className="bg-[#192b45] border border-[#38bdf8]/60 rounded-2xl max-w-xl w-full shadow-2xl animate-scaleUp overflow-hidden flex flex-col max-h-[88vh]">
+          <div className="bg-[#192b45] border border-[var(--syd-accent)]/60 rounded-2xl max-w-xl w-full shadow-2xl animate-scaleUp overflow-hidden flex flex-col max-h-[88vh]">
             {/* Edit Row Header */}
             <div className="px-4 py-3 border-b border-[#334d6e] bg-[#15253d] flex items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="p-2 rounded-xl bg-[#38bdf8]/20 text-[#38bdf8] border border-[#38bdf8]/30 shrink-0">
+                <div className="p-2 rounded-xl bg-[var(--syd-accent)]/20 text-[var(--syd-accent)] border border-[var(--syd-accent)]/30 shrink-0">
                   <Edit3 className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
@@ -1624,7 +1624,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                   type="text"
                   value={editingRowData.name}
                   onChange={(e) => setEditingRowData({ ...editingRowData, name: e.target.value })}
-                  className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
+                  className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
                 />
               </div>
 
@@ -1635,7 +1635,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                     type="text"
                     value={editingRowData.brand}
                     onChange={(e) => setEditingRowData({ ...editingRowData, brand: e.target.value })}
-                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
+                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
                   />
                 </div>
                 <div>
@@ -1644,7 +1644,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                     type="text"
                     value={editingRowData.model}
                     onChange={(e) => setEditingRowData({ ...editingRowData, model: e.target.value })}
-                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
+                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
                   />
                 </div>
               </div>
@@ -1657,7 +1657,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                     list="modal-directory-suppliers-list"
                     value={editingRowData.supplier || ''}
                     onChange={(e) => setEditingRowData({ ...editingRowData, supplier: e.target.value })}
-                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
+                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
                     placeholder="Escriba o elija del Directorio..."
                   />
                   <datalist id="modal-directory-suppliers-list">
@@ -1678,7 +1678,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                         productGroup: e.target.value as ProductGroup,
                       })
                     }
-                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white outline-none font-bold"
+                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white outline-none font-bold"
                   >
                     <option value="Equipos Médicos" className="bg-[#111c2e] text-sky-300">
                       ⚡ Equipos Médicos
@@ -1707,7 +1707,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                         category: e.target.value as MedicalEquipment['category'],
                       })
                     }
-                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
+                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white outline-none font-medium"
                   >
                     {validCategories.map((cat) => (
                       <option key={cat} value={cat} className="bg-[#111c2e] text-white">
@@ -1727,7 +1727,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                         warrantyMonths: Number(e.target.value) || 24,
                       })
                     }
-                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white outline-none"
                   />
                 </div>
               </div>
@@ -1753,7 +1753,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                     type="text"
                     value={editingRowData.code}
                     onChange={(e) => setEditingRowData({ ...editingRowData, code: e.target.value })}
-                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-[#38bdf8] font-mono outline-none font-bold"
+                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-[var(--syd-accent)] font-mono outline-none font-bold"
                   />
                 </div>
               </div>
@@ -1767,7 +1767,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
                     onChange={(e) =>
                       setEditingRowData({ ...editingRowData, invimaRecordNumber: e.target.value })
                     }
-                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white font-mono outline-none"
+                    className="w-full bg-[#15253d] border border-[#334d6e] focus:border-[var(--syd-accent)] rounded-xl px-3 py-2 text-xs text-white font-mono outline-none"
                     placeholder="ej. INVIMA 2021EBC-0004521"
                   />
                 </div>
@@ -1786,7 +1786,7 @@ export const CatalogExcelImportModal: React.FC<CatalogExcelImportModalProps> = (
               <button
                 type="button"
                 onClick={handleSaveEditModal}
-                className="inline-flex items-center gap-1.5 bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-md"
+                className="inline-flex items-center gap-1.5 bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-md"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Guardar Cambios</span>

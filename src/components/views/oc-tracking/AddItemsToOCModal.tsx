@@ -274,7 +274,7 @@ export const AddItemsToOCModal: React.FC<AddItemsToOCModalProps> = ({
               <button
                 type="button"
                 onClick={handleAddBlankRow}
-                className="inline-flex items-center gap-1.5 bg-[#38bdf8]/20 hover:bg-[#38bdf8]/30 text-sky-300 border border-sky-400/40 text-xs font-bold px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[var(--syd-accent)]/20 hover:bg-[var(--syd-accent)]/30 text-sky-300 border border-sky-400/40 text-xs font-bold px-2.5 py-1.5 rounded-lg transition cursor-pointer"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
                 <span>Agregar Fila</span>
@@ -318,7 +318,7 @@ export const AddItemsToOCModal: React.FC<AddItemsToOCModalProps> = ({
                           placeholder="Nombre..."
                           value={row.name}
                           onChange={(e) => handleUpdateItem(idx, 'name', e.target.value)}
-                          className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[#38bdf8] text-xs"
+                          className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[var(--syd-accent)] text-xs"
                         />
                       </td>
                       <td className="py-1 px-1.5">
@@ -328,7 +328,7 @@ export const AddItemsToOCModal: React.FC<AddItemsToOCModalProps> = ({
                           placeholder="Marca..."
                           value={row.brand}
                           onChange={(e) => handleUpdateItem(idx, 'brand', e.target.value)}
-                          className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[#38bdf8] text-xs font-semibold"
+                          className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[var(--syd-accent)] text-xs font-semibold"
                         />
                       </td>
                       <td className="py-1 px-1.5">
@@ -338,7 +338,7 @@ export const AddItemsToOCModal: React.FC<AddItemsToOCModalProps> = ({
                           placeholder="Modelo..."
                           value={row.model}
                           onChange={(e) => handleUpdateItem(idx, 'model', e.target.value)}
-                          className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[#38bdf8] text-xs"
+                          className="w-full bg-[#101b2b] border border-[#334d6e] rounded px-1.5 py-0.5 text-white outline-none focus:border-[var(--syd-accent)] text-xs"
                         />
                       </td>
                       <td className="py-1 px-1 text-center">
@@ -348,7 +348,7 @@ export const AddItemsToOCModal: React.FC<AddItemsToOCModalProps> = ({
                           required
                           value={row.quantity}
                           onChange={(e) => handleUpdateItem(idx, 'quantity', parseInt(e.target.value) || 1)}
-                          className="w-10 text-center bg-[#101b2b] border border-[#334d6e] rounded py-0.5 text-white font-black outline-none focus:border-[#38bdf8] text-xs"
+                          className="w-10 text-center bg-[#101b2b] border border-[#334d6e] rounded py-0.5 text-white font-black outline-none focus:border-[var(--syd-accent)] text-xs"
                         />
                       </td>
                       <td className="py-1 px-1.5 text-right">
@@ -362,7 +362,7 @@ export const AddItemsToOCModal: React.FC<AddItemsToOCModalProps> = ({
                           className={`w-full text-right bg-[#101b2b] border rounded px-1.5 py-0.5 font-bold outline-none text-xs ${
                             (row.costPriceCOP || 0) <= 0
                               ? 'border-rose-500/70 text-rose-300 focus:border-rose-400'
-                              : 'border-[#334d6e] text-emerald-400 focus:border-[#38bdf8]'
+                              : 'border-[#334d6e] text-emerald-400 focus:border-[var(--syd-accent)]'
                           }`}
                         />
                       </td>
