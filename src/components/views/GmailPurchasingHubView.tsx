@@ -23,9 +23,7 @@ import {
   ArrowRight,
   Eye,
   FileText,
-  UserCheck,
   LogOut,
-  Sliders,
   Check,
   Copy,
   ChevronDown,
@@ -34,7 +32,6 @@ import {
   Hash,
   BookOpen,
   Users,
-  UserPlus,
   Globe,
   Settings,
   Building2,
@@ -124,13 +121,8 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
-  const [connectModalTab, setConnectModalTab] = useState<'direct' | 'oauth' | 'manual'>('direct');
-  const [customEmailInput, setCustomEmailInput] = useState<string>(currentUser?.email || 'eljemb22@gmail.com');
-  const [customNameInput, setCustomNameInput] = useState<string>(currentUser?.name || 'Administrador Compras SYD');
   const [savedAccounts, setSavedAccounts] = useState<GmailUserProfile[]>(() => gmailService.getSavedAccounts());
   const [customClientIdInput, setCustomClientIdInput] = useState<string>(gmailService.getStoredClientId());
-  const [manualTokenInput, setManualTokenInput] = useState<string>('');
-  const [manualTokenEmail, setManualTokenEmail] = useState<string>('');
 
   // Inbox & Detected Orders State
   const [detectedOrders, setDetectedOrders] = useState<DetectedPurchaseOrder[]>([]);
@@ -1158,35 +1150,6 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
     alert(`✓ "${requested.name}" ha sido registrado exitosamente en el Catálogo Maestro de Equipos.`);
   };
 
-  // Connect Any Gmail or Custom Email directly
-  const handleConnectDirectEmail = async (emailToConnect?: string, nameToConnect?: string) => {
-    const targetEmail = (emailToConnect || customEmailInput).trim();
-    const targetName = (nameToConnect || customNameInput).trim();
-    if (!targetEmail || !targetEmail.includes('@')) {
-      setAuthError('Por favor ingrese un correo electrónico válido (ej: eljemb22@gmail.com).');
-      return;
-    }
-    setIsAuthenticating(true);
-    setAuthError(null);
-    try {
-      const { profile } = gmailService.connectAnyEmail(targetEmail, targetName);
-      setUserProfile(profile);
-      setIsConnected(true);
-      setSavedAccounts(gmailService.getSavedAccounts());
-      setShowConfigModal(false);
-      await loadInboxOrders();
-    } catch (err: any) {
-      setAuthError(err.message || 'Error al conectar la cuenta de correo.');
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
-
-  // Switch to a saved account with 1-click
-  const handleSelectSavedAccount = async (account: GmailUserProfile) => {
-    await handleConnectDirectEmail(account.email, account.name);
-  };
-
   // Remove saved account from memory permanently
   const handleRemoveAccount = (emailToRemove: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1230,41 +1193,8 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
       console.warn('Auth notice/error:', err);
       setAuthError(
         err.message ||
-          'Google bloqueó la ventana porque este dominio no está registrado en los Orígenes de JavaScript de su Google Cloud Console. Recomendamos usar la pestaña "Cualquier Gmail (Directo)" o el botón "Abrir en Gmail Web".'
+          'Google bloqueó la ventana porque este dominio no está registrado en los Orígenes de JavaScript de su Google Cloud Console. Agrega "http://localhost:3000" en el cliente OAuth de tipo "Aplicación web" y vuelve a intentar.'
       );
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
-
-  // Quick Connect Demo / Corporate Account Handler
-  const handleQuickConnectDemo = async () => {
-    const email = currentUser?.email || 'compras.syd@sydcolombia.com';
-    const name = currentUser?.name || 'Departamento de Compras SYD';
-    await handleConnectDirectEmail(email, name);
-  };
-
-  // Connect Manual OAuth Token Handler
-  const handleConnectManualToken = async () => {
-    if (!manualTokenInput.trim()) {
-      alert('Por favor ingrese el Token de Acceso de Google OAuth.');
-      return;
-    }
-    setIsAuthenticating(true);
-    setAuthError(null);
-    try {
-      const { profile } = await gmailService.connectManualToken(
-        manualTokenInput,
-        manualTokenEmail || customEmailInput || currentUser?.email || 'compras@sydcolombia.com',
-        customNameInput || currentUser?.name || 'Usuario Google Conectado'
-      );
-      setUserProfile(profile);
-      setIsConnected(true);
-      setSavedAccounts(gmailService.getSavedAccounts());
-      setShowConfigModal(false);
-      await loadInboxOrders();
-    } catch (err: any) {
-      setAuthError(err.message || 'Error al conectar mediante token.');
     } finally {
       setIsAuthenticating(false);
     }
@@ -1693,10 +1623,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    setConnectModalTab('direct');
-                    setShowConfigModal(true);
-                  }}
+                  onClick={() => setShowConfigModal(true)}
                   className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-semibold transition border border-slate-600 shrink-0 cursor-pointer"
                   title="Cambiar a otra cuenta de Gmail"
                 >
@@ -1706,25 +1633,8 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
             ) : (
               <div className="bg-slate-900/40 p-2.5 rounded-lg border border-dashed border-slate-700 space-y-1">
                 <p className="text-xs text-slate-300 font-medium">
-                  Conecte cualquier dirección de Gmail para emitir órdenes de compra y sincronizar bandejas.
+                  Conecta tu cuenta de Google para emitir órdenes de compra y sincronizar bandejas.
                 </p>
-                {/* Quick 1-click accounts pills if any exist */}
-                {savedAccounts.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {savedAccounts.slice(0, 3).map((acc) => (
-                      <button
-                        key={acc.email}
-                        onClick={() => handleSelectSavedAccount(acc)}
-                        disabled={isAuthenticating}
-                        className="inline-flex items-center gap-1 text-[10px] bg-slate-800 hover:bg-cyan-900/60 text-cyan-300 px-2 py-1 rounded-md border border-slate-700 hover:border-cyan-500/50 transition cursor-pointer"
-                        title={`Conectar como ${acc.email}`}
-                      >
-                        <UserCheck className="w-3 h-3 text-cyan-400" />
-                        <span className="truncate max-w-[130px]">{acc.email}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
 
@@ -1740,10 +1650,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                     <span>{isLoadingInbox ? 'Sincronizando...' : 'Sincronizar Bandeja'}</span>
                   </button>
                   <button
-                    onClick={() => {
-                      setConnectModalTab('direct');
-                      setShowConfigModal(true);
-                    }}
+                    onClick={() => setShowConfigModal(true)}
                     className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-600 transition cursor-pointer"
                     title="Administrar Cuentas y Conexiones"
                   >
@@ -1758,45 +1665,21 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <button
-                    onClick={() => {
-                      setConnectModalTab('direct');
-                      setShowConfigModal(true);
-                    }}
-                    disabled={isAuthenticating}
-                    style={{
-                      backgroundColor: 'var(--syd-btn-bg, #38bdf8)',
-                      color: 'var(--syd-btn-text, #0f172a)',
-                      borderRadius: 'var(--syd-btn-radius, 14px)',
-                      borderColor: 'var(--syd-btn-bg, #38bdf8)',
-                    }}
-                    className="w-full inline-flex items-center justify-center gap-2 font-bold text-xs py-2.5 px-3 rounded-lg shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50 border"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span>Conectar Cualquier Cuenta de Gmail</span>
-                  </button>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleConnectGmail}
-                      disabled={isAuthenticating}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition active:scale-95 cursor-pointer disabled:opacity-50"
-                      title="Google Sign-In Popup"
-                    >
-                      <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>{isAuthenticating ? 'Abriendo Google...' : 'Ventana Google'}</span>
-                    </button>
-                    <button
-                      onClick={handleQuickConnectDemo}
-                      disabled={isAuthenticating}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-cyan-300 font-semibold text-[11px] py-1.5 px-2 rounded-lg transition active:scale-95 cursor-pointer disabled:opacity-50"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Demo Compras SYD</span>
-                    </button>
-                  </div>
-                </div>
+                <button
+                  onClick={handleConnectGmail}
+                  disabled={isAuthenticating}
+                  style={{
+                    backgroundColor: 'var(--syd-btn-bg, #38bdf8)',
+                    color: 'var(--syd-btn-text, #0f172a)',
+                    borderRadius: 'var(--syd-btn-radius, 14px)',
+                    borderColor: 'var(--syd-btn-bg, #38bdf8)',
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 font-bold text-xs py-2.5 px-3 rounded-lg shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50 border"
+                  title="Inicia sesión con Google (OAuth 2.0)"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>{isAuthenticating ? 'Abriendo Google...' : 'Conectar con Google'}</span>
+                </button>
               )}
             </div>
 
@@ -1818,20 +1701,11 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                 {!isConnected && (
                   <div className="flex items-center gap-2 pt-1 border-t border-amber-900/40">
                     <button
-                      onClick={() => {
-                        setConnectModalTab('direct');
-                        setShowConfigModal(true);
-                      }}
-                      className="text-[11px] font-bold text-cyan-300 hover:underline cursor-pointer"
+                      onClick={handleConnectGmail}
+                      disabled={isAuthenticating}
+                      className="text-[11px] font-bold text-cyan-300 hover:underline cursor-pointer disabled:opacity-50"
                     >
-                      Escribir mi correo Gmail
-                    </button>
-                    <span className="text-slate-600">&bull;</span>
-                    <button
-                      onClick={handleQuickConnectDemo}
-                      className="text-[11px] font-bold text-amber-300 hover:underline cursor-pointer"
-                    >
-                      Usar Conexión Rápida
+                      Reintentar conexión con Google
                     </button>
                   </div>
                 )}
@@ -2203,16 +2077,9 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                 </p>
               </div>
               <div>
-                <button
-                  onClick={() => {
-                    setConnectModalTab('direct');
-                    setShowConfigModal(true);
-                  }}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg transition active:scale-95 cursor-pointer"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>Vincular Cuenta de Gmail</span>
-                </button>
+                <p className="text-[11px] text-amber-300/90 font-semibold">
+                  Pulsa "Conectar con Google" en la tarjeta "Cuenta de Gmail activa" (arriba a la derecha) para iniciar sesión.
+                </p>
               </div>
             </div>
           ) : filteredOrders.length === 0 ? (
@@ -4962,39 +4829,10 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
 
             {/* Modal Tabs */}
             <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-              <button
-                onClick={() => setConnectModalTab('direct')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  connectModalTab === 'direct'
-                    ? 'bg-cyan-600 text-slate-950 shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>Cualquier Gmail (Directo)</span>
-              </button>
-              <button
-                onClick={() => setConnectModalTab('oauth')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  connectModalTab === 'oauth'
-                    ? 'bg-cyan-600 text-slate-950 shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
+              <div className="flex-1 py-2 px-3 rounded-lg text-xs font-bold bg-cyan-600 text-slate-950 shadow-md flex items-center justify-center gap-1.5">
                 <Globe className="w-3.5 h-3.5" />
-                <span>Google OAuth 2.0</span>
-              </button>
-              <button
-                onClick={() => setConnectModalTab('manual')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  connectModalTab === 'manual'
-                    ? 'bg-cyan-600 text-slate-950 shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                <span>Avanzado / Token</span>
-              </button>
+                <span>Google OAuth 2.0 (única conexión real)</span>
+              </div>
             </div>
 
             {authError && (
@@ -5016,154 +4854,19 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setConnectModalTab('direct');
                       setAuthError(null);
+                      handleConnectGmail();
                     }}
-                    className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-slate-950 text-xs font-bold transition cursor-pointer"
+                    disabled={isAuthenticating}
+                    className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-slate-950 text-xs font-bold transition cursor-pointer"
                   >
-                    Usar pestaña &quot;Cualquier Gmail (Directo)&quot; sin bloqueos
+                    Reintentar con Google
                   </button>
                 </div>
               </div>
             )}
-
-            {/* TAB 1: DIRECT EMAIL CONNECTION */}
-            {connectModalTab === 'direct' && (
-              <div className="space-y-4">
-                <div className="bg-slate-900/90 border border-cyan-500/30 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-cyan-300 font-bold text-xs">
-                    <UserPlus className="w-4 h-4 text-cyan-400" />
-                    <span>Conectar Nueva Dirección de Gmail</span>
-                  </div>
-                  <p className="text-xs text-slate-300">
-                    Ingrese cualquier cuenta de Gmail (ej: <span className="text-cyan-300 font-mono font-bold">eljemb22@gmail.com</span>) para emitir órdenes de compra, enviar solicitudes y administrar cotizaciones sin bloqueos de navegador.
-                  </p>
-
-                  <div className="space-y-3 pt-1">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                        Dirección de Correo Gmail / Workspace *
-                      </label>
-                      <input
-                        type="email"
-                        value={customEmailInput}
-                        onChange={(e) => setCustomEmailInput(e.target.value)}
-                        placeholder="ej: eljemb22@gmail.com o compras@sydcolombia.com"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white font-mono focus:outline-hidden focus:border-cyan-400"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                        Nombre del Remitente / Cargo
-                      </label>
-                      <input
-                        type="text"
-                        value={customNameInput}
-                        onChange={(e) => setCustomNameInput(e.target.value)}
-                        placeholder="ej: Juan Esteban - Compras SYD Colombia"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-hidden focus:border-cyan-400"
-                      />
-                    </div>
-
-                    <button
-                      onClick={() => handleConnectDirectEmail()}
-                      disabled={isAuthenticating || !customEmailInput.trim()}
-                      className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>{isAuthenticating ? 'Conectando Cuenta...' : `Conectar Cuenta (${customEmailInput || 'Gmail'})`}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Saved Accounts Switcher */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Cuentas Guardadas ({savedAccounts.length})</span>
-                    </span>
-                    {savedAccounts.length > 0 && (
-                      <button
-                        onClick={handleClearAllAccounts}
-                        className="text-[11px] text-red-400 hover:text-red-300 hover:underline flex items-center gap-1 cursor-pointer"
-                        title="Borrar todas las cuentas para que no quede ningún correo sincronizado"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>Eliminar todas</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {savedAccounts.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-slate-400 bg-slate-900/40 rounded-xl border border-dashed border-slate-800 space-y-1">
-                      <p className="font-semibold text-slate-300">No hay ningún correo sincronizado.</p>
-                      <p className="text-[11px] text-slate-500">Agregue su correo manualmente arriba cuando desee emitir o enviar órdenes.</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-800 bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
-                      {savedAccounts.map((account) => {
-                        const isCurrent = isConnected && userProfile?.email === account.email;
-                        return (
-                          <div
-                            key={account.email}
-                            onClick={() => handleSelectSavedAccount(account)}
-                            className={`p-3 flex items-center justify-between gap-3 cursor-pointer transition ${
-                              isCurrent
-                                ? 'bg-cyan-950/40 border-l-4 border-cyan-400'
-                                : 'hover:bg-slate-800/80'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-cyan-300 font-bold text-xs shrink-0">
-                                {account.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-bold text-white truncate flex items-center gap-1.5">
-                                  <span>{account.name}</span>
-                                  {isCurrent && (
-                                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-semibold border border-emerald-500/40">
-                                      Activa
-                                    </span>
-                                  )}
-                                </p>
-                                <p className="text-[11px] font-mono text-slate-400 truncate">{account.email}</p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 shrink-0">
-                              {!isCurrent && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSelectSavedAccount(account);
-                                  }}
-                                  className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs transition cursor-pointer"
-                                >
-                                  Usar
-                                </button>
-                              )}
-                              <button
-                                onClick={(e) => handleRemoveAccount(account.email, e)}
-                                className="p-1.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-950/40 transition cursor-pointer"
-                                title="Eliminar cuenta de la lista de forma permanente"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 2: GOOGLE OAUTH POPUP */}
-            {connectModalTab === 'oauth' && (
-              <div className="space-y-4">
+            {/* GOOGLE OAUTH POPUP (unica conexion real) */}
+            <div className="space-y-4">
                 <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
                   <div className="flex items-center gap-2 text-slate-200 font-bold text-xs">
                     <Globe className="w-4 h-4 text-cyan-400" />
@@ -5211,8 +4914,33 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                     className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Mail className="w-4 h-4" />
-                    <span>{isAuthenticating ? 'Abriendo Google...' : 'Abrir Selector de Cuenta Google'}</span>
+                    <span>{isAuthenticating ? 'Abriendo Google...' : 'Conectar con Google'}</span>
                   </button>
+
+                  {savedAccounts.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Cuentas conectadas anteriormente ({savedAccounts.length})
+                      </span>
+                      <div className="divide-y divide-slate-800 bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
+                        {savedAccounts.map((account) => (
+                          <div key={account.email} className="p-2.5 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-white truncate">{account.name}</p>
+                              <p className="text-[11px] font-mono text-slate-400 truncate">{account.email}</p>
+                            </div>
+                            <button
+                              onClick={(e) => handleRemoveAccount(account.email, e)}
+                              className="p-1.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-950/40 transition cursor-pointer shrink-0"
+                              title="Olvidar esta cuenta"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Explanatory banner about Why Google throws "No autorizado / Error 403 / Error 400" */}
                   <div className="p-4 bg-slate-950/80 border border-amber-500/40 rounded-xl space-y-3 text-xs">
@@ -5229,7 +4957,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                       <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-1.5 font-sans">
                         <p className="font-bold text-cyan-300">Opción 1 (Recomendada - Inmediata):</p>
                         <p>
-                          Usa la pestaña superior <strong className="text-white">&quot;Cualquier Gmail (Directo)&quot;</strong>. Te permite escribir cualquier correo corporativo (ej: <span className="font-mono text-cyan-300">auxlineadiagnostica@syd.com.co</span>) y conectarlo al instante para redactar y enviar órdenes y partes vía Gmail Web sin bloqueos de Google.
+                          Registra este origen en <strong className="text-white">"Orígenes de JavaScript autorizados"</strong> del cliente OAuth de tipo <strong className="text-white">"Aplicación web"</strong> (Google Cloud Console &gt; Credenciales &gt; IDs de cliente OAuth 2.0) y agrega <span className="font-mono text-cyan-300">http://localhost:3000</span>. Es el paso único que necesita Google para mostrar la ventana de inicio de sesión.
                         </p>
                       </div>
 
@@ -5253,79 +4981,6 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* TAB 3: ADVANCED / MANUAL TOKEN & CLIENT ID */}
-            {connectModalTab === 'manual' && (
-              <div className="space-y-4">
-                {/* Manual Token */}
-                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-slate-200 font-bold text-xs">
-                    <Tag className="w-4 h-4 text-emerald-400" />
-                    <span>Token de Acceso OAuth Manual (Bearer Token)</span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Si obtuvo un token de acceso temporal mediante Google OAuth Playground:
-                  </p>
-                  <input
-                    type="password"
-                    value={manualTokenInput}
-                    onChange={(e) => setManualTokenInput(e.target.value)}
-                    placeholder="ya29.a0AfH6SM..."
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-hidden focus:border-cyan-400"
-                  />
-                  <div className="flex items-center gap-2 pt-1">
-                    <input
-                      type="email"
-                      value={manualTokenEmail}
-                      onChange={(e) => setManualTokenEmail(e.target.value)}
-                      placeholder="email@empresa.com (opcional)"
-                      className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-hidden"
-                    />
-                    <button
-                      onClick={handleConnectManualToken}
-                      disabled={!manualTokenInput.trim()}
-                      className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-1.5 px-3 rounded-lg transition cursor-pointer"
-                    >
-                      Conectar Token
-                    </button>
-                  </div>
-                </div>
-
-                {/* Custom Google Client ID */}
-                <div className="space-y-2 bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                    Google Client ID Personalizado
-                  </label>
-                  <input
-                    type="text"
-                    value={customClientIdInput}
-                    onChange={(e) => setCustomClientIdInput(e.target.value)}
-                    placeholder="xxxx-yyyy.apps.googleusercontent.com"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-hidden focus:border-cyan-400"
-                  />
-                  <div className="flex items-center justify-end gap-2 pt-2">
-                    <button
-                      onClick={() => {
-                        setCustomClientIdInput(DEFAULT_GMAIL_CLIENT_ID);
-                        gmailService.setStoredClientId(DEFAULT_GMAIL_CLIENT_ID);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 cursor-pointer"
-                    >
-                      Restaurar Predeterminado
-                    </button>
-                    <button
-                      onClick={() => {
-                        gmailService.setStoredClientId(customClientIdInput);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-cyan-600 text-slate-950 text-xs font-bold hover:bg-cyan-500 cursor-pointer"
-                    >
-                      Guardar Client ID
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
               <button
@@ -5339,7 +4994,6 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
       {/* MODAL: MANUAL EDIT / OVERRIDE DETECTED PURCHASE ORDER OR PART CREATION */}
       {/* ========================================================================= */}
       {orderBeingEdited && (

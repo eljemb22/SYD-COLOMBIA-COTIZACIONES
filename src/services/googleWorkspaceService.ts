@@ -105,6 +105,20 @@ export class GoogleWorkspaceService {
       const storedExp = localStorage.getItem(GOOGLE_WORKSPACE_EXPIRY_KEY);
       const storedProf = localStorage.getItem(GOOGLE_WORKSPACE_PROFILE_KEY);
 
+      const isSimulatedToken = (t: string | null): boolean =>
+        !!t && (t.startsWith('direct_') || t.startsWith('demo_') || t.startsWith('fake_'));
+
+      if (storedToken && isSimulatedToken(storedToken)) {
+        // Sesion simulada heredada: se descarta por completo.
+        this.accessToken = null;
+        this.tokenExpiresAt = 0;
+        this.userProfile = null;
+        localStorage.removeItem(GOOGLE_WORKSPACE_TOKEN_KEY);
+        localStorage.removeItem(GOOGLE_WORKSPACE_EXPIRY_KEY);
+        localStorage.removeItem(GOOGLE_WORKSPACE_PROFILE_KEY);
+        return;
+      }
+
       if (storedToken) {
         this.accessToken = storedToken;
         // Keep active session retained long-term (30 days) to prevent unexpected disconnections
@@ -121,7 +135,7 @@ export class GoogleWorkspaceService {
         // Fallback: Check if valid Gmail token is present
         const gmailToken = localStorage.getItem('syd_gmail_oauth_token_v1');
         const gmailProf = localStorage.getItem('syd_gmail_user_profile_v1');
-        if (gmailToken) {
+        if (gmailToken && !isSimulatedToken(gmailToken)) {
           this.accessToken = gmailToken;
           this.tokenExpiresAt = Date.now() + 30 * 24 * 3600 * 1000;
           if (gmailProf) {
@@ -172,58 +186,6 @@ export class GoogleWorkspaceService {
     }
   }
 
-  /**
-   * Connect any Google Workspace or corporate email directly without Google OAuth block
-   */
-  public connectDirectAccount(
-    email: string,
-    name?: string
-  ): { profile: GoogleWorkspaceProfile; token: string } {
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      throw new Error('Por favor ingrese una dirección de correo válida.');
-    }
-
-    const defaultName =
-      name?.trim() ||
-      (cleanEmail.includes('auxlinea')
-        ? 'Línea Diagnóstica SYD'
-        : cleanEmail.includes('equimedicos')
-        ? 'Equimédicos 23'
-        : cleanEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
-
-    const token = `direct_workspace_${Date.now()}_${cleanEmail.replace(/[^a-z0-9]/gi, '_')}`;
-    const expiresAt = Date.now() + 30 * 24 * 3600 * 1000; // 30 days valid
-
-    const profile: GoogleWorkspaceProfile = {
-      email: cleanEmail,
-      name: defaultName,
-      verified_email: true,
-    };
-
-    this.accessToken = token;
-    this.tokenExpiresAt = expiresAt;
-    this.userProfile = profile;
-
-    localStorage.setItem(GOOGLE_WORKSPACE_TOKEN_KEY, token);
-    localStorage.setItem(GOOGLE_WORKSPACE_EXPIRY_KEY, String(expiresAt));
-    localStorage.setItem(GOOGLE_WORKSPACE_PROFILE_KEY, JSON.stringify(profile));
-
-    // Also sync with Gmail integration storage so both modules recognize the active user
-    localStorage.setItem('syd_gmail_oauth_token_v1', token);
-    localStorage.setItem('syd_gmail_oauth_token_v1_exp', String(expiresAt));
-    localStorage.setItem('syd_gmail_user_profile_v1', JSON.stringify(profile));
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('syd-workspace-auth-changed', {
-          detail: { connected: true, profile },
-        })
-      );
-    }
-
-    return { profile, token };
-  }
 
   public getClientId(): string {
     try {
@@ -1238,7 +1200,7 @@ export class GoogleWorkspaceService {
 
         if (res.status === 401) {
           this.clearAuth();
-          throw new Error('La sesión de Google ha expirado. Por favor presiona "Conectar con Google (OAuth)" nuevamente.');
+          throw new Error('La sesión de Google ha expirado. Por favor presiona "Conectar con Google Drive" nuevamente.');
         }
 
         console.warn('Error fetching user drive files:', res.status, errMsg);

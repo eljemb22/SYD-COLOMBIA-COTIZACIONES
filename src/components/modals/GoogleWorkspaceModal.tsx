@@ -21,7 +21,6 @@ import {
   FileText,
   Clock,
   ShieldCheck,
-  UserCheck,
   LogOut,
   Lock,
   Link2,
@@ -875,7 +874,7 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
   const handleSearchAndConnectNFCO03 = async () => {
     if (!googleWorkspaceService.isConnected()) {
       setSheetConnectionError(
-        'Para buscar en su Google Drive, primero conecte su cuenta de Google Workspace con el botón verde "Conectar Google".'
+        'Para buscar en su Google Drive, primero conecte su cuenta de Google Workspace con el botón "Conectar con Google Drive" de la parte superior.'
       );
       return;
     }
@@ -1174,20 +1173,6 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
     }
   };
 
-  const handleConnectDirect = (email: string, name?: string) => {
-    try {
-      setSheetError(null);
-      setDriveError(null);
-      setSheetConnectionError(null);
-      const res = googleWorkspaceService.connectDirectAccount(email, name);
-      setIsConnected(true);
-      setProfile(res.profile);
-      setSheetConnectionSuccess(`¡Cuenta ${res.profile.email} conectada con éxito!`);
-    } catch (err: any) {
-      setSheetConnectionError(err.message || 'Error al conectar la cuenta.');
-    }
-  };
-
   const handleConnectSheetFromDrive = async (sheetIdOrUrl: string) => {
     setActiveTab('sheets');
     await handleConnectExistingSheet(sheetIdOrUrl);
@@ -1308,27 +1293,16 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
 
           <div className="flex items-center gap-2 shrink-0">
             {!isConnected ? (
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleConnectGoogle}
-                  disabled={isConnecting}
-                  className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold text-xs rounded-lg shadow transition cursor-pointer disabled:opacity-50"
-                  title="Conectar con Google OAuth oficial"
-                >
-                  <Cloud className="w-3.5 h-3.5" />
-                  <span>{isConnecting ? 'Conectando...' : 'Conectar Google'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleConnectDirect('auxlineadiagnostica@syd.com.co', 'Línea Diagnóstica SYD')}
-                  className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs rounded-lg shadow transition cursor-pointer"
-                  title="Acceso directo auxlineadiagnostica@syd.com.co"
-                >
-                  <UserCheck className="w-3.5 h-3.5" />
-                  <span>Directo</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleConnectGoogle}
+                disabled={isConnecting}
+                className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold text-xs rounded-lg shadow transition cursor-pointer disabled:opacity-50"
+                title="Conectar tu cuenta de Google con OAuth (Drive, Sheets y Gmail)"
+              >
+                <Cloud className="w-3.5 h-3.5" />
+                <span>{isConnecting ? 'Conectando...' : 'Conectar con Google Drive'}</span>
+              </button>
             ) : (
               <button
                 type="button"
@@ -1424,15 +1398,10 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
 
                   <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
                     {!isConnected ? (
-                      <button
-                        type="button"
-                        onClick={handleConnectGoogle}
-                        disabled={isConnecting}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <HardDrive className="w-3.5 h-3.5" />
-                        <span>{isConnecting ? 'Conectando...' : 'Conectar Google Drive'}</span>
-                      </button>
+                      <span className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs font-semibold rounded-xl">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span>Pulsa "Conectar con Google Drive" en la parte superior para iniciar sesión</span>
+                      </span>
                     ) : (
                       <button
                         type="button"
@@ -2634,22 +2603,10 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                       </div>
 
                       <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center gap-2.5">
-                        <button
-                          type="button"
-                          onClick={handleConnectGoogle}
-                          disabled={isConnecting}
-                          className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl transition flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 shadow-md"
-                        >
-                          <Cloud className="w-4 h-4" />
-                          <span>Conectar con Google Drive (OAuth)</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleConnectDirect('auxlineadiagnostica@syd.com.co', 'Línea Diagnóstica SYD')}
-                          className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition flex items-center gap-2 cursor-pointer active:scale-95 shadow-md"
-                        >
-                          <span>⚡ Conectar auxlineadiagnostica@syd.com.co</span>
-                        </button>
+                        <span className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs font-semibold rounded-xl">
+                          <AlertCircle className="w-4 h-4" />
+                          <span>Pulsa "Conectar con Google Drive" en la parte superior para iniciar sesión</span>
+                        </span>
                         <label className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-2 cursor-pointer shadow-sm">
                           <Upload className="w-4 h-4 text-emerald-400" />
                           <span>Cargar Archivo Excel (.xlsx)</span>
@@ -2737,27 +2694,13 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                     </div>
 
                     {!isConnected ? (
-                      <div className="p-6 rounded-lg border border-dashed border-slate-700 text-center space-y-3">
+                      <div className="p-6 rounded-lg border border-dashed border-slate-700 text-center space-y-2">
                         <p className="text-xs text-slate-400">
-                          Conecta tu cuenta institucional o de Google Workspace para sincronizar tus documentos:
+                          Conecta tu cuenta institucional o de Google Workspace para sincronizar tus documentos.
                         </p>
-                        <div className="flex flex-wrap items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleConnectDirect('auxlineadiagnostica@syd.com.co', 'Línea Diagnóstica SYD')}
-                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition cursor-pointer active:scale-95 shadow-sm"
-                          >
-                            ⚡ Conectar auxlineadiagnostica@syd.com.co (Directo)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleConnectGoogle}
-                            disabled={isConnecting}
-                            className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-lg transition cursor-pointer active:scale-95 disabled:opacity-50"
-                          >
-                            Conectar con Google OAuth
-                          </button>
-                        </div>
+                        <p className="text-xs text-amber-300/90 font-semibold">
+                          Usa el botón "Conectar con Google Drive" en la parte superior de esta ventana.
+                        </p>
                       </div>
                     ) : isLoadingDriveSheets ? (
                       <div className="p-6 flex flex-col items-center justify-center gap-2 text-slate-400 text-xs">
@@ -2811,16 +2754,8 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                       <div className="p-4 rounded-lg bg-slate-800/40 text-center text-xs text-slate-300 space-y-2">
                         <p className="text-slate-300">No se detectaron hojas de cálculo de Google Sheets con la sesión actual.</p>
                         <p className="text-[11px] text-slate-400">
-                          Si tu cuenta abierta tiene archivos en Drive, pulsa el botón para actualizar y autorizar la lectura de Google Drive, o ingresa el enlace directo abajo:
+                          Si tu cuenta abierta tiene archivos en Drive, vuelve a conectar desde el boton superior para actualizar los permisos de lectura, o ingresa el enlace directo abajo:
                         </p>
-                        <button
-                          type="button"
-                          onClick={handleConnectGoogle}
-                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          <span>Actualizar Permisos de Google Drive</span>
-                        </button>
                       </div>
                     )}
                   </div>
@@ -2862,7 +2797,7 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                         ) : (
                           <>
                             <FileSpreadsheet className="w-3.5 h-3.5" />
-                            <span>Conectar & Detectar Partes</span>
+                            <span>Vincular y Detectar Partes</span>
                           </>
                         )}
                       </button>
@@ -2965,15 +2900,9 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
-                    <button
-                      type="button"
-                      onClick={handleConnectGoogle}
-                      disabled={isConnecting}
-                      className="px-3 py-1.5 bg-sky-700 hover:bg-sky-600 text-white font-semibold rounded-lg text-[11px] transition cursor-pointer flex items-center gap-1.5"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isConnecting ? 'animate-spin' : ''}`} />
-                      <span>Conectar con OAuth</span>
-                    </button>
+                    <span className="text-[11px] text-rose-300/90 font-semibold">
+                      Pulsa "Conectar con Google Drive" en la parte superior para reintentar.
+                    </span>
                   </div>
                 </div>
               )}
@@ -3059,31 +2988,22 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                     </span>
                   </div>
                   {isConnected && (
-                    <button
-                      type="button"
-                      onClick={handleConnectGoogle}
-                      className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center gap-1 font-semibold cursor-pointer"
-                    >
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1 font-semibold">
                       <RefreshCw className="w-3 h-3" />
-                      <span>Actualizar Permisos de Drive</span>
-                    </button>
+                      <span>Para actualizar permisos usa "Conectar con Google Drive" (arriba)</span>
+                    </span>
                   )}
                 </div>
 
                 <div className="divide-y divide-slate-800/80 max-h-[360px] overflow-y-auto scrollbar-thin">
                   {!isConnected ? (
-                    <div className="p-8 text-center space-y-3">
+                    <div className="p-8 text-center space-y-2">
                       <p className="text-xs text-slate-400">
                         Inicia sesión con tu cuenta de Google para acceder a todos los archivos y hojas de cálculo de tu Drive.
                       </p>
-                      <button
-                        type="button"
-                        onClick={handleConnectGoogle}
-                        disabled={isConnecting}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 text-white font-bold text-xs rounded-xl shadow transition cursor-pointer"
-                      >
-                        Conectar Google Workspace
-                      </button>
+                      <p className="text-xs text-amber-300/90 font-semibold">
+                        Usa el botón "Conectar con Google Drive" en la parte superior de esta ventana.
+                      </p>
                     </div>
                   ) : isLoadingDriveFiles ? (
                     <div className="p-8 flex flex-col items-center justify-center gap-2 text-slate-400 text-xs">
@@ -3091,37 +3011,6 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                       <span>Cargando archivos desde Google Drive...</span>
                     </div>
                   ) : driveFiles.length === 0 ? (
-                    googleWorkspaceService.getAccessToken()?.startsWith('direct_token_') ? (
-                      <div className="p-8 text-center space-y-4">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-inner">
-                          <HardDrive className="w-6 h-6" />
-                        </div>
-                        <div className="max-w-md mx-auto space-y-1.5">
-                          <p className="text-xs font-bold text-slate-200">
-                            Modo Conexión Directa Activo ({profile?.email || 'Institucional'})
-                          </p>
-                          <p className="text-[11px] text-slate-400 leading-relaxed">
-                            La Conexión Directa es un acceso rápido sin conexión directa a servidores de Google. Para listar y sincronizar tus archivos y hojas de cálculo de Drive en tiempo real, conecta con tu cuenta de Google mediante OAuth con el nuevo ID de cliente.
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={handleConnectGoogle}
-                            disabled={isConnecting}
-                            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2 cursor-pointer"
-                          >
-                            <RefreshCw className={`w-3.5 h-3.5 ${isConnecting ? 'animate-spin' : ''}`} />
-                            <span>Conectar con Google Drive (OAuth)</span>
-                          </button>
-                          <label className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs rounded-xl shadow transition flex items-center gap-2 cursor-pointer">
-                            <Upload className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Cargar Excel N-FCO-03 (.xlsx)</span>
-                            <input type="file" accept=".xlsx,.xls,.csv" onChange={handleLocalFileUpload} className="hidden" />
-                          </label>
-                        </div>
-                      </div>
-                    ) : (
                       <div className="p-8 text-center space-y-3">
                         <HardDrive className="w-8 h-8 text-slate-500 mx-auto" />
                         <div>
@@ -3156,13 +3045,9 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                             <RefreshCw className="w-3.5 h-3.5" />
                             <span>Recargar Archivos de Drive</span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={handleConnectGoogle}
-                            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 font-semibold text-xs rounded-lg transition flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <span>Reautorizar Permisos</span>
-                          </button>
+                          <span className="text-[11px] text-amber-300/90 font-semibold">
+                            Para reautorizar usa "Conectar con Google Drive" (arriba).
+                          </span>
                           <a
                             href="https://drive.google.com"
                             target="_blank"
@@ -3174,7 +3059,6 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                           </a>
                         </div>
                       </div>
-                    )
                   ) : (
                     driveFiles.map((file, fileIdx) => {
                       const isSheet =
@@ -3241,7 +3125,7 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                                 title="Conectar esta hoja, explorar su contenido y detectar partes"
                               >
                                 <FileSpreadsheet className="w-3.5 h-3.5" />
-                                <span>Conectar & Detectar Partes</span>
+                                <span>Vincular y Detectar Partes</span>
                               </button>
                             )}
 

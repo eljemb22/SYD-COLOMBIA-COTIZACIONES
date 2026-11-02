@@ -298,7 +298,15 @@ class GmailIntegrationService {
       const storedExpiry = localStorage.getItem(`${GMAIL_TOKEN_STORAGE_KEY}_exp`);
       const storedProfile = localStorage.getItem(GMAIL_PROFILE_STORAGE_KEY);
 
-      if (storedToken && storedExpiry) {
+      // Los tokens simulados ("direct_*", "demo_*", "fake_*") NO provienen de una
+      // autenticacion real de Google. Se descartan (token + perfil) para que la
+      // aplicacion nunca muestre una cuenta falsa como conectada.
+      const isSimulatedToken = (t: string | null): boolean =>
+        !!t && (t.startsWith('direct_') || t.startsWith('demo_') || t.startsWith('fake_'));
+
+      if (isSimulatedToken(storedToken)) {
+        this.clearAuth();
+      } else if (storedToken && storedExpiry) {
         const expTime = parseInt(storedExpiry, 10);
         if (Date.now() < expTime) {
           this.accessToken = storedToken;
@@ -308,7 +316,7 @@ class GmailIntegrationService {
         }
       }
 
-      if (storedProfile) {
+      if (storedProfile && !isSimulatedToken(storedToken)) {
         this.userProfile = JSON.parse(storedProfile);
       }
 
@@ -602,37 +610,6 @@ class GmailIntegrationService {
     localStorage.removeItem(GMAIL_PROFILE_STORAGE_KEY);
   }
 
-  /**
-   * Connect ANY Gmail or email account directly
-   */
-  public connectAnyEmail(email: string, name?: string, picture?: string): { profile: GmailUserProfile; token: string } {
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      throw new Error('Por favor ingrese una dirección de correo válida (ej: eljemb22@gmail.com o tu.correo@empresa.com).');
-    }
-
-    const defaultName = name?.trim() || cleanEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    const token = `direct_email_${Date.now()}_${cleanEmail.replace(/[^a-z0-9]/gi, '_')}`;
-
-    const profile: GmailUserProfile = {
-      email: cleanEmail,
-      name: defaultName,
-      picture: picture || undefined,
-      verified_email: true,
-    };
-
-    this.accessToken = token;
-    this.tokenExpiresAt = Date.now() + 30 * 24 * 3600 * 1000; // 30 days valid
-    this.userProfile = profile;
-
-    localStorage.setItem(GMAIL_TOKEN_STORAGE_KEY, token);
-    localStorage.setItem(`${GMAIL_TOKEN_STORAGE_KEY}_exp`, String(this.tokenExpiresAt));
-    localStorage.setItem(GMAIL_PROFILE_STORAGE_KEY, JSON.stringify(profile));
-
-    this.saveAccount(profile);
-
-    return { profile, token };
-  }
 
   /**
    * Request OAuth 2.0 access token via Google Identity Services popup
@@ -753,17 +730,6 @@ class GmailIntegrationService {
       this.saveAccount(fallbackProfile);
       return { profile: fallbackProfile, token: cleanToken };
     }
-  }
-
-  /**
-   * Quick connection / demo corporate mode
-   */
-  public connectQuickDemoAccount(email?: string, name?: string): { profile: GmailUserProfile; token: string } {
-    return this.connectAnyEmail(
-      email || 'compras.syd@sydcolombia.com',
-      name || 'Departamento de Compras & OCs SYD',
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-    );
   }
 
   /**
