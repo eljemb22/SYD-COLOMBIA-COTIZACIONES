@@ -1366,20 +1366,14 @@ select[class*="bg-["] {
               inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-/* --- Entrada de cada ventana (optimizada: solo opacidad, sin transform) --- */
-@keyframes viewEnter {
-  from { opacity: 0.6; }
-  to   { opacity: 1; }
-}
-
-/* Fondo limpio sin gradientes (mejor rendimiento) */
+/* --- Sin animacion de entrada (mejor rendimiento) --- */
 #app-main-content {
   background-image: none;
   background-repeat: no-repeat;
 }
 
 #app-main-content > * {
-  animation: viewEnter 0.15s ease both;
+  animation: none;
 }
 
 /* --- Títulos algo más compactos y limpios ------------------------- */
