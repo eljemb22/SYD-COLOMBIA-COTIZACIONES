@@ -1609,6 +1609,107 @@ select[class*="bg-["] {
 }
 
 /* =====================================================================
+   CONSISTENCIA DE TEMA (5) - clases sys-* del panel de inicio
+   ===================================================================== */
+.sys-chip {
+  color: var(--syd-accent) !important;
+  background: color-mix(in srgb, var(--syd-accent) 12%, transparent) !important;
+  border-color: color-mix(in srgb, var(--syd-accent) 30%, transparent) !important;
+}
+
+.sys-chip-muted {
+  color: var(--syd-text-secondary) !important;
+}
+
+.sys-gradient-text {
+  background: none !important;
+  color: var(--syd-accent) !important;
+  -webkit-text-fill-color: var(--syd-accent) !important;
+}
+
+.sys-badge {
+  color: var(--syd-accent) !important;
+  background: color-mix(in srgb, var(--syd-accent) 12%, transparent) !important;
+  border-color: color-mix(in srgb, var(--syd-accent) 28%, transparent) !important;
+}
+
+.sys-ico {
+  color: var(--syd-accent) !important;
+  background: color-mix(in srgb, var(--syd-accent) 12%, transparent) !important;
+  border-color: color-mix(in srgb, var(--syd-accent) 25%, transparent) !important;
+  box-shadow: none !important;
+}
+
+.sys-ico-sm {
+  color: var(--syd-text-secondary) !important;
+}
+
+.sys-kpi {
+  background-color: var(--syd-card-bg) !important;
+  border-color: var(--syd-border-color) !important;
+}
+
+.sys-kpi::before {
+  background: radial-gradient(120% 100% at 100% 0%,
+              color-mix(in srgb, var(--syd-accent) 16%, transparent), transparent 66%) !important;
+}
+
+.sys-panel {
+  background-color: var(--syd-card-bg) !important;
+  border-color: var(--syd-border-color) !important;
+}
+
+.sys-session {
+  background-color: var(--syd-card-bg) !important;
+  border-color: var(--syd-border-color) !important;
+}
+
+.sys-link-row {
+  background-color: var(--syd-card-bg) !important;
+  border-color: var(--syd-border-color) !important;
+}
+
+.sys-tile {
+  background-color: var(--syd-card-bg) !important;
+  border-color: var(--syd-border-color) !important;
+}
+
+.sys-tile .sys-ico {
+  color: var(--syd-accent) !important;
+  background: color-mix(in srgb, var(--syd-accent) 14%, transparent) !important;
+  border-color: color-mix(in srgb, var(--syd-accent) 30%, transparent) !important;
+  box-shadow: none !important;
+}
+
+.sys-client-card {
+  background-color: var(--syd-card-bg) !important;
+  border-color: var(--syd-border-color) !important;
+}
+
+.sys-scenario {
+  background-color: var(--syd-card-bg) !important;
+  border-color: var(--syd-border-color) !important;
+}
+
+.sys-arrow {
+  color: var(--syd-text-secondary) !important;
+}
+
+.sys-tile:hover .sys-arrow {
+  color: var(--syd-btn-text) !important;
+  background-color: var(--syd-accent) !important;
+  border-color: var(--syd-accent) !important;
+}
+
+.sys-tile:hover {
+  border-color: color-mix(in srgb, var(--syd-accent) 40%, transparent) !important;
+}
+
+.sys-kpi:hover {
+  border-color: color-mix(in srgb, var(--syd-accent) 40%, transparent) !important;
+}
+
+/* =====================================================================
    CONSISTENCIA DE TEMA — los colores de acento (sky/cyan/blue) siguen
    la variable --syd-accent para que cualquier tema personalizado se
    aplique a toda la interfaz, no solo a las partes que usan la variable.
