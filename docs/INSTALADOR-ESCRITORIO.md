@@ -45,7 +45,8 @@ La app sincroniza en tiempo real con **Firestore**. Para que funcione:
 1. En **cada PC**, abrir la app y pulsar **Conectar con Google Drive** (ventana 1) o
    **Conectar con Google** (Gmail / Órdenes de compra).
 2. Usar la **misma cuenta de Google** en todas las PCs.
-3. Verificar que la barra superior muestre el estado **Conectado y Sincronizado**.
+3. Abrir el botón **Instalar / Compartir** de la barra superior y verificar que el
+   estado diga **Conectado y Sincronizado en Tiempo Real**.
 
 A partir de ese momento, cualquier cambio guardado en una PC (cotización, equipo,
 licitación, OC, orden de venta, factura, documento o usuario) aparece en las demás
@@ -58,8 +59,8 @@ en segundos, sin recargar.
 
 - Confirmar que la cuenta de Google se conectó correctamente (no basta con el login
   de la app).
-- Revisar que el puerto `3000` esté libre. Si otro programa lo ocupa, la app abre
-  igual, pero Drive/Gmail y la sincronización no podrán autenticarse.
+- Revisar que el puerto `3000` esté libre. Si otro programa lo ocupa, la app
+  mostrará "No se pudo iniciar el motor interno": cierra ese programa y vuelve a abrirla.
 - Cerrar cualquier otra copia de SYD Colombia abierta (la app permite una sola
   instancia por usuario de Windows).
 
