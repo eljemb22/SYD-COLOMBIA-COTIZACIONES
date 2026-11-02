@@ -1608,3 +1608,118 @@ select[class*="bg-["] {
   }
 }
 
+/* =====================================================================
+   CONSISTENCIA DE TEMA — los colores de acento (sky/cyan/blue) siguen
+   la variable --syd-accent para que cualquier tema personalizado se
+   aplique a toda la interfaz, no solo a las partes que usan la variable.
+   ===================================================================== */
+:root {
+  --syd-accent-hover: color-mix(in srgb, var(--syd-accent) 85%, #000000);
+}
+
+/* Texto */
+[class~="text-sky-300"],
+[class~="text-sky-400"],
+[class~="text-sky-500"],
+[class~="text-cyan-300"],
+[class~="text-cyan-400"],
+[class~="text-cyan-500"],
+[class~="text-blue-300"],
+[class~="text-blue-400"],
+[class~="text-blue-500"] {
+  color: var(--syd-accent) !important;
+}
+
+/* Fondos */
+[class~="bg-sky-400"],
+[class~="bg-sky-500"],
+[class~="bg-sky-600"],
+[class~="bg-cyan-400"],
+[class~="bg-cyan-500"],
+[class~="bg-cyan-600"],
+[class~="bg-blue-400"],
+[class~="bg-blue-500"],
+[class~="bg-blue-600"] {
+  background-color: var(--syd-accent) !important;
+}
+
+/* Bordes */
+[class~="border-sky-400"],
+[class~="border-sky-500"],
+[class~="border-cyan-400"],
+[class~="border-cyan-500"],
+[class~="border-blue-400"],
+[class~="border-blue-500"] {
+  border-color: var(--syd-accent) !important;
+}
+
+/* Hover texto */
+[class~="hover:text-sky-300"]:hover,
+[class~="hover:text-sky-400"]:hover,
+[class~="hover:text-sky-500"]:hover,
+[class~="hover:text-cyan-300"]:hover,
+[class~="hover:text-cyan-400"]:hover,
+[class~="hover:text-cyan-500"]:hover,
+[class~="hover:text-blue-400"]:hover,
+[class~="hover:text-blue-500"]:hover {
+  color: var(--syd-accent) !important;
+}
+
+/* Hover fondo */
+[class~="hover:bg-sky-400"]:hover,
+[class~="hover:bg-sky-500"]:hover,
+[class~="hover:bg-sky-600"]:hover,
+[class~="hover:bg-cyan-400"]:hover,
+[class~="hover:bg-cyan-500"]:hover,
+[class~="hover:bg-cyan-600"]:hover,
+[class~="hover:bg-blue-400"]:hover,
+[class~="hover:bg-blue-500"]:hover,
+[class~="hover:bg-blue-600"]:hover {
+  background-color: var(--syd-accent) !important;
+}
+
+/* Hover borde */
+[class~="hover:border-sky-400"]:hover,
+[class~="hover:border-sky-500"]:hover,
+[class~="hover:border-cyan-400"]:hover,
+[class~="hover:border-cyan-500"]:hover,
+[class~="hover:border-blue-400"]:hover,
+[class~="hover:border-blue-500"]:hover {
+  border-color: var(--syd-accent) !important;
+}
+
+/* Focus */
+[class~="focus:border-sky-400"]:focus,
+[class~="focus:border-cyan-400"]:focus,
+[class~="focus:border-blue-400"]:focus,
+[class~="focus:ring-sky-400"]:focus,
+[class~="focus:ring-cyan-400"]:focus,
+[class~="focus:ring-blue-400"]:focus {
+  border-color: var(--syd-accent) !important;
+  --tw-ring-color: var(--syd-accent) !important;
+}
+
+/* Group hover */
+.group:hover [class~="group-hover:text-sky-400"],
+.group:hover [class~="group-hover:text-cyan-400"],
+.group:hover [class~="group-hover:text-blue-400"],
+.group:hover [class~="group-hover:bg-sky-400"],
+.group:hover [class~="group-hover:bg-cyan-400"],
+.group:hover [class~="group-hover:bg-blue-400"] {
+  color: var(--syd-accent) !important;
+  background-color: var(--syd-accent) !important;
+}
+
+/* Fill y stroke para iconos */
+[class~="fill-sky-400"],
+[class~="fill-cyan-400"],
+[class~="fill-blue-400"] {
+  fill: var(--syd-accent) !important;
+}
+
+[class~="stroke-sky-400"],
+[class~="stroke-cyan-400"],
+[class~="stroke-blue-400"] {
+  stroke: var(--syd-accent) !important;
+}
+
