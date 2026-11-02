@@ -25,6 +25,14 @@ const APP_HOST = 'syd';
 const APP_ORIGIN = `${APP_SCHEME}://${APP_HOST}`;
 const IS_PACKAGED = app.isPackaged;
 
+// electron-updater es opcional: si no esta disponible (entorno dev), se omite.
+let autoUpdater = null;
+try {
+  autoUpdater = require('electron-updater').autoUpdater;
+} catch (_) {
+  autoUpdater = null;
+}
+
 // Define la carpeta de datos de la app: %APPDATA%/SYD Colombia
 app.setName('SYD Colombia');
 
@@ -233,6 +241,43 @@ function isGoogleAuthUrl(url) {
   }
 }
 
+function sendUpdateEvent(payload) {
+  try {
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+      mainWindow.webContents.send('syd:update-event', payload);
+    }
+  } catch (_) {}
+}
+
+function setupAutoUpdater() {
+  if (!autoUpdater || !IS_PACKAGED) return;
+  try {
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.on('checking-for-update', () => sendUpdateEvent({ type: 'checking' }));
+    autoUpdater.on('update-available', (info) =>
+      sendUpdateEvent({ type: 'available', version: info && info.version, releaseNotes: info && info.releaseNotes })
+    );
+    autoUpdater.on('update-not-available', (info) =>
+      sendUpdateEvent({ type: 'not-available', version: info && info.version })
+    );
+    autoUpdater.on('download-progress', (p) =>
+      sendUpdateEvent({ type: 'progress', percent: p && p.percent, transferred: p && p.transferred, total: p && p.total })
+    );
+    autoUpdater.on('update-downloaded', (info) =>
+      sendUpdateEvent({ type: 'downloaded', version: info && info.version })
+    );
+    autoUpdater.on('error', (err) =>
+      sendUpdateEvent({ type: 'error', message: err && err.message ? err.message : String(err) })
+    );
+    autoUpdater.checkForUpdates().catch((e) =>
+      sendUpdateEvent({ type: 'error', message: e && e.message ? e.message : String(e) })
+    );
+  } catch (e) {
+    console.warn('[AutoUpdater] no disponible:', e && e.message ? e.message : String(e));
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -295,6 +340,9 @@ function createWindow() {
   });
 
   mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
+
+  // Verificar actualizaciones del binario en segundo plano (solo en builds empaquetados).
+  setTimeout(() => setupAutoUpdater(), 4000);
 }
 
 /* ------------------------------------------------------------------ *
@@ -429,7 +477,38 @@ if (!gotTheLock) {
     }
   });
 
-  app.whenReady().then(() => {
+  // Handlers IPC para el auto-actualizador del escritorio.
+ipcMain.handle('syd:update:check', async () => {
+  if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
+  try {
+    const r = await autoUpdater.checkForUpdates();
+    return { ok: true, updateInfo: r && r.updateInfo };
+  } catch (e) {
+    return { ok: false, reason: e && e.message ? e.message : String(e) };
+  }
+});
+
+ipcMain.handle('syd:update:download', async () => {
+  if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
+  try {
+    await autoUpdater.downloadUpdate();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: e && e.message ? e.message : String(e) };
+  }
+});
+
+ipcMain.handle('syd:update:install', () => {
+  if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
+  try {
+    autoUpdater.quitAndInstall(false, true);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: e && e.message ? e.message : String(e) };
+  }
+});
+
+app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
     setupLogging();
     registerAppProtocol();

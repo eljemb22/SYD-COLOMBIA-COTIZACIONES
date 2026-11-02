@@ -16,6 +16,7 @@ import { FloatingAlertsWidget } from './components/alerts/FloatingAlertsWidget';
 import { FloatingChatWidget } from './components/chat/FloatingChatWidget';
 import { RateLimitToast } from './components/common/RateLimitToast';
 import { AppUpdateBanner } from './components/common/AppUpdateBanner';
+import { DesktopUpdateBanner } from './components/common/DesktopUpdateBanner';
 import { CustomizationModal } from './components/modals/CustomizationModal';
 import { BackupModal } from './components/modals/BackupModal';
 import { GoogleWorkspaceModal } from './components/modals/GoogleWorkspaceModal';
@@ -1374,6 +1375,7 @@ export default function App() {
 
         {/* Global App Update Banner */}
         <AppUpdateBanner />
+        <DesktopUpdateBanner />
 
         {/* Dynamic View Router */}
         <main id="app-main-content" className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-6 lg:p-8">

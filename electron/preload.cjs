@@ -21,4 +21,18 @@ contextBridge.exposeInMainWorld('sydDesktop', {
    * Resuelve con la respuesta de token de Google o rechaza con el error.
    */
   startOAuth: (options) => ipcRenderer.invoke('syd:oauth:start', options || {}),
+  /**
+   * Auto-actualizador del binario de escritorio (electron-updater).
+   * Solo tiene efecto en builds empaquetados; en dev/dev-server devuelve not-packaged.
+   */
+  onUpdateEvent: (callback) => {
+    const handler = (_event, payload) => {
+      try { callback && callback(payload || {}); } catch (_) {}
+    };
+    ipcRenderer.on('syd:update-event', handler);
+    return () => ipcRenderer.removeListener('syd:update-event', handler);
+  },
+  checkForUpdates: () => ipcRenderer.invoke('syd:update:check'),
+  downloadUpdate: () => ipcRenderer.invoke('syd:update:download'),
+  quitAndInstall: () => ipcRenderer.invoke('syd:update:install'),
 });
