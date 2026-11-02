@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Autenticacion con Google - SYD Colombia</title>
+    <style>
+      :root {
+        --navy: #0b1329;
+        --navy-2: #132244;
+        --cyan: #38bdf8;
+        --cyan-dark: #0369a1;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(120% 90% at 50% 0%, var(--navy-2) 0%, var(--navy) 62%);
+        color: #e2e8f0;
+        font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .card {
+        width: 100%;
+        max-width: 380px;
+        margin: 24px;
+        padding: 32px 28px;
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid rgba(56, 189, 248, 0.22);
+        border-radius: 16px;
+        box-shadow: 0 18px 44px rgba(2, 6, 23, 0.55);
+        text-align: center;
+      }
+      .logo {
+        width: 76px;
+        height: 76px;
+        margin: 0 auto 18px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, var(--navy-2), #0e2a4d);
+        border: 2px solid rgba(56, 189, 248, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 22px;
+        letter-spacing: 1px;
+        color: #ffffff;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 17px;
+        font-weight: 650;
+        color: #f8fafc;
+      }
+      p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.55;
+        color: #94a3b8;
+      }
+      .spinner {
+        width: 34px;
+        height: 34px;
+        margin: 20px auto 4px;
+        border: 3px solid rgba(56, 189, 248, 0.18);
+        border-top-color: var(--cyan);
+        border-radius: 50%;
+        animation: spin 0.85s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .status { margin-top: 16px; font-size: 12.5px; color: var(--cyan); font-weight: 600; }
+      .error {
+        margin-top: 16px;
+        padding: 11px 13px;
+        border-radius: 10px;
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #fecaca;
+        font-size: 12.5px;
+        line-height: 1.5;
+        text-align: left;
+        word-break: break-word;
+      }
+      button {
+        margin-top: 16px;
+        padding: 10px 20px;
+        border-radius: 9px;
+        border: none;
+        background: linear-gradient(135deg, var(--cyan), var(--cyan-dark));
+        color: #04121f;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      button:hover { filter: brightness(1.08); }
+      .hidden { display: none !important; }
+    </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div class="card">
+      <div class="logo">SYD</div>
+      <h1>Conectar con Google</h1>
+      <p id="descripcion">Se abrira la ventana de inicio de sesion de Google para autorizar el acceso.</p>
+
+      <div class="spinner" id="spinner"></div>
+      <div class="status" id="status">Preparando la conexion segura...</div>
+
+      <div class="error hidden" id="error"></div>
+      <button class="hidden" id="reintentar" type="button">Reintentar</button>
+    </div>
+
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var clientId = params.get('client_id') || '';
+        var scopes = params.get('scopes') || '';
+
+        var spinner = document.getElementById('spinner');
+        var status = document.getElementById('status');
+        var errorBox = document.getElementById('error');
+        var retryButton = document.getElementById('reintentar');
+        var description = document.getElementById('descripcion');
+
+        function showError(message) {
+          spinner.classList.add('hidden');
+          status.classList.add('hidden');
+          errorBox.textContent = message;
+          errorBox.classList.remove('hidden');
+          retryButton.classList.remove('hidden');
+          description.textContent = 'No se pudo completar la conexion.';
+        }
+
+        function sendResult(payload) {
+          try {
+            if (window.sydOAuthHelper && typeof window.sydOAuthHelper.sendResult === 'function') {
+              window.sydOAuthHelper.sendResult(payload);
+              return true;
+            }
+          } catch (_) {}
+          showError('No fue posible devolver el resultado a SYD Colombia. Cierra esta ventana e intenta de nuevo.');
+          return false;
+        }
+
+        function friendlyError(raw) {
+          var text = typeof raw === 'string' ? raw : (raw && raw.message) || '';
+          if (!text) text = 'Error desconocido.';
+          if (/popup_closed|closed/i.test(text)) {
+            return 'La ventana de autenticacion de Google se cerro antes de otorgar permisos.';
+          }
+          if (/access_denied/i.test(text)) {
+            return 'Acceso denegado. Debes aceptar los permisos solicitados por Google.';
+          }
+          if (/origin_mismatch|redirect_uri/i.test(text)) {
+            return 'El origen de la aplicacion no esta autorizado en Google Cloud Console.';
+          }
+          return text;
+        }
+
+        var tokenClient = null;
+
+        function requestToken() {
+          errorBox.classList.add('hidden');
+          retryButton.classList.add('hidden');
+          spinner.classList.remove('hidden');
+          status.classList.remove('hidden');
+          status.textContent = 'Esperando la autorizacion de Google...';
+
+          if (!clientId) {
+            showError('No se encontro el Client ID de Google OAuth.');
+            return;
+          }
+
+          var attempts = 0;
+          (function waitForGsi() {
+            if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+              start();
+              return;
+            }
+            attempts += 1;
+            if (attempts > 60) {
+              showError('No fue posible cargar la libreria de Google. Revisa tu conexion a internet e intenta de nuevo.');
+              return;
+            }
+            setTimeout(waitForGsi, 150);
+          })();
+        }
+
+        function start() {
+          try {
+            tokenClient = window.google.accounts.oauth2.initTokenClient({
+              client_id: clientId,
+              scope: scopes,
+              prompt: 'consent select_account',
+              callback: function (response) {
+                if (!response) {
+                  showError('Google no devolvio ninguna respuesta de autenticacion.');
+                  return;
+                }
+                if (response.error) {
+                  sendResult({ error: friendlyError(response.error) });
+                  return;
+                }
+                if (!response.access_token) {
+                  sendResult({ error: 'Google no entrego un token de acceso valido.' });
+                  return;
+                }
+                status.textContent = 'Conexion completada. Volviendo a SYD Colombia...';
+                sendResult({
+                  tokenResponse: {
+                    access_token: response.access_token,
+                    expires_in: response.expires_in || 3600,
+                    scope: response.scope || scopes,
+                    token_type: response.token_type || 'Bearer',
+                  },
+                });
+              },
+              error_callback: function (err) {
+                var message = friendlyError(err);
+                sendResult({ error: message });
+              },
+            });
+            tokenClient.requestAccessToken();
+          } catch (err) {
+            sendResult({ error: friendlyError(err) });
+          }
+        }
+
+        retryButton.addEventListener('click', function () {
+          requestToken();
+        });
+
+        requestToken();
+      })();
+    </script>
+  </body>
+</html>

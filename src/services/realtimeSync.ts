@@ -1491,21 +1491,46 @@ export interface RealtimeDataCallbacks {
   onTendersChange?: (tenders: TenderClientProject[]) => void;
   onTendersUpdate?: (tenders: TenderClientProject[]) => void;
   onOCContractsChange?: (contracts: OCTrackingContract[]) => void;
+  onOCContractsUpdate?: (contracts: OCTrackingContract[]) => void;
   onSalesOrdersChange?: (orders: SalesOrderRecord[]) => void;
+  onSalesOrdersUpdate?: (orders: SalesOrderRecord[]) => void;
   onSalesInvoicesChange?: (invoices: SalesInvoiceRecord[]) => void;
+  onSalesInvoicesUpdate?: (invoices: SalesInvoiceRecord[]) => void;
   onDocumentsChange?: (documents: TechnicalDocument[]) => void;
+  onDocumentsUpdate?: (documents: TechnicalDocument[]) => void;
   onUsersChange?: (users: StoredUserAccount[]) => void;
+  onUsersUpdate?: (users: StoredUserAccount[]) => void;
   onSuppliersChange?: (suppliers: SupplierProfile[]) => void;
   onClientsChange?: (clients: ClientRecord[]) => void;
   onCreatedPartsChange?: (partCodes: string[]) => void;
   onThemeChange?: (theme: ThemeSettings) => void;
   onLetterheadChange?: (letterheadUrl: string | null) => void;
   onStatusChange?: (status: SyncConnectionStatus) => void;
+  /** Alias usado por App.tsx para reflejar el estado en la barra superior. */
+  onSyncStatusChange?: (status: SyncConnectionStatus) => void;
 }
 
 export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): () => void {
   const unsubscribers: Unsubscribe[] = [];
-  callbacks.onStatusChange?.('connecting');
+  let hadPermissionError = false;
+
+  const emitStatus = (status: SyncConnectionStatus) => {
+    callbacks.onStatusChange?.(status);
+    callbacks.onSyncStatusChange?.(status);
+  };
+
+  const markListenerError = (err: any, operationType: OperationType, path: string) => {
+    handleFirestoreError(err, operationType, path);
+    const text = String((err && (err.code || err.message)) || '');
+    if (text.includes('permission-denied') || text.includes('Missing or insufficient permissions')) {
+      hadPermissionError = true;
+      // Sin sesion de Google no se pueden listar las colecciones. Se informa
+      // de inmediato en la interfaz en lugar de dejar "Conectando..." eterno.
+      emitStatus('offline');
+    }
+  };
+
+  emitStatus('connecting');
 
   let quotesInitialized = false;
   let equipmentsInitialized = false;
@@ -1531,7 +1556,7 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
       suppliersInitialized &&
       clientsInitialized
     ) {
-      callbacks.onStatusChange?.('connected');
+      emitStatus(hadPermissionError ? 'offline' : 'connected');
     }
   };
 
@@ -1662,12 +1687,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
         } catch (e) {}
         wrapRemoteUpdate(() => {
           callbacks.onQuotesChange?.(resolvedQuotes);
+          callbacks.onQuotesUpdate?.(resolvedQuotes);
         });
         quotesInitialized = true;
         checkInitialSyncDone();
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'saved_quotes');
+        markListenerError(err, OperationType.LIST, 'saved_quotes');
         quotesInitialized = true;
         checkInitialSyncDone();
       }
@@ -1699,12 +1725,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
 
         wrapRemoteUpdate(() => {
           callbacks.onEquipmentsChange?.(resolvedEquipments);
+          callbacks.onEquipmentsUpdate?.(resolvedEquipments);
         });
         equipmentsInitialized = true;
         checkInitialSyncDone();
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'equipments');
+        markListenerError(err, OperationType.LIST, 'equipments');
         equipmentsInitialized = true;
         checkInitialSyncDone();
       }
@@ -1735,12 +1762,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
         } catch (e) {}
         wrapRemoteUpdate(() => {
           callbacks.onTendersChange?.(resolvedTenders);
+          callbacks.onTendersUpdate?.(resolvedTenders);
         });
         tendersInitialized = true;
         checkInitialSyncDone();
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'tender_projects');
+        markListenerError(err, OperationType.LIST, 'tender_projects');
         tendersInitialized = true;
         checkInitialSyncDone();
       }
@@ -1773,12 +1801,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
         } catch (e) {}
         wrapRemoteUpdate(() => {
           callbacks.onOCContractsChange?.(resolvedOC);
+          callbacks.onOCContractsUpdate?.(resolvedOC);
         });
         ocInitialized = true;
         checkInitialSyncDone();
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'oc_contracts');
+        markListenerError(err, OperationType.LIST, 'oc_contracts');
         ocInitialized = true;
         checkInitialSyncDone();
       }
@@ -1813,12 +1842,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
         } catch (e) {}
         wrapRemoteUpdate(() => {
           callbacks.onSalesOrdersChange?.(resolvedOrders);
+          callbacks.onSalesOrdersUpdate?.(resolvedOrders);
         });
         salesOrdersInitialized = true;
         checkInitialSyncDone();
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'sales_orders');
+        markListenerError(err, OperationType.LIST, 'sales_orders');
         salesOrdersInitialized = true;
         checkInitialSyncDone();
       }
@@ -1853,12 +1883,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
         } catch (e) {}
         wrapRemoteUpdate(() => {
           callbacks.onSalesInvoicesChange?.(resolvedInvoices);
+          callbacks.onSalesInvoicesUpdate?.(resolvedInvoices);
         });
         salesInvoicesInitialized = true;
         checkInitialSyncDone();
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'sales_invoices');
+        markListenerError(err, OperationType.LIST, 'sales_invoices');
         salesInvoicesInitialized = true;
         checkInitialSyncDone();
       }
@@ -1896,12 +1927,13 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
         } catch (e) {}
         wrapRemoteUpdate(() => {
           callbacks.onDocumentsChange?.(resolvedDocs);
+          callbacks.onDocumentsUpdate?.(resolvedDocs);
         });
         docsInitialized = true;
         checkInitialSyncDone();
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'technical_documents');
+        markListenerError(err, OperationType.LIST, 'technical_documents');
         docsInitialized = true;
         checkInitialSyncDone();
       }
@@ -1944,13 +1976,14 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
 
         wrapRemoteUpdate(() => {
           callbacks.onUsersChange?.(resolvedUsers);
+          callbacks.onUsersUpdate?.(resolvedUsers);
         });
 
         usersInitialized = true;
         checkInitialSyncDone();
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'system_users');
+        markListenerError(err, OperationType.LIST, 'system_users');
         usersInitialized = true;
         checkInitialSyncDone();
       }
@@ -2036,7 +2069,7 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
         checkInitialSyncDone();
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'supplier_directory');
+        markListenerError(err, OperationType.LIST, 'supplier_directory');
         suppliersInitialized = true;
         checkInitialSyncDone();
       }
@@ -2099,7 +2132,7 @@ export function subscribeToRealtimeDatabase(callbacks: RealtimeDataCallbacks): (
         checkInitialSyncDone();
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'client_directory');
+        markListenerError(err, OperationType.LIST, 'client_directory');
         clientsInitialized = true;
         checkInitialSyncDone();
       }

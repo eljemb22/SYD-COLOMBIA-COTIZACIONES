@@ -55,6 +55,7 @@ import {
   TARGET_NFCO03_FILENAME,
 } from '../../services/googleWorkspaceService';
 import { gmailService } from '../../services/gmailIntegrationService';
+import { getGoogleOAuthOriginLabel } from '../../utils/googleOAuthOrigin';
 import * as XLSX from 'xlsx';
 import {
   MedicalEquipment,
@@ -2635,7 +2636,7 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                               Si Google responde <span className="text-rose-300 font-mono">Error 400: origin_mismatch</span>,
                               el origen desde el que abres esta app no esta autorizado en Google Cloud Console.
                               Crea un cliente OAuth 2.0 de tipo <span className="text-slate-200 font-semibold">Aplicacion web</span> con
-                              el origen <span className="text-cyan-300 font-mono">{typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}</span>
+                              el origen <span className="text-cyan-300 font-mono">{getGoogleOAuthOriginLabel()}</span>
                               en "Origenes de JavaScript autorizados" y pega aqui su Client ID.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-2">

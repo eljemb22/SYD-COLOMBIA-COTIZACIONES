@@ -86,10 +86,15 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "icon": "build/icon.png",
-      "artifactName": "SYD Colombia Setup ${version}.${ext}"
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -99,6 +104,9 @@
       "createStartMenuShortcut": true,
       "shortcutName": "SYD Colombia",
       "artifactName": "SYD Colombia Setup ${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "SYD Colombia Portable ${version}.${ext}"
     }
   }
 }

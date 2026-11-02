@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './lib/firebase';
 import { Header } from './components/Header';
 import { Navigation, ActiveTab } from './components/Navigation';
 import { DashboardOverview } from './components/views/DashboardOverview';
@@ -145,6 +147,11 @@ export default function App() {
 
   // Real-time Database Connection Status
   const [syncStatus, setSyncStatus] = useState<SyncConnectionStatus>('connected');
+
+  // Cambia cuando Firebase termina de autenticar con Google. Fuerza una nueva
+  // suscripcion a Firestore para que las reglas de seguridad ya vean al usuario
+  // autenticado y la sincronizacion entre PCs empiece de inmediato.
+  const [syncEpoch, setSyncEpoch] = useState(0);
 
   // Helper to construct a pristine new daily quote header
   const buildNewDailyQuoteHeader = (quotesList?: SavedQuote[]): QuoteHeader => {
@@ -318,6 +325,17 @@ export default function App() {
   // Standby Hook
   const { isStandby, wakeUp, enterStandby, timeoutMinutes, setTimeoutMinutes } = useIdleStandby(currentUser);
 
+  // Re-suscribe Firestore cuando Firebase Auth obtiene (o restaura) la sesion
+  // de Google, para que los listeners usen el token autenticado.
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setSyncEpoch((epoch) => epoch + 1);
+      }
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
   // Real-time Firestore Sync Subscription
   useEffect(() => {
     // Migracion: limpiar membrete/logo guardados que puedan estar desactualizados,
@@ -421,7 +439,7 @@ export default function App() {
       window.removeEventListener('syd-catalog-updated', handleCatalogUpdated);
       window.removeEventListener('syd_users_updated', handleUsersUpdated as EventListener);
     };
-  }, []);
+  }, [syncEpoch]);
 
   // Handlers for Quotes
   const handleUpdateHeader = useCallback((headerUpdates: Partial<QuoteHeader>) => {

@@ -19,6 +19,8 @@ import { extractStructuredRowsFromEmail, parseCurrencyCOP, parseQuantity } from 
 import { extractEquipmentNamesFromSubject } from '../utils/clientPOUtils';
 import { buildGoogleOAuthErrorMessage } from '../utils/googleOAuthError';
 import { MASTER_EQUIPMENTS_CATALOG } from '../data/masterEquipmentsCatalog';
+import { requestGoogleToken } from './desktopOAuth';
+import { signInFirebaseWithGoogle } from '../lib/firebase';
 
 export interface GmailUserProfile {
   email: string;
@@ -615,89 +617,84 @@ class GmailIntegrationService {
    * Request OAuth 2.0 access token via Google Identity Services popup
    */
   public async connectGoogleAccount(customClientId?: string): Promise<{ profile: GmailUserProfile; token: string }> {
-    return new Promise((resolve, reject) => {
-      if (typeof window === 'undefined' || !window.google?.accounts?.oauth2) {
-        return reject(
-          new Error('La librería Google Identity Services (GSI) no se encuentra disponible. Verifique su conexión a internet.')
+    const isDesktop = typeof window !== 'undefined' && Boolean(window.sydDesktop?.isDesktop);
+    if (!isDesktop && (typeof window === 'undefined' || !window.google?.accounts?.oauth2)) {
+      throw new Error('La librería Google Identity Services (GSI) no se encuentra disponible. Verifique su conexión a internet.');
+    }
+
+    const clientId = customClientId || this.getStoredClientId();
+    const scopes = [
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/gmail.send',
+      'https://www.googleapis.com/auth/gmail.compose',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+    ].join(' ');
+
+    let tokenResponse: any;
+    try {
+      tokenResponse = await requestGoogleToken(
+        clientId,
+        scopes,
+        (options) => window.google!.accounts!.oauth2!.initTokenClient(options as any) as any
+      );
+    } catch (err: any) {
+      const errorType = err?.type || '';
+      const errorMsg = err?.message || (typeof err === 'string' ? err : '');
+
+      if (errorType === 'popup_closed' || errorMsg.includes('closed') || errorMsg.includes('Popup window closed')) {
+        throw new Error('La ventana emergente de Google fue cerrada. Vuelve a intentarlo y acepta todos los permisos solicitados.');
+      }
+      if (errorType === 'popup_failed_to_open') {
+        throw new Error('El navegador bloqueó la ventana emergente de Google. Por favor habilite las ventanas emergentes para este sitio y vuelve a intentarlo.');
+      }
+      throw new Error(buildGoogleOAuthErrorMessage(errorMsg || errorType, 'La ventana de autenticación fue cerrada o cancelada por el usuario.'));
+    }
+
+    if (tokenResponse?.error) {
+      const errStr = typeof tokenResponse.error === 'string' ? tokenResponse.error : JSON.stringify(tokenResponse.error);
+      if (errStr.includes('popup_closed') || errStr.includes('closed')) {
+        throw new Error('La ventana de autenticación fue cerrada antes de otorgar permisos.');
+      }
+      if (errStr.includes('access_denied')) {
+        throw new Error(
+          'Acceso denegado por Google (Error 403: access_denied). La aplicación se encuentra en modo "Prueba" en Google Cloud y este correo no está en la lista de "Usuarios de prueba (Test users)". Puedes agregarlo en console.cloud.google.com > Pantalla de consentimiento de OAuth y volver a intentarlo.'
         );
       }
+      throw new Error(buildGoogleOAuthErrorMessage(errStr, 'Error de autenticación Google:'));
+    }
 
-      const clientId = customClientId || this.getStoredClientId();
-      const scopes = [
-        'https://www.googleapis.com/auth/gmail.readonly',
-        'https://www.googleapis.com/auth/gmail.send',
-        'https://www.googleapis.com/auth/gmail.compose',
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-      ].join(' ');
+    if (!tokenResponse?.access_token) {
+      throw new Error('No se recibió el token de acceso de Google.');
+    }
 
-      try {
-        const client = window.google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: scopes,
-          prompt: 'consent select_account',
-          callback: async (tokenResponse) => {
-            if (tokenResponse.error) {
-              const errStr = typeof tokenResponse.error === 'string' ? tokenResponse.error : JSON.stringify(tokenResponse.error);
-              if (errStr.includes('popup_closed') || errStr.includes('closed')) {
-                return reject(new Error('La ventana de autenticación fue cerrada antes de otorgar permisos.'));
-              }
-              if (errStr.includes('access_denied')) {
-                return reject(
-                  new Error(
-                    'Acceso denegado por Google (Error 403: access_denied). La aplicación se encuentra en modo "Prueba" en Google Cloud y este correo no está en la lista de "Usuarios de prueba (Test users)". Puedes agregarlo en console.cloud.google.com > Pantalla de consentimiento de OAuth, o usar directamente la pestaña "Cualquier Gmail (Directo)" en esta ventana para conectar tu correo de inmediato.'
-                  )
-                );
-              }
-              return reject(new Error(buildGoogleOAuthErrorMessage(errStr, 'Error de autenticación Google:')));
-            }
-            if (!tokenResponse.access_token) {
-              return reject(new Error('No se recibió el token de acceso de Google.'));
-            }
+    const token = tokenResponse.access_token;
+    const expiresIn = tokenResponse.expires_in || 3600;
+    this.accessToken = token;
+    this.tokenExpiresAt = Date.now() + expiresIn * 1000;
 
-            const token = tokenResponse.access_token;
-            const expiresIn = tokenResponse.expires_in || 3600;
-            this.accessToken = token;
-            this.tokenExpiresAt = Date.now() + expiresIn * 1000;
+    localStorage.setItem(GMAIL_TOKEN_STORAGE_KEY, token);
+    localStorage.setItem(`${GMAIL_TOKEN_STORAGE_KEY}_exp`, String(this.tokenExpiresAt));
 
-            localStorage.setItem(GMAIL_TOKEN_STORAGE_KEY, token);
-            localStorage.setItem(`${GMAIL_TOKEN_STORAGE_KEY}_exp`, String(this.tokenExpiresAt));
+    // Autenticar Firestore con la misma cuenta de Google para que los cambios
+    // se compartan en tiempo real entre todas las PCs.
+    await signInFirebaseWithGoogle(token);
 
-            try {
-              const profile = await this.fetchUserProfile(token);
-              this.userProfile = profile;
-              localStorage.setItem(GMAIL_PROFILE_STORAGE_KEY, JSON.stringify(profile));
-              this.saveAccount(profile);
-              resolve({ profile, token });
-            } catch (profErr) {
-              const fallbackProfile: GmailUserProfile = {
-                email: 'usuario.conectado@gmail.com',
-                name: 'Usuario Google Conectado',
-              };
-              this.userProfile = fallbackProfile;
-              this.saveAccount(fallbackProfile);
-              resolve({ profile: fallbackProfile, token });
-            }
-          },
-          error_callback: (err: any) => {
-            const errorType = err?.type || '';
-            const errorMsg = err?.message || (typeof err === 'string' ? err : '');
-            
-            if (errorType === 'popup_closed' || errorMsg.includes('closed') || errorMsg.includes('Popup window closed')) {
-              reject(new Error('La ventana emergente de Google fue cerrada. Vuelve a intentarlo y acepta todos los permisos solicitados.'));
-            } else if (errorType === 'popup_failed_to_open') {
-              reject(new Error('El navegador bloqueó la ventana emergente de Google. Por favor habilite las ventanas emergentes para este sitio y vuelve a intentarlo.'));
-            } else {
-              reject(new Error(buildGoogleOAuthErrorMessage(errorMsg || errorType, 'La ventana de autenticación fue cerrada o cancelada por el usuario.')));
-            }
-          },
-        });
-
-        client.requestAccessToken({ prompt: 'select_account' });
-      } catch (err: any) {
-        reject(new Error(`Fallo al inicializar cliente OAuth: ${err?.message || err}`));
-      }
-    });
+    try {
+      const profile = await this.fetchUserProfile(token);
+      this.userProfile = profile;
+      localStorage.setItem(GMAIL_PROFILE_STORAGE_KEY, JSON.stringify(profile));
+      this.saveAccount(profile);
+      return { profile, token };
+    } catch (profErr) {
+      const fallbackProfile: GmailUserProfile = {
+        email: 'usuario.conectado@gmail.com',
+        name: 'Usuario Google Conectado',
+      };
+      this.userProfile = fallbackProfile;
+      this.saveAccount(fallbackProfile);
+      return { profile: fallbackProfile, token };
+    }
   }
 
   /**

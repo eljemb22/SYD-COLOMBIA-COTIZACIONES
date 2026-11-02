@@ -1,28 +1,59 @@
 /**
- * SYD Colombia - Proceso principal de Electron (version escritorio).
+ * SYD Colombia - Proceso principal de Electron (version escritorio PORTABLE).
  *
- * - Levanta el servidor Express embebido (dist-server/server.cjs) dentro del propio
- *   proceso principal, de modo que las dependencias de produccion se resuelven desde
- *   app.asar/node_modules.
- * - Abre la interfaz en http://localhost:3000 (mismo origen autorizado en Google Cloud,
- *   necesario para que el popup OAuth de Google Drive / Gmail funcione).
- * - Las ventanas emergentes de accounts.google.com se abren dentro de la app
- *   (necesario para el flujo OAuth); el resto de enlaces se abren en el navegador.
+ * - La interfaz se carga desde el origen interno "app://syd" (sin URL, sin barra de
+ *   direcciones, sin depender de ningun puerto visible para el usuario).
+ * - El backend Express se ejecuta dentro del proceso principal y se alcanza mediante
+ *   un puente interno en 127.0.0.1 (canal invisible, nunca se muestra al usuario).
+ * - Google Drive / Gmail: el popup OAuth de Google exige un origen http://localhost
+ *   registrado en Google Cloud Console. Se abre una ventana auxiliar minima
+ *   (oauth-helper) en ese origen, se completa alli el flujo y el token vuelve a la app.
+ * - Los enlaces externos (Drive web, Gmail web, PDF) se abren en el navegador del sistema.
  */
-const { app, BrowserWindow, shell, dialog, Menu } = require('electron');
+const { app, BrowserWindow, shell, dialog, Menu, protocol, net, ipcMain } = require('electron');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
 
 const APP_PORT = parseInt(process.env.SYD_PORT || '3000', 10);
-const APP_URL = `http://localhost:${APP_PORT}`;
+// Canal interno invisible: 127.0.0.1 evita resoluciones IPv6 ambiguas.
+const INTERNAL_URL = `http://127.0.0.1:${APP_PORT}`;
+// Origen OAuth: debe coincidir exactamente con el autorizado en Google Cloud.
+const OAUTH_ORIGIN_URL = `http://localhost:${APP_PORT}`;
+const APP_SCHEME = 'app';
+const APP_HOST = 'syd';
+const APP_ORIGIN = `${APP_SCHEME}://${APP_HOST}`;
 const IS_PACKAGED = app.isPackaged;
 
 // Define la carpeta de datos de la app: %APPDATA%/SYD Colombia
 app.setName('SYD Colombia');
 
+// Google rechaza el inicio de sesion cuando detecta un navegador embebido
+// (user-agent con "Electron"). Se usa un user-agent de Chrome estable para que
+// la ventana OAuth de Drive/Gmail funcione igual que en el navegador normal.
+const CHROME_VERSION = process.versions.chrome || '140.0.0.0';
+app.userAgentFallback =
+  `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ` +
+  `(KHTML, like Gecko) Chrome/${CHROME_VERSION} Safari/537.36`;
+
+// Debe registrarse antes de que Electron este listo.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+      codeCache: true,
+    },
+  },
+]);
+
 let mainWindow = null;
 let serverStarted = false;
+let serverReady = false;
 
 /** Raiz de la aplicacion (contiene dist/ y public/) */
 function resolveAppRoot() {
@@ -67,7 +98,7 @@ function startServer() {
   if (!fs.existsSync(serverScript)) {
     dialog.showErrorBox(
       'SYD Colombia',
-      `No se encontro el servidor de la aplicacion en:\n${serverScript}\n\nEjecuta nuevamente el instalador.`
+      `No se encontro el servidor de la aplicacion en:\n${serverScript}\n\nEjecuta nuevamente la aplicacion.`
     );
     app.quit();
     return;
@@ -83,7 +114,7 @@ function startServer() {
   } catch (err) {
     dialog.showErrorBox(
       'SYD Colombia',
-      `No se pudo iniciar el servidor interno:\n\n${err && err.message ? err.message : String(err)}`
+      `No se pudo iniciar el motor interno:\n\n${err && err.message ? err.message : String(err)}`
     );
     app.quit();
   }
@@ -94,15 +125,16 @@ function waitForServer(retries = 60, onReady) {
     if (left <= 0) {
       dialog.showErrorBox(
         'SYD Colombia',
-        `No se pudo iniciar el servidor local en ${APP_URL}.\n\nCierra cualquier otra copia de SYD Colombia o de Node que este usando el puerto ${APP_PORT} e intenta de nuevo.`
+        'No se pudo iniciar el motor interno de la aplicacion.\n\nCierra cualquier otra copia de SYD Colombia que este abierta e intenta de nuevo.'
       );
       app.quit();
       return;
     }
     setTimeout(() => {
-      const req = http.get(`${APP_URL}/api/version`, (res) => {
+      const req = http.get(`${INTERNAL_URL}/api/version`, (res) => {
         res.resume();
         if (res.statusCode && res.statusCode < 500) {
+          serverReady = true;
           onReady();
         } else {
           retry(left - 1);
@@ -116,6 +148,76 @@ function waitForServer(retries = 60, onReady) {
     }, 500);
   };
   retry(retries);
+}
+
+/* ------------------------------------------------------------------ *
+ *  Puente del protocolo app:// hacia el motor interno.                *
+ *  Todo lo que la app pide (assets, /api/...) se reenvia al servidor  *
+ *  local; el usuario nunca ve ni escribe una URL.                      *
+ * ------------------------------------------------------------------ */
+const SKIP_REQUEST_HEADERS = new Set([
+  'host',
+  'connection',
+  'keep-alive',
+  'transfer-encoding',
+  'accept-encoding',
+  'content-length',
+  'upgrade',
+]);
+
+function registerAppProtocol() {
+  protocol.handle(APP_SCHEME, async (request) => {
+    if (!serverReady) {
+      return new Response('El motor interno de SYD Colombia aun esta iniciando. Intenta de nuevo en un momento.', {
+        status: 503,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
+    }
+    try {
+      const url = new URL(request.url);
+      const target = `${INTERNAL_URL}${url.pathname}${url.search}`;
+
+      const headers = {};
+      request.headers.forEach((value, key) => {
+        if (!SKIP_REQUEST_HEADERS.has(key.toLowerCase())) {
+          headers[key] = value;
+        }
+      });
+
+      let body;
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        const buffer = await request.arrayBuffer();
+        if (buffer.byteLength > 0) body = new Uint8Array(buffer);
+      }
+
+      const response = await net.fetch(target, {
+        method: request.method,
+        headers,
+        body,
+        bypassCustomProtocolHandlers: true,
+      });
+
+      // net.fetch ya descomprime la respuesta: se retiran las cabeceras de compresion
+      // para que el renderer no intente descomprimir un contenido ya decodificado.
+      const outHeaders = new Headers();
+      response.headers.forEach((value, key) => {
+        const lower = key.toLowerCase();
+        if (lower === 'content-encoding' || lower === 'content-length') return;
+        outHeaders.set(key, value);
+      });
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: outHeaders,
+      });
+    } catch (err) {
+      return new Response(`No se pudo obtener el recurso: ${err && err.message ? err.message : err}`, {
+        status: 502,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
+    }
+  });
 }
 
 function isGoogleAuthUrl(url) {
@@ -156,6 +258,9 @@ function createWindow() {
   });
 
   // Popups de Google (OAuth) dentro de la app; el resto en el navegador del sistema.
+  // El sandbox debe coincidir con el de la ventana que abre el popup: si difiere,
+  // Electron crea la ventana en otro proceso sin relacion de opener y el popup
+  // no puede devolver el token a la app.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (isGoogleAuthUrl(url)) {
       return {
@@ -165,6 +270,7 @@ function createWindow() {
           height: 720,
           autoHideMenuBar: true,
           webPreferences: {
+            preload: undefined,
             contextIsolation: true,
             nodeIntegration: false,
             sandbox: false,
@@ -178,7 +284,7 @@ function createWindow() {
 
   // Bloquea navegacion fuera de la app dentro de la misma ventana.
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(APP_URL)) {
+    if (!url.startsWith(APP_ORIGIN)) {
       event.preventDefault();
       shell.openExternal(url);
     }
@@ -188,8 +294,129 @@ function createWindow() {
     mainWindow = null;
   });
 
-  mainWindow.loadURL(APP_URL);
+  mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
 }
+
+/* ------------------------------------------------------------------ *
+ *  Flujo OAuth auxiliar (Google Drive / Gmail)                      *
+ *  Google exige que el popup se ejecute desde un origen http://localhost
+ *  registrado en Google Cloud Console. Se abre una ventana auxiliar minima
+ *  en ese origen que completa el flujo y devuelve el token a la app.      *
+ * ------------------------------------------------------------------ */
+let oauthWindow = null;
+let oauthRequestId = 0;
+let oauthResolveRef = null;
+let oauthRejectRef = null;
+
+ipcMain.handle('syd:oauth:start', async (_event, payload = {}) => {
+  if (oauthWindow) {
+    oauthWindow.focus();
+    throw new Error('Ya hay una ventana de autenticacion de Google abierta.');
+  }
+
+  const { clientId = '', scopes = '' } = payload;
+
+  return new Promise((resolve, reject) => {
+    // Cada solicitud tiene su propia identidad: evita que el cierre de una
+    // ventana antigua cancele una solicitud nueva.
+    const requestId = ++oauthRequestId;
+    let settled = false;
+
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      if (oauthRequestId === requestId) {
+        oauthResolveRef = null;
+        oauthRejectRef = null;
+      }
+      fn(value);
+    };
+
+    const helperUrl = `${OAUTH_ORIGIN_URL}/oauth-helper.html?client_id=${encodeURIComponent(
+      clientId
+    )}&scopes=${encodeURIComponent(scopes)}`;
+
+    const win = new BrowserWindow({
+      width: 520,
+      height: 720,
+      show: true,
+      parent: mainWindow || undefined,
+      title: 'Autenticacion con Google',
+      autoHideMenuBar: true,
+      webPreferences: {
+        preload: path.join(__dirname, 'oauth-preload.cjs'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false,
+      },
+    });
+
+    oauthWindow = win;
+    oauthResolveRef = (value) => settle(resolve, value);
+    oauthRejectRef = (err) => settle(reject, err);
+
+    // El popup de Google se abre dentro de la app (sin preload, sin Node).
+    // El sandbox debe coincidir con el de esta ventana auxiliar: si difiere,
+    // Electron crea el popup en otro proceso sin relacion de opener y Google
+    // no puede devolver el token (error "Failed to open popup window").
+    win.webContents.setWindowOpenHandler(({ url }) => {
+      if (isGoogleAuthUrl(url)) {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 520,
+            height: 720,
+            autoHideMenuBar: true,
+            webPreferences: {
+              preload: undefined,
+              contextIsolation: true,
+              nodeIntegration: false,
+              sandbox: false,
+            },
+          },
+        };
+      }
+      shell.openExternal(url);
+      return { action: 'deny' };
+    });
+
+    win.on('closed', () => {
+      if (oauthWindow === win) oauthWindow = null;
+      settle(reject, new Error('La ventana de autenticacion de Google fue cerrada antes de otorgar permisos.'));
+    });
+
+    win.loadURL(helperUrl).catch((err) => {
+      settle(reject, err);
+    });
+  });
+});
+
+ipcMain.on('syd:oauth:result', (_event, result = {}) => {
+  const resolvePending = oauthResolveRef;
+  const rejectPending = oauthRejectRef;
+  oauthResolveRef = null;
+  oauthRejectRef = null;
+
+  // Se resuelve ANTES de cerrar la ventana: el evento 'closed' tambien intenta
+  // rechazar la promesa y, si ocurre primero, taparia el mensaje real de Google.
+  if (result && result.error) {
+    if (rejectPending) rejectPending(new Error(result.error));
+  } else if (resolvePending) {
+    resolvePending(result.tokenResponse || null);
+  }
+
+  const win = oauthWindow;
+  oauthWindow = null;
+  if (win) {
+    try {
+      win.destroy();
+    } catch (_) {
+      try {
+        win.close();
+      } catch (_) {}
+    }
+  }
+});
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -205,6 +432,7 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
     setupLogging();
+    registerAppProtocol();
     startServer();
     if (serverStarted) {
       waitForServer(60, createWindow);

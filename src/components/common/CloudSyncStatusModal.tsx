@@ -26,6 +26,7 @@ import {
   Play,
 } from 'lucide-react';
 import { SyncConnectionStatus } from '../../services/realtimeSync';
+import { isDesktopRuntime } from '../../services/desktopOAuth';
 import {
   getPublicShareAppUrl,
   getPublishedStudioAppUrl,
@@ -70,6 +71,10 @@ export const CloudSyncStatusModal: React.FC<CloudSyncStatusModalProps> = ({
   const [copiedCmd, setCopiedCmd] = useState<boolean>(false);
   const [showLocalhostSection, setShowLocalhostSection] = useState<boolean>(true);
   const [showBatCode, setShowBatCode] = useState<boolean>(false);
+
+  // En escritorio no se muestran URLs ni instaladores de navegador: la app ya
+  // es un ejecutable y la sincronizacion se activa conectando Google.
+  const isDesktop = isDesktopRuntime();
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -226,7 +231,7 @@ export const CloudSyncStatusModal: React.FC<CloudSyncStatusModalProps> = ({
                 <span>Acceso Multi-Equipo & Compartir en Otros PC</span>
               </h2>
               <p className="text-xs text-slate-400">
-                Sincronización en la nube con Firebase Firestore y Cloud Run
+                Sincronización en tiempo real con Firebase Firestore
               </p>
             </div>
           </div>
@@ -249,6 +254,53 @@ export const CloudSyncStatusModal: React.FC<CloudSyncStatusModalProps> = ({
             {getStatusBadge()}
           </div>
 
+          {isDesktop && (
+            <div className="p-4 bg-gradient-to-r from-emerald-950/60 via-slate-900 to-sky-950/50 border border-emerald-500/50 rounded-2xl shadow-xl space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Monitor className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white">Sincronización entre PCs</h3>
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    Los cambios se comparten en tiempo real por Firebase Firestore.
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
+                <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1.5">
+                  <span className="text-emerald-400 font-black text-[11px] flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> 1. Conecta Google
+                  </span>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    En cada PC, abre <strong>Google Drive</strong> (ventana 1) o <strong>Gmail</strong> (ventana 5.1) y pulsa <strong>Conectar con Google</strong>.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1.5">
+                  <span className="text-sky-400 font-black text-[11px] flex items-center gap-1.5">
+                    <Cloud className="w-3.5 h-3.5 shrink-0" /> 2. Misma cuenta
+                  </span>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    Usa la misma cuenta de Google en todas las PCs para que compartan la misma base de datos.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1.5">
+                  <span className="text-indigo-400 font-black text-[11px] flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 shrink-0" /> 3. Verifica el estado
+                  </span>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    El estado debe decir <strong>Conectado y Sincronizado</strong>. Si dice <strong>Modo Local</strong>, vuelve a conectar Google.
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10.5px] text-slate-400">
+                La app funciona instalada o en modo portable; no requiere Node.js ni permisos de administrador.
+              </p>
+            </div>
+          )}
+
+          {!isDesktop && (
+            <>
           {/* Corporate PC Installation Card (No Admin, No Node Required) */}
           <div className="p-4 bg-gradient-to-r from-emerald-950/60 via-slate-900 to-sky-950/50 border border-emerald-500/50 rounded-2xl shadow-xl space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -559,29 +611,48 @@ export const CloudSyncStatusModal: React.FC<CloudSyncStatusModalProps> = ({
               </div>
             </div>
           </div>
+            </>
+          )}
 
-          {/* Troubleshooting Accordion / Guide */}
-          <div className="p-3.5 bg-amber-950/30 border border-amber-500/30 rounded-xl space-y-2">
-            <div className="flex items-start gap-2.5">
-              <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <div className="space-y-1 text-xs text-amber-200/90 leading-relaxed">
-                <p className="font-semibold text-amber-300">
-                  ¿Cómo compartir el acceso con tu equipo de trabajo?
-                </p>
-                <ul className="list-disc list-inside space-y-1 text-[11.5px] text-slate-300">
-                  <li>
-                    <strong>Usa el botón &ldquo;Copiar Enlace&rdquo;</strong>: Pégalo en WhatsApp, correo o Teams para que tus compañeros puedan entrar desde cualquier navegador.
-                  </li>
-                  <li>
-                    <strong>Acceso Móvil Instantáneo</strong>: Puedes pulsar el botón <strong>&ldquo;QR&rdquo;</strong> y escanearlo con la cámara del celular.
-                  </li>
-                  <li>
-                    <strong>Sincronización en Tiempo Real</strong>: Cualquier cotización, equipo o licitación que se cree se reflejará automáticamente en todos los dispositivos conectados.
-                  </li>
-                </ul>
+          {!isDesktop && (
+            <div className="p-3.5 bg-amber-950/30 border border-amber-500/30 rounded-xl space-y-2">
+              <div className="flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1 text-xs text-amber-200/90 leading-relaxed">
+                  <p className="font-semibold text-amber-300">
+                    ¿Cómo compartir el acceso con tu equipo de trabajo?
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-[11.5px] text-slate-300">
+                    <li>
+                      <strong>Usa el botón &ldquo;Copiar Enlace&rdquo;</strong>: Pégalo en WhatsApp, correo o Teams para que tus compañeros puedan entrar desde cualquier navegador.
+                    </li>
+                    <li>
+                      <strong>Acceso Móvil Instantáneo</strong>: Puedes pulsar el botón <strong>&ldquo;QR&rdquo;</strong> y escanearlo con la cámara del celular.
+                    </li>
+                    <li>
+                      <strong>Sincronización en Tiempo Real</strong>: Cualquier cotización, equipo o licitación que se cree se reflejará automáticamente en todos los dispositivos conectados.
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {isDesktop && (
+            <div className="p-3.5 bg-amber-950/30 border border-amber-500/30 rounded-xl space-y-2">
+              <div className="flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1 text-xs text-amber-200/90 leading-relaxed">
+                  <p className="font-semibold text-amber-300">Si la sincronización no está activa</p>
+                  <ul className="list-disc list-inside space-y-1 text-[11.5px] text-slate-300">
+                    <li>Conecta Google Drive o Gmail en esta PC con la misma cuenta de las demás.</li>
+                    <li>Verifica que el puerto 3000 no esté ocupado por otro programa.</li>
+                    <li>Cierra cualquier otra copia de SYD Colombia abierta.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Automatic Daily Email Backup Card */}
           <div className="p-4 bg-gradient-to-r from-blue-950/40 via-slate-900 to-indigo-950/40 rounded-xl border border-blue-800/40 space-y-3">

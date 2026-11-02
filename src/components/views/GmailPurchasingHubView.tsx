@@ -87,6 +87,7 @@ import {
   isSignatureOrHeaderOrNoise,
 } from '../../utils/emailThreadUtils';
 import { applyOrderOverrides, saveOrderOverride, getStoredOrderOverrides } from '../../utils/gmailOrderOverrides';
+import { getGoogleOAuthOriginLabel } from '../../utils/googleOAuthOrigin';
 
 interface GmailPurchasingHubViewProps {
   equipments: MedicalEquipment[];
@@ -4974,7 +4975,7 @@ export const GmailPurchasingHubView: React.FC<GmailPurchasingHubViewProps> = ({
                       <div className="flex items-center justify-between gap-2 p-2 rounded bg-slate-900/60 border border-slate-800">
                         <span className="text-[11px] text-slate-400">Origen de este entorno:</span>
                         <code className="font-mono text-[11px] text-cyan-300 truncate select-all">
-                          {typeof window !== 'undefined' ? window.location.origin : 'https://...'}
+                          {getGoogleOAuthOriginLabel()}
                         </code>
                       </div>
                     </div>

@@ -2,6 +2,8 @@ import * as XLSX from 'xlsx';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { MedicalEquipment, SavedQuote, OCTrackingContract, SalesOrderRecord, TechnicalDocument } from '../types';
 import { buildGoogleOAuthErrorMessage } from '../utils/googleOAuthError';
+import { requestGoogleToken } from './desktopOAuth';
+import { signInFirebaseWithGoogle } from '../lib/firebase';
 
 export const GOOGLE_WORKSPACE_TOKEN_KEY = 'syd_google_workspace_token_v1';
 export const GOOGLE_WORKSPACE_EXPIRY_KEY = 'syd_google_workspace_token_exp_v1';
@@ -254,94 +256,90 @@ export class GoogleWorkspaceService {
    * Authorize Google Workspace (Google Drive, Sheets) via Google Identity Services Popup
    */
   public async connectGoogleWorkspace(): Promise<{ profile: GoogleWorkspaceProfile; token: string }> {
-    return new Promise((resolve, reject) => {
-      if (typeof window === 'undefined' || !window.google?.accounts?.oauth2) {
-        return reject(
-          new Error('La librería Google Identity Services (GSI) no se encuentra lista. Verifique su conexión.')
+    const isDesktop = typeof window !== 'undefined' && Boolean(window.sydDesktop?.isDesktop);
+    if (!isDesktop && (typeof window === 'undefined' || !window.google?.accounts?.oauth2)) {
+      throw new Error('La librería Google Identity Services (GSI) no se encuentra lista. Verifique su conexión.');
+    }
+
+    const clientId = this.getClientId();
+    const scopes = [
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/drive',
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+    ].join(' ');
+
+    let tokenResponse: any;
+    try {
+      tokenResponse = await requestGoogleToken(
+        clientId,
+        scopes,
+        (options) => window.google!.accounts!.oauth2!.initTokenClient(options as any) as any
+      );
+    } catch (err: any) {
+      const message = err?.message || String(err);
+      if (/popup_closed|closed/i.test(message)) {
+        throw new Error('La ventana de autenticación fue cerrada antes de otorgar permisos.');
+      }
+      throw new Error(
+        buildGoogleOAuthErrorMessage(message, 'Error al autenticar con Google:')
+      );
+    }
+
+    if (tokenResponse?.error) {
+      const errStr = typeof tokenResponse.error === 'string' ? tokenResponse.error : JSON.stringify(tokenResponse.error);
+      if (errStr.includes('popup_closed') || errStr.includes('closed')) {
+        throw new Error('La ventana de autenticación fue cerrada antes de otorgar permisos.');
+      }
+      if (errStr.includes('access_denied') || errStr.includes('blocked') || errStr.includes('verification') || errStr.includes('403')) {
+        throw new Error(
+          'Acceso Bloqueado por Google (403): Su cuenta de correo debe ser agregada a "Usuarios de prueba" en la Pantalla de consentimiento de OAuth de Google Cloud, o la aplicación debe publicarse.'
         );
       }
+      throw new Error(buildGoogleOAuthErrorMessage(errStr, 'Error al autenticar con Google:'));
+    }
 
-      const clientId = this.getClientId();
-      const scopes = [
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive',
-        'https://www.googleapis.com/auth/drive.readonly',
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-      ].join(' ');
+    if (!tokenResponse?.access_token) {
+      throw new Error('No se recibió token de acceso de Google.');
+    }
 
-      try {
-        const client = window.google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: scopes,
-          prompt: 'consent select_account',
-          callback: async (tokenResponse) => {
-            if (tokenResponse.error) {
-              const errStr = typeof tokenResponse.error === 'string' ? tokenResponse.error : JSON.stringify(tokenResponse.error);
-              if (errStr.includes('popup_closed') || errStr.includes('closed')) {
-                return reject(new Error('La ventana de autenticación fue cerrada antes de otorgar permisos.'));
-              }
-              if (errStr.includes('access_denied') || errStr.includes('blocked') || errStr.includes('verification') || errStr.includes('403')) {
-                return reject(
-                  new Error(
-                    'Acceso Bloqueado por Google (403): Su cuenta de correo debe ser agregada a "Usuarios de prueba" en la Pantalla de consentimiento de OAuth de Google Cloud, o la aplicación debe publicarse.'
-                  )
-                );
-              }
-              return reject(new Error(buildGoogleOAuthErrorMessage(errStr, 'Error al autenticar con Google:')));
-            }
+    const token = tokenResponse.access_token;
+    const expiresIn = tokenResponse.expires_in || 3600;
+    const expiresAt = Date.now() + (expiresIn - 60) * 1000;
 
-            if (!tokenResponse.access_token) {
-              return reject(new Error('No se recibió token de acceso de Google.'));
-            }
+    this.accessToken = token;
+    this.tokenExpiresAt = expiresAt;
 
-            const token = tokenResponse.access_token;
-            const expiresIn = tokenResponse.expires_in || 3600;
-            const expiresAt = Date.now() + (expiresIn - 60) * 1000;
+    localStorage.setItem(GOOGLE_WORKSPACE_TOKEN_KEY, token);
+    localStorage.setItem(GOOGLE_WORKSPACE_EXPIRY_KEY, String(expiresAt));
 
-            this.accessToken = token;
-            this.tokenExpiresAt = expiresAt;
+    // Sync with Gmail integration service storage
+    localStorage.setItem('syd_gmail_oauth_token_v1', token);
+    localStorage.setItem('syd_gmail_oauth_token_v1_exp', String(expiresAt));
 
-            localStorage.setItem(GOOGLE_WORKSPACE_TOKEN_KEY, token);
-            localStorage.setItem(GOOGLE_WORKSPACE_EXPIRY_KEY, String(expiresAt));
+    // Autenticar Firestore con la misma cuenta de Google. Esto habilita la
+    // sincronizacion en tiempo real entre todas las PCs conectadas.
+    await signInFirebaseWithGoogle(token);
 
-            // Sync with Gmail integration service storage
-            localStorage.setItem('syd_gmail_oauth_token_v1', token);
-            localStorage.setItem('syd_gmail_oauth_token_v1_exp', String(expiresAt));
-
-            // Fetch user profile
-            try {
-              const userProfile = await this.fetchUserProfile(token);
-              this.userProfile = userProfile;
-              localStorage.setItem(GOOGLE_WORKSPACE_PROFILE_KEY, JSON.stringify(userProfile));
-              localStorage.setItem('syd_gmail_user_profile_v1', JSON.stringify(userProfile));
-              window.dispatchEvent(new CustomEvent('syd-workspace-auth-changed', { detail: { connected: true, profile: userProfile } }));
-              resolve({ profile: userProfile, token });
-            } catch {
-              const fallbackProfile: GoogleWorkspaceProfile = {
-                email: 'usuario@sydcolombia.com',
-                name: 'Usuario Google Workspace',
-                verified_email: true,
-              };
-              this.userProfile = fallbackProfile;
-              resolve({ profile: fallbackProfile, token });
-            }
-          },
-          error_callback: (err) => {
-            reject(
-              new Error(
-                buildGoogleOAuthErrorMessage(err, 'Error inicializando el cliente OAuth de Google.')
-              )
-            );
-          },
-        });
-
-        client.requestAccessToken();
-      } catch (err: any) {
-        reject(new Error(`Error al solicitar conexión de Google: ${err.message || err}`));
-      }
-    });
+    // Fetch user profile
+    try {
+      const userProfile = await this.fetchUserProfile(token);
+      this.userProfile = userProfile;
+      localStorage.setItem(GOOGLE_WORKSPACE_PROFILE_KEY, JSON.stringify(userProfile));
+      localStorage.setItem('syd_gmail_user_profile_v1', JSON.stringify(userProfile));
+      window.dispatchEvent(new CustomEvent('syd-workspace-auth-changed', { detail: { connected: true, profile: userProfile } }));
+      return { profile: userProfile, token };
+    } catch {
+      const fallbackProfile: GoogleWorkspaceProfile = {
+        email: 'usuario@sydcolombia.com',
+        name: 'Usuario Google Workspace',
+        verified_email: true,
+      };
+      this.userProfile = fallbackProfile;
+      return { profile: fallbackProfile, token };
+    }
   }
 
   private async fetchUserProfile(token: string): Promise<GoogleWorkspaceProfile> {
