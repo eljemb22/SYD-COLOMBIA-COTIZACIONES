@@ -605,7 +605,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* ===================================================================== */}
       {/* 1. HERO — identidad, sesión y estado del sistema                      */}
       {/* ===================================================================== */}
-      <section className="sys-hero relative overflow-hidden rounded-[28px] border border-white/10 shadow-2xl">
+      <section className="sys-hero relative overflow-hidden rounded-[28px] border border-sky-400/20 shadow-2xl">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#132742] via-[#0f1f33] to-[#0a1624]" />
+        <div className="sys-grid pointer-events-none absolute inset-0" />
+        <div className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-sky-500/25 blur-[100px]" />
+        <div className="pointer-events-none absolute -left-28 -bottom-24 h-72 w-72 rounded-full bg-indigo-500/20 blur-[100px]" />
+
         <div className="relative p-5 sm:p-7 space-y-6">
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
             <div className="min-w-0">
@@ -637,7 +642,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
             {/* Tarjeta de sesión */}
             <div className="sys-session">
-              <div className="w-11 h-11 shrink-0 rounded-2xl bg-sky-400 text-slate-950 font-black text-lg flex items-center justify-center shadow-sm">
+              <div className="w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-500 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg shadow-sky-500/30">
                 {userInitial}
               </div>
               <div className="min-w-0">
