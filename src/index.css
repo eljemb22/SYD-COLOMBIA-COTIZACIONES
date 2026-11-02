@@ -1836,6 +1836,238 @@ select[class*="bg-["] {
   background-color: var(--syd-accent) !important;
 }
 
+/* =====================================================================
+   CONSISTENCIA DE TEMA (4) - TODOS los colores de acento (incluyendo
+   emerald, rose, amber) siguen --syd-accent. Sin excepciones.
+   ===================================================================== */
+
+/* Texto - todos los colores de acento */
+[class~="text-emerald-300"],
+[class~="text-emerald-400"],
+[class~="text-emerald-500"],
+[class~="text-rose-300"],
+[class~="text-rose-400"],
+[class~="text-rose-500"],
+[class~="text-amber-100"],
+[class~="text-amber-200"],
+[class~="text-amber-300"],
+[class~="text-amber-400"],
+[class~="text-amber-500"],
+[class~="text-yellow-300"],
+[class~="text-yellow-400"],
+[class~="text-yellow-500"],
+[class~="text-orange-300"],
+[class~="text-orange-400"],
+[class~="text-orange-500"],
+[class~="text-red-300"],
+[class~="text-red-400"],
+[class~="text-red-500"],
+[class~="text-green-300"],
+[class~="text-green-400"],
+[class~="text-green-500"],
+[class~="text-pink-300"],
+[class~="text-pink-400"],
+[class~="text-pink-500"],
+[class~="text-fuchsia-300"],
+[class~="text-fuchsia-400"],
+[class~="text-fuchsia-500"] {
+  color: var(--syd-accent) !important;
+}
+
+/* Fondos solidos */
+[class~="bg-emerald-400"],
+[class~="bg-emerald-500"],
+[class~="bg-emerald-600"],
+[class~="bg-rose-400"],
+[class~="bg-rose-500"],
+[class~="bg-rose-600"],
+[class~="bg-amber-400"],
+[class~="bg-amber-500"],
+[class~="bg-amber-600"],
+[class~="bg-yellow-400"],
+[class~="bg-yellow-500"],
+[class~="bg-yellow-600"],
+[class~="bg-orange-400"],
+[class~="bg-orange-500"],
+[class~="bg-orange-600"],
+[class~="bg-red-400"],
+[class~="bg-red-500"],
+[class~="bg-red-600"],
+[class~="bg-green-400"],
+[class~="bg-green-500"],
+[class~="bg-green-600"],
+[class~="bg-pink-400"],
+[class~="bg-pink-500"],
+[class~="bg-pink-600"],
+[class~="bg-fuchsia-400"],
+[class~="bg-fuchsia-500"],
+[class~="bg-fuchsia-600"] {
+  background-color: var(--syd-accent) !important;
+}
+
+/* Fondos con opacidad (emerald, rose, amber) */
+[class~="bg-emerald-500/10"],
+[class~="bg-emerald-500/15"],
+[class~="bg-emerald-500/20"],
+[class~="bg-rose-500/10"],
+[class~="bg-rose-500/20"],
+[class~="bg-amber-400/20"],
+[class~="bg-amber-500/10"],
+[class~="bg-amber-500/20"] {
+  background-color: color-mix(in srgb, var(--syd-accent) 15%, transparent) !important;
+}
+
+/* Bordes */
+[class~="border-emerald-400"],
+[class~="border-emerald-500"],
+[class~="border-rose-400"],
+[class~="border-rose-500"],
+[class~="border-amber-400"],
+[class~="border-amber-500"],
+[class~="border-yellow-400"],
+[class~="border-yellow-500"],
+[class~="border-orange-400"],
+[class~="border-orange-500"],
+[class~="border-red-400"],
+[class~="border-red-500"],
+[class~="border-green-400"],
+[class~="border-green-500"],
+[class~="border-pink-400"],
+[class~="border-pink-500"],
+[class~="border-fuchsia-400"],
+[class~="border-fuchsia-500"] {
+  border-color: var(--syd-accent) !important;
+}
+
+/* Hover texto */
+[class~="hover:text-emerald-300"]:hover,
+[class~="hover:text-emerald-400"]:hover,
+[class~="hover:text-emerald-500"]:hover,
+[class~="hover:text-rose-300"]:hover,
+[class~="hover:text-rose-400"]:hover,
+[class~="hover:text-rose-500"]:hover,
+[class~="hover:text-amber-300"]:hover,
+[class~="hover:text-amber-400"]:hover,
+[class~="hover:text-amber-500"]:hover,
+[class~="hover:text-yellow-400"]:hover,
+[class~="hover:text-orange-400"]:hover,
+[class~="hover:text-red-400"]:hover,
+[class~="hover:text-green-400"]:hover,
+[class~="hover:text-pink-400"]:hover,
+[class~="hover:text-fuchsia-400"]:hover {
+  color: var(--syd-accent) !important;
+}
+
+/* Hover fondo */
+[class~="hover:bg-emerald-400"]:hover,
+[class~="hover:bg-emerald-500"]:hover,
+[class~="hover:bg-rose-400"]:hover,
+[class~="hover:bg-rose-500"]:hover,
+[class~="hover:bg-amber-400"]:hover,
+[class~="hover:bg-amber-500"]:hover,
+[class~="hover:bg-yellow-400"]:hover,
+[class~="hover:bg-orange-400"]:hover,
+[class~="hover:bg-red-400"]:hover,
+[class~="hover:bg-green-400"]:hover,
+[class~="hover:bg-pink-400"]:hover,
+[class~="hover:bg-fuchsia-400"]:hover {
+  background-color: var(--syd-accent) !important;
+}
+
+/* Hover borde */
+[class~="hover:border-emerald-400"]:hover,
+[class~="hover:border-emerald-500"]:hover,
+[class~="hover:border-rose-400"]:hover,
+[class~="hover:border-rose-500"]:hover,
+[class~="hover:border-amber-400"]:hover,
+[class~="hover:border-amber-500"]:hover {
+  border-color: var(--syd-accent) !important;
+}
+
+/* Group hover */
+.group:hover [class~="group-hover:text-emerald-400"],
+.group:hover [class~="group-hover:text-rose-400"],
+.group:hover [class~="group-hover:text-amber-400"],
+.group:hover [class~="group-hover:bg-emerald-400"],
+.group:hover [class~="group-hover:bg-rose-400"],
+.group:hover [class~="group-hover:bg-amber-400"] {
+  color: var(--syd-accent) !important;
+  background-color: var(--syd-accent) !important;
+}
+
+/* Fill y stroke */
+[class~="fill-emerald-400"],
+[class~="fill-rose-400"],
+[class~="fill-amber-400"],
+[class~="fill-yellow-400"],
+[class~="fill-red-400"],
+[class~="fill-green-400"] {
+  fill: var(--syd-accent) !important;
+}
+
+[class~="stroke-emerald-400"],
+[class~="stroke-rose-400"],
+[class~="stroke-amber-400"],
+[class~="stroke-red-400"],
+[class~="stroke-green-400"] {
+  stroke: var(--syd-accent) !important;
+}
+
+/* Gradientes - from */
+[class*="from-emerald-400"],
+[class*="from-emerald-500"],
+[class*="from-emerald-600"],
+[class*="from-rose-400"],
+[class*="from-rose-500"],
+[class*="from-rose-600"],
+[class*="from-amber-400"],
+[class*="from-amber-500"],
+[class*="from-amber-600"],
+[class*="from-red-400"],
+[class*="from-red-500"],
+[class*="from-red-600"],
+[class*="from-green-400"],
+[class*="from-green-500"],
+[class*="from-green-600"],
+[class*="from-yellow-400"],
+[class*="from-yellow-500"],
+[class*="from-yellow-600"] {
+  --tw-gradient-from: var(--syd-accent) !important;
+  --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position)) !important;
+}
+
+/* Gradientes - to */
+[class*="to-emerald-400"],
+[class*="to-emerald-500"],
+[class*="to-emerald-600"],
+[class*="to-rose-400"],
+[class*="to-rose-500"],
+[class*="to-rose-600"],
+[class*="to-amber-400"],
+[class*="to-amber-500"],
+[class*="to-amber-600"],
+[class*="to-red-400"],
+[class*="to-red-500"],
+[class*="to-red-600"],
+[class*="to-green-400"],
+[class*="to-green-500"],
+[class*="to-green-600"],
+[class*="to-yellow-400"],
+[class*="to-yellow-500"],
+[class*="to-yellow-600"] {
+  --tw-gradient-to: var(--syd-accent) !important;
+}
+
+/* Sombras */
+[class*="shadow-emerald"],
+[class*="shadow-rose"],
+[class*="shadow-amber"],
+[class*="shadow-red"],
+[class*="shadow-green"],
+[class*="shadow-yellow"] {
+  --tw-shadow-color: var(--syd-accent) !important;
+}
+
 /* Fill y stroke */
 [class~="fill-indigo-400"],
 [class~="fill-violet-400"],
