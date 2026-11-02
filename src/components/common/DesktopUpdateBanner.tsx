@@ -57,6 +57,7 @@ export const DesktopUpdateBanner: React.FC = () => {
           }));
           break;
         case 'error':
+          if (payload.message && payload.message.includes('404')) return; // no releases published yet
           setState((s) => ({ ...s, error: payload.message || 'Error al actualizar' }));
           break;
         default:

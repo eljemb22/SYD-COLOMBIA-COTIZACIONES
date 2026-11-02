@@ -267,12 +267,23 @@ function setupAutoUpdater() {
     autoUpdater.on('update-downloaded', (info) =>
       sendUpdateEvent({ type: 'downloaded', version: info && info.version })
     );
-    autoUpdater.on('error', (err) =>
-      sendUpdateEvent({ type: 'error', message: err && err.message ? err.message : String(err) })
-    );
-    autoUpdater.checkForUpdates().catch((e) =>
-      sendUpdateEvent({ type: 'error', message: e && e.message ? e.message : String(e) })
-    );
+    autoUpdater.on('error', (err) => {
+      const msg = err && err.message ? err.message : String(err);
+      // 404 = no hay releases publicadas; no es un error real para el usuario.
+      if (msg.includes('404')) {
+        sendUpdateEvent({ type: 'not-available', version: null });
+        return;
+      }
+      sendUpdateEvent({ type: 'error', message: msg });
+    });
+    autoUpdater.checkForUpdates().catch((e) => {
+      const msg = e && e.message ? e.message : String(e);
+      if (msg.includes('404')) {
+        sendUpdateEvent({ type: 'not-available', version: null });
+        return;
+      }
+      sendUpdateEvent({ type: 'error', message: msg });
+    });
   } catch (e) {
     console.warn('[AutoUpdater] no disponible:', e && e.message ? e.message : String(e));
   }
@@ -484,7 +495,9 @@ ipcMain.handle('syd:update:check', async () => {
     const r = await autoUpdater.checkForUpdates();
     return { ok: true, updateInfo: r && r.updateInfo };
   } catch (e) {
-    return { ok: false, reason: e && e.message ? e.message : String(e) };
+    const msg = e && e.message ? e.message : String(e);
+    if (msg.includes('404')) return { ok: true, updateInfo: null };
+    return { ok: false, reason: msg };
   }
 });
 
