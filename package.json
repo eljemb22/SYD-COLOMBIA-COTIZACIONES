@@ -5,11 +5,14 @@
   "description": "SYD Colombia - Software de Cotizaciones y Licitaciones",
   "author": "SYD Colombia",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "tsx server.ts",
     "build": "node scripts/build.js",
     "start": "node server.ts",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "electron:dev": "electron .",
+    "desktop:build": "node scripts/build-desktop.js"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -46,8 +49,56 @@
     "@types/react-dom": "^19.2.4",
     "@types/sql.js": "^1.4.11",
     "autoprefixer": "^10.4.21",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2"
+  },
+  "build": {
+    "appId": "com.sydcolombia.app",
+    "productName": "SYD Colombia",
+    "copyright": "Copyright (c) 2026 SYD Colombia",
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "dist-server/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "app/dist"
+      },
+      {
+        "from": "public",
+        "to": "app/public"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "SYD Colombia Setup ${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SYD Colombia",
+      "artifactName": "SYD Colombia Setup ${version}.${ext}"
+    }
   }
 }

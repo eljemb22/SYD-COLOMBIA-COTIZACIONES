@@ -1,9 +1,12 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import * as XLSX from 'xlsx';
+
+// Raiz de la aplicacion. En modo escritorio (Electron) se apunta a la carpeta de
+// recursos del paquete instalado; en desarrollo/Cloud se usa la carpeta actual.
+const APP_ROOT = process.env.SYD_APP_ROOT || process.cwd();
 
 async function startServer() {
   const app = express();
@@ -30,7 +33,7 @@ async function startServer() {
   app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
   // Static files from public folder if exists
-  const publicDir = path.join(process.cwd(), 'public');
+  const publicDir = path.join(APP_ROOT, 'public');
   if (fs.existsSync(publicDir)) {
     app.use(express.static(publicDir));
   }
@@ -770,7 +773,7 @@ Devuelve un JSON estrictamente con esta estructura:
 
   // Development vs Production serving
   const isProduction = process.env.NODE_ENV === 'production';
-  const distDir = path.join(process.cwd(), 'dist');
+  const distDir = path.join(APP_ROOT, 'dist');
 
   if (isProduction && fs.existsSync(path.join(distDir, 'index.html'))) {
     console.log(`[Production] Serving static files from: ${distDir}`);
@@ -779,8 +782,11 @@ Devuelve un JSON estrictamente con esta estructura:
       res.sendFile(path.join(distDir, 'index.html'));
     });
   } else {
-    // Development mode with Vite middleware
+    // Development mode with Vite middleware.
+    // Vite se carga de forma dinamica para que la version empaquetada (escritorio)
+    // no requiera la dependencia de desarrollo.
     try {
+      const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
         server: {
           middlewareMode: true,
@@ -793,7 +799,7 @@ Devuelve un JSON estrictamente con esta estructura:
       app.use('*', async (req, res, next) => {
         const url = req.originalUrl;
         try {
-          const indexPath = path.resolve(process.cwd(), 'index.html');
+          const indexPath = path.resolve(APP_ROOT, 'index.html');
           if (fs.existsSync(indexPath)) {
             let template = fs.readFileSync(indexPath, 'utf-8');
             template = await vite.transformIndexHtml(url, template);

@@ -9,6 +9,12 @@ coverage/
 
 # Build output
 dist/
+dist-server/
+dist-electron/
+
+# Icono generado para el empaquetado de escritorio
+build/icon.png
+build/icon.ico
 
 # Datos locales y credenciales: nunca versionar
 cookies.txt
