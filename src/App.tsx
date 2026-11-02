@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { Header } from './components/Header';
 import { Navigation, ActiveTab } from './components/Navigation';
-import { DashboardOverview } from './components/views/DashboardOverview';
-import { QuotesView } from './components/views/QuotesView';
-import { CostManagerView } from './components/views/CostManagerView';
-import { EquipmentCatalogView } from './components/views/EquipmentCatalogView';
-import { TendersView } from './components/views/TendersView';
-import { OCTrackingView } from './components/views/OCTrackingView';
-import { SalesOrdersView } from './components/views/SalesOrdersView';
-import { DocumentationView } from './components/views/DocumentationView';
-import { GmailPurchasingHubView } from './components/views/GmailPurchasingHubView';
+const DashboardOverview = lazy(() => import('./components/views/DashboardOverview').then(m => ({ default: m.DashboardOverview })));
+const QuotesView = lazy(() => import('./components/views/QuotesView').then(m => ({ default: m.QuotesView })));
+const CostManagerView = lazy(() => import('./components/views/CostManagerView').then(m => ({ default: m.CostManagerView })));
+const EquipmentCatalogView = lazy(() => import('./components/views/EquipmentCatalogView').then(m => ({ default: m.EquipmentCatalogView })));
+const TendersView = lazy(() => import('./components/views/TendersView').then(m => ({ default: m.TendersView })));
+const OCTrackingView = lazy(() => import('./components/views/OCTrackingView').then(m => ({ default: m.OCTrackingView })));
+const SalesOrdersView = lazy(() => import('./components/views/SalesOrdersView').then(m => ({ default: m.SalesOrdersView })));
+const DocumentationView = lazy(() => import('./components/views/DocumentationView').then(m => ({ default: m.DocumentationView })));
+const GmailPurchasingHubView = lazy(() => import('./components/views/GmailPurchasingHubView').then(m => ({ default: m.GmailPurchasingHubView })));
 import { FloatingAlertsWidget } from './components/alerts/FloatingAlertsWidget';
 import { FloatingChatWidget } from './components/chat/FloatingChatWidget';
 import { RateLimitToast } from './components/common/RateLimitToast';
@@ -1379,6 +1379,7 @@ export default function App() {
 
         {/* Dynamic View Router */}
         <main id="app-main-content" className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-6 lg:p-8">
+          <Suspense fallback={<div className="flex items-center justify-center py-20 text-slate-400 text-sm">Cargando vista...</div>}>
           {activeTab === 'inicio' && (
             <DashboardOverview
               quoteHeader={quoteHeader}
@@ -1604,6 +1605,7 @@ export default function App() {
               currentUser={currentUser}
             />
           )}
+          </Suspense>
         </main>
       </div>
 
