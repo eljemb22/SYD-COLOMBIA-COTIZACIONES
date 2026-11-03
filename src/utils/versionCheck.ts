@@ -10,12 +10,12 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '2.10.2';
+export const CURRENT_APP_VERSION = '2.10.3';
 export const CURRENT_RELEASE_DATE = '2026-10-01';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
   {
-    version: '2.10.2',
+    version: '2.10.3',
     releaseDate: '2026-10-01',
     title: 'Corrección de Renderizado y Mapeo Seguro en Pestaña 7 (Documentación)',
     summary:
