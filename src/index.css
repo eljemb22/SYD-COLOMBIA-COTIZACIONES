@@ -1972,3 +1972,194 @@ body {
 [class~="bg-[#334d6e]/40"] { background-color: color-mix(in srgb, var(--syd-card-bg) 40%, transparent) !important; }
 [class~="bg-[#6b5ca5]/40"] { background-color: color-mix(in srgb, var(--syd-card-bg) 40%, transparent) !important; }
 
+
+/* =====================================================================
+   FORZAR TEMA DE ACEENTO EN TODA LA APP
+   Cualquier color de acento hardcodeado (sky, cyan, amber, purple, teal,
+   rose, emerald, gold, etc.) se reemplaza por --syd-accent para que el
+   tema seleccionado en Personalización se respete en toda la interfaz,
+   no solo en las partes que ya usaban la variable.
+   ===================================================================== */
+
+/* Texto de acento */
+[class~="text-sky-300"],
+[class~="text-sky-400"],
+[class~="text-sky-500"],
+[class~="text-cyan-300"],
+[class~="text-cyan-400"],
+[class~="text-cyan-500"],
+[class~="text-blue-300"],
+[class~="text-blue-400"],
+[class~="text-blue-500"],
+[class~="text-amber-300"],
+[class~="text-amber-400"],
+[class~="text-purple-300"],
+[class~="text-purple-400"],
+[class~="text-teal-300"],
+[class~="text-teal-400"],
+[class~="text-rose-300"],
+[class~="text-rose-400"],
+[class~="text-emerald-300"],
+[class~="text-emerald-400"],
+[class~="text-yellow-300"],
+[class~="text-yellow-400"],
+[class~="hover:text-sky-300"]:hover,
+[class~="hover:text-sky-400"]:hover,
+[class~="hover:text-cyan-300"]:hover,
+[class~="hover:text-cyan-400"]:hover,
+[class~="hover:text-blue-300"]:hover,
+[class~="hover:text-blue-400"]:hover,
+[class~="hover:text-amber-300"]:hover,
+[class~="hover:text-purple-300"]:hover,
+[class~="hover:text-teal-300"]:hover,
+[class~="hover:text-rose-300"]:hover,
+[class~="hover:text-emerald-300"]:hover,
+.group-hover:text-sky-400,
+.group-hover:text-cyan-400,
+.group-hover:text-blue-400,
+.group-hover:text-amber-400,
+.group-hover:text-purple-400,
+.group-hover:text-teal-400,
+.group-hover:text-rose-400,
+.group-hover:text-emerald-400 {
+  color: var(--syd-accent) !important;
+}
+
+/* Fondos de acento */
+[class~="bg-sky-400"],
+[class~="bg-sky-500"],
+[class~="bg-sky-600"],
+[class~="bg-cyan-400"],
+[class~="bg-cyan-500"],
+[class~="bg-cyan-600"],
+[class~="bg-blue-400"],
+[class~="bg-blue-500"],
+[class~="bg-blue-600"],
+[class~="bg-amber-400"],
+[class~="bg-amber-500"],
+[class~="bg-purple-400"],
+[class~="bg-purple-500"],
+[class~="bg-teal-400"],
+[class~="bg-teal-500"],
+[class~="bg-rose-400"],
+[class~="bg-rose-500"],
+[class~="bg-emerald-400"],
+[class~="bg-emerald-500"],
+[class~="bg-yellow-400"],
+[class~="bg-yellow-500"],
+[class~="bg-[#38bdf8]"],
+[class~="bg-[#06b6d4]"],
+[class~="bg-[#f59e0b]"],
+[class~="bg-[#a855f7]"],
+[class~="bg-[#14b8a6]"],
+[class~="bg-[#f43f5e]"],
+[class~="bg-[#10b981]"],
+[class~="bg-[#eab308]"],
+[class~="hover:bg-sky-400"]:hover,
+[class~="hover:bg-sky-500"]:hover,
+[class~="hover:bg-cyan-400"]:hover,
+[class~="hover:bg-cyan-500"]:hover,
+[class~="hover:bg-blue-400"]:hover,
+[class~="hover:bg-blue-500"]:hover,
+[class~="hover:bg-amber-400"]:hover,
+[class~="hover:bg-purple-400"]:hover,
+[class~="hover:bg-teal-400"]:hover,
+[class~="hover:bg-rose-400"]:hover,
+[class~="hover:bg-emerald-400"]:hover,
+.group-hover:bg-sky-400,
+.group-hover:bg-cyan-400,
+.group-hover:bg-blue-400,
+.group-hover:bg-amber-400,
+.group-hover:bg-purple-400,
+.group-hover:bg-teal-400,
+.group-hover:bg-rose-400,
+.group-hover:bg-emerald-400 {
+  background-color: var(--syd-accent) !important;
+}
+
+/* Bordes de acento */
+[class~="border-sky-400"],
+[class~="border-sky-500"],
+[class~="border-cyan-400"],
+[class~="border-cyan-500"],
+[class~="border-blue-400"],
+[class~="border-blue-500"],
+[class~="border-amber-400"],
+[class~="border-amber-500"],
+[class~="border-purple-400"],
+[class~="border-purple-500"],
+[class~="border-teal-400"],
+[class~="border-teal-500"],
+[class~="border-rose-400"],
+[class~="border-rose-500"],
+[class~="border-emerald-400"],
+[class~="border-emerald-500"],
+[class~="border-yellow-400"],
+[class~="border-yellow-500"],
+[class~="border-[#38bdf8]"],
+[class~="border-[#06b6d4]"],
+[class~="border-[#f59e0b]"],
+[class~="border-[#a855f7]"],
+[class~="border-[#14b8a6]"],
+[class~="border-[#f43f5e]"],
+[class~="border-[#10b981]"],
+[class~="border-[#eab308]"],
+[class~="hover:border-sky-400"]:hover,
+[class~="hover:border-cyan-400"]:hover,
+[class~="hover:border-blue-400"]:hover,
+[class~="hover:border-amber-400"]:hover,
+[class~="hover:border-purple-400"]:hover,
+[class~="hover:border-teal-400"]:hover,
+[class~="hover:border-rose-400"]:hover,
+[class~="hover:border-emerald-400"]:hover {
+  border-color: var(--syd-accent) !important;
+}
+
+/* Focus rings de acento */
+[class~="focus:ring-sky-400"]:focus,
+[class~="focus:ring-cyan-400"]:focus,
+[class~="focus:ring-blue-400"]:focus,
+[class~="focus:ring-amber-400"]:focus,
+[class~="focus:ring-purple-400"]:focus,
+[class~="focus:ring-teal-400"]:focus,
+[class~="focus:ring-rose-400"]:focus,
+[class~="focus:ring-emerald-400"]:focus {
+  --tw-ring-color: var(--syd-accent) !important;
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color) !important;
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color) !important;
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000) !important;
+}
+
+/* Texto de botón de acento (cuando el botón usa color de acento como bg) */
+button[class~="bg-[#38bdf8]"],
+button[class~="bg-sky-500"],
+button[class~="bg-cyan-500"],
+button[class~="bg-blue-500"],
+button[class~="bg-amber-500"],
+button[class~="bg-purple-500"],
+button[class~="bg-teal-500"],
+button[class~="bg-rose-500"],
+button[class~="bg-emerald-500"],
+button[class~="bg-yellow-500"] {
+  color: var(--syd-btn-text) !important;
+}
+
+/* Sombra de brillo de acento */
+button[class~="from-"],
+button[class~="gradient"] {
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--syd-accent) 25%, transparent),
+              0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+button[class~="from-"]:hover,
+button[class~="gradient"]:hover {
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--syd-accent) 40%, transparent),
+              0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Forzar fondos de badges de navegación al acento del tema */
+#main-sidebar-navigation .nav-badge {
+  background-color: var(--syd-accent) !important;
+  color: var(--syd-btn-text) !important;
+}
+

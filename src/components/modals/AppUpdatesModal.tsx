@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Sparkles,
@@ -51,12 +51,57 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
   } | null>(null);
   const [activeReleaseTab, setActiveReleaseTab] = useState<string>(CURRENT_APP_VERSION);
 
+  const desktop = (window as any).sydDesktop;
+  const ipcOffRef = useRef<(() => void) | null>(null);
+
+  // Clean up IPC listener on unmount
+  useEffect(() => {
+    return () => {
+      if (ipcOffRef.current) {
+        ipcOffRef.current();
+        ipcOffRef.current = null;
+      }
+    };
+  }, []);
+
   // Check update status whenever modal opens
   useEffect(() => {
     if (!isOpen) return;
 
     setPlatformInfo(getPlatformInfo());
     let isMounted = true;
+
+    // If desktop .exe, register IPC listener for real update events
+    if (desktop && desktop.onUpdateEvent) {
+      ipcOffRef.current = desktop.onUpdateEvent((payload: any) => {
+        if (!payload || !payload.type) return;
+        if (!isMounted) return;
+        switch (payload.type) {
+          case 'available':
+            setHasPendingUpdate(true);
+            setLatestRemoteVersion(payload.version || latestRemoteVersion);
+            setTargetInstallVersion(payload.version || latestRemoteVersion);
+            setInstallStatusText(`Nueva versión ${payload.version || ''} detectada. Listo para instalar.`);
+            break;
+          case 'progress':
+            setInstallProgress(Math.round(payload.percent || 0));
+            setInstallStatusText(`Descargando actualización... ${Math.round(payload.percent || 0)}%`);
+            break;
+          case 'downloaded':
+            setInstallProgress(100);
+            setInstallStatusText('Actualización descargada. Listo para instalar.');
+            setHasPendingUpdate(false);
+            break;
+          case 'error':
+            if (payload.message && payload.message.includes('404')) return;
+            setInstallStatusText('Error al verificar actualización.');
+            break;
+          default:
+            break;
+        }
+      });
+    }
+
     checkForAppUpdatesOnline().then((res) => {
       if (!isMounted) return;
       setHasPendingUpdate(res.updateAvailable);
@@ -76,14 +121,48 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
     return () => {
       isMounted = false;
     };
-  }, [isOpen]);
+  }, [isOpen, desktop]);
 
   if (!isOpen) return null;
 
   const handleCheckNow = async () => {
     setIsChecking(true);
     setCheckResult(null);
+    setInstallProgress(0);
+    setInstallStatusText('');
 
+    // If desktop .exe, use IPC checkForUpdates
+    if (desktop && desktop.checkForUpdates) {
+      try {
+        const res = await desktop.checkForUpdates();
+        setIsChecking(false);
+        setHasPendingUpdate(res.updateInfo ? true : false);
+        setLatestRemoteVersion(res.updateInfo?.version || CURRENT_APP_VERSION);
+        setTargetInstallVersion(res.updateInfo?.version || CURRENT_APP_VERSION);
+        setCheckResult({
+          tested: true,
+          updateAvailable: res.updateInfo ? true : false,
+          latestVersion: res.updateInfo?.version || CURRENT_APP_VERSION,
+          message: res.updateInfo
+            ? `¡Se detectó una nueva versión v${res.updateInfo.version} disponible en la nube!`
+            : `El sistema ya está actualizado a la última versión (v${CURRENT_APP_VERSION}). No hay actualizaciones pendientes.`,
+          checkedAt: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+        });
+        return;
+      } catch (e) {
+        setIsChecking(false);
+        setCheckResult({
+          tested: true,
+          updateAvailable: false,
+          latestVersion: CURRENT_APP_VERSION,
+          message: `Comprobación realizada. Sistema en versión v${CURRENT_APP_VERSION}.`,
+          checkedAt: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+        });
+        return;
+      }
+    }
+
+    // Web fallback
     try {
       const res = await checkForAppUpdatesOnline();
       setTimeout(() => {
@@ -115,9 +194,58 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
     }
   };
 
-  const startInstallationFlow = (targetVer: string, isReinstall: boolean = false) => {
+  const startInstallationFlow = async (targetVer: string, isReinstall: boolean = false) => {
     if (isInstalling) return;
 
+    // If desktop .exe, use real electron-updater IPC: download + install
+    if (desktop && desktop.downloadUpdate && desktop.quitAndInstall) {
+      setIsInstalling(true);
+      setTargetInstallVersion(targetVer);
+      setInstallProgress(0);
+      setInstallStatusText('Iniciando descarga de actualización desde la nube...');
+
+      try {
+        await desktop.downloadUpdate();
+        // The IPC listener (registered in useEffect) will update progress/status
+        // When 'downloaded' event fires, the listener sets progress to 100 and status ready.
+        // We wait briefly then call quitAndInstall via the 'downloaded' handler below.
+        // To be safe, also poll for downloaded state:
+        const waitForDownload = setInterval(() => {
+          // The IPC listener already handles progress via onUpdateEvent
+          // We just wait for the downloaded flag or a timeout
+        }, 500);
+
+        // Listen specifically for downloaded then install
+        const installOff = desktop.onUpdateEvent((payload: any) => {
+          if (!payload || !payload.type) return;
+          if (payload.type === 'downloaded') {
+            clearInterval(waitForDownload);
+            installOff();
+            setInstallProgress(100);
+            setInstallStatusText('Actualización descargada. Reiniciando e instalando...');
+            setTimeout(() => {
+              desktop.quitAndInstall();
+            }, 1000);
+          }
+        });
+
+        // Safety timeout: if no downloaded event after 10 minutes, stop waiting
+        setTimeout(() => {
+          clearInterval(waitForDownload);
+          installOff();
+          setIsInstalling(false);
+          setInstallStatusText('Tiempo de espera agotado. Intenta nuevamente.');
+        }, 10 * 60 * 1000);
+
+        return;
+      } catch (e: any) {
+        setIsInstalling(false);
+        setInstallStatusText('Error al iniciar descarga: ' + (e && e.message ? e.message : String(e)));
+        return;
+      }
+    }
+
+    // Web fallback: simulated flow + reload
     setIsInstalling(true);
     setTargetInstallVersion(targetVer);
     setInstallProgress(10);

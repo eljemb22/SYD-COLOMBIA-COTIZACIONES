@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, ArrowRight, Zap, RefreshCw, X, ShieldCheck, DownloadCloud } from 'lucide-react';
 import {
   CURRENT_APP_VERSION,
@@ -24,12 +24,58 @@ export const AppUpdateBanner: React.FC<AppUpdateBannerProps> = ({ onOpenDetails 
   const [installStatusText, setInstallStatusText] = useState('');
   const [isDismissed, setIsDismissed] = useState(false);
 
+  const desktop = (window as any).sydDesktop;
+  const ipcOffRef = useRef<(() => void) | null>(null);
+
+  // Clean up IPC listener on unmount
+  useEffect(() => {
+    return () => {
+      if (ipcOffRef.current) {
+        ipcOffRef.current();
+        ipcOffRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     // Initial active release check
     const info = getActiveReleaseInfo();
     setReleaseInfo(info);
     if (info && info.version) {
       setTargetVersion(info.version);
+    }
+
+    // If desktop .exe, register IPC listener for real update events
+    if (desktop && desktop.onUpdateEvent) {
+      ipcOffRef.current = desktop.onUpdateEvent((payload: any) => {
+        if (!payload || !payload.type) return;
+        switch (payload.type) {
+          case 'available':
+            setUpdateAvailable(true);
+            setTargetVersion(payload.version || targetVersion);
+            setReleaseInfo((prev) => prev || { version: payload.version || '', title: 'Nueva Actualización SYD Colombia', summary: 'Nuevas mejoras y optimizaciones disponibles.', highlights: ['Mejoras de rendimiento y sincronización.'], releaseDate: new Date().toISOString().split('T')[0], isImportant: true });
+            setIsInstalling(false);
+            break;
+          case 'progress':
+            setInstallProgress(Math.round(payload.percent || 0));
+            setInstallStatusText(`Descargando actualización... ${Math.round(payload.percent || 0)}%`);
+            break;
+          case 'downloaded':
+            setInstallProgress(100);
+            setInstallStatusText('Actualización descargada. Reiniciando e instalando...');
+            setUpdateAvailable(false);
+            setTimeout(() => {
+              desktop.quitAndInstall();
+            }, 1000);
+            break;
+          case 'error':
+            if (payload.message && payload.message.includes('404')) return;
+            setInstallStatusText('Error al verificar actualización.');
+            break;
+          default:
+            break;
+        }
+      });
     }
 
     // Auto-check online on mount
@@ -83,6 +129,20 @@ export const AppUpdateBanner: React.FC<AppUpdateBannerProps> = ({ onOpenDetails 
   const handleInstallNow = () => {
     if (isInstalling) return;
 
+    // If desktop .exe, use real electron-updater IPC: download + install
+    if (desktop && desktop.downloadUpdate && desktop.quitAndInstall) {
+      setIsInstalling(true);
+      setInstallProgress(0);
+      setInstallStatusText('Iniciando descarga de actualización desde la nube...');
+
+      desktop.downloadUpdate().catch((e: any) => {
+        setIsInstalling(false);
+        setInstallStatusText('Error al iniciar descarga: ' + (e && e.message ? e.message : String(e)));
+      });
+      return;
+    }
+
+    // Web fallback: simulated flow + reload
     const versionToInstall = targetVersion || CURRENT_APP_VERSION;
     localStorage.setItem('installed_version', versionToInstall);
     localStorage.setItem('syd_app_version_installed', versionToInstall);
