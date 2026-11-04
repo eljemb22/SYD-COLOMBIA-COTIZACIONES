@@ -1261,6 +1261,75 @@ export default function App() {
     [ocContracts, equipments, salesOrders, handleUpdateContracts, handleUpdateSalesOrders]
   );
 
+  // =====================================================================
+  // OPTIMIZACIÓN DEL SISTEMA — Botón "Refrescar" del header
+  // Limpia caches, fuerza recolección de basura, reinicia suscripciones
+  // y recarga datos para que la app vuelva a estar fluida.
+  // =====================================================================
+  const handleRefresh = useCallback(async () => {
+    try {
+      // 1. Limpiar caches del navegador (service workers, cache storage)
+      if ('caches' in window) {
+        const cacheKeys = await window.caches.keys();
+        await Promise.all(cacheKeys.map((key) => window.caches.delete(key)));
+      }
+
+      // 2. Unregister service workers activos para forzar recarga limpia
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((reg) => reg.unregister()));
+      }
+
+      // 3. Forzar garbage collection si está disponible (solo en dev/Chrome)
+      if ((window as any).gc) {
+        (window as any).gc();
+      }
+
+      // 4. Limpiar localStorage de claves temporales huérfanas (mantener datos importantes)
+      const keysToKeep = [
+        'syd_theme_settings_v3',
+        'syd_equipments_catalog',
+        'syd_saved_quotes_database_v2',
+        'syd_tender_clients_v2',
+        'syd_oc_tracking_contracts_v1',
+        'syd_sales_orders_v1',
+        'syd_sales_invoices_v1',
+        'syd_technical_documents_v3',
+        'syd_registered_system_users_v4',
+        'syd_current_session_user_v4',
+        'syd_app_version_installed',
+        'installed_version',
+        'syd_dismissed_alert_ids_v2',
+        'syd_toast_alert_history',
+        'syd_active_draft_quote_header',
+        'syd_active_draft_quote_items',
+      ];
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && !keysToKeep.includes(key) && !key.startsWith('syd_')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+      // 5. Recargar datos desde localStorage (forzar re-render de vistas)
+      setSavedQuotes(getSavedQuotes());
+      setTenderClients(getStoredTenders());
+      setOcContracts(getStoredOCTrackingContracts());
+      setSalesOrders(getStoredSalesOrders());
+      setSalesInvoices(getStoredSalesInvoices());
+      setEquipments((prev) => [...prev]); // forzar re-render del catálogo
+      setDocuments((prev) => [...prev]); // forzar re-render de documentos
+
+      // 6. Dispatch evento para notificar a componentes que se refresquen
+      window.dispatchEvent(new Event('resize'));
+      window.dispatchEvent(new CustomEvent('syd-alerts-updated'));
+    } catch (e) {
+      console.error('Error en optimización de refresco:', e);
+    }
+  }, []);
+
   // Handlers for Documents
   const handleOpenNewDocumentModal = useCallback(
     (equipmentId?: string, docType?: string, equipmentData?: any, contractContext?: any) => {
@@ -1443,13 +1512,7 @@ export default function App() {
             onOpenShareModal={() => setIsCloudSyncModalOpen(true)}
             onSuspendApp={() => setIsSuspended(true)}
             alertsCount={systemAlerts.length}
-            onRefresh={() => {
-              setSavedQuotes(getSavedQuotes());
-              setTenderClients(getStoredTenders());
-              setOcContracts(getStoredOCTrackingContracts());
-              setSalesOrders(getStoredSalesOrders());
-              setSalesInvoices(getStoredSalesInvoices());
-            }}
+            onRefresh={handleRefresh}
           />
         </div>
 
