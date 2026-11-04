@@ -434,13 +434,35 @@ export default function App() {
 
     window.addEventListener('syd-catalog-updated', handleCatalogUpdated);
     window.addEventListener('syd_users_updated', handleUsersUpdated as EventListener);
+    window.addEventListener('syd_permissions_changed', handlePermissionsChanged as EventListener);
 
     return () => {
       unsubscribe();
       window.removeEventListener('syd-catalog-updated', handleCatalogUpdated);
       window.removeEventListener('syd_users_updated', handleUsersUpdated as EventListener);
+      window.removeEventListener('syd_permissions_changed', handlePermissionsChanged as EventListener);
     };
   }, [syncEpoch]);
+
+  // Aplicar permisos en tiempo real cuando el admin los cambia desde UserManagementModal
+  const handlePermissionsChanged = (e: any) => {
+    const detail = e?.detail || {};
+    const userId = detail.userId;
+    const newPerms = detail.permissions;
+    if (!userId || !newPerms || typeof newPerms !== 'object') return;
+
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      if (prev.id === userId || prev.username.toLowerCase() === String(userId).toLowerCase()) {
+        const { password, ...safe } = { ...prev, permissions: newPerms } as any;
+        try {
+          setStoredAuthUser(safe);
+        } catch {}
+        return safe;
+      }
+      return prev;
+    });
+  };
 
   // Handlers for Quotes
   const handleUpdateHeader = useCallback((headerUpdates: Partial<QuoteHeader>) => {

@@ -258,6 +258,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
     const updatedList = updateStoredUserAccount(selectedUserId, updates);
     setUsers(updatedList);
+
+    // Notificar a la app que los permisos/cuenta cambiaron (para aplicar en tiempo real)
+    window.dispatchEvent(
+      new CustomEvent('syd_permissions_changed', {
+        detail: { userId: selectedUserId, permissions: updatedUserPermissions },
+      })
+    );
     setSuccessMessage(
       isAdmin
         ? `¡Datos y credenciales actualizados correctamente para ${formName.trim()}!`
@@ -291,6 +298,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
       const updatedList = updateSpecificUserPermissions(selectedUserId, newPerms);
       setUsers(updatedList);
+
+      // Notificar a la app que los permisos cambiaron (para aplicar en tiempo real)
+      window.dispatchEvent(
+        new CustomEvent('syd_permissions_changed', {
+          detail: { userId: selectedUserId, permissions: newPerms },
+        })
+      );
 
       // If current user is modified user, update parent state
       if (currentUser?.id === selectedUserId) {
@@ -343,6 +357,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       enableAll
         ? `Se han habilitado todos los permisos de edición para ${selectedUser.name}.`
         : `Se han revocado todos los permisos de edición para ${selectedUser.name} (Modo Solo Lectura).`
+    );
+
+    // Notificar a la app que los permisos cambiaron (para aplicar en tiempo real)
+    window.dispatchEvent(
+      new CustomEvent('syd_permissions_changed', {
+        detail: { userId: selectedUserId, permissions: newPerms },
+      })
     );
 
     if (currentUser?.id === selectedUserId) {
