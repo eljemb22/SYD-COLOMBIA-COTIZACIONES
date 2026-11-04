@@ -35,6 +35,30 @@ interface FloatingAlertsWidgetProps {
   onOpenAppUpdates?: () => void;
 }
 
+const SEVERITY_CONFIG: Record<AlertSeverity, { label: string; color: string; bg: string; border: string; icon: React.ElementType }> = {
+  critica: {
+    label: '🔴 Crítica',
+    color: 'text-rose-300',
+    bg: 'bg-rose-500/20',
+    border: 'border-rose-500/40',
+    icon: ShieldAlert,
+  },
+  media: {
+    label: '🟡 Media',
+    color: 'text-amber-300',
+    bg: 'bg-amber-500/20',
+    border: 'border-amber-500/40',
+    icon: AlertTriangle,
+  },
+  informativa: {
+    label: '🔵 Info',
+    color: 'text-blue-300',
+    bg: 'bg-blue-500/20',
+    border: 'border-blue-500/40',
+    icon: Info,
+  },
+};
+
 export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
   alerts,
   summary,
@@ -341,69 +365,46 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
     onNavigateTab(alert.targetTab);
   };
 
-  // Active toast alert (prioritizing critical alerts respecting intervals)
-  const currentToast = activeToastAlert || visibleAlerts[0] || null;
+  const severityConfig = (severity: AlertSeverity) => SEVERITY_CONFIG[severity];
 
   return (
     <>
       {/* 1. FLOATING TOAST NOTIFICATION (Auto-Dismissing compact preview) */}
-      {showToast && !isOpen && currentToast && (
+      {showToast && !isOpen && activeToastAlert && (
         <div
           id="floating-alert-toast"
-          className="fixed bottom-20 left-6 z-50 max-w-[270px] sm:max-w-[290px] bg-[#121e31]/95 backdrop-blur-md border border-slate-700/80 shadow-2xl rounded-xl p-2 sm:p-2.5 text-white animate-slideUp transition-all duration-300"
+          className="fixed bottom-20 left-6 z-50 max-w-[320px] sm:max-w-[360px] bg-[#121e31]/98 backdrop-blur-md border border-slate-700/80 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-xl p-3 sm:p-3.5 text-white transition-all duration-300"
         >
           <div className="flex items-start justify-between gap-1.5">
             <div className="flex items-start gap-1.5">
               <div
-                className={`p-1 rounded-md shrink-0 mt-0.5 border ${
-                  currentToast.severity === 'critica'
-                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
-                    : currentToast.severity === 'media'
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                    : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
-                }`}
+                className={`p-1.5 rounded-md shrink-0 mt-0.5 border ${severityConfig(activeToastAlert.severity).bg} ${severityConfig(activeToastAlert.severity).border}`}
               >
-                {currentToast.severity === 'critica' ? (
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                ) : currentToast.severity === 'media' ? (
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                ) : (
-                  <Info className="w-3.5 h-3.5" />
-                )}
+                <severityConfig(activeToastAlert.severity).icon className={`w-3.5 h-3.5 ${severityConfig(activeToastAlert.severity).color}`} />
               </div>
-              <div className="space-y-0.5 min-w-0">
+              <div className="space-y-0.5 min-w-0 flex-1">
                 <div className="flex items-center gap-1 flex-wrap">
                   <span
-                    className={`text-[7.5px] uppercase font-black px-1.5 py-0.2 rounded tracking-wide ${
-                      currentToast.severity === 'critica'
-                        ? 'bg-rose-500/30 text-rose-300 border border-rose-500/40'
-                        : currentToast.severity === 'media'
-                        ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40'
-                        : 'bg-blue-500/30 text-blue-300 border border-blue-500/40'
-                    }`}
+                    className={`text-[8px] uppercase font-black px-1.5 py-0.2 rounded tracking-wide ${severityConfig(activeToastAlert.severity).bg} ${severityConfig(activeToastAlert.severity).border} ${severityConfig(activeToastAlert.severity).color}`}
                   >
-                    {currentToast.severity === 'critica'
-                      ? '🔴 Crítica'
-                      : currentToast.severity === 'media'
-                      ? '🟡 Media'
-                      : '🔵 Info'}
+                    {severityConfig(activeToastAlert.severity).label}
                   </span>
-                  <span className="text-[8.5px] text-slate-400 font-medium truncate max-w-[130px]">
-                    {currentToast.sourceModule}
+                  <span className="text-[9px] text-slate-400 font-medium truncate max-w-[120px]">
+                    {activeToastAlert.sourceModule}
                   </span>
                 </div>
-                <h4 className="text-[10.5px] font-bold text-white leading-snug line-clamp-1">
-                  {currentToast.title}
+                <h4 className="text-[11px] font-bold text-white leading-snug line-clamp-1">
+                  {activeToastAlert.title}
                 </h4>
-                <p className="text-[9px] text-slate-300 line-clamp-2 leading-relaxed">
-                  {currentToast.message}
+                <p className="text-[9.5px] text-slate-300 line-clamp-2 leading-relaxed mt-0.5">
+                  {activeToastAlert.message}
                 </p>
-                <div className="pt-0.5 flex items-center gap-1.5">
+                <div className="pt-1 flex items-center gap-1.5">
                   <button
-                    onClick={() => handleActionClick(currentToast)}
-                    className="bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 px-1.5 py-0.5 rounded text-[9px] font-black transition cursor-pointer flex items-center gap-0.5 shadow-xs"
+                    onClick={() => handleActionClick(activeToastAlert)}
+                    className="bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950 px-2 py-0.5 rounded text-[9px] font-black transition cursor-pointer flex items-center gap-0.5 shadow-sm"
                   >
-                    <span>{currentToast.actionLabel || 'Resolver'}</span>
+                    <span>{activeToastAlert.actionLabel || 'Resolver'}</span>
                     <ArrowRight className="w-2.5 h-2.5" />
                   </button>
                   <button
@@ -420,7 +421,7 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
             </div>
             <button
               onClick={() => setShowToast(false)}
-              className="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-700/50 transition cursor-pointer shrink-0"
+              className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-700/50 transition cursor-pointer shrink-0"
               title="Cerrar notificación flotante"
             >
               <X className="w-3 h-3" />
@@ -430,23 +431,20 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
       )}
 
       {/* 2. PERSISTENT FLOATING BUTTON (Always visible, even with 0 alerts) */}
-      <div className="fixed bottom-6 left-6 z-40 flex items-center gap-2 animate-fadeIn">
+      <div className="fixed bottom-6 left-6 z-40 flex items-center gap-2">
         <button
           id="open-floating-alerts-btn"
           onClick={() => {
             setShowToast(false);
             setIsOpen(!isOpen);
           }}
-          className={`relative w-12 h-12 rounded-full shadow-2xl transition-all duration-300 cursor-pointer border flex items-center justify-center hover:scale-105 active:scale-95 ${
-            hasSystemUpdate
-              ? 'bg-gradient-to-br from-emerald-950/95 via-cyan-950/95 to-blue-950/95 border-emerald-400 text-white shadow-emerald-950/70 ring-2 ring-emerald-400/50 animate-pulse'
-              : currentSummary.critica > 0
-              ? 'bg-rose-950/95 hover:bg-rose-900 border-rose-500 text-white shadow-rose-950/60 ring-2 ring-rose-500/40'
-              : currentSummary.media > 0
-              ? 'bg-amber-950/95 hover:bg-amber-900 border-amber-500 text-white shadow-amber-950/60 ring-2 ring-amber-500/40'
-              : currentSummary.total > 0
-              ? 'bg-[#1e314b]/95 hover:bg-[#253f63] border-[var(--syd-accent)]/80 text-white shadow-cyan-950/50 ring-2 ring-cyan-500/30'
-              : 'bg-[#132238]/95 hover:bg-[#1c3252] border-[var(--syd-accent)]/50 text-slate-300 hover:text-white shadow-xl hover:border-[var(--syd-accent)]'
+          className={`relative w-12 h-12 rounded-full shadow-2xl transition-all duration-300 cursor-pointer border flex items-center justify-center hover:scale-105 active:scale-95 ${currentSummary.critica > 0
+            ? 'bg-rose-950/95 hover:bg-rose-900 border-rose-500 text-white shadow-rose-950/60 ring-2 ring-rose-500/40'
+            : currentSummary.media > 0
+            ? 'bg-amber-950/95 hover:bg-amber-900 border-amber-500 text-white shadow-amber-950/60 ring-2 ring-amber-500/40'
+            : currentSummary.total > 0
+            ? 'bg-[#1e314b]/95 hover:bg-[#253f63] border-[var(--syd-accent)]/80 text-white shadow-cyan-950/50 ring-2 ring-cyan-500/30'
+            : 'bg-[#132238]/95 hover:bg-[#1c3252] border-[var(--syd-accent)]/50 text-slate-300 hover:text-white shadow-xl hover:border-[var(--syd-accent)]'
           }`}
           title={
             hasSystemUpdate
@@ -455,28 +453,22 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
           }
         >
           <Bell
-            className={`w-5 h-5 transition-transform ${
-              hasSystemUpdate
-                ? 'text-emerald-300 animate-spin-slow'
-                : currentSummary.critica > 0
-                ? 'text-rose-400 animate-bounce'
-                : currentSummary.media > 0
-                ? 'text-amber-400 animate-pulse'
-                : currentSummary.total > 0
-                ? 'text-cyan-300'
-                : 'text-[var(--syd-accent)]'
+            className={`w-5 h-5 transition-transform ${currentSummary.critica > 0
+              ? 'text-rose-400 animate-bounce'
+              : currentSummary.media > 0
+              ? 'text-amber-400 animate-pulse'
+              : currentSummary.total > 0
+              ? 'text-cyan-300'
+              : 'text-[var(--syd-accent)]'
             }`}
           />
           {currentSummary.total > 0 ? (
             <span
-              className={`absolute -top-1 -right-1 font-black text-[10px] min-w-[19px] h-[19px] px-1 rounded-full flex items-center justify-center border-2 border-slate-900 shadow-md ${
-                hasSystemUpdate
-                  ? 'bg-emerald-400 text-slate-950 font-black animate-pulse'
-                  : currentSummary.critica > 0
-                  ? 'bg-rose-500 text-white animate-pulse'
-                  : currentSummary.media > 0
-                  ? 'bg-amber-500 text-slate-950 font-bold'
-                  : 'bg-[var(--syd-accent)] text-slate-950 font-bold'
+              className={`absolute -top-1 -right-1 font-black text-[10px] min-w-[19px] h-[19px] px-1 rounded-full flex items-center justify-center border-2 border-slate-900 shadow-md ${currentSummary.critica > 0
+                ? 'bg-rose-500 text-white animate-pulse'
+                : currentSummary.media > 0
+                ? 'bg-amber-500 text-slate-950 font-bold'
+                : 'bg-[var(--syd-accent)] text-slate-950 font-bold'
               }`}
             >
               {currentSummary.total}
@@ -492,10 +484,10 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
         </button>
       </div>
 
-      {/* 3. COMPACT FLOATING ALERTS POPUP (Floats at bottom-left, keeps app 100% visible) */}
+      {/* 3. COMPACT FLOATING ALERTS POPUP */}
       {isOpen && (
         <>
-          {/* Transparent click-outside overlay - Does NOT dim or blur the background app */}
+          {/* Transparent click-outside overlay */}
           <div
             className="fixed inset-0 z-40 bg-transparent cursor-default"
             onClick={() => setIsOpen(false)}
@@ -503,7 +495,7 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
           />
 
           <div
-            className="fixed bottom-20 left-4 sm:left-6 z-50 w-[calc(100vw-2rem)] max-w-[390px] sm:max-w-[420px] max-h-[500px] sm:max-h-[540px] bg-[#121e30] rounded-2xl border border-[#334d6e] shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden animate-slideUp"
+            className="fixed bottom-20 left-4 sm:left-6 z-50 w-[calc(100vw-2rem)] max-w-[390px] sm:max-w-[420px] max-h-[500px] sm:max-h-[540px] bg-[#121e30] rounded-2xl border border-[#334d6e] shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -515,9 +507,11 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
                 <div>
                   <h3 className="text-xs font-black text-white flex items-center gap-1.5 leading-tight">
                     <span>Alertas del Sistema</span>
-                    <span className="bg-[var(--syd-accent)] text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full">
-                      {currentSummary.total}
-                    </span>
+                    {currentSummary.total > 0 && (
+                      <span className={`bg-[var(--syd-accent)] text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full`}>
+                        {currentSummary.total}
+                      </span>
+                    )}
                   </h3>
                   <p className="text-[10px] text-slate-400 leading-tight">
                     Notificaciones de costos, OC y licitaciones
@@ -538,43 +532,27 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setActiveFilter('todas')}
-                  className={`px-2 py-0.5 rounded text-[10.5px] font-bold transition cursor-pointer ${
-                    activeFilter === 'todas'
-                      ? 'bg-[var(--syd-accent)] text-slate-950'
-                      : 'bg-[#192b45] text-slate-300 hover:text-white'
-                  }`}
+                  className={`px-2 py-0.5 rounded text-[10.5px] font-bold transition cursor-pointer ${activeFilter === 'todas' ? 'bg-[var(--syd-accent)] text-slate-950' : 'bg-[#192b45] text-slate-300 hover:text-white'}`}
                 >
                   Todas ({currentSummary.total})
                 </button>
                 <button
                   onClick={() => setActiveFilter('critica')}
-                  className={`px-1.5 py-0.5 rounded text-[10.5px] font-bold transition cursor-pointer flex items-center gap-1 ${
-                    activeFilter === 'critica'
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-[#192b45] text-rose-300 hover:text-white border border-rose-500/30'
-                  }`}
+                  className={`px-1.5 py-0.5 rounded text-[10.5px] font-bold transition cursor-pointer flex items-center gap-1 ${activeFilter === 'critica' ? 'bg-rose-500 text-white' : 'bg-[#192b45] text-rose-300 hover:text-white border border-rose-500/30'}`}
                 >
                   <span>🔴 Críticas</span>
                   <span className="text-[9.5px]">({currentSummary.critica})</span>
                 </button>
                 <button
                   onClick={() => setActiveFilter('media')}
-                  className={`px-1.5 py-0.5 rounded text-[10.5px] font-bold transition cursor-pointer flex items-center gap-1 ${
-                    activeFilter === 'media'
-                      ? 'bg-amber-500 text-slate-950 font-black'
-                      : 'bg-[#192b45] text-amber-300 hover:text-white border border-amber-500/30'
-                  }`}
+                  className={`px-1.5 py-0.5 rounded text-[10.5px] font-bold transition cursor-pointer flex items-center gap-1 ${activeFilter === 'media' ? 'bg-amber-500 text-slate-950 font-black' : 'bg-[#192b45] text-amber-300 hover:text-white border border-amber-500/30'}`}
                 >
                   <span>🟡 Medias</span>
                   <span className="text-[9.5px]">({currentSummary.media})</span>
                 </button>
                 <button
                   onClick={() => setActiveFilter('informativa')}
-                  className={`px-1.5 py-0.5 rounded text-[10.5px] font-bold transition cursor-pointer flex items-center gap-1 ${
-                    activeFilter === 'informativa'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-[#192b45] text-blue-300 hover:text-white border border-blue-500/30'
-                  }`}
+                  className={`px-1.5 py-0.5 rounded text-[10.5px] font-bold transition cursor-pointer flex items-center gap-1 ${activeFilter === 'informativa' ? 'bg-blue-500 text-white' : 'bg-[#192b45] text-blue-300 hover:text-white border border-blue-500/30'}`}
                 >
                   <span>🔵 Info</span>
                   <span className="text-[9.5px]">({currentSummary.informativa})</span>
@@ -587,7 +565,7 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
                   className="text-[9.5px] text-slate-400 hover:text-rose-300 font-semibold whitespace-nowrap px-1.5 py-0.5 rounded hover:bg-slate-800 transition cursor-pointer"
                   title="Marcar todas como revisadas"
                 >
-                  Descartar
+                  Descartar todo
                 </button>
               )}
             </div>
@@ -610,35 +588,20 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
                 filteredAlerts.map((alert) => {
                   const isCritica = alert.severity === 'critica';
                   const isMedia = alert.severity === 'media';
+                  const cfg = severityConfig(alert.severity);
 
                   return (
                     <div
                       key={alert.id}
-                      className={`p-2.5 rounded-xl border transition-all duration-200 space-y-1.5 shadow-sm ${
-                        isCritica
-                          ? 'bg-rose-950/25 border-rose-500/50 hover:border-rose-400'
-                          : isMedia
-                          ? 'bg-amber-950/25 border-amber-500/50 hover:border-amber-400'
-                          : 'bg-blue-950/25 border-blue-500/40 hover:border-blue-400'
-                      }`}
+                      className={`p-2.5 rounded-xl border transition-all duration-200 space-y-1.5 shadow-sm ${isCritica ? 'bg-rose-950/25 border-rose-500/50 hover:border-rose-400' : isMedia ? 'bg-amber-950/25 border-amber-500/50 hover:border-amber-400' : 'bg-blue-950/25 border-blue-500/40 hover:border-blue-400'}`}
                     >
                       {/* Top badge row */}
                       <div className="flex items-center justify-between gap-1.5">
                         <div className="flex items-center gap-1 flex-wrap">
                           <span
-                            className={`text-[8.5px] uppercase font-black px-1.5 py-0.2 rounded tracking-wide ${
-                              isCritica
-                                ? 'bg-rose-500/30 text-rose-300 border border-rose-500/40'
-                                : isMedia
-                                ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40'
-                                : 'bg-blue-500/30 text-blue-300 border border-blue-500/40'
-                            }`}
+                            className={`text-[8.5px] uppercase font-black px-1.5 py-0.2 rounded tracking-wide ${cfg.bg} ${cfg.border} ${cfg.color}`}
                           >
-                            {isCritica
-                              ? '🔴 Crítica'
-                              : isMedia
-                              ? '🟡 Media'
-                              : '🔵 Info'}
+                            {cfg.label}
                           </span>
                           <span className="text-[9.5px] text-slate-300 font-semibold bg-[#152338] px-1.5 py-0.2 rounded border border-[#334d6e]">
                             {alert.sourceModule}
@@ -674,17 +637,13 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
                             ? '⏱️ Despacho a Cliente'
                             : alert.category === 'oc_pago'
                             ? '💳 Pago a Proveedor'
+                            : alert.category === 'nueva_parte_drive'
+                            ? '📦 Nueva Parte en Drive'
                             : '📋 Operaciones'}
                         </span>
                         <button
                           onClick={() => handleActionClick(alert)}
-                          className={`px-2.5 py-1 rounded-md text-[10.5px] font-black transition cursor-pointer inline-flex items-center gap-1 shadow-xs active:scale-95 shrink-0 ${
-                            isCritica
-                              ? 'bg-rose-500 hover:bg-rose-600 text-white'
-                              : isMedia
-                              ? 'bg-amber-400 hover:bg-amber-500 text-slate-950'
-                              : 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950'
-                          }`}
+                          className={`px-2.5 py-1 rounded-md text-[10.5px] font-black transition cursor-pointer inline-flex items-center gap-1 shadow-xs active:scale-95 shrink-0 ${isCritica ? 'bg-rose-500 hover:bg-rose-600 text-white' : isMedia ? 'bg-amber-400 hover:bg-amber-500 text-slate-950' : 'bg-[var(--syd-accent)] hover:bg-[var(--syd-accent-light)] text-slate-950'}`}
                         >
                           <span>{alert.actionLabel || 'Resolver'}</span>
                           <ChevronRight className="w-3 h-3 stroke-[3]" />

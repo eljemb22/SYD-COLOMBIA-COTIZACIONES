@@ -101,7 +101,8 @@
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "autoInstall": true
     },
     "nsis": {
       "oneClick": false,

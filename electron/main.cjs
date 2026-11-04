@@ -252,7 +252,7 @@ function sendUpdateEvent(payload) {
 function setupAutoUpdater() {
   if (!autoUpdater || !IS_PACKAGED) return;
   try {
-    autoUpdater.autoDownload = false;
+    autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on('checking-for-update', () => sendUpdateEvent({ type: 'checking' }));
     autoUpdater.on('update-available', (info) =>
@@ -264,9 +264,11 @@ function setupAutoUpdater() {
     autoUpdater.on('download-progress', (p) =>
       sendUpdateEvent({ type: 'progress', percent: p && p.percent, transferred: p && p.transferred, total: p && p.total })
     );
-    autoUpdater.on('update-downloaded', (info) =>
-      sendUpdateEvent({ type: 'downloaded', version: info && info.version })
-    );
+    autoUpdater.on('update-downloaded', (info) => {
+      sendUpdateEvent({ type: 'downloaded', version: info && info.version });
+      // Auto-instalar al cerrar la app: el usuario solo verá el UAC de Windows
+      autoUpdater.quitAndInstall(false, true);
+    });
     autoUpdater.on('error', (err) => {
       const msg = err && err.message ? err.message : String(err);
       // 404 = no hay releases publicadas; no es un error real para el usuario.
