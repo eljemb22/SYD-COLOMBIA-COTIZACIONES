@@ -367,6 +367,14 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
 
   const severityConfig = (severity: AlertSeverity) => SEVERITY_CONFIG[severity];
 
+/** Renderiza el icono de severidad de forma segura en JSX. */
+const SeverityIcon = ({ severity, className }: { severity: AlertSeverity; className?: string }) => {
+  const IconComponent = severityConfig(severity).icon;
+  return (
+    <IconComponent className={`w-3.5 h-3.5 ${severityConfig(severity).color} ${className || ''}`} />
+  );
+};
+
   return (
     <>
       {/* 1. FLOATING TOAST NOTIFICATION (Auto-Dismissing compact preview) */}
@@ -380,7 +388,7 @@ export const FloatingAlertsWidget: React.FC<FloatingAlertsWidgetProps> = ({
               <div
                 className={`p-1.5 rounded-md shrink-0 mt-0.5 border ${severityConfig(activeToastAlert.severity).bg} ${severityConfig(activeToastAlert.severity).border}`}
               >
-                <severityConfig(activeToastAlert.severity).icon className={`w-3.5 h-3.5 ${severityConfig(activeToastAlert.severity).color}`} />
+                <SeverityIcon severity={activeToastAlert.severity} />
               </div>
               <div className="space-y-0.5 min-w-0 flex-1">
                 <div className="flex items-center gap-1 flex-wrap">

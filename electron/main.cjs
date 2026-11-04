@@ -15,6 +15,8 @@ const path = require('path');
 const http = require('http');
 const fs = require('fs');
 
+const { validateIpcPayload } = require('./security.cjs');
+
 const APP_PORT = parseInt(process.env.SYD_PORT || '3000', 10);
 // Canal interno invisible: 127.0.0.1 evita resoluciones IPv6 ambiguas.
 const INTERNAL_URL = `http://127.0.0.1:${APP_PORT}`;
@@ -491,8 +493,9 @@ if (!gotTheLock) {
   });
 
   // Handlers IPC para el auto-actualizador del escritorio.
-ipcMain.handle('syd:update:check', async () => {
+ipcMain.handle('syd:update:check', async (_event, payload) => {
   if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
+  if (!validateIpcPayload(payload)) return { ok: false, reason: 'invalid-payload' };
   try {
     const r = await autoUpdater.checkForUpdates();
     return { ok: true, updateInfo: r && r.updateInfo };
@@ -503,8 +506,9 @@ ipcMain.handle('syd:update:check', async () => {
   }
 });
 
-ipcMain.handle('syd:update:download', async () => {
+ipcMain.handle('syd:update:download', async (_event, payload) => {
   if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
+  if (!validateIpcPayload(payload)) return { ok: false, reason: 'invalid-payload' };
   try {
     await autoUpdater.downloadUpdate();
     return { ok: true };
@@ -513,8 +517,9 @@ ipcMain.handle('syd:update:download', async () => {
   }
 });
 
-ipcMain.handle('syd:update:install', () => {
+ipcMain.handle('syd:update:install', (_event, payload) => {
   if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
+  if (!validateIpcPayload(payload)) return { ok: false, reason: 'invalid-payload' };
   try {
     autoUpdater.quitAndInstall(false, true);
     return { ok: true };

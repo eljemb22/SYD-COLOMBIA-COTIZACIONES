@@ -11,6 +11,13 @@ import {
 } from 'lucide-react';
 import { AuthUser } from '../../types';
 import { authenticateUser } from '../../data/authData';
+import {
+  isLoginLocked,
+  recordLoginFailure,
+  clearLoginAttempts,
+  getLoginIdentifier,
+  sanitizeDisplayText,
+} from '../../utils/security';
 
 export const ULTRA_THIN_WHITE_OUTLINE =
   'drop-shadow(0 0 1.5px rgba(255,255,255,0.95)) drop-shadow(0 0 3px rgba(255,255,255,0.5)) drop-shadow(0 2px 8px rgba(0,0,0,0.55))';
@@ -23,6 +30,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [lockoutRemaining, setLockoutRemaining] = useState(0);
 
   const [phase, setPhase] = useState<'draw' | 'exit' | 'ready'>('draw');
 
@@ -45,6 +53,14 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
 
     const cleanUsername = (username || '').trim();
     const cleanPassword = (password || '').trim();
+
+    const identifier = getLoginIdentifier();
+    const lockStatus = isLoginLocked(identifier);
+    if (lockStatus.locked) {
+      setLockoutRemaining(Math.ceil(lockStatus.remainingMs / 1000 / 60));
+      setErrorMsg(`Demasiados intentos fallidos. Intente nuevamente en ${lockoutRemaining} minuto(s).`);
+      return;
+    }
 
     if (!cleanUsername || !cleanPassword) {
       setErrorMsg('Por favor ingrese su usuario y contraseña.');
@@ -69,10 +85,18 @@ export const LoginModal: React.FC<{ isOpen: boolean; onLoginSuccess: (user: Auth
         setIsLoading(false);
         setUsername('');
         setPassword('');
+        clearLoginAttempts(identifier);
+        setLockoutRemaining(0);
         onLoginSuccess(user);
       } else {
         setIsLoading(false);
-        setErrorMsg('Credenciales incorrectas. Verifique su usuario y contraseña.');
+        const { locked, remainingMs } = recordLoginFailure(identifier);
+        if (locked) {
+          setLockoutRemaining(Math.ceil(remainingMs / 1000 / 60));
+          setErrorMsg(`Demasiados intentos fallidos. Intente nuevamente en ${Math.ceil(remainingMs / 1000 / 60)} minuto(s).`);
+        } else {
+          setErrorMsg('Credenciales incorrectas. Verifique su usuario y contraseña.');
+        }
       }
     } catch (err) {
       setIsLoading(false);
