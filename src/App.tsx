@@ -574,10 +574,30 @@ export default function App() {
   }, []);
 
   const handleDeleteQuote = useCallback((id: string) => {
-    const all = getSavedQuotes().filter((q) => q.id !== id);
+    const quote = savedQuotes.find((q) => q.id === id);
+    const quoteNumber = quote?.quoteNumber;
+
+    // Borrado en cascada: eliminar tenderes, OVs y OCs vinculadas a esta cotización
+    const tendersToDelete = [...tenderClients].filter(
+      (t) => t.linkedQuoteId === id || t.header?.linkedQuoteId === id
+    );
+    tendersToDelete.forEach((t) => handleDeleteTenderClient(t.id));
+
+    const ordersToDelete = [...salesOrders].filter(
+      (o) => o.quoteId === id || o.quoteNumber === quoteNumber
+    );
+    ordersToDelete.forEach((o) => handleDeleteSalesOrder(o.id));
+
+    const ocsToDelete = [...ocContracts].filter(
+      (c) => c.quoteId === id || c.quoteNumber === quoteNumber
+    );
+    ocsToDelete.forEach((oc) => handleDeleteOCContract(oc.id));
+
+    // Borrar la cotización
+    const all = savedQuotes.filter((q) => q.id !== id);
     localStorage.setItem('syd_saved_quotes_database_v2', JSON.stringify(all));
     setSavedQuotes(all);
-  }, []);
+  }, [savedQuotes, tenderClients, salesOrders, ocContracts]);
 
   const handleDuplicateQuote = useCallback((id: string) => {
     const all = getSavedQuotes();
@@ -889,11 +909,71 @@ export default function App() {
 
   const handleDeleteTenderClient = useCallback(
     (clientId: string) => {
+      // Borrado en cascada: eliminar OVs y OCs vinculadas a esta licitación
+      const ordersToDelete = [...salesOrders].filter(
+        (o) => o.tenderClientId === clientId
+      );
+      ordersToDelete.forEach((o) => handleDeleteSalesOrder(o.id));
+
+      const ocsToDelete = [...ocContracts].filter(
+        (c) => c.tenderClientId === clientId
+      );
+      ocsToDelete.forEach((oc) => handleDeleteOCContract(oc.id));
+
       persistTenderClients((prev) => prev.filter((tc) => tc.id !== clientId));
       deleteTenderClientFromFirestore(clientId).catch(console.warn);
     },
-    [persistTenderClients]
+    [persistTenderClients, salesOrders, ocContracts]
   );
+
+  // ===== BORRADO EN CASCADA: Órdenes de Venta =====
+  // Al borrar una OV se borran sus OCs vinculadas y facturas vinculadas
+  const handleDeleteSalesOrder = useCallback((id: string) => {
+    // 1. Borrar contratos OC vinculados a esta OV
+    const ocsToDelete = ocContracts.filter(
+      (c) => c.salesOrderId === id || (c.salesOrderIds || []).includes(id)
+    );
+    ocsToDelete.forEach((oc) => handleDeleteOCContract(oc.id));
+
+    // 2. Borrar facturas vinculadas a esta OV
+    const invoicesToDelete = salesInvoices.filter(
+      (inv) => inv.salesOrderId === id
+    );
+    invoicesToDelete.forEach((inv) => handleDeleteSalesInvoice(inv.id));
+
+    // 3. Borrar la orden de venta
+    const updatedOrders = salesOrders.filter((o) => o.id !== id);
+    try {
+      localStorage.setItem('syd_sales_orders_v1', JSON.stringify(updatedOrders));
+    } catch {}
+    setSalesOrders(updatedOrders);
+  }, [salesOrders, ocContracts, salesInvoices]);
+
+  // ===== BORRADO EN CASCADA: Contratos de OC =====
+  // Al borrar un contrato OC se borran sus facturas vinculadas
+  const handleDeleteOCContract = useCallback((id: string) => {
+    // 1. Borrar facturas vinculadas a este contrato OC
+    const invoicesToDelete = salesInvoices.filter(
+      (inv) => inv.contractId === id
+    );
+    invoicesToDelete.forEach((inv) => handleDeleteSalesInvoice(inv.id));
+
+    // 2. Borrar el contrato OC
+    const updated = ocContracts.filter((c) => c.id !== id);
+    try {
+      localStorage.setItem('syd_oc_tracking_contracts_v1', JSON.stringify(updated));
+    } catch {}
+    setOcContracts(updated);
+  }, [ocContracts, salesInvoices]);
+
+  // ===== BORRADO EN CASCADA: Facturas =====
+  const handleDeleteSalesInvoice = useCallback((id: string) => {
+    const updated = salesInvoices.filter((inv) => inv.id !== id);
+    try {
+      localStorage.setItem('syd_sales_invoices_v1', JSON.stringify(updated));
+    } catch {}
+    setSalesInvoices(updated);
+  }, [salesInvoices]);
 
   const handleBatchCreateTenderClients = useCallback(
     (newClients: TenderClientProject[]) => {
@@ -1561,6 +1641,7 @@ export default function App() {
             <OCTrackingView
               contracts={ocContracts}
               onUpdateContracts={handleUpdateContracts}
+              onDeleteOCContract={handleDeleteOCContract}
               tenderClients={tenderClients}
               salesOrders={salesOrders}
               onUpdateSalesOrders={handleUpdateSalesOrders}
@@ -1575,10 +1656,13 @@ export default function App() {
             <SalesOrdersView
               salesOrders={salesOrders}
               onUpdateSalesOrders={handleUpdateSalesOrders}
+              onDeleteSalesOrder={handleDeleteSalesOrder}
               salesInvoices={salesInvoices}
               onUpdateSalesInvoices={handleUpdateSalesInvoices}
+              onDeleteSalesInvoice={handleDeleteSalesInvoice}
               contracts={ocContracts}
               onUpdateContracts={handleUpdateContracts}
+              onDeleteOCContract={handleDeleteOCContract}
               savedQuotes={savedQuotes}
               tenderClients={tenderClients}
               onUpdateTenderClient={handleUpdateTenderClient}
