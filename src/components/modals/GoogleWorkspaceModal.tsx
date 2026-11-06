@@ -2633,11 +2633,11 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
                         {showClientIdEditor && (
                           <div className="space-y-2 p-3 rounded-xl border border-slate-700/80 bg-slate-950/60">
                             <p className="text-[11px] text-slate-400 leading-relaxed">
-                              Si Google responde <span className="text-rose-300 font-mono">Error 400: origin_mismatch</span>,
-                              el origen desde el que abres esta app no esta autorizado en Google Cloud Console.
-                              Crea un cliente OAuth 2.0 de tipo <span className="text-slate-200 font-semibold">Aplicacion web</span> con
-                              el origen <span className="text-cyan-300 font-mono">{getGoogleOAuthOriginLabel()}</span>
-                              en "Origenes de JavaScript autorizados" y pega aqui su Client ID.
+                              En escritorio, Google se abre en el navegador del sistema para completar el permiso.
+                              Configura un cliente OAuth de tipo <span className="text-slate-200 font-semibold">Aplicacion web</span>
+                              y agrega <span className="text-cyan-300 font-mono">{getGoogleOAuthOriginLabel()}</span> en
+                              "Authorized JavaScript origins". Para permitir cuentas externas, configura Audience como
+                              "External"; si la app sigue en "Testing", agrega cada cuenta a "Test users".
                             </p>
                             <div className="flex flex-col sm:flex-row gap-2">
                               <input

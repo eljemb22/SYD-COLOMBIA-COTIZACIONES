@@ -6,6 +6,7 @@ interface DesktopUpdateState {
   version: string;
   progress: number;
   status: string;
+  downloading: boolean;
   downloaded: boolean;
   error: string | null;
 }
@@ -15,6 +16,7 @@ const initialState: DesktopUpdateState = {
   version: '',
   progress: 0,
   status: '',
+  downloading: false,
   downloaded: false,
   error: null,
 };
@@ -36,6 +38,8 @@ export const DesktopUpdateBanner: React.FC = () => {
             available: true,
             version: payload.version || s.version,
             status: `Nueva versión ${payload.version || ''} disponible`,
+            downloading: false,
+            downloaded: false,
             error: null,
           }));
           setDismissed(false);
@@ -45,12 +49,14 @@ export const DesktopUpdateBanner: React.FC = () => {
             ...s,
             progress: Math.round(payload.percent || 0),
             status: `Descargando actualización... ${Math.round(payload.percent || 0)}%`,
+            downloading: true,
           }));
           break;
         case 'downloaded':
           setState((s) => ({
             ...s,
             downloaded: true,
+            downloading: false,
             available: true,
             progress: 100,
             status: 'Actualización lista. Reinicia para instalar.',
@@ -58,7 +64,7 @@ export const DesktopUpdateBanner: React.FC = () => {
           break;
         case 'error':
           if (payload.message && payload.message.includes('404')) return; // no releases published yet
-          setState((s) => ({ ...s, error: payload.message || 'Error al actualizar' }));
+          setState((s) => ({ ...s, downloading: false, error: payload.message || 'Error al actualizar' }));
           break;
         default:
           break;
@@ -76,16 +82,16 @@ export const DesktopUpdateBanner: React.FC = () => {
   }, [desktop]);
 
   if (!desktop) return null;
-  if (dismissed && !state.downloaded) return null;
+  if (dismissed && !state.downloaded && !state.downloading) return null;
   if (!state.available && !state.downloaded && !state.error) return null;
 
   const handleDownload = async () => {
     if (desktop.downloadUpdate) {
-      setState((s) => ({ ...s, status: 'Iniciando descarga...', progress: 0 }));
+      setState((s) => ({ ...s, downloading: true, error: null, status: 'Iniciando descarga...', progress: 0 }));
       try {
         await desktop.downloadUpdate();
       } catch (e: any) {
-        setState((s) => ({ ...s, error: e && e.message ? e.message : String(e) }));
+        setState((s) => ({ ...s, downloading: false, error: e && e.message ? e.message : String(e) }));
       }
     }
   };
@@ -108,7 +114,18 @@ export const DesktopUpdateBanner: React.FC = () => {
     >
       <div className="max-w-7xl mx-auto px-4 py-2.5 sm:px-6">
         {state.error ? (
-          <div className="text-xs text-rose-300">{state.error}</div>
+          <div className="flex items-center justify-between gap-3 text-xs text-rose-300">
+            <span>{state.error}</span>
+            {state.available && !state.downloaded && (
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="shrink-0 rounded-lg border border-rose-400/40 px-3 py-1.5 font-bold hover:bg-rose-500/10"
+              >
+                Reintentar descarga
+              </button>
+            )}
+          </div>
         ) : state.downloaded ? (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -140,7 +157,7 @@ export const DesktopUpdateBanner: React.FC = () => {
               </button>
             </div>
           </div>
-        ) : state.progress > 0 && state.progress < 100 ? (
+        ) : state.downloading ? (
           <div className="py-1 space-y-2 animate-fadeIn">
             <div className="flex items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2 font-bold text-violet-300">
@@ -178,10 +195,11 @@ export const DesktopUpdateBanner: React.FC = () => {
               <button
                 type="button"
                 onClick={handleDownload}
+                disabled={state.downloading}
                 className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-400 to-indigo-400 hover:from-violet-300 hover:to-indigo-300 text-slate-950 font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <DownloadCloud className="w-3.5 h-3.5" />
-                <span>Descargar actualización</span>
+                <span>{state.downloading ? 'Descargando…' : 'Descargar actualización'}</span>
               </button>
               <button
                 type="button"

@@ -119,6 +119,7 @@
         var params = new URLSearchParams(window.location.search);
         var clientId = params.get('client_id') || '';
         var scopes = params.get('scopes') || '';
+        var callbackUrl = params.get('callback_url') || '';
 
         var spinner = document.getElementById('spinner');
         var status = document.getElementById('status');
@@ -126,13 +127,20 @@
         var retryButton = document.getElementById('reintentar');
         var description = document.getElementById('descripcion');
 
-        function showError(message) {
+        function displayError(message) {
           spinner.classList.add('hidden');
           status.classList.add('hidden');
           errorBox.textContent = message;
           errorBox.classList.remove('hidden');
           retryButton.classList.remove('hidden');
           description.textContent = 'No se pudo completar la conexion.';
+        }
+
+        function showError(message) {
+          displayError(message);
+          if (callbackUrl || (window.sydOAuthHelper && window.sydOAuthHelper.sendResult)) {
+            sendResult({ error: message });
+          }
         }
 
         function sendResult(payload) {
@@ -142,15 +150,45 @@
               return true;
             }
           } catch (_) {}
-          showError('No fue posible devolver el resultado a SYD Colombia. Cierra esta ventana e intenta de nuevo.');
+
+          if (callbackUrl) {
+            fetch(callbackUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'omit',
+              body: JSON.stringify(payload),
+            })
+              .then(function (response) {
+                if (!response.ok) throw new Error('Respuesta HTTP ' + response.status);
+                if (payload && payload.error) {
+                  displayError(String(payload.error));
+                  return;
+                }
+                spinner.classList.add('hidden');
+                errorBox.classList.add('hidden');
+                retryButton.classList.add('hidden');
+                status.classList.remove('hidden');
+                status.textContent = 'Conexion completada. Ya puedes volver a SYD Colombia.';
+                description.textContent = 'Autenticacion autorizada.';
+              })
+              .catch(function (error) {
+                displayError('No se pudo devolver la respuesta a SYD Colombia: ' + (error.message || error));
+              });
+            return true;
+          }
+
+          displayError('No fue posible devolver el resultado a SYD Colombia. Cierra esta ventana e intenta de nuevo.');
           return false;
         }
 
         function friendlyError(raw) {
-          var text = typeof raw === 'string' ? raw : (raw && raw.message) || '';
+          var text = typeof raw === 'string' ? raw : (raw && (raw.message || raw.error || raw.type)) || '';
           if (!text) text = 'Error desconocido.';
           if (/popup_closed|closed/i.test(text)) {
             return 'La ventana de autenticacion de Google se cerro antes de otorgar permisos.';
+          }
+          if (/popup_failed_to_open/i.test(text)) {
+            return 'El navegador bloqueo la ventana emergente de Google. Permite las ventanas emergentes e intenta de nuevo.';
           }
           if (/access_denied/i.test(text)) {
             return 'Acceso denegado. Debes aceptar los permisos solicitados por Google.';

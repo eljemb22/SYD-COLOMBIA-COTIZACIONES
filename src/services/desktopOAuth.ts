@@ -27,6 +27,7 @@ export interface DesktopOAuthBridge {
   startOAuth: (options: {
     clientId: string;
     scopes: string;
+    externalBrowser?: boolean;
   }) => Promise<DesktopOAuthTokenResponse | null>;
 }
 
@@ -56,12 +57,17 @@ export async function requestGoogleToken(
     prompt: string;
     callback: (response: any) => void;
     error_callback?: (err: any) => void;
-  }) => { requestAccessToken: (overrideConfig?: { prompt?: string }) => void }
+  }) => { requestAccessToken: (overrideConfig?: { prompt?: string }) => void },
+  desktopOptions: { externalBrowser?: boolean } = {}
 ): Promise<DesktopOAuthTokenResponse> {
-  // Escritorio: flujo por IPC hacia la ventana auxiliar en localhost.
+  // Escritorio: Drive puede completar el flujo en el navegador del sistema.
   if (isDesktopRuntime() && window.sydDesktop) {
     try {
-      const result = await window.sydDesktop.startOAuth({ clientId, scopes });
+      const result = await window.sydDesktop.startOAuth({
+        clientId,
+        scopes,
+        externalBrowser: desktopOptions.externalBrowser,
+      });
       if (!result) {
         throw new Error('Google no devolvio ninguna respuesta de autenticacion.');
       }

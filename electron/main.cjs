@@ -14,6 +14,7 @@ const { app, BrowserWindow, shell, dialog, Menu, protocol, net, ipcMain } = requ
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const { validateIpcPayload } = require('./security.cjs');
 
@@ -29,6 +30,7 @@ const IS_PACKAGED = app.isPackaged;
 
 // electron-updater es opcional: si no esta disponible (entorno dev), se omite.
 let autoUpdater = null;
+let hasDownloadedUpdate = false;
 try {
   autoUpdater = require('electron-updater').autoUpdater;
 } catch (_) {
@@ -254,12 +256,13 @@ function sendUpdateEvent(payload) {
 function setupAutoUpdater() {
   if (!autoUpdater || !IS_PACKAGED) return;
   try {
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = false;
     autoUpdater.on('checking-for-update', () => sendUpdateEvent({ type: 'checking' }));
-    autoUpdater.on('update-available', (info) =>
-      sendUpdateEvent({ type: 'available', version: info && info.version, releaseNotes: info && info.releaseNotes })
-    );
+    autoUpdater.on('update-available', (info) => {
+      hasDownloadedUpdate = false;
+      sendUpdateEvent({ type: 'available', version: info && info.version, releaseNotes: info && info.releaseNotes });
+    });
     autoUpdater.on('update-not-available', (info) =>
       sendUpdateEvent({ type: 'not-available', version: info && info.version })
     );
@@ -267,9 +270,8 @@ function setupAutoUpdater() {
       sendUpdateEvent({ type: 'progress', percent: p && p.percent, transferred: p && p.transferred, total: p && p.total })
     );
     autoUpdater.on('update-downloaded', (info) => {
+      hasDownloadedUpdate = true;
       sendUpdateEvent({ type: 'downloaded', version: info && info.version });
-      // Auto-instalar al cerrar la app: el usuario solo verá el UAC de Windows
-      autoUpdater.quitAndInstall(false, true);
     });
     autoUpdater.on('error', (err) => {
       const msg = err && err.message ? err.message : String(err);
@@ -280,6 +282,13 @@ function setupAutoUpdater() {
       }
       sendUpdateEvent({ type: 'error', message: msg });
     });
+    const updateCheckTimer = setInterval(() => {
+      autoUpdater.checkForUpdates().catch((e) => {
+        const msg = e && e.message ? e.message : String(e);
+        if (!msg.includes('404')) sendUpdateEvent({ type: 'error', message: msg });
+      });
+    }, 4 * 60 * 60 * 1000);
+    updateCheckTimer.unref();
     autoUpdater.checkForUpdates().catch((e) => {
       const msg = e && e.message ? e.message : String(e);
       if (msg.includes('404')) {
@@ -370,8 +379,57 @@ let oauthWindow = null;
 let oauthRequestId = 0;
 let oauthResolveRef = null;
 let oauthRejectRef = null;
+const externalOAuthCallbacks = new Map();
+globalThis.__sydOAuthCallbacks = externalOAuthCallbacks;
+
+function startExternalBrowserOAuth(payload) {
+  const { clientId = '', scopes = '' } = payload;
+  if (!clientId || !clientId.endsWith('.apps.googleusercontent.com')) {
+    return Promise.reject(new Error('El Client ID de Google OAuth no es válido.'));
+  }
+  if (externalOAuthCallbacks.size > 0) {
+    return Promise.reject(new Error('Ya hay una autenticación de Google en curso.'));
+  }
+
+  const nonce = crypto.randomBytes(32).toString('base64url');
+  const helperUrl = new URL('/oauth-helper.html', OAUTH_ORIGIN_URL);
+  helperUrl.searchParams.set('client_id', clientId);
+  helperUrl.searchParams.set('scopes', scopes);
+  helperUrl.searchParams.set('callback_url', `/api/oauth/bridge/${nonce}`);
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      externalOAuthCallbacks.delete(nonce);
+      reject(new Error('No se recibió la respuesta de Google en 5 minutos. Revisa el navegador e intenta de nuevo.'));
+    }, 5 * 60 * 1000);
+
+    externalOAuthCallbacks.set(nonce, (result) => {
+      clearTimeout(timeout);
+      if (result && result.error) {
+        reject(new Error(String(result.error)));
+        return;
+      }
+      const tokenResponse = result && result.tokenResponse;
+      if (!tokenResponse || !tokenResponse.access_token) {
+        reject(new Error('Google no devolvió un token de acceso.'));
+        return;
+      }
+      resolve(tokenResponse);
+    });
+
+    shell.openExternal(helperUrl.toString()).catch((error) => {
+      clearTimeout(timeout);
+      externalOAuthCallbacks.delete(nonce);
+      reject(new Error(`No se pudo abrir el navegador del sistema: ${error && error.message ? error.message : error}`));
+    });
+  });
+}
 
 ipcMain.handle('syd:oauth:start', async (_event, payload = {}) => {
+  if (payload.externalBrowser) {
+    return startExternalBrowserOAuth(payload);
+  }
+
   if (oauthWindow) {
     oauthWindow.focus();
     throw new Error('Ya hay una ventana de autenticacion de Google abierta.');
@@ -498,7 +556,7 @@ ipcMain.handle('syd:update:check', async (_event, payload) => {
   if (!validateIpcPayload(payload)) return { ok: false, reason: 'invalid-payload' };
   try {
     const r = await autoUpdater.checkForUpdates();
-    return { ok: true, updateInfo: r && r.updateInfo };
+    return { ok: true, updateInfo: r && r.updateInfo, updateDownloaded: hasDownloadedUpdate };
   } catch (e) {
     const msg = e && e.message ? e.message : String(e);
     if (msg.includes('404')) return { ok: true, updateInfo: null };
@@ -510,8 +568,9 @@ ipcMain.handle('syd:update:download', async (_event, payload) => {
   if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
   if (!validateIpcPayload(payload)) return { ok: false, reason: 'invalid-payload' };
   try {
+    if (hasDownloadedUpdate) return { ok: true, alreadyDownloaded: true };
     await autoUpdater.downloadUpdate();
-    return { ok: true };
+    return { ok: true, alreadyDownloaded: hasDownloadedUpdate };
   } catch (e) {
     return { ok: false, reason: e && e.message ? e.message : String(e) };
   }

@@ -13,17 +13,17 @@ export const GOOGLE_OAUTH_CLIENT_ID =
 export const GOOGLE_CLOUD_PROJECT_ID = 'gen-lang-client-0388689309';
 
 export const GOOGLE_OAUTH_ERROR_HELP =
-  'Solucion (2 minutos):\n' +
+  'Revisa la configuracion OAuth del proyecto:\n' +
   '1) Abre https://console.cloud.google.com y selecciona el proyecto "' +
   GOOGLE_CLOUD_PROJECT_ID +
   '".\n' +
-  '2) Ve a "APIs y servicios > Credenciales" y abre el cliente OAuth 2.0 de tipo "Web application" con ID ' +
+  '2) En Google Auth Platform > Audience, usa "External". Mientras la app este en "Testing", cada cuenta debe aparecer en "Test users".\n' +
+  '3) En Google Auth Platform > Clients, abre el cliente OAuth de tipo "Web application" con ID ' +
   GOOGLE_OAUTH_CLIENT_ID +
-  '.\n' +
-  '3) En "Origenes de JavaScript autorizados" agrega el origen desde el que abres la app ' +
-  '(por ejemplo http://localhost:3000). Si entras por IP de red, agrega tambien esa (http://192.168.x.x:3000).\n' +
-  '4) Guarda y espera 2 a 5 minutos. Vuelve a la app y conecta de nuevo.\n' +
-  '5) Si despues aparece "access_denied", agrega tu correo en "APIs y servicios > Pantalla de consentimiento de OAuth > Usuarios de prueba".';
+  ' y agrega http://localhost:3000 en "Authorized JavaScript origins".\n' +
+  '4) Habilita Google Drive API y Google Sheets API.\n' +
+  '5) Para permitir cuentas externas que no sean de prueba, publica la app y enviala a la verificacion OAuth requerida por los scopes de Drive/Sheets.\n' +
+  '6) Guarda los cambios y vuelve a conectar. Si usas una cuenta de Google Workspace, el administrador del dominio tambien puede tener que aprobar la app.';
 
 /**
  * Detecta si el error viene del popup de Google y devuelve un texto util en espanol.

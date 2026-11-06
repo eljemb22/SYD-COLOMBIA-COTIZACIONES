@@ -40,6 +40,7 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
   const [installStatusText, setInstallStatusText] = useState('');
   const [targetInstallVersion, setTargetInstallVersion] = useState<string>(CURRENT_APP_VERSION);
   const [hasPendingUpdate, setHasPendingUpdate] = useState<boolean>(false);
+  const [isUpdateDownloaded, setIsUpdateDownloaded] = useState(false);
   const [latestRemoteVersion, setLatestRemoteVersion] = useState<string>(CURRENT_APP_VERSION);
   const [platformInfo, setPlatformInfo] = useState(() => getPlatformInfo());
   const [checkResult, setCheckResult] = useState<{
@@ -89,8 +90,10 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
             break;
           case 'downloaded':
             setInstallProgress(100);
-            setInstallStatusText('Actualización descargada. Listo para instalar.');
+            setInstallStatusText('Actualización descargada. Pulsa “Reiniciar e instalar” cuando quieras aplicarla.');
             setHasPendingUpdate(false);
+            setIsUpdateDownloaded(true);
+            setIsInstalling(false);
             break;
           case 'error':
             if (payload.message && payload.message.includes('404')) return;
@@ -102,9 +105,19 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
       });
     }
 
-    checkForAppUpdatesOnline().then((res) => {
+    const checkPromise = desktop && desktop.checkForUpdates
+      ? desktop.checkForUpdates().then((res: any) => ({
+          updateAvailable: Boolean(res?.updateInfo),
+          latestVersion: res?.updateInfo?.version || CURRENT_APP_VERSION,
+          updateDownloaded: Boolean(res?.updateDownloaded),
+          lastChecked: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+        }))
+      : checkForAppUpdatesOnline();
+
+    checkPromise.then((res) => {
       if (!isMounted) return;
       setHasPendingUpdate(res.updateAvailable);
+      setIsUpdateDownloaded(Boolean((res as any).updateDownloaded));
       setLatestRemoteVersion(res.latestVersion);
       setTargetInstallVersion(res.latestVersion);
       setCheckResult({
@@ -137,6 +150,7 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
         const res = await desktop.checkForUpdates();
         setIsChecking(false);
         setHasPendingUpdate(res.updateInfo ? true : false);
+        setIsUpdateDownloaded(Boolean(res.updateDownloaded));
         setLatestRemoteVersion(res.updateInfo?.version || CURRENT_APP_VERSION);
         setTargetInstallVersion(res.updateInfo?.version || CURRENT_APP_VERSION);
         setCheckResult({
@@ -199,44 +213,32 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
 
     // If desktop .exe, use real electron-updater IPC: download + install
     if (desktop && desktop.downloadUpdate && desktop.quitAndInstall) {
+      if (isUpdateDownloaded) {
+        try {
+          await desktop.quitAndInstall();
+        } catch (e: any) {
+          setInstallStatusText('No se pudo reiniciar para instalar: ' + (e?.message || String(e)));
+        }
+        return;
+      }
+
       setIsInstalling(true);
       setTargetInstallVersion(targetVer);
       setInstallProgress(0);
       setInstallStatusText('Iniciando descarga de actualización desde la nube...');
 
       try {
-        await desktop.downloadUpdate();
-        // The IPC listener (registered in useEffect) will update progress/status
-        // When 'downloaded' event fires, the listener sets progress to 100 and status ready.
-        // We wait briefly then call quitAndInstall via the 'downloaded' handler below.
-        // To be safe, also poll for downloaded state:
-        const waitForDownload = setInterval(() => {
-          // The IPC listener already handles progress via onUpdateEvent
-          // We just wait for the downloaded flag or a timeout
-        }, 500);
-
-        // Listen specifically for downloaded then install
-        const installOff = desktop.onUpdateEvent((payload: any) => {
-          if (!payload || !payload.type) return;
-          if (payload.type === 'downloaded') {
-            clearInterval(waitForDownload);
-            installOff();
-            setInstallProgress(100);
-            setInstallStatusText('Actualización descargada. Reiniciando e instalando...');
-            setTimeout(() => {
-              desktop.quitAndInstall();
-            }, 1000);
-          }
-        });
-
-        // Safety timeout: if no downloaded event after 10 minutes, stop waiting
-        setTimeout(() => {
-          clearInterval(waitForDownload);
-          installOff();
+        const result = await desktop.downloadUpdate();
+        if (result?.ok === false) throw new Error(result.reason || 'No se pudo descargar la actualización.');
+        if (result?.alreadyDownloaded) {
+          setIsUpdateDownloaded(true);
+          setHasPendingUpdate(false);
           setIsInstalling(false);
-          setInstallStatusText('Tiempo de espera agotado. Intenta nuevamente.');
-        }, 10 * 60 * 1000);
-
+          setInstallProgress(100);
+          setInstallStatusText('Actualización descargada. Pulsa “Reiniciar e instalar” cuando quieras aplicarla.');
+          return;
+        }
+        // Los eventos IPC actualizan el progreso y dejan el reinicio a elección del usuario.
         return;
       } catch (e: any) {
         setIsInstalling(false);
@@ -352,7 +354,7 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
                   </div>
                   <div>
                     <h4 className="text-sm font-black text-white">
-                      Instalando Actualización en Línea (v{targetInstallVersion})
+                      Descargando actualización (v{targetInstallVersion})
                     </h4>
                     <p className="text-xs text-slate-300">
                       Por favor espera unos segundos mientras se aplican los cambios...
@@ -409,7 +411,7 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
                     <span className="text-[10px] bg-slate-800/80 text-slate-400 px-2 py-0.5 rounded-md border border-slate-700/60 font-mono">
                       {CURRENT_RELEASE_DATE}
                     </span>
-                    {hasPendingUpdate ? (
+                    {hasPendingUpdate || isUpdateDownloaded ? (
                       <span className="text-[11px] font-black text-amber-300 bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                         ¡Actualización v{latestRemoteVersion} disponible!
@@ -446,10 +448,10 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
               <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 {/* Status indicator on the left */}
                 <div className="text-xs text-slate-400 flex items-center gap-2">
-                  {hasPendingUpdate ? (
+                  {hasPendingUpdate || isUpdateDownloaded ? (
                     <span className="text-cyan-300 font-semibold flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin-slow" />
-                      <span>{platformInfo.isDesktopExe ? 'Nueva versión de Windows lista para aplicar' : 'Nueva versión web lista para aplicar'}</span>
+                      <span>{isUpdateDownloaded ? 'Actualización descargada y lista para instalar' : platformInfo.isDesktopExe ? 'Nueva versión de Windows lista para descargar' : 'Nueva versión web lista para aplicar'}</span>
                     </span>
                   ) : (
                     <span className="text-emerald-400 font-medium flex items-center gap-1.5">
@@ -474,19 +476,21 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
                   </button>
 
                   {/* If update is pending: prominent Install Button */}
-                  {hasPendingUpdate && (
+                  {(hasPendingUpdate || isUpdateDownloaded) && (
                     <button
                       id="btn-apply-update-reload"
                       type="button"
                       onClick={() => startInstallationFlow(latestRemoteVersion)}
                       disabled={isInstalling}
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 text-xs font-black shadow-lg transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 animate-pulse"
-                      title={platformInfo.isDesktopExe ? `Actualizar ejecutable Windows a v${latestRemoteVersion}` : `Recargar y aplicar v${latestRemoteVersion}`}
+                      title={isUpdateDownloaded ? `Reiniciar e instalar v${latestRemoteVersion}` : platformInfo.isDesktopExe ? `Descargar actualización v${latestRemoteVersion}` : `Recargar y aplicar v${latestRemoteVersion}`}
                     >
                       <Zap className="w-4 h-4 fill-current text-slate-950" />
                       <span>
-                        {platformInfo.isDesktopExe
-                          ? `Actualizar Sistema Windows (v${latestRemoteVersion})`
+                        {isUpdateDownloaded
+                          ? `Reiniciar e instalar (v${latestRemoteVersion})`
+                          : platformInfo.isDesktopExe
+                          ? `Descargar actualización (v${latestRemoteVersion})`
                           : `Instalar Actualización Ahora (v${latestRemoteVersion})`}
                       </span>
                     </button>

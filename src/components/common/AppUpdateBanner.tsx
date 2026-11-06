@@ -29,6 +29,10 @@ export const AppUpdateBanner: React.FC<AppUpdateBannerProps> = ({ onOpenDetails 
 
   // Clean up IPC listener on unmount
   useEffect(() => {
+    // La app de escritorio usa DesktopUpdateBanner, conectado a electron-updater.
+    // Este banner queda reservado para actualizaciones de la versión web.
+    if (desktop) return;
+
     return () => {
       if (ipcOffRef.current) {
         ipcOffRef.current();
@@ -122,7 +126,7 @@ export const AppUpdateBanner: React.FC<AppUpdateBannerProps> = ({ onOpenDetails 
     return () => window.removeEventListener('syd-update-status-changed', handleUpdateEvent);
   }, []);
 
-  if (!updateAvailable || isDismissed) {
+  if (desktop || !updateAvailable || isDismissed) {
     return null;
   }
 

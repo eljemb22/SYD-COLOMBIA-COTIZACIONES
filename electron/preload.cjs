@@ -16,8 +16,8 @@ contextBridge.exposeInMainWorld('sydDesktop', {
    */
   oauthOrigin: `http://localhost:${process.env.DEFAULT_APP_PORT || '3000'}`,
   /**
-   * Inicia el flujo OAuth de Google en una ventana auxiliar invisible para el
-   * usuario (origen http://localhost:PORT, el unico que Google acepta).
+   * Inicia OAuth de Google. Workspace puede completar el flujo en el navegador
+   * del sistema y devolver el token por un puente local de un solo uso.
    * Resuelve con la respuesta de token de Google o rechaza con el error.
    */
   startOAuth: (options) => ipcRenderer.invoke('syd:oauth:start', options || {}),

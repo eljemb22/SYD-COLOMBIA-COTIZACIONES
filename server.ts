@@ -32,6 +32,42 @@ async function startServer() {
   app.use(express.json({ limit: '25mb' }));
   app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
+  // Puente de un solo uso para devolver el resultado OAuth del navegador externo
+  // al proceso principal de Electron. El nonce aleatorio vence tras cada intento.
+  app.post('/api/oauth/bridge/:nonce', (req, res) => {
+    const expectedOrigin = `http://localhost:${PORT}`;
+    if (req.get('origin') !== expectedOrigin) {
+      return res.status(403).send('Origen OAuth no autorizado.');
+    }
+
+    const nonce = String(req.params.nonce || '');
+    if (!/^[A-Za-z0-9_-]{40,50}$/.test(nonce)) {
+      return res.status(400).send('Nonce OAuth inválido.');
+    }
+
+    const callbacks = (globalThis as any).__sydOAuthCallbacks as
+      | Map<string, (result: any) => void>
+      | undefined;
+    const deliver = callbacks?.get(nonce);
+    if (!callbacks || !deliver) {
+      return res.status(410).send('La solicitud OAuth ya venció o fue utilizada.');
+    }
+
+    const result = req.body;
+    if (!result || typeof result !== 'object' || Array.isArray(result)) {
+      return res.status(400).send('Respuesta OAuth inválida.');
+    }
+
+    callbacks.delete(nonce);
+    try {
+      deliver(result);
+      return res.sendStatus(204);
+    } catch (error: any) {
+      console.error('[OAuth] No se pudo entregar la respuesta:', error?.message || error);
+      return res.status(500).send('No se pudo entregar la respuesta OAuth a SYD Colombia.');
+    }
+  });
+
   // Static files from public folder if exists
   const publicDir = path.join(APP_ROOT, 'public');
   if (fs.existsSync(publicDir)) {

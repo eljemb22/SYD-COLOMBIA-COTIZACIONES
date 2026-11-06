@@ -271,8 +271,8 @@ export class GoogleWorkspaceService {
       'https://www.googleapis.com/auth/userinfo.profile',
     ].join(' ');
 
-    // En escritorio, el origen de autenticación es http://localhost:PORT (ventana auxiliar)
-    // que debe estar registrado en "Orígenes de JavaScript autorizados" de Google Cloud Console.
+    // En escritorio, Drive se autentica en el navegador del sistema. La página auxiliar
+    // usa el origen localhost autorizado en Google Cloud Console.
     const isDesktopEnv = typeof window !== 'undefined' && Boolean(window.sydDesktop?.isDesktop);
     const oauthOrigin = isDesktopEnv ? window.sydDesktop?.oauthOrigin || 'http://localhost:3000' : window.location.origin;
 
@@ -281,7 +281,8 @@ export class GoogleWorkspaceService {
       tokenResponse = await requestGoogleToken(
         clientId,
         scopes,
-        (options) => window.google!.accounts!.oauth2!.initTokenClient(options as any) as any
+        (options) => window.google!.accounts!.oauth2!.initTokenClient(options as any) as any,
+        { externalBrowser: isDesktopEnv }
       );
     } catch (err: any) {
       const message = err?.message || String(err);

@@ -10,10 +10,24 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.10.10';
+export let CURRENT_APP_VERSION = '2.10.11';
 export const CURRENT_RELEASE_DATE = '2026-11-06';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.10.11',
+    releaseDate: '2026-11-06',
+    title: 'Actualizaciones de escritorio bajo tu control',
+    summary:
+      'La app ahora avisa cuando hay una versión disponible, permite iniciar la descarga desde la misma ventana y muestra el progreso. Al terminar, puedes elegir cuándo reiniciar e instalar. También se corrige el inicio de sesión de Google Drive y Sheets en escritorio para completarlo en el navegador del sistema.',
+    highlights: [
+      '🔔 Aviso de versión nueva dentro de SYD Colombia.',
+      '⬇️ Descarga manual con indicador de progreso.',
+      '🔄 Reinicio e instalación solo cuando pulses el botón.',
+      '🌐 Autenticación de Google Drive y Sheets en el navegador del sistema.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.10.10',
     releaseDate: '2026-11-06',
