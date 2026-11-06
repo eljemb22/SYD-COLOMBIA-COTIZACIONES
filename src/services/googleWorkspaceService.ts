@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { MedicalEquipment, SavedQuote, OCTrackingContract, SalesOrderRecord, TechnicalDocument } from '../types';
-import { buildGoogleOAuthErrorMessage } from '../utils/googleOAuthError';
+import { buildGoogleOAuthErrorMessage, GOOGLE_CLOUD_PROJECT_ID } from '../utils/googleOAuthError';
 import { requestGoogleToken } from './desktopOAuth';
 import { signInFirebaseWithGoogle } from '../lib/firebase';
 
@@ -271,6 +271,11 @@ export class GoogleWorkspaceService {
       'https://www.googleapis.com/auth/userinfo.profile',
     ].join(' ');
 
+    // En escritorio, el origen de autenticación es http://localhost:PORT (ventana auxiliar)
+    // que debe estar registrado en "Orígenes de JavaScript autorizados" de Google Cloud Console.
+    const isDesktopEnv = typeof window !== 'undefined' && Boolean(window.sydDesktop?.isDesktop);
+    const oauthOrigin = isDesktopEnv ? window.sydDesktop?.oauthOrigin || 'http://localhost:3000' : window.location.origin;
+
     let tokenResponse: any;
     try {
       tokenResponse = await requestGoogleToken(
@@ -282,6 +287,18 @@ export class GoogleWorkspaceService {
       const message = err?.message || String(err);
       if (/popup_closed|closed/i.test(message)) {
         throw new Error('La ventana de autenticación fue cerrada antes de otorgar permisos.');
+      }
+      if (isDesktopEnv && (message.includes('origin_mismatch') || message.includes('idpiframe_initialization_failed'))) {
+        throw new Error(
+          `Google bloqueó la conexión porque el origen "${oauthOrigin}" no está autorizado.\n\n` +
+          `Solución:\n` +
+          `1) Abra https://console.cloud.google.com y seleccione el proyecto "${GOOGLE_CLOUD_PROJECT_ID}".\n` +
+          `2) Vaya a "APIs y servicios > Credenciales" y abra el cliente OAuth 2.0 "Web application".\n` +
+          `3) En "Origenes de JavaScript autorizados" agregue: ${oauthOrigin}\n` +
+          `4) En "URI de redireccionamiento autorizados" agregue: ${oauthOrigin}\n` +
+          `5) Guarde y espere 2-5 minutos. Vuelva a intentar.\n\n` +
+          `Si aparece "access_denied", agregue su correo en "APIs y servicios > Pantalla de consentimiento de OAuth > Usuarios de prueba".`
+        );
       }
       throw new Error(
         buildGoogleOAuthErrorMessage(message, 'Error al autenticar con Google:')
