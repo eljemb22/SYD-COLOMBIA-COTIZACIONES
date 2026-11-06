@@ -1,7 +1,7 @@
 {
   "name": "syd-colombia",
   "private": true,
-  "version": "2.10.8",
+  "version": "2.10.9",
   "description": "SYD Colombia - Software de Cotizaciones y Licitaciones",
   "author": "SYD Colombia",
   "type": "module",

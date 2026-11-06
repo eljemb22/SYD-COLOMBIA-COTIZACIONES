@@ -10,7 +10,7 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.10.8';
+export let CURRENT_APP_VERSION = '2.10.9';
 export const CURRENT_RELEASE_DATE = '2026-10-01';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
