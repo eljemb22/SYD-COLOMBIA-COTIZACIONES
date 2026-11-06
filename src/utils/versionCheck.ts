@@ -10,7 +10,7 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export const CURRENT_APP_VERSION = '2.10.7';
+export let CURRENT_APP_VERSION = '2.10.7';
 export const CURRENT_RELEASE_DATE = '2026-10-01';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
@@ -459,6 +459,32 @@ export function subscribeToAppVersionUpdates(
 }
 
 /**
+ * Consults GitHub Releases API to get the latest published release version.
+ * This ensures that even if Firestore is not updated, the app still detects
+ * the real latest version from GitHub.
+ */
+async function fetchLatestGitHubRelease(): Promise<{ version: string; title?: string; summary?: string; highlights?: string[] } | null> {
+  try {
+    const res = await fetch('https://api.github.com/repos/eljemb22/SYD-COLOMBIA-COTIZACIONES/releases/latest', {
+      headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.tag_name) {
+        const version = data.tag_name.replace(/^v/, '');
+        return {
+          version,
+          title: data.name || undefined,
+          summary: data.body || undefined,
+          highlights: undefined,
+        };
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+/**
  * Checks online if there is a newer version published in Firestore metadata or server API.
  */
 export async function checkForAppUpdatesOnline(): Promise<{
@@ -487,7 +513,25 @@ export async function checkForAppUpdatesOnline(): Promise<{
       }
     } catch (_) {}
 
-    // 2. Check Firestore metadata
+    // 2. Check GitHub releases (most reliable source for published versions)
+    try {
+      const ghRelease = await fetchLatestGitHubRelease();
+      if (ghRelease && ghRelease.version && isVersionNewer(ghRelease.version, latest)) {
+        latest = ghRelease.version;
+        activeRemoteVersion = latest;
+        release = {
+          version: latest,
+          releaseDate: new Date().toISOString().split('T')[0],
+          title: ghRelease.title || 'Actualización SYD Colombia v' + latest,
+          summary: ghRelease.summary || 'Nuevas mejoras y optimizaciones disponibles.',
+          highlights: ghRelease.highlights || [],
+          isImportant: true,
+        };
+        activeRemoteRelease = release;
+      }
+    } catch (_) {}
+
+    // 3. Check Firestore metadata
     if (db) {
       const versionDocRef = doc(db, 'app_metadata', 'version_manifest');
       const snap = await getDoc(versionDocRef);
