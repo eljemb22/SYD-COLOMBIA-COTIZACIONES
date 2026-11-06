@@ -77,6 +77,7 @@ await sharp(svgIcon).resize(512, 512).png().toFile(path.join(iconDir, 'icon.png'
 console.log('[Desktop] Icono generado en build/icon.png');
 
 // 4) Instalador
-run('npx electron-builder --win --x64 --publish never');
+const publishMode = process.env.ELECTRON_PUBLISH === 'always' ? 'always' : 'never';
+run(`npx electron-builder --win --x64 --publish ${publishMode}`);
 
 console.log('\n[Desktop] Listo. Instalador generado en dist-electron/');

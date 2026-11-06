@@ -93,11 +93,7 @@ import {
 } from './services/realtimeSync';
 import { syncTenderItemToCatalog } from './utils/catalogSyncUtils';
 import { useIdleStandby } from './hooks/useIdleStandby';
-import { hydrateFromSnapshotIfEmpty } from './utils/hydrateInitialData';
 import { isValidEquipmentCode, isValidSupplierName } from './utils/formatters';
-
-// Hydrate local data on bundle evaluation
-hydrateFromSnapshotIfEmpty();
 
 function buildTenderItemFromEquipment(equipment: MedicalEquipment, itemNumber: number): TenderItem {
   const requirements: TechnicalRequirement[] = (equipment.technicalSpecs || []).map((spec, idx) => ({

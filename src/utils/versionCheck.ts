@@ -10,10 +10,23 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.10.9';
-export const CURRENT_RELEASE_DATE = '2026-10-01';
+export let CURRENT_APP_VERSION = '2.10.10';
+export const CURRENT_RELEASE_DATE = '2026-11-06';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.10.10',
+    releaseDate: '2026-11-06',
+    title: 'Compilación y publicación confiables para Windows',
+    summary:
+      'Se corrigió el empaquetado de Windows para generar el instalador y la aplicación portable sin depender de respaldos locales excluidos del repositorio. El flujo de publicación ahora adjunta los ejecutables a GitHub Releases al crear una etiqueta de versión.',
+    highlights: [
+      '📦 Generación del instalador NSIS y del ejecutable portable desde el mismo flujo de compilación.',
+      '🔒 Los respaldos de datos locales permanecen fuera de los paquetes distribuidos.',
+      '🚀 Publicación automatizada de los ejecutables en GitHub Releases para etiquetas de versión.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.10.7',
     releaseDate: '2026-10-01',

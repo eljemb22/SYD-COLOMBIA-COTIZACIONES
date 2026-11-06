@@ -1,55 +1,32 @@
-name: Build Windows
+name: Build and release Windows
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build-windows:
     runs-on: windows-latest
 
     steps:
-      - name: Descargar codigo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
-      - name: Instalar dependencias
-        run: |
-          npm install
-          npm install @rollup/rollup-win32-x64-msvc --save-dev
-          npm install lightningcss-win32-x64-msvc --save-dev
-          npm install @tailwindcss/oxide-win32-x64-msvc --save-dev
-          npm install --no-save electron electron-builder
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Compilar aplicacion
-        run: npm run build
-
-      - name: Generar archivos Windows
-        run: npx electron-builder --win nsis portable zip --publish never
-
-      - name: Subir instalador
-        uses: actions/upload-artifact@v4
-        with:
-          name: SYD-Colombia-Installer
-          path: release/*Setup*.exe
-          if-no-files-found: error
-
-      - name: Subir portable
-        uses: actions/upload-artifact@v4
-        with:
-          name: SYD-Colombia-Portable
-          path: release/*.exe
-          if-no-files-found: error
-
-      - name: Subir ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: SYD-Colombia-ZIP
-          path: release/*.zip
-          if-no-files-found: error
+      - name: Build and publish installer and portable app
+        run: npm run desktop:build
+        env:
+          ELECTRON_PUBLISH: always
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
