@@ -1130,17 +1130,20 @@ export const applyThemeToDOM = (settings: ThemeSettings): void => {
   // Set font family directly to body
   document.body.style.fontFamily = font.family;
 
-  // Font scale
-  if (settings.fontSize === 'compact') {
-    root.style.setProperty('--syd-font-scale', '0.88');
-    root.style.fontSize = '14.5px';
-  } else if (settings.fontSize === 'comfortable') {
-    root.style.setProperty('--syd-font-scale', '1.10');
-    root.style.fontSize = '16.5px';
-  } else {
-    root.style.setProperty('--syd-font-scale', '1');
-    root.style.fontSize = '15.5px';
-  }
+  // Apply every size option consistently. Most Tailwind typography uses rem,
+  // so changing the root size scales labels and controls across all views.
+  const fontSizeMap: Record<ThemeSettings['fontSize'], string> = {
+    compact: '14px',
+    sm: '14px',
+    normal: '15.5px',
+    md: '16px',
+    comfortable: '16.5px',
+    lg: '17px',
+  };
+  const rootFontSize = fontSizeMap[settings.fontSize] || fontSizeMap.normal;
+  root.style.setProperty('--syd-font-scale', String(parseFloat(rootFontSize) / 15.5));
+  root.style.setProperty('--syd-font-size', rootFontSize);
+  root.style.fontSize = rootFontSize;
 
   // Set dataset attributes for conditional Tailwind / CSS styling
   root.dataset.theme = settings.canvasTheme;
@@ -1148,6 +1151,7 @@ export const applyThemeToDOM = (settings: ThemeSettings): void => {
   root.dataset.buttonShape = settings.buttonShape;
   root.dataset.buttonColor = settings.buttonColor;
   root.dataset.isLight = canvas.isLight ? 'true' : 'false';
+  root.dataset.fontSize = settings.fontSize;
 };
 
 /** Helper to test luminance of a hex color */

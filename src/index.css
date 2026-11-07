@@ -33,9 +33,9 @@
   body {
     margin: 0;
     min-height: 100vh;
-    background: linear-gradient(180deg, #050b18 0%, #0a1324 50%, #0f1a2e 100%);
+    background: var(--syd-body-bg);
     color: var(--syd-text-primary);
-    font-family: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
+    font-family: var(--syd-font-family, "Plus Jakarta Sans"), "Inter", system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: -0.01em;
@@ -277,8 +277,107 @@ select[class*="bg-["] {
 
 #main-sidebar-navigation .nav-icon {
   position: relative;
-  transition: none;
+  transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
 }
+
+#main-sidebar-navigation button[id^="sidebar-tab-"] [data-nav-icon] {
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="inicio"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="inicio"] {
+  animation: nav-dashboard-pulse 520ms ease-out;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="ventas"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="ventas"] {
+  animation: nav-cart-roll 620ms ease-in-out;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="costos"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="costos"] {
+  animation: nav-pencil-write 620ms ease-in-out;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="catalogo"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="catalogo"] {
+  animation: nav-book-page 700ms ease-in-out;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="licitaciones"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="licitaciones"] {
+  animation: nav-sheet-check 620ms ease-out;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="seguimiento_oc"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="seguimiento_oc"] {
+  animation: nav-truck-drive 700ms ease-in-out;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="gmail_compras"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="gmail_compras"] {
+  animation: nav-mail-flap 600ms ease-in-out;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="ordenes_venta"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="ordenes_venta"] {
+  animation: nav-package-check 620ms ease-out;
+}
+
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="documentacion"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="documentacion"] {
+  animation: nav-folder-open 620ms ease-in-out;
+}
+
+@keyframes nav-dashboard-pulse {
+  50% { transform: scale(1.12); }
+}
+
+@keyframes nav-cart-roll {
+  35% { transform: translateX(1.5px) rotate(5deg); }
+  70% { transform: translateX(-1px) rotate(-3deg); }
+}
+
+@keyframes nav-pencil-write {
+  25% { transform: translate(1px, -1px) rotate(8deg); }
+  50% { transform: translate(-0.5px, 0.5px) rotate(-5deg); }
+  75% { transform: translate(1px, -0.5px) rotate(6deg); }
+}
+
+@keyframes nav-book-page {
+  40% { transform: perspective(60px) rotateY(-18deg) scale(1.04); }
+  75% { transform: perspective(60px) rotateY(8deg); }
+}
+
+@keyframes nav-sheet-check {
+  35% { transform: translateY(-1px) rotate(-5deg); }
+  70% { transform: translateY(1px) rotate(4deg); }
+}
+
+@keyframes nav-truck-drive {
+  35% { transform: translateX(2px); }
+  55% { transform: translate(2px, -1px); }
+  75% { transform: translateX(-1px); }
+}
+
+@keyframes nav-mail-flap {
+  35% { transform: rotateX(20deg) translateY(-1px); }
+  70% { transform: rotateX(-8deg); }
+}
+
+@keyframes nav-package-check {
+  45% { transform: translateY(-2px) scale(1.06); }
+  75% { transform: translateY(0) scale(0.98); }
+}
+
+@keyframes nav-folder-open {
+  35% { transform: translateY(-1px) rotate(-5deg); }
+  70% { transform: translateY(0) rotate(3deg); }
+}
+
+
 
 /* Reduced motion respect */
 @media (prefers-reduced-motion: reduce) {
@@ -2014,14 +2113,14 @@ body {
 [class~="hover:text-teal-300"]:hover,
 [class~="hover:text-rose-300"]:hover,
 [class~="hover:text-emerald-300"]:hover,
-.group-hover:text-sky-400,
-.group-hover:text-cyan-400,
-.group-hover:text-blue-400,
-.group-hover:text-amber-400,
-.group-hover:text-purple-400,
-.group-hover:text-teal-400,
-.group-hover:text-rose-400,
-.group-hover:text-emerald-400 {
+.group:hover [class~="group-hover:text-sky-400"],
+.group:hover [class~="group-hover:text-cyan-400"],
+.group:hover [class~="group-hover:text-blue-400"],
+.group:hover [class~="group-hover:text-amber-400"],
+.group:hover [class~="group-hover:text-purple-400"],
+.group:hover [class~="group-hover:text-teal-400"],
+.group:hover [class~="group-hover:text-rose-400"],
+.group:hover [class~="group-hover:text-emerald-400"] {
   color: var(--syd-accent) !important;
 }
 
@@ -2066,14 +2165,14 @@ body {
 [class~="hover:bg-teal-400"]:hover,
 [class~="hover:bg-rose-400"]:hover,
 [class~="hover:bg-emerald-400"]:hover,
-.group-hover:bg-sky-400,
-.group-hover:bg-cyan-400,
-.group-hover:bg-blue-400,
-.group-hover:bg-amber-400,
-.group-hover:bg-purple-400,
-.group-hover:bg-teal-400,
-.group-hover:bg-rose-400,
-.group-hover:bg-emerald-400 {
+.group:hover [class~="group-hover:bg-sky-400"],
+.group:hover [class~="group-hover:bg-cyan-400"],
+.group:hover [class~="group-hover:bg-blue-400"],
+.group:hover [class~="group-hover:bg-amber-400"],
+.group:hover [class~="group-hover:bg-purple-400"],
+.group:hover [class~="group-hover:bg-teal-400"],
+.group:hover [class~="group-hover:bg-rose-400"],
+.group:hover [class~="group-hover:bg-emerald-400"] {
   background-color: var(--syd-accent) !important;
 }
 
@@ -2163,3 +2262,207 @@ button[class~="gradient"]:hover {
   color: var(--syd-btn-text) !important;
 }
 
+/* Tema global: conectar las vistas heredadas con las variables elegidas. */
+body { background: var(--syd-body-bg) !important; font-family: var(--syd-font-family, inherit); }
+#root { font-family: var(--syd-font-family, inherit); }
+button:not([style*="border-radius"]),
+[role="button"]:not([style*="border-radius"]),
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+  border-radius: var(--syd-btn-radius) !important;
+}
+#app-main-content [class*="bg-"][class*="rounded-"]:not([class~="rounded-full"]):not(button),
+.fixed.inset-0 > [class*="bg-"][class*="rounded-"]:not([class~="rounded-full"]) {
+  border-radius: var(--syd-card-radius) !important;
+}
+#app-main-content [class~="bg-slate-900"],
+#app-main-content [class~="bg-slate-800"],
+#app-main-content [class~="bg-slate-950"],
+#app-main-content [class~="bg-slate-900/50"],
+#app-main-content [class~="bg-slate-800/50"] {
+  background-color: var(--syd-card-bg) !important;
+}
+:root [class~="text-white"],
+:root [class~="text-slate-100"],
+:root [class~="text-slate-200"] {
+  color: var(--syd-text-primary) !important;
+}
+:root [class~="text-slate-300"], :root [class~="text-slate-400"], :root [class~="text-slate-500"] {
+  color: var(--syd-text-secondary) !important;
+}
+[class*="border-[var(--syd-border-color)]"] { border-color: var(--syd-border-color) !important; }
+/* Estados de negocio mantienen sus colores aunque exista un acento personalizado. */
+[class~="text-emerald-300"], [class~="text-emerald-400"], [class~="text-emerald-500"], [class~="text-green-300"], [class~="text-green-400"], [class~="text-green-500"] { color: var(--syd-success) !important; }
+[class~="text-rose-300"], [class~="text-rose-400"], [class~="text-rose-500"], [class~="text-red-300"], [class~="text-red-400"], [class~="text-red-500"] { color: var(--syd-danger) !important; }
+[class~="text-amber-100"], [class~="text-amber-200"], [class~="text-amber-300"], [class~="text-amber-400"], [class~="text-amber-500"], [class~="text-yellow-300"], [class~="text-yellow-400"], [class~="text-yellow-500"], [class~="text-orange-300"], [class~="text-orange-400"], [class~="text-orange-500"] { color: var(--syd-warning) !important; }
+[class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-emerald-600"], [class~="bg-green-400"], [class~="bg-green-500"], [class~="bg-green-600"] { background-color: var(--syd-success) !important; }
+[class~="bg-rose-400"], [class~="bg-rose-500"], [class~="bg-rose-600"], [class~="bg-red-400"], [class~="bg-red-500"], [class~="bg-red-600"] { background-color: var(--syd-danger) !important; }
+[class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-amber-600"], [class~="bg-yellow-400"], [class~="bg-yellow-500"], [class~="bg-yellow-600"], [class~="bg-orange-400"], [class~="bg-orange-500"], [class~="bg-orange-600"] { background-color: var(--syd-warning) !important; }
+[class~="border-emerald-400"], [class~="border-emerald-500"], [class~="border-green-400"], [class~="border-green-500"] { border-color: var(--syd-success) !important; }
+[class~="border-rose-400"], [class~="border-rose-500"], [class~="border-red-400"], [class~="border-red-500"] { border-color: var(--syd-danger) !important; }
+[class~="border-amber-400"], [class~="border-amber-500"], [class~="border-yellow-400"], [class~="border-yellow-500"], [class~="border-orange-400"], [class~="border-orange-500"] { border-color: var(--syd-warning) !important; }
+[class~="hover:bg-emerald-400"]:hover, [class~="hover:bg-emerald-500"]:hover, [class~="hover:bg-green-400"]:hover { background-color: var(--syd-success) !important; }
+[class~="hover:bg-rose-400"]:hover, [class~="hover:bg-rose-500"]:hover, [class~="hover:bg-red-400"]:hover { background-color: var(--syd-danger) !important; }
+[class~="hover:bg-amber-400"]:hover, [class~="hover:bg-amber-500"]:hover, [class~="hover:bg-yellow-400"]:hover, [class~="hover:bg-orange-400"]:hover { background-color: var(--syd-warning) !important; }
+.group:hover [class~="group-hover:bg-emerald-400"], .group:hover [class~="group-hover:bg-green-400"] { background-color: var(--syd-success) !important; }
+.group:hover [class~="group-hover:bg-rose-400"] { background-color: var(--syd-danger) !important; }
+.group:hover [class~="group-hover:bg-amber-400"] { background-color: var(--syd-warning) !important; }
+.group:hover [class~="group-hover:text-emerald-400"] { color: var(--syd-success) !important; }
+.group:hover [class~="group-hover:text-rose-400"] { color: var(--syd-danger) !important; }
+.group:hover [class~="group-hover:text-amber-400"] { color: var(--syd-warning) !important; }
+/* Acciones principales usan el color de botón seleccionado. */
+button[class~="bg-sky-500"], button[class~="bg-sky-600"], button[class~="bg-cyan-500"], button[class~="bg-cyan-600"], button[class~="bg-blue-500"], button[class~="bg-blue-600"], button[class~="bg-indigo-500"], button[class~="bg-indigo-600"], button[class~="bg-violet-500"], button[class~="bg-violet-600"], button[class~="bg-purple-500"], button[class~="bg-purple-600"], button[class~="bg-teal-500"], button[class~="bg-teal-600"] {
+  background-color: var(--syd-btn-bg) !important; border-color: var(--syd-btn-bg) !important; color: var(--syd-btn-text) !important;
+}
+[class~="bg-[#060b14]"],
+[class~="bg-[#070b14]"],
+[class~="bg-[#07111e]"],
+[class~="bg-[#080d16]"],
+[class~="bg-[#080f1a]"],
+[class~="bg-[#090d16]"],
+[class~="bg-[#09121d]"],
+[class~="bg-[#091320]"],
+[class~="bg-[#091424]"],
+[class~="bg-[#0a0f1d]"],
+[class~="bg-[#0a111a]"],
+[class~="bg-[#0a111c]"],
+[class~="bg-[#0a121c]"],
+[class~="bg-[#0a121e]"],
+[class~="bg-[#0a1220]"],
+[class~="bg-[#0a1320]"],
+[class~="bg-[#0a1322]"],
+[class~="bg-[#0a1422]"],
+[class~="bg-[#0a1524]"],
+[class~="bg-[#0a1526]"],
+[class~="bg-[#0a1628]"],
+[class~="bg-[#0a1826]"],
+[class~="bg-[#0b1220]"],
+[class~="bg-[#0b1320]"],
+[class~="bg-[#0b1322]"],
+[class~="bg-[#0b1329]"],
+[class~="bg-[#0b1420]"],
+[class~="bg-[#0b1422]"],
+[class~="bg-[#0b1424]"],
+[class~="bg-[#0b1624]"],
+[class~="bg-[#0b1625]"],
+[class~="bg-[#0b1626]"],
+[class~="bg-[#0b1727]"],
+[class~="bg-[#0c1422]"],
+[class~="bg-[#0c1524]"],
+[class~="bg-[#0c1626]"],
+[class~="bg-[#0c182b]"],
+[class~="bg-[#0c1c2e]"],
+[class~="bg-[#0d1624]"],
+[class~="bg-[#0d1626]"],
+[class~="bg-[#0d1726]"],
+[class~="bg-[#0d1827]"],
+[class~="bg-[#0d1828]"],
+[class~="bg-[#0d1829]"],
+[class~="bg-[#0d1a2c]"],
+[class~="bg-[#0d1a2d]"],
+[class~="bg-[#0d1b30]"],
+[class~="bg-[#0e1726]"],
+[class~="bg-[#0e1828]"],
+[class~="bg-[#0e1927]"],
+[class~="bg-[#0e1929]"],
+[class~="bg-[#0e192a]"],
+[class~="bg-[#0e1b2c]"],
+[class~="bg-[#0f172a]"],
+[class~="bg-[#0f192b]"],
+[class~="bg-[#0f1a29]"],
+[class~="bg-[#0f1a2a]"],
+[class~="bg-[#0f1a2d]"],
+[class~="bg-[#0f1a2e]"],
+[class~="bg-[#0f1b2b]"],
+[class~="bg-[#0f1b2c]"],
+[class~="bg-[#0f1b2d]"],
+[class~="bg-[#0f1d30]"],
+[class~="bg-[#0f1d33]"],
+[class~="bg-[#101a2b]"],
+[class~="bg-[#101b2b]"],
+[class~="bg-[#101b2c]"],
+[class~="bg-[#101b2d]"],
+[class~="bg-[#101c2d]"],
+[class~="bg-[#101c2e]"],
+[class~="bg-[#101e30]"],
+[class~="bg-[#111c2e]"],
+[class~="bg-[#111e30]"],
+[class~="bg-[#111e31]"],
+[class~="bg-[#111e33]"],
+[class~="bg-[#111f33]"],
+[class~="bg-[#112237]"],
+[class~="bg-[#121c2e]"],
+[class~="bg-[#121e30]"],
+[class~="bg-[#121e31]"],
+[class~="bg-[#121e33]"],
+[class~="bg-[#121f33]"],
+[class~="bg-[#121f35]"],
+[class~="bg-[#122033]"],
+[class~="bg-[#122137]"],
+[class~="bg-[#122138]"],
+[class~="bg-[#122238]"],
+[class~="bg-[#12233e]"],
+[class~="bg-[#122525]"],
+[class~="bg-[#131b2e]"],
+[class~="bg-[#131f33]"],
+[class~="bg-[#131f38]"],
+[class~="bg-[#132035]"],
+[class~="bg-[#132235]"],
+[class~="bg-[#132236]"],
+[class~="bg-[#132237]"],
+[class~="bg-[#132238]"],
+[class~="bg-[#13233a]"],
+[class~="bg-[#13233b]"],
+[class~="bg-[#142338]"],
+[class~="bg-[#142339]"],
+[class~="bg-[#14233a]"],
+[class~="bg-[#14233c]"],
+[class~="bg-[#14263d]"],
+[class~="bg-[#152336]"],
+[class~="bg-[#152338]"],
+[class~="bg-[#152438]"],
+[class~="bg-[#15243b]"],
+[class~="bg-[#15253d]"],
+[class~="bg-[#15273f]"],
+[class~="bg-[#16243a]"],
+[class~="bg-[#16253d]"],
+[class~="bg-[#16253e]"],
+[class~="bg-[#16273e]"],
+[class~="bg-[#16273f]"],
+[class~="bg-[#162740]"],
+[class~="bg-[#162742]"],
+[class~="bg-[#17253b]"],
+[class~="bg-[#17263c]"],
+[class~="bg-[#172a44]"],
+[class~="bg-[#172b44]"],
+[class~="bg-[#172b47]"],
+[class~="bg-[#18263a]"],
+[class~="bg-[#182840]"],
+[class~="bg-[#182942]"],
+[class~="bg-[#182a44]"],
+[class~="bg-[#182b45]"],
+[class~="bg-[#182c47]"],
+[class~="bg-[#192a40]"],
+[class~="bg-[#192b45]"],
+[class~="bg-[#1a2b42]"],
+[class~="bg-[#1a2c47]"],
+[class~="bg-[#1a2d46]"],
+[class~="bg-[#1a2d47]"],
+[class~="bg-[#1a2d48]"],
+[class~="bg-[#1a2e48]"],
+[class~="bg-[#1b2b42]"],
+[class~="bg-[#1b2d46]"],
+[class~="bg-[#1b2d48]"],
+[class~="bg-[#1b2e49]"],
+[class~="bg-[#1c2e47]"],
+[class~="bg-[#1e293b]"],
+[class~="bg-[#1e2f47]"],
+[class~="bg-[#1e314b]"],
+[class~="bg-[#1f334d]"],
+[class~="bg-[#2b2f42]"] {
+  background-color: var(--syd-card-bg) !important;
+  border-color: var(--syd-border-color) !important;
+}
+
+
+/* Conservar el contraste calculado para botones principales tras normalizar textos. */
+button[class~="bg-sky-500"], button[class~="bg-sky-600"], button[class~="bg-cyan-500"], button[class~="bg-cyan-600"], button[class~="bg-blue-500"], button[class~="bg-blue-600"], button[class~="bg-indigo-500"], button[class~="bg-indigo-600"], button[class~="bg-violet-500"], button[class~="bg-violet-600"], button[class~="bg-purple-500"], button[class~="bg-purple-600"], button[class~="bg-teal-500"], button[class~="bg-teal-600"] { color: var(--syd-btn-text) !important; }

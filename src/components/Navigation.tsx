@@ -666,7 +666,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     : 'bg-slate-800/80 text-slate-300 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 group-hover:ring-1 group-hover:ring-cyan-400/40'
                 }`}
               >
-                <LayoutDashboard className="w-4 h-4" />
+                <LayoutDashboard data-nav-icon="inicio" className="w-4 h-4" />
               </div>
 
               {isEffectiveExpanded && (
@@ -753,7 +753,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                               : 'bg-slate-800/80 text-slate-300 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 group-hover:ring-1 group-hover:ring-cyan-400/40'
                           }`}
                         >
-                          <Icon className="w-4 h-4" />
+                          <Icon data-nav-icon={tab.id} className="w-4 h-4" />
                         </div>
 
                         {isEffectiveExpanded && (

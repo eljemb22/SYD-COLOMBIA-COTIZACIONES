@@ -10,10 +10,25 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.10.12';
+export let CURRENT_APP_VERSION = '2.10.13';
 export const CURRENT_RELEASE_DATE = '2026-11-06';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.10.13',
+    releaseDate: '2026-11-06',
+    title: 'Personalización de tema consistente en toda la app',
+    summary:
+      'Se amplía la aplicación de los temas a las vistas que conservaban fondos, bordes, botones y textos fijos. Los ajustes de forma, color y tipografía se aplican de forma más uniforme, conservando los colores de estados de éxito, error y advertencia.',
+    highlights: [
+      '🎨 Los colores de fondo y superficies siguen el tema elegido en más secciones.',
+      '🔘 La forma de botones, tarjetas y campos se aplica globalmente.',
+      '🔤 La fuente y escala seleccionadas se reflejan en toda la interfaz.',
+      '✅ Se mantienen diferenciados los colores de éxito, error y advertencia.',
+      '✨ Los iconos del menú lateral conservan sus animaciones breves.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.10.12',
     releaseDate: '2026-11-06',
