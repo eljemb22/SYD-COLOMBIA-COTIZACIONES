@@ -30,3 +30,14 @@ jobs:
         env:
           ELECTRON_PUBLISH: always
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish portable update mirror to GitLab
+        shell: pwsh
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if (-not $env:GITLAB_TOKEN) {
+            throw 'Configura GITLAB_TOKEN en GitHub → Settings → Secrets and variables → Actions.'
+          }
+          .\scripts\publish-gitlab-release.ps1 -Token $env:GITLAB_TOKEN -Tag $env:RELEASE_TAG

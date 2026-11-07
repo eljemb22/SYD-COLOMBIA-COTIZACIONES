@@ -10,10 +10,25 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.10.13';
+export let CURRENT_APP_VERSION = '2.10.14';
 export const CURRENT_RELEASE_DATE = '2026-11-06';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.10.14',
+    releaseDate: '2026-11-06',
+    title: 'Actualización del portable desde la aplicación',
+    summary:
+      'La app portable descarga y verifica la nueva versión dentro de SYD Colombia. Al confirmar, se cierra, reemplaza el ejecutable portable y vuelve a abrirse sin pedir que busques y sustituyas el archivo manualmente.',
+    highlights: [
+      '⬇️ Descarga integrada con progreso visible dentro de la app.',
+      '🔐 Verificación SHA-256 del ejecutable; valida también el tamaño cuando la fuente lo informa.',
+      '🌐 Consulta GitHub y permite GitLab como respaldo al configurar un proyecto espejo.',
+      '🔄 Botón para actualizar y reiniciar después de descargar.',
+      '🧰 Reemplazo con rollback si Windows no puede aplicar el nuevo archivo.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.10.13',
     releaseDate: '2026-11-06',

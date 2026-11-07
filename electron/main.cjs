@@ -15,6 +15,9 @@ const path = require('path');
 const http = require('http');
 const fs = require('fs');
 const crypto = require('crypto');
+const { spawn } = require('child_process');
+const { Readable, Transform } = require('stream');
+const { pipeline } = require('stream/promises');
 
 const { validateIpcPayload } = require('./security.cjs');
 
@@ -29,6 +32,7 @@ const APP_ORIGIN = `${APP_SCHEME}://${APP_HOST}`;
 const IS_PACKAGED = app.isPackaged;
 const IS_PORTABLE = process.platform === 'win32' && Boolean(process.env.PORTABLE_EXECUTABLE_DIR);
 const GITHUB_LATEST_RELEASE_API = 'https://api.github.com/repos/eljemb22/SYD-COLOMBIA-COTIZACIONES/releases/latest';
+const DEFAULT_UPDATE_CONFIG = { gitlabProjectPath: '' };
 
 // electron-updater es opcional: si no esta disponible (entorno dev), se omite.
 let autoUpdater = null;
@@ -36,6 +40,8 @@ let hasDownloadedUpdate = false;
 let updateCheckPromise = null;
 let cachedPortableRelease = null;
 let cachedPortableReleaseCheckedAt = 0;
+let pendingPortableUpdate = null;
+let portableDownloadPromise = null;
 try {
   autoUpdater = require('electron-updater').autoUpdater;
 } catch (_) {
@@ -53,42 +59,293 @@ function compareVersions(left, right) {
   return 0;
 }
 
+function getPortableAssetNames(version) {
+  return new Set([
+    `SYD-Colombia-Portable-${version}.exe`,
+    `SYD Colombia Portable ${version}.exe`,
+  ]);
+}
+
+function isAllowedUpdateHost(hostname, provider) {
+  const host = String(hostname || '').toLowerCase();
+  if (provider === 'github') {
+    return ['github.com', 'release-assets.githubusercontent.com', 'objects.githubusercontent.com'].includes(host);
+  }
+  return host === 'gitlab.com' || host.endsWith('.gitlab.com');
+}
+
+function getGitLabProjectPath() {
+  const configPaths = [
+    path.join(app.getPath('userData'), 'update-sources.json'),
+    path.join(__dirname, 'update-sources.json'),
+  ];
+  for (const configPath of configPaths) {
+    try {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      const projectPath = String(config.gitlabProjectPath || '').trim().replace(/^\/+|\/+$/g, '');
+      if (projectPath && !/^https?:\/\//i.test(projectPath)) return projectPath;
+    } catch (_) {}
+  }
+  return DEFAULT_UPDATE_CONFIG.gitlabProjectPath;
+}
+
+async function fetchReleaseJson(url, headers) {
+  const response = await fetch(url, { headers, signal: AbortSignal.timeout(7000) });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+async function getGitHubPortableRelease() {
+  const release = await fetchReleaseJson(GITHUB_LATEST_RELEASE_API, {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'SYD-Colombia-Desktop-Updater',
+  });
+  const version = String(release.tag_name || '').replace(/^v/i, '');
+  if (!/^\d+(?:\.\d+){1,3}$/.test(version) || release.draft || release.prerelease) {
+    throw new Error('GitHub no devolvió una versión estable publicada.');
+  }
+  const portableAsset = (release.assets || []).find((asset) => getPortableAssetNames(version).has(asset.name));
+  if (!portableAsset || !portableAsset.browser_download_url) throw new Error(`La release v${version} de GitHub no contiene el portable.`);
+  const digestMatch = String(portableAsset.digest || '').match(/^sha256:([a-f\d]{64})$/i);
+  if (!digestMatch || !Number.isSafeInteger(Number(portableAsset.size)) || Number(portableAsset.size) <= 0) {
+    throw new Error(`GitHub no publicó la huella de integridad del portable v${version}.`);
+  }
+  return {
+    provider: 'github', version, downloadUrl: portableAsset.browser_download_url,
+    size: Number(portableAsset.size), sha256: digestMatch[1].toLowerCase(), releaseNotes: release.body || '',
+  };
+}
+
+async function getGitLabPortableRelease() {
+  const projectPath = getGitLabProjectPath();
+  if (!projectPath) throw new Error('El respaldo de GitLab aún no está configurado.');
+  const encodedProject = encodeURIComponent(projectPath);
+  const release = await fetchReleaseJson(`https://gitlab.com/api/v4/projects/${encodedProject}/releases/permalink/latest`, {
+    Accept: 'application/json',
+    'User-Agent': 'SYD-Colombia-Desktop-Updater',
+  });
+  const version = String(release.tag_name || '').replace(/^v/i, '');
+  if (!/^\d+(?:\.\d+){1,3}$/.test(version) || release.upcoming_release) {
+    throw new Error('GitLab no devolvió una versión estable publicada.');
+  }
+  const assets = release.assets && Array.isArray(release.assets.links) ? release.assets.links : [];
+  const portable = assets.find((asset) => getPortableAssetNames(version).has(asset.name));
+  if (!portable) throw new Error(`La release v${version} de GitLab no contiene el portable.`);
+  const portableUrl = portable.direct_asset_url || portable.url;
+  const parsedPortableUrl = new URL(portableUrl);
+  if (parsedPortableUrl.protocol !== 'https:' || !isAllowedUpdateHost(parsedPortableUrl.hostname, 'gitlab')) {
+    throw new Error('La dirección del portable de GitLab no es segura.');
+  }
+
+  let sha256 = '';
+  const notesHash = String(release.description || '').match(/Portable\s+SHA-?256\s*:\s*([a-f\d]{64})/i);
+  if (notesHash) sha256 = notesHash[1].toLowerCase();
+  if (!sha256) {
+    const checksumAsset = assets.find((asset) => asset.name === `${portable.name}.sha256`);
+    const checksumUrl = checksumAsset && (checksumAsset.direct_asset_url || checksumAsset.url);
+    if (checksumUrl) {
+      const parsedChecksumUrl = new URL(checksumUrl);
+      if (parsedChecksumUrl.protocol !== 'https:' || !isAllowedUpdateHost(parsedChecksumUrl.hostname, 'gitlab')) {
+        throw new Error('La dirección del checksum de GitLab no es segura.');
+      }
+      const checksumResponse = await fetch(parsedChecksumUrl, { redirect: 'follow', signal: AbortSignal.timeout(7000) });
+      if (!checksumResponse.ok) throw new Error(`No se pudo descargar el checksum de GitLab (HTTP ${checksumResponse.status}).`);
+      const checksumText = await checksumResponse.text();
+      const checksumMatch = checksumText.match(/\b([a-f\d]{64})\b/i);
+      if (checksumMatch) sha256 = checksumMatch[1].toLowerCase();
+    }
+  }
+  if (!sha256) throw new Error(`La release v${version} de GitLab no contiene un checksum SHA-256 para el portable.`);
+  return { provider: 'gitlab', version, downloadUrl: portableUrl, size: null, sha256, releaseNotes: release.description || '' };
+}
+
 async function getLatestPortableRelease() {
   const cacheIsFresh = cachedPortableRelease && Date.now() - cachedPortableReleaseCheckedAt < 5 * 60 * 1000;
   if (cacheIsFresh) return cachedPortableRelease;
 
-  const response = await fetch(GITHUB_LATEST_RELEASE_API, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'SYD-Colombia-Desktop-Updater',
-    },
+  const failures = [];
+  for (const [provider, getRelease] of [['github', getGitHubPortableRelease], ['gitlab', getGitLabPortableRelease]]) {
+    try {
+      cachedPortableRelease = await getRelease();
+      cachedPortableReleaseCheckedAt = Date.now();
+      return cachedPortableRelease;
+    } catch (error) {
+      failures.push(`${provider === 'github' ? 'GitHub' : 'GitLab'}: ${error.message || error}`);
+    }
+  }
+  throw new Error(`No se pudo consultar ninguna fuente de actualización. ${failures.join(' | ')}`);
+}
+
+function getPortableTargetPath() {
+  if (!IS_PORTABLE) throw new Error('La aplicación no se está ejecutando como portable.');
+  const executableFile = process.env.PORTABLE_EXECUTABLE_FILE;
+  const executableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+  if (!executableFile || !executableDir) {
+    throw new Error('No se pudo localizar el archivo portable original.');
+  }
+  const targetPath = path.resolve(executableFile);
+  const targetDir = path.resolve(executableDir);
+  if (path.dirname(targetPath).toLowerCase() !== targetDir.toLowerCase() || path.extname(targetPath).toLowerCase() !== '.exe') {
+    throw new Error('La ubicación del ejecutable portable no es válida.');
+  }
+  if (!fs.existsSync(targetPath) || !fs.statSync(targetPath).isFile()) {
+    throw new Error('No se encontró el ejecutable portable que se debe actualizar.');
+  }
+  return targetPath;
+}
+
+function readPendingPortableUpdate() {
+  if (!IS_PORTABLE) return null;
+  try {
+    const manifestPath = path.join(app.getPath('userData'), 'portable-update.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const targetPath = getPortableTargetPath();
+    if (
+      manifest.targetPath !== targetPath ||
+      !/^\d+(?:\.\d+){1,3}$/.test(String(manifest.version || '')) ||
+      !fs.existsSync(manifest.stagingPath) ||
+      path.extname(path.resolve(manifest.stagingPath)).toLowerCase() !== '.exe' ||
+      path.dirname(path.resolve(manifest.stagingPath)).toLowerCase() !== path.dirname(targetPath).toLowerCase()
+    ) {
+      return null;
+    }
+    return { ...manifest, manifestPath };
+  } catch (_) {
+    return null;
+  }
+}
+
+async function downloadPortableUpdate() {
+  if (portableDownloadPromise) return portableDownloadPromise;
+  portableDownloadPromise = (async () => {
+    const release = await getLatestPortableRelease();
+    if (compareVersions(release.version, app.getVersion()) <= 0) {
+      return { ok: false, reason: 'already-current' };
+    }
+
+    const existing = readPendingPortableUpdate();
+    if (existing && existing.version === release.version) {
+      pendingPortableUpdate = existing;
+      return { ok: true, alreadyDownloaded: true, portableDownload: true, version: release.version };
+    }
+    if (existing) {
+      try { fs.rmSync(existing.stagingPath, { force: true }); } catch (_) {}
+      try { fs.rmSync(existing.manifestPath, { force: true }); } catch (_) {}
+    }
+
+    const targetPath = getPortableTargetPath();
+    const targetDir = path.dirname(targetPath);
+    const manifestPath = path.join(app.getPath('userData'), 'portable-update.json');
+    const stagingPath = path.join(targetDir, `.${path.basename(targetPath, '.exe')}.update-${release.version}-${crypto.randomUUID()}.exe`);
+    const probePath = path.join(targetDir, `.syd-write-check-${crypto.randomUUID()}.tmp`);
+    try {
+      fs.writeFileSync(probePath, 'SYD update write check', { flag: 'wx' });
+      fs.unlinkSync(probePath);
+    } catch (error) {
+      try { fs.rmSync(probePath, { force: true }); } catch (_) {}
+      throw new Error(`La carpeta del portable no permite escribir la actualización: ${error.message}`);
+    }
+
+    const downloadUrl = new URL(release.downloadUrl);
+    if (downloadUrl.protocol !== 'https:' || !isAllowedUpdateHost(downloadUrl.hostname, release.provider)) {
+      throw new Error(`La dirección de descarga de ${release.provider} no es segura.`);
+    }
+
+    sendUpdateEvent({ type: 'progress', percent: 0, portable: true });
+    try {
+      const response = await fetch(downloadUrl, { redirect: 'follow' });
+      if (!response.ok || !response.body) {
+        throw new Error(`No se pudo descargar el portable (HTTP ${response.status}).`);
+      }
+      const finalUrl = new URL(response.url);
+      if (finalUrl.protocol !== 'https:' || !isAllowedUpdateHost(finalUrl.hostname, release.provider)) {
+        throw new Error(`${release.provider} redirigió la descarga a un servidor no permitido.`);
+      }
+
+      const hash = crypto.createHash('sha256');
+      let bytesReceived = 0;
+      let lastProgressAt = 0;
+      const meter = new Transform({
+        transform(chunk, _encoding, callback) {
+          bytesReceived += chunk.length;
+          hash.update(chunk);
+          const now = Date.now();
+          if (now - lastProgressAt >= 250) {
+            const percent = release.size ? Math.min(99, Math.floor((bytesReceived / release.size) * 100)) : 0;
+            sendUpdateEvent({ type: 'progress', percent, portable: true });
+            lastProgressAt = now;
+          }
+          callback(null, chunk);
+        },
+      });
+      await pipeline(Readable.fromWeb(response.body), meter, fs.createWriteStream(stagingPath, { flags: 'wx' }));
+
+      const actualDigest = hash.digest('hex');
+      if ((release.size && bytesReceived !== release.size) || actualDigest !== release.sha256) {
+        throw new Error(`La descarga no coincide con el tamaño o la huella SHA-256 publicada por ${release.provider}.`);
+      }
+
+      const manifest = {
+        version: release.version,
+        sha256: release.sha256,
+        size: release.size,
+        targetPath,
+        stagingPath,
+        downloadedAt: new Date().toISOString(),
+      };
+      fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+      const manifestTempPath = `${manifestPath}.${crypto.randomUUID()}.tmp`;
+      fs.writeFileSync(manifestTempPath, JSON.stringify(manifest), { flag: 'wx' });
+      fs.rmSync(manifestPath, { force: true });
+      fs.renameSync(manifestTempPath, manifestPath);
+      pendingPortableUpdate = { ...manifest, manifestPath };
+      sendUpdateEvent({ type: 'progress', percent: 100, portable: true });
+      sendUpdateEvent({ type: 'downloaded', version: release.version, portable: true });
+      return { ok: true, alreadyDownloaded: true, portableDownload: true, version: release.version };
+    } catch (error) {
+      try { fs.rmSync(stagingPath, { force: true }); } catch (_) {}
+      throw error;
+    }
+  })().finally(() => {
+    portableDownloadPromise = null;
   });
-  if (!response.ok) {
-    throw new Error(`No se pudo consultar GitHub (HTTP ${response.status}).`);
+  return portableDownloadPromise;
+}
+
+function startPortableUpdate() {
+  const update = pendingPortableUpdate || readPendingPortableUpdate();
+  if (!update) throw new Error('Primero descarga la actualización portable.');
+  const targetPath = getPortableTargetPath();
+  if (update.targetPath !== targetPath || !fs.existsSync(update.stagingPath)) {
+    throw new Error('No se encontró la actualización descargada junto al portable.');
   }
 
-  const release = await response.json();
-  const version = String(release.tag_name || '').replace(/^v/i, '');
-  if (!version || release.draft || release.prerelease) {
-    throw new Error('GitHub no devolvió una versión estable publicada.');
+  const helperSource = path.join(__dirname, 'portable-update-helper.ps1');
+  const helperPath = path.join(app.getPath('temp'), `syd-portable-update-${crypto.randomUUID()}.ps1`);
+  fs.writeFileSync(helperPath, fs.readFileSync(helperSource, 'utf8'), { flag: 'wx' });
+  const systemRoot = process.env.SystemRoot || 'C:\\Windows';
+  const powershellPath = path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  const helper = spawn(powershellPath, [
+    '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', helperPath,
+    '-ProcessId', String(process.pid),
+    '-Source', update.stagingPath,
+    '-Destination', targetPath,
+    '-ExpectedSha256', update.sha256,
+    '-RestartArgsJson', JSON.stringify(process.argv.slice(1)),
+    '-ManifestPath', update.manifestPath || path.join(app.getPath('userData'), 'portable-update.json'),
+    '-HelperPath', helperPath,
+  ], { detached: true, stdio: 'ignore', windowsHide: true });
+  helper.once('error', (error) => {
+    try { fs.rmSync(helperPath, { force: true }); } catch (_) {}
+    sendUpdateEvent({ type: 'error', message: `No se pudo iniciar la actualización portable: ${error.message}` });
+  });
+  if (!helper.pid) {
+    try { fs.rmSync(helperPath, { force: true }); } catch (_) {}
+    throw new Error('No se pudo iniciar el proceso de actualización de Windows.');
   }
-
-  const expectedPortableNames = new Set([
-    `SYD-Colombia-Portable-${version}.exe`,
-    `SYD Colombia Portable ${version}.exe`,
-  ]);
-  const portableAsset = (release.assets || []).find((asset) => expectedPortableNames.has(asset.name));
-  if (!portableAsset || !portableAsset.browser_download_url) {
-    throw new Error(`La release v${version} no contiene el ejecutable portable.`);
-  }
-
-  cachedPortableRelease = {
-    version,
-    downloadUrl: portableAsset.browser_download_url,
-    releaseNotes: release.body || '',
-  };
-  cachedPortableReleaseCheckedAt = Date.now();
-  return cachedPortableRelease;
+  helper.unref();
+  setTimeout(() => app.quit(), 150);
+  return { ok: true, restarting: true };
 }
 
 function checkPackagedUpdate() {
@@ -631,10 +888,15 @@ ipcMain.handle('syd:update:check', async (_event, payload) => {
       const updateInfo = compareVersions(release.version, app.getVersion()) > 0
         ? { version: release.version, releaseNotes: release.releaseNotes, portable: true }
         : null;
+      const stagedUpdate = readPendingPortableUpdate();
+      pendingPortableUpdate = stagedUpdate;
       sendUpdateEvent(updateInfo
         ? { type: 'available', version: updateInfo.version, releaseNotes: updateInfo.releaseNotes, portable: true }
         : { type: 'not-available', version: app.getVersion() });
-      return { ok: true, updateInfo, updateDownloaded: false, portable: true };
+      if (stagedUpdate && updateInfo && stagedUpdate.version === updateInfo.version) {
+        sendUpdateEvent({ type: 'downloaded', version: stagedUpdate.version, portable: true });
+      }
+      return { ok: true, updateInfo, updateDownloaded: Boolean(stagedUpdate && updateInfo && stagedUpdate.version === updateInfo.version), portable: true };
     }
     if (!autoUpdater) return { ok: false, reason: 'updater-unavailable' };
     const r = await checkPackagedUpdate();
@@ -651,12 +913,7 @@ ipcMain.handle('syd:update:download', async (_event, payload) => {
   if (!validateIpcPayload(payload)) return { ok: false, reason: 'invalid-payload' };
   try {
     if (IS_PORTABLE) {
-      const release = await getLatestPortableRelease();
-      if (compareVersions(release.version, app.getVersion()) <= 0) {
-        return { ok: false, reason: 'already-current' };
-      }
-      await shell.openExternal(release.downloadUrl);
-      return { ok: true, portableDownload: true, version: release.version };
+      return await downloadPortableUpdate();
     }
     if (!autoUpdater) return { ok: false, reason: 'updater-unavailable' };
     if (hasDownloadedUpdate) return { ok: true, alreadyDownloaded: true };
@@ -668,10 +925,11 @@ ipcMain.handle('syd:update:download', async (_event, payload) => {
 });
 
 ipcMain.handle('syd:update:install', (_event, payload) => {
-  if (IS_PORTABLE) return { ok: false, reason: 'portable-manual-update' };
-  if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
+  if (!IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
   if (!validateIpcPayload(payload)) return { ok: false, reason: 'invalid-payload' };
   try {
+    if (IS_PORTABLE) return startPortableUpdate();
+    if (!autoUpdater) return { ok: false, reason: 'updater-unavailable' };
     autoUpdater.quitAndInstall(false, true);
     return { ok: true };
   } catch (e) {

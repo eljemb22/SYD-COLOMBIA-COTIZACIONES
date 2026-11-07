@@ -62,7 +62,9 @@ export const DesktopUpdateBanner: React.FC = () => {
             downloading: false,
             available: true,
             progress: 100,
-            status: 'Actualización lista. Reinicia para instalar.',
+            status: payload.portable
+              ? 'Descarga verificada. Actualiza y reinicia para aplicarla.'
+              : 'Actualización lista. Reinicia para instalar.',
           }));
           break;
         case 'error':
@@ -97,7 +99,7 @@ export const DesktopUpdateBanner: React.FC = () => {
         const result = await desktop.downloadUpdate();
         if (result?.ok === false) throw new Error(result.reason || 'No se pudo iniciar la descarga.');
         if (result?.portableDownload) {
-          setState((s) => ({ ...s, available: true, downloaded: true, downloading: false, progress: 100, status: `Descarga portable v${result.version} abierta. Cierra la app y reemplaza el EXE portable cuando termine.` }));
+          setState((s) => ({ ...s, available: true, downloaded: true, downloading: false, progress: 100, version: result.version || s.version, status: `Versión ${result.version} descargada y verificada. Pulsa “Actualizar y reiniciar” para aplicarla.` }));
         } else if (result?.alreadyDownloaded) {
           setState((s) => ({ ...s, downloaded: true, downloading: false, progress: 100, status: 'Actualización descargada. Reinicia para instalar.' }));
         }
@@ -151,14 +153,14 @@ export const DesktopUpdateBanner: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {!desktop.isPortable && <button
+              <button
                 type="button"
                 onClick={handleInstall}
                 className="px-3.5 py-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Reiniciar e instalar</span>
-              </button>}
+                <span>{desktop.isPortable ? 'Actualizar y reiniciar' : 'Reiniciar e instalar'}</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setDismissed(true)}
@@ -198,7 +200,7 @@ export const DesktopUpdateBanner: React.FC = () => {
                   <span className="text-xs font-extrabold text-white">Versión {state.version}</span>
                 </div>
                 <p className="text-[11px] text-slate-300 truncate max-w-xl">
-                  {desktop.isPortable ? 'Hay una nueva versión portable lista para descargar.' : 'Hay una nueva versión del instalador lista para descargar.'}
+                  {desktop.isPortable ? 'Descarga la actualización desde aquí y aplícala al reiniciar.' : 'Hay una nueva versión del instalador lista para descargar.'}
                 </p>
               </div>
             </div>
@@ -210,7 +212,7 @@ export const DesktopUpdateBanner: React.FC = () => {
                 className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-400 to-indigo-400 hover:from-violet-300 hover:to-indigo-300 text-slate-950 font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <DownloadCloud className="w-3.5 h-3.5" />
-                <span>{state.downloading ? 'Descargando…' : desktop.isPortable ? 'Descargar portable' : 'Descargar actualización'}</span>
+                <span>{state.downloading ? 'Descargando…' : 'Descargar actualización'}</span>
               </button>
               <button
                 type="button"

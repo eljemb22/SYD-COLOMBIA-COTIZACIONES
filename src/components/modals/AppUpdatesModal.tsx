@@ -90,7 +90,9 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
             break;
           case 'downloaded':
             setInstallProgress(100);
-            setInstallStatusText('Actualización descargada. Pulsa “Reiniciar e instalar” cuando quieras aplicarla.');
+            setInstallStatusText(desktop.isPortable
+              ? 'Actualización descargada y verificada. Pulsa “Actualizar y reiniciar” para aplicarla.'
+              : 'Actualización descargada. Pulsa “Reiniciar e instalar” cuando quieras aplicarla.');
             setHasPendingUpdate(false);
             setIsUpdateDownloaded(true);
             setIsInstalling(false);
@@ -226,18 +228,34 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
   const startInstallationFlow = async (targetVer: string, isReinstall: boolean = false) => {
     if (isInstalling) return;
 
-    // If desktop .exe, use real electron-updater IPC: download + install
+    // The portable target stages its replacement and swaps it after the app exits.
     if (desktop && desktop.downloadUpdate && desktop.quitAndInstall) {
       if (desktop.isPortable) {
+        if (isUpdateDownloaded) {
+          try {
+            await desktop.quitAndInstall();
+          } catch (e: any) {
+            setInstallStatusText('No se pudo reiniciar para actualizar: ' + (e?.message || String(e)));
+          }
+          return;
+        }
         setIsInstalling(true);
+        setTargetInstallVersion(targetVer);
+        setInstallProgress(0);
+        setInstallStatusText('Descargando y verificando la actualización portable...');
         try {
           const result = await desktop.downloadUpdate();
-          if (result?.ok === false) throw new Error(result.reason || 'No se pudo abrir la descarga portable.');
+          if (result?.ok === false) throw new Error(result.reason || 'No se pudo descargar la actualización portable.');
           setIsInstalling(false);
-          setInstallStatusText(`Descarga portable v${result.version || targetVer} abierta en el navegador. Al terminar, cierra la app y reemplaza el archivo EXE portable.`);
+          setIsUpdateDownloaded(Boolean(result?.alreadyDownloaded));
+          setHasPendingUpdate(!result?.alreadyDownloaded);
+          setInstallProgress(result?.alreadyDownloaded ? 100 : 0);
+          setInstallStatusText(result?.alreadyDownloaded
+            ? `Versión ${result.version || targetVer} lista. Pulsa “Actualizar y reiniciar” para aplicarla.`
+            : 'Preparando la descarga portable...');
         } catch (e: any) {
           setIsInstalling(false);
-          setInstallStatusText('Error al abrir la descarga: ' + (e?.message || String(e)));
+          setInstallStatusText('Error al descargar la actualización: ' + (e?.message || String(e)));
         }
         return;
       }
@@ -479,7 +497,7 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
                   {hasPendingUpdate || isUpdateDownloaded ? (
                     <span className="text-cyan-300 font-semibold flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin-slow" />
-                      <span>{isUpdateDownloaded ? 'Actualización descargada y lista para instalar' : platformInfo.isDesktopExe ? desktop?.isPortable ? 'Nueva versión portable lista para descargar' : 'Nueva versión de Windows lista para descargar' : 'Nueva versión web lista para aplicar'}</span>
+                      <span>{isUpdateDownloaded ? desktop?.isPortable ? 'Actualización lista para aplicar' : 'Actualización descargada y lista para instalar' : platformInfo.isDesktopExe ? desktop?.isPortable ? 'Nueva versión portable disponible' : 'Nueva versión de Windows lista para descargar' : 'Nueva versión web lista para aplicar'}</span>
                     </span>
                   ) : (
                     <span className="text-emerald-400 font-medium flex items-center gap-1.5">
@@ -511,14 +529,14 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
                       onClick={() => startInstallationFlow(latestRemoteVersion)}
                       disabled={isInstalling}
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 text-xs font-black shadow-lg transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 animate-pulse"
-                      title={isUpdateDownloaded ? `Reiniciar e instalar v${latestRemoteVersion}` : platformInfo.isDesktopExe ? `Descargar actualización v${latestRemoteVersion}` : `Recargar y aplicar v${latestRemoteVersion}`}
+                      title={isUpdateDownloaded ? `${desktop?.isPortable ? 'Actualizar y reiniciar' : 'Reiniciar e instalar'} v${latestRemoteVersion}` : platformInfo.isDesktopExe ? `Descargar actualización v${latestRemoteVersion}` : `Recargar y aplicar v${latestRemoteVersion}`}
                     >
                       <Zap className="w-4 h-4 fill-current text-slate-950" />
                       <span>
                         {isUpdateDownloaded
-                          ? `Reiniciar e instalar (v${latestRemoteVersion})`
+                          ? `${desktop?.isPortable ? 'Actualizar y reiniciar' : 'Reiniciar e instalar'} (v${latestRemoteVersion})`
                           : platformInfo.isDesktopExe
-                          ? `${desktop?.isPortable ? 'Descargar portable' : 'Descargar actualización'} (v${latestRemoteVersion})`
+                          ? `Descargar actualización (v${latestRemoteVersion})`
                           : `Instalar Actualización Ahora (v${latestRemoteVersion})`}
                       </span>
                     </button>
