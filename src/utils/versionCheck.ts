@@ -10,10 +10,24 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.10.11';
+export let CURRENT_APP_VERSION = '2.10.12';
 export const CURRENT_RELEASE_DATE = '2026-11-06';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.10.12',
+    releaseDate: '2026-11-06',
+    title: 'Portable e instalador con actualización correcta',
+    summary:
+      'Se separa la actualización automática del instalador NSIS de la descarga manual para la app portable. El portable usa su propio perfil, permite abrirse sin colisionar con la instalación y explica cómo reemplazar su ejecutable. Se corrige la detección de versiones ya instaladas y se muestran errores de descarga.',
+    highlights: [
+      '📦 El portable inicia como app independiente y conserva sus datos junto al ejecutable.',
+      '⬇️ El portable detecta nuevas versiones y descarga el EXE portable correcto.',
+      '🔄 El instalador descarga y aplica actualizaciones NSIS desde la app.',
+      '✅ La app limpia avisos cuando ya está al día y muestra errores reales.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.10.11',
     releaseDate: '2026-11-06',

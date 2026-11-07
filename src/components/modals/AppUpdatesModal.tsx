@@ -106,12 +106,15 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
     }
 
     const checkPromise = desktop && desktop.checkForUpdates
-      ? desktop.checkForUpdates().then((res: any) => ({
+      ? desktop.checkForUpdates().then((res: any) => {
+          if (res?.ok === false) throw new Error(res.reason || 'No se pudo consultar la versión publicada.');
+          return ({
           updateAvailable: Boolean(res?.updateInfo),
           latestVersion: res?.updateInfo?.version || CURRENT_APP_VERSION,
           updateDownloaded: Boolean(res?.updateDownloaded),
           lastChecked: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
-        }))
+          });
+        })
       : checkForAppUpdatesOnline();
 
     checkPromise.then((res) => {
@@ -128,6 +131,17 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
           ? `¡Hay una nueva versión disponible (v${res.latestVersion}) con mejoras listas para instalar!`
           : `El sistema ya se encuentra en la versión más reciente (v${CURRENT_APP_VERSION}). ¡Todo está al día!`,
         checkedAt: res.lastChecked,
+      });
+    }).catch((error: any) => {
+      if (!isMounted) return;
+      setHasPendingUpdate(false);
+      setIsUpdateDownloaded(false);
+      setCheckResult({
+        tested: true,
+        updateAvailable: false,
+        latestVersion: CURRENT_APP_VERSION,
+        message: `No se pudo comprobar la actualización: ${error?.message || String(error)}`,
+        checkedAt: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
       });
     });
 
@@ -148,6 +162,7 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
     if (desktop && desktop.checkForUpdates) {
       try {
         const res = await desktop.checkForUpdates();
+        if (res?.ok === false) throw new Error(res.reason || 'No se pudo consultar la versión publicada.');
         setIsChecking(false);
         setHasPendingUpdate(res.updateInfo ? true : false);
         setIsUpdateDownloaded(Boolean(res.updateDownloaded));
@@ -169,7 +184,7 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
           tested: true,
           updateAvailable: false,
           latestVersion: CURRENT_APP_VERSION,
-          message: `Comprobación realizada. Sistema en versión v${CURRENT_APP_VERSION}.`,
+          message: `No se pudo comprobar la actualización: ${(e as any)?.message || String(e)}`,
           checkedAt: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
         });
         return;
@@ -213,6 +228,19 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
 
     // If desktop .exe, use real electron-updater IPC: download + install
     if (desktop && desktop.downloadUpdate && desktop.quitAndInstall) {
+      if (desktop.isPortable) {
+        setIsInstalling(true);
+        try {
+          const result = await desktop.downloadUpdate();
+          if (result?.ok === false) throw new Error(result.reason || 'No se pudo abrir la descarga portable.');
+          setIsInstalling(false);
+          setInstallStatusText(`Descarga portable v${result.version || targetVer} abierta en el navegador. Al terminar, cierra la app y reemplaza el archivo EXE portable.`);
+        } catch (e: any) {
+          setIsInstalling(false);
+          setInstallStatusText('Error al abrir la descarga: ' + (e?.message || String(e)));
+        }
+        return;
+      }
       if (isUpdateDownloaded) {
         try {
           await desktop.quitAndInstall();
@@ -451,7 +479,7 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
                   {hasPendingUpdate || isUpdateDownloaded ? (
                     <span className="text-cyan-300 font-semibold flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin-slow" />
-                      <span>{isUpdateDownloaded ? 'Actualización descargada y lista para instalar' : platformInfo.isDesktopExe ? 'Nueva versión de Windows lista para descargar' : 'Nueva versión web lista para aplicar'}</span>
+                      <span>{isUpdateDownloaded ? 'Actualización descargada y lista para instalar' : platformInfo.isDesktopExe ? desktop?.isPortable ? 'Nueva versión portable lista para descargar' : 'Nueva versión de Windows lista para descargar' : 'Nueva versión web lista para aplicar'}</span>
                     </span>
                   ) : (
                     <span className="text-emerald-400 font-medium flex items-center gap-1.5">
@@ -490,7 +518,7 @@ export const AppUpdatesModal: React.FC<AppUpdatesModalProps> = ({ isOpen, onClos
                         {isUpdateDownloaded
                           ? `Reiniciar e instalar (v${latestRemoteVersion})`
                           : platformInfo.isDesktopExe
-                          ? `Descargar actualización (v${latestRemoteVersion})`
+                          ? `${desktop?.isPortable ? 'Descargar portable' : 'Descargar actualización'} (v${latestRemoteVersion})`
                           : `Instalar Actualización Ahora (v${latestRemoteVersion})`}
                       </span>
                     </button>

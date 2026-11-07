@@ -7,6 +7,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('sydDesktop', {
   isDesktop: true,
+  isPortable: process.platform === 'win32' && Boolean(process.env.PORTABLE_EXECUTABLE_DIR),
   platform: process.platform,
   version: process.versions.electron,
   /**

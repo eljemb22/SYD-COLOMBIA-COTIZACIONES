@@ -44,6 +44,9 @@ export const DesktopUpdateBanner: React.FC = () => {
           }));
           setDismissed(false);
           break;
+        case 'not-available':
+          setState(initialState);
+          break;
         case 'progress':
           setState((s) => ({
             ...s,
@@ -73,7 +76,9 @@ export const DesktopUpdateBanner: React.FC = () => {
 
     // Check on mount
     if (desktop.checkForUpdates) {
-      desktop.checkForUpdates().catch(() => {});
+      desktop.checkForUpdates().then((result: any) => {
+        if (result?.ok === false) setState((s) => ({ ...s, error: result.reason || 'No se pudo consultar la actualización.' }));
+      }).catch((error: any) => setState((s) => ({ ...s, error: error?.message || String(error) })));
     }
 
     return () => {
@@ -89,7 +94,13 @@ export const DesktopUpdateBanner: React.FC = () => {
     if (desktop.downloadUpdate) {
       setState((s) => ({ ...s, downloading: true, error: null, status: 'Iniciando descarga...', progress: 0 }));
       try {
-        await desktop.downloadUpdate();
+        const result = await desktop.downloadUpdate();
+        if (result?.ok === false) throw new Error(result.reason || 'No se pudo iniciar la descarga.');
+        if (result?.portableDownload) {
+          setState((s) => ({ ...s, available: true, downloaded: true, downloading: false, progress: 100, status: `Descarga portable v${result.version} abierta. Cierra la app y reemplaza el EXE portable cuando termine.` }));
+        } else if (result?.alreadyDownloaded) {
+          setState((s) => ({ ...s, downloaded: true, downloading: false, progress: 100, status: 'Actualización descargada. Reinicia para instalar.' }));
+        }
       } catch (e: any) {
         setState((s) => ({ ...s, downloading: false, error: e && e.message ? e.message : String(e) }));
       }
@@ -135,19 +146,19 @@ export const DesktopUpdateBanner: React.FC = () => {
                   Actualización lista
                 </span>
                 <p className="text-[11px] text-slate-300">
-                  Versión {state.version} descargada. Reinicia la aplicación para instalarla.
+                  {desktop.isPortable ? state.status : `Versión ${state.version} descargada. Reinicia la aplicación para instalarla.`}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button
+              {!desktop.isPortable && <button
                 type="button"
                 onClick={handleInstall}
                 className="px-3.5 py-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Reiniciar e instalar</span>
-              </button>
+              </button>}
               <button
                 type="button"
                 onClick={() => setDismissed(true)}
@@ -187,7 +198,7 @@ export const DesktopUpdateBanner: React.FC = () => {
                   <span className="text-xs font-extrabold text-white">Versión {state.version}</span>
                 </div>
                 <p className="text-[11px] text-slate-300 truncate max-w-xl">
-                  Hay una nueva versión del instalador lista para descargar.
+                  {desktop.isPortable ? 'Hay una nueva versión portable lista para descargar.' : 'Hay una nueva versión del instalador lista para descargar.'}
                 </p>
               </div>
             </div>
@@ -199,7 +210,7 @@ export const DesktopUpdateBanner: React.FC = () => {
                 className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-400 to-indigo-400 hover:from-violet-300 hover:to-indigo-300 text-slate-950 font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <DownloadCloud className="w-3.5 h-3.5" />
-                <span>{state.downloading ? 'Descargando…' : 'Descargar actualización'}</span>
+                <span>{state.downloading ? 'Descargando…' : desktop.isPortable ? 'Descargar portable' : 'Descargar actualización'}</span>
               </button>
               <button
                 type="button"

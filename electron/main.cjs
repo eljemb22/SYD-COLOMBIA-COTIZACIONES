@@ -27,18 +27,87 @@ const APP_SCHEME = 'app';
 const APP_HOST = 'syd';
 const APP_ORIGIN = `${APP_SCHEME}://${APP_HOST}`;
 const IS_PACKAGED = app.isPackaged;
+const IS_PORTABLE = process.platform === 'win32' && Boolean(process.env.PORTABLE_EXECUTABLE_DIR);
+const GITHUB_LATEST_RELEASE_API = 'https://api.github.com/repos/eljemb22/SYD-COLOMBIA-COTIZACIONES/releases/latest';
 
 // electron-updater es opcional: si no esta disponible (entorno dev), se omite.
 let autoUpdater = null;
 let hasDownloadedUpdate = false;
+let updateCheckPromise = null;
+let cachedPortableRelease = null;
+let cachedPortableReleaseCheckedAt = 0;
 try {
   autoUpdater = require('electron-updater').autoUpdater;
 } catch (_) {
   autoUpdater = null;
 }
 
+function compareVersions(left, right) {
+  const leftParts = String(left || '').replace(/^v/i, '').split(/[.+-]/).map((part) => Number.parseInt(part, 10) || 0);
+  const rightParts = String(right || '').replace(/^v/i, '').split(/[.+-]/).map((part) => Number.parseInt(part, 10) || 0);
+  const length = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (leftParts[index] || 0) - (rightParts[index] || 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+async function getLatestPortableRelease() {
+  const cacheIsFresh = cachedPortableRelease && Date.now() - cachedPortableReleaseCheckedAt < 5 * 60 * 1000;
+  if (cacheIsFresh) return cachedPortableRelease;
+
+  const response = await fetch(GITHUB_LATEST_RELEASE_API, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'SYD-Colombia-Desktop-Updater',
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`No se pudo consultar GitHub (HTTP ${response.status}).`);
+  }
+
+  const release = await response.json();
+  const version = String(release.tag_name || '').replace(/^v/i, '');
+  if (!version || release.draft || release.prerelease) {
+    throw new Error('GitHub no devolvió una versión estable publicada.');
+  }
+
+  const expectedPortableNames = new Set([
+    `SYD-Colombia-Portable-${version}.exe`,
+    `SYD Colombia Portable ${version}.exe`,
+  ]);
+  const portableAsset = (release.assets || []).find((asset) => expectedPortableNames.has(asset.name));
+  if (!portableAsset || !portableAsset.browser_download_url) {
+    throw new Error(`La release v${version} no contiene el ejecutable portable.`);
+  }
+
+  cachedPortableRelease = {
+    version,
+    downloadUrl: portableAsset.browser_download_url,
+    releaseNotes: release.body || '',
+  };
+  cachedPortableReleaseCheckedAt = Date.now();
+  return cachedPortableRelease;
+}
+
+function checkPackagedUpdate() {
+  if (!autoUpdater) return Promise.reject(new Error('El actualizador NSIS no está disponible.'));
+  if (updateCheckPromise) return updateCheckPromise;
+  updateCheckPromise = autoUpdater.checkForUpdates();
+  return updateCheckPromise.finally(() => {
+    updateCheckPromise = null;
+  });
+}
+
 // Define la carpeta de datos de la app: %APPDATA%/SYD Colombia
 app.setName('SYD Colombia');
+// Una copia portable y una instalación normal deben poder abrirse a la vez.
+// Electron usa userData para el bloqueo de instancia única; el perfil portable
+// vive junto al ejecutable y no provoca que la copia instalada lo cierre.
+if (IS_PORTABLE && process.env.PORTABLE_EXECUTABLE_DIR) {
+  app.setPath('userData', path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'SYD Colombia Data'));
+}
 
 // Google rechaza el inicio de sesion cuando detecta un navegador embebido
 // (user-agent con "Electron"). Se usa un user-agent de Chrome estable para que
@@ -254,7 +323,8 @@ function sendUpdateEvent(payload) {
 }
 
 function setupAutoUpdater() {
-  if (!autoUpdater || !IS_PACKAGED) return;
+  // electron-updater no soporta el target portable de Windows.
+  if (!autoUpdater || !IS_PACKAGED || IS_PORTABLE) return;
   try {
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = false;
@@ -263,9 +333,10 @@ function setupAutoUpdater() {
       hasDownloadedUpdate = false;
       sendUpdateEvent({ type: 'available', version: info && info.version, releaseNotes: info && info.releaseNotes });
     });
-    autoUpdater.on('update-not-available', (info) =>
-      sendUpdateEvent({ type: 'not-available', version: info && info.version })
-    );
+    autoUpdater.on('update-not-available', (info) => {
+      hasDownloadedUpdate = false;
+      sendUpdateEvent({ type: 'not-available', version: info && info.version });
+    });
     autoUpdater.on('download-progress', (p) =>
       sendUpdateEvent({ type: 'progress', percent: p && p.percent, transferred: p && p.transferred, total: p && p.total })
     );
@@ -283,13 +354,13 @@ function setupAutoUpdater() {
       sendUpdateEvent({ type: 'error', message: msg });
     });
     const updateCheckTimer = setInterval(() => {
-      autoUpdater.checkForUpdates().catch((e) => {
+      checkPackagedUpdate().catch((e) => {
         const msg = e && e.message ? e.message : String(e);
         if (!msg.includes('404')) sendUpdateEvent({ type: 'error', message: msg });
       });
     }, 4 * 60 * 60 * 1000);
     updateCheckTimer.unref();
-    autoUpdater.checkForUpdates().catch((e) => {
+    checkPackagedUpdate().catch((e) => {
       const msg = e && e.message ? e.message : String(e);
       if (msg.includes('404')) {
         sendUpdateEvent({ type: 'not-available', version: null });
@@ -552,11 +623,22 @@ if (!gotTheLock) {
 
   // Handlers IPC para el auto-actualizador del escritorio.
 ipcMain.handle('syd:update:check', async (_event, payload) => {
-  if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
+  if (!IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
   if (!validateIpcPayload(payload)) return { ok: false, reason: 'invalid-payload' };
   try {
-    const r = await autoUpdater.checkForUpdates();
-    return { ok: true, updateInfo: r && r.updateInfo, updateDownloaded: hasDownloadedUpdate };
+    if (IS_PORTABLE) {
+      const release = await getLatestPortableRelease();
+      const updateInfo = compareVersions(release.version, app.getVersion()) > 0
+        ? { version: release.version, releaseNotes: release.releaseNotes, portable: true }
+        : null;
+      sendUpdateEvent(updateInfo
+        ? { type: 'available', version: updateInfo.version, releaseNotes: updateInfo.releaseNotes, portable: true }
+        : { type: 'not-available', version: app.getVersion() });
+      return { ok: true, updateInfo, updateDownloaded: false, portable: true };
+    }
+    if (!autoUpdater) return { ok: false, reason: 'updater-unavailable' };
+    const r = await checkPackagedUpdate();
+    return { ok: true, updateInfo: r && r.updateInfo, updateDownloaded: hasDownloadedUpdate, portable: false };
   } catch (e) {
     const msg = e && e.message ? e.message : String(e);
     if (msg.includes('404')) return { ok: true, updateInfo: null };
@@ -565,9 +647,18 @@ ipcMain.handle('syd:update:check', async (_event, payload) => {
 });
 
 ipcMain.handle('syd:update:download', async (_event, payload) => {
-  if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
+  if (!IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
   if (!validateIpcPayload(payload)) return { ok: false, reason: 'invalid-payload' };
   try {
+    if (IS_PORTABLE) {
+      const release = await getLatestPortableRelease();
+      if (compareVersions(release.version, app.getVersion()) <= 0) {
+        return { ok: false, reason: 'already-current' };
+      }
+      await shell.openExternal(release.downloadUrl);
+      return { ok: true, portableDownload: true, version: release.version };
+    }
+    if (!autoUpdater) return { ok: false, reason: 'updater-unavailable' };
     if (hasDownloadedUpdate) return { ok: true, alreadyDownloaded: true };
     await autoUpdater.downloadUpdate();
     return { ok: true, alreadyDownloaded: hasDownloadedUpdate };
@@ -577,6 +668,7 @@ ipcMain.handle('syd:update:download', async (_event, payload) => {
 });
 
 ipcMain.handle('syd:update:install', (_event, payload) => {
+  if (IS_PORTABLE) return { ok: false, reason: 'portable-manual-update' };
   if (!autoUpdater || !IS_PACKAGED) return { ok: false, reason: 'not-packaged' };
   if (!validateIpcPayload(payload)) return { ok: false, reason: 'invalid-payload' };
   try {
