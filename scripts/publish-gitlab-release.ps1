@@ -93,14 +93,6 @@ Portable SHA-256: $portableSha256
 SYD Colombia $version. Portable y checksum disponibles en GitLab.$(if ($InstallerPath) { ' El instalador y el canal de actualización NSIS también están publicados.' })
 "@
 $releaseApiUrl = "$apiRoot/releases/$([uri]::EscapeDataString($Tag))"
-try {
-  Invoke-RestMethod -Method Delete -Uri $releaseApiUrl -Headers $headers -TimeoutSec 30 | Out-Null
-} catch {
-  $statusCode = 0
-  try { $statusCode = [int]$_.Exception.Response.StatusCode } catch {}
-  if ($statusCode -ne 404) { throw }
-}
-
 $releaseBody = @{
   name = "SYD Colombia $Tag"
   tag_name = $Tag
@@ -108,5 +100,17 @@ $releaseBody = @{
   description = $description
   assets = @{ links = $releaseLinks }
 } | ConvertTo-Json -Depth 8
-Invoke-RestMethod -Method Post -Uri "$apiRoot/releases" -Headers $headers -ContentType 'application/json' -Body $releaseBody -TimeoutSec 60 | Out-Null
+$existingRelease = $null
+try {
+  $existingRelease = Invoke-RestMethod -Method Get -Uri $releaseApiUrl -Headers $headers -TimeoutSec 30
+} catch {
+  $statusCode = 0
+  try { $statusCode = [int]$_.Exception.Response.StatusCode } catch {}
+  if ($statusCode -ne 404) { throw }
+}
+if ($existingRelease) {
+  Invoke-RestMethod -Method Put -Uri $releaseApiUrl -Headers $headers -ContentType 'application/json' -Body $releaseBody -TimeoutSec 60 | Out-Null
+} else {
+  Invoke-RestMethod -Method Post -Uri "$apiRoot/releases" -Headers $headers -ContentType 'application/json' -Body $releaseBody -TimeoutSec 60 | Out-Null
+}
 Write-Output "Release $Tag publicada en GitLab con portable$(if ($InstallerPath) { ', instalador y canal de actualización NSIS' })."

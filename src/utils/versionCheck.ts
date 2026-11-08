@@ -10,12 +10,12 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.10.16';
+export let CURRENT_APP_VERSION = '2.10.17';
 export const CURRENT_RELEASE_DATE = '2026-11-08';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
   {
-    version: '2.10.16',
+    version: '2.10.17',
     releaseDate: '2026-11-08',
     title: 'Nombres de archivos compatibles con GitLab',
     summary:
