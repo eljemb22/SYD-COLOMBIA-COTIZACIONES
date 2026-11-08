@@ -1,7 +1,7 @@
 {
   "name": "syd-colombia",
   "private": true,
-  "version": "2.10.15",
+  "version": "2.10.16",
   "description": "SYD Colombia - Software de Cotizaciones y Licitaciones",
   "author": "SYD Colombia",
   "type": "module",
@@ -110,10 +110,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "SYD Colombia",
-      "artifactName": "SYD Colombia Setup ${version}.${ext}"
+      "artifactName": "SYD-Colombia-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "SYD Colombia Portable ${version}.${ext}"
+      "artifactName": "SYD-Colombia-Portable-${version}.${ext}"
     }
   }
 }

@@ -10,10 +10,23 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.10.15';
-export const CURRENT_RELEASE_DATE = '2026-11-07';
+export let CURRENT_APP_VERSION = '2.10.16';
+export const CURRENT_RELEASE_DATE = '2026-11-08';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.10.16',
+    releaseDate: '2026-11-08',
+    title: 'Nombres de archivos compatibles con GitLab',
+    summary:
+      'Se normalizan los nombres del instalador y portable para que GitLab acepte los paquetes y el canal de actualización NSIS mantenga rutas consistentes.',
+    highlights: [
+      '📦 El instalador y el portable se generan con nombres sin espacios.',
+      '🔄 El feed latest.yml conserva el nombre exacto del instalador publicado.',
+      '🌐 Se facilita la publicación de releases y actualizaciones desde GitLab.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.10.15',
     releaseDate: '2026-11-07',
