@@ -1,6 +1,7 @@
 param(
   [Parameter(Mandatory = $true)][string]$Token,
-  [Parameter(Mandatory = $true)][string]$Tag
+  [Parameter(Mandatory = $true)][string]$Tag,
+  [string]$PortablePath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,11 +12,16 @@ $headers = @{ 'PRIVATE-TOKEN' = $Token }
 $version = $Tag -replace '^v', ''
 if ($version -notmatch '^\d+(\.\d+){1,3}$') { throw "Etiqueta de versión no válida: $Tag" }
 
-$portableName = "SYD Colombia Portable $version.exe"
-$portablePath = Join-Path 'dist-electron' $portableName
-if (-not (Test-Path -LiteralPath $portablePath -PathType Leaf)) {
-  throw "No se encontró el portable que debe publicarse: $portablePath"
+$portableCandidates = @("SYD-Colombia-Portable-$version.exe", "SYD Colombia Portable $version.exe")
+if (-not $PortablePath) {
+  $portablePath = $portableCandidates | ForEach-Object { Join-Path 'dist-electron' $_ } | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+} else {
+  $portablePath = (Resolve-Path -LiteralPath $PortablePath).Path
 }
+if (-not $portablePath -or -not (Test-Path -LiteralPath $portablePath -PathType Leaf)) {
+  throw "No se encontró el portable para la versión $version. Nombres aceptados: $($portableCandidates -join ', ')"
+}
+$portableName = Split-Path -Leaf $portablePath
 
 $checksumPath = "$portablePath.sha256"
 $sha256 = (Get-FileHash -LiteralPath $portablePath -Algorithm SHA256).Hash.ToLowerInvariant()
