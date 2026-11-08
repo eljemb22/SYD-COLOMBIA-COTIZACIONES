@@ -1,5 +1,6 @@
 param(
   [Parameter(Mandatory = $true)][string]$Token,
+  [Parameter(Mandatory = $true)][string]$PackageToken,
   [Parameter(Mandatory = $true)][string]$Tag,
   [string]$PortablePath
 )
@@ -9,6 +10,7 @@ $projectId = '88650289'
 $packageName = 'syd-colombia-portable'
 $apiRoot = "https://gitlab.com/api/v4/projects/$projectId"
 $headers = @{ 'PRIVATE-TOKEN' = $Token }
+$packageHeaders = @{ 'DEPLOY-TOKEN' = $PackageToken }
 $version = $Tag -replace '^v', ''
 if ($version -notmatch '^\d+(\.\d+){1,3}$') { throw "Etiqueta de versión no válida: $Tag" }
 
@@ -57,7 +59,7 @@ $releaseLinks = @()
 foreach ($asset in $assets) {
   $encodedName = [uri]::EscapeDataString($asset.name)
   $packageUrl = "$apiRoot/packages/generic/$packageName/$version/$encodedName"
-  Invoke-WebRequest -Method Put -Uri $packageUrl -Headers $headers -InFile $asset.path -ContentType 'application/octet-stream' -TimeoutSec 300 | Out-Null
+  Invoke-WebRequest -Method Put -Uri $packageUrl -Headers $packageHeaders -InFile $asset.path -ContentType 'application/octet-stream' -TimeoutSec 300 | Out-Null
   $releaseLinks += @{
     name = $asset.name
     url = $packageUrl

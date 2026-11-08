@@ -42,12 +42,16 @@ jobs:
         shell: pwsh
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          GITLAB_PACKAGE_TOKEN: ${{ secrets.GITLAB_PACKAGE_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           if (-not $env:GITLAB_TOKEN) {
             throw 'Configura GITLAB_TOKEN en GitHub → Settings → Secrets and variables → Actions.'
           }
-          .\scripts\publish-gitlab-release.ps1 -Token $env:GITLAB_TOKEN -Tag $env:RELEASE_TAG
+          if (-not $env:GITLAB_PACKAGE_TOKEN) {
+            throw 'Configura GITLAB_PACKAGE_TOKEN en GitHub → Settings → Secrets and variables → Actions.'
+          }
+          .\scripts\publish-gitlab-release.ps1 -Token $env:GITLAB_TOKEN -PackageToken $env:GITLAB_PACKAGE_TOKEN -Tag $env:RELEASE_TAG
 
   mirror-existing-release:
     if: github.event_name == 'workflow_dispatch'
@@ -60,10 +64,14 @@ jobs:
         shell: pwsh
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          GITLAB_PACKAGE_TOKEN: ${{ secrets.GITLAB_PACKAGE_TOKEN }}
           RELEASE_TAG: ${{ inputs.gitlab_tag }}
         run: |
           if (-not $env:GITLAB_TOKEN) {
             throw 'Configura GITLAB_TOKEN en GitHub → Settings → Secrets and variables → Actions.'
+          }
+          if (-not $env:GITLAB_PACKAGE_TOKEN) {
+            throw 'Configura GITLAB_PACKAGE_TOKEN en GitHub → Settings → Secrets and variables → Actions.'
           }
           $tag = $env:RELEASE_TAG
           $version = $tag -replace '^v', ''
@@ -72,4 +80,4 @@ jobs:
           if (-not $asset) { throw "La release $tag de GitHub no contiene el portable." }
           $portablePath = Join-Path $env:RUNNER_TEMP $asset.name
           Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $portablePath -TimeoutSec 600
-          .\scripts\publish-gitlab-release.ps1 -Token $env:GITLAB_TOKEN -Tag $tag -PortablePath $portablePath
+          .\scripts\publish-gitlab-release.ps1 -Token $env:GITLAB_TOKEN -PackageToken $env:GITLAB_PACKAGE_TOKEN -Tag $tag -PortablePath $portablePath

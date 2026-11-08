@@ -27,8 +27,13 @@ El flujo de publicación copia el portable y su checksum a la release de GitLab.
 
 ## Habilitar la publicación automática
 
-En GitLab crea un token con permiso Maintainer y alcance `api`, y guárdalo en GitHub como secreto de Actions llamado `GITLAB_TOKEN` (Settings → Secrets and variables → Actions). El workflow genera la release de GitHub, sube el portable y su checksum al Generic Package Registry de GitLab y crea una release con enlaces de descarga. No pongas el token en el repositorio ni en la app.
+La publicación usa dos secretos del repositorio GitHub:
 
-En GitLab.com, los **Project Access Tokens** requieren un plan Premium o Ultimate. En el plan Free se necesita un Personal Access Token con alcance `api`; por seguridad, conviene crear una cuenta técnica que solo tenga acceso a este proyecto y generar el token allí. GitLab indica que los tokens de proyecto requieren Maintainer u Owner y que su disponibilidad en GitLab.com depende del plan ([tokens de proyecto](https://docs.gitlab.com/user/project/settings/project_access_tokens/)).
+- `GITLAB_TOKEN`: token API para consultar y crear la release. En GitLab.com, los Project Access Tokens requieren Premium o Ultimate; en el plan Free se necesita un Personal Access Token con alcance `api`.
+- `GITLAB_PACKAGE_TOKEN`: Deploy Token de este proyecto con el alcance mínimo `write_package_registry`. Créalo en GitLab → Settings → Repository → Deploy tokens.
+
+Guarda ambos en GitHub → Settings → Secrets and variables → Actions. El workflow usa el token API para gestionar metadatos y el Deploy Token solo para cargar los binarios al registro de paquetes.
+
+GitLab documenta los permisos y encabezados de Deploy Tokens para el registro genérico de paquetes ([Deploy Tokens](https://docs.gitlab.com/user/project/deploy_tokens/), [paquetes genéricos](https://docs.gitlab.com/user/packages/generic_packages/)). Los tokens de proyecto requieren Maintainer u Owner y GitLab.com Premium o Ultimate ([tokens de proyecto](https://docs.gitlab.com/user/project/settings/project_access_tokens/)).
 
 GitLab recibe los archivos mediante el endpoint `PUT /projects/:id/packages/generic/...` ([documentación](https://docs.gitlab.com/user/packages/generic_packages/)).
