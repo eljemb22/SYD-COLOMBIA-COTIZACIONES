@@ -328,27 +328,56 @@ select[class*="bg-["] {
 
 #main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="documentacion"],
 #main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="documentacion"] {
-  animation: nav-folder-open 620ms ease-in-out;
+  animation: nav-folder-open 820ms cubic-bezier(.2,.8,.2,1);
 }
 
+/* Sidebar motions are deliberately visible but brief and tied to hover/focus. */
+#main-sidebar-navigation button[id^="sidebar-tab-"] [data-nav-icon] {
+  transition: transform 180ms ease, filter 180ms ease;
+}
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon] {
+  filter: drop-shadow(0 2px 5px color-mix(in srgb, var(--syd-accent) 55%, transparent));
+}
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="inicio"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="inicio"] { animation-duration: 760ms; }
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="ventas"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="ventas"] { animation-duration: 850ms; }
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="costos"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="costos"] { animation-duration: 850ms; }
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="catalogo"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="catalogo"] { animation-duration: 900ms; }
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="licitaciones"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="licitaciones"] { animation-duration: 820ms; }
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="seguimiento_oc"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="seguimiento_oc"] { animation-duration: 950ms; }
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="gmail_compras"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="gmail_compras"] { animation-duration: 850ms; }
+#main-sidebar-navigation button[id^="sidebar-tab-"]:hover [data-nav-icon="ordenes_venta"],
+#main-sidebar-navigation button[id^="sidebar-tab-"]:focus-visible [data-nav-icon="ordenes_venta"] { animation-duration: 850ms; }
+
 @keyframes nav-dashboard-pulse {
-  50% { transform: scale(1.12); }
+  35% { transform: scale(1.22) rotate(-5deg); }
+  70% { transform: scale(0.96) rotate(3deg); }
 }
 
 @keyframes nav-cart-roll {
-  35% { transform: translateX(1.5px) rotate(5deg); }
-  70% { transform: translateX(-1px) rotate(-3deg); }
+  25% { transform: translateX(3px) rotate(12deg); }
+  55% { transform: translateX(-2px) rotate(-9deg); }
+  80% { transform: translateX(1px) rotate(4deg); }
 }
 
 @keyframes nav-pencil-write {
-  25% { transform: translate(1px, -1px) rotate(8deg); }
-  50% { transform: translate(-0.5px, 0.5px) rotate(-5deg); }
-  75% { transform: translate(1px, -0.5px) rotate(6deg); }
+  20% { transform: translate(2px, -2px) rotate(16deg); }
+  40% { transform: translate(-1px, 1px) rotate(-12deg); }
+  60% { transform: translate(2px, -1px) rotate(13deg); }
+  80% { transform: translate(-1px, 1px) rotate(-7deg); }
 }
 
 @keyframes nav-book-page {
-  40% { transform: perspective(60px) rotateY(-18deg) scale(1.04); }
-  75% { transform: perspective(60px) rotateY(8deg); }
+  35% { transform: perspective(60px) rotateY(-38deg) scale(1.1); }
+  65% { transform: perspective(60px) rotateY(18deg) scale(1.04); }
+  85% { transform: perspective(60px) rotateY(-8deg); }
 }
 
 @keyframes nav-sheet-check {
@@ -357,9 +386,10 @@ select[class*="bg-["] {
 }
 
 @keyframes nav-truck-drive {
-  35% { transform: translateX(2px); }
-  55% { transform: translate(2px, -1px); }
-  75% { transform: translateX(-1px); }
+  25% { transform: translateX(4px); }
+  45% { transform: translate(5px, -2px) rotate(3deg); }
+  65% { transform: translate(2px, 0) rotate(-2deg); }
+  85% { transform: translateX(-1px); }
 }
 
 @keyframes nav-mail-flap {
@@ -2466,3 +2496,78 @@ button[class~="bg-sky-500"], button[class~="bg-sky-600"], button[class~="bg-cyan
 
 /* Conservar el contraste calculado para botones principales tras normalizar textos. */
 button[class~="bg-sky-500"], button[class~="bg-sky-600"], button[class~="bg-cyan-500"], button[class~="bg-cyan-600"], button[class~="bg-blue-500"], button[class~="bg-blue-600"], button[class~="bg-indigo-500"], button[class~="bg-indigo-600"], button[class~="bg-violet-500"], button[class~="bg-violet-600"], button[class~="bg-purple-500"], button[class~="bg-purple-600"], button[class~="bg-teal-500"], button[class~="bg-teal-600"] { color: var(--syd-btn-text) !important; }
+
+/* Global theme compatibility pass. Keep legacy views, modals, and portals in
+   sync with the selected palette; previously some button classes escaped the
+   themed surface/text rules above. */
+:root [class~="bg-[#0a0f1d]"],
+:root [class~="bg-[#0b1329]"],
+:root [class~="bg-[#060b14]"],
+:root [class~="bg-[#070b14]"],
+:root [class~="bg-[#07111e]"],
+:root [class~="bg-[#080d16]"],
+:root [class~="bg-[#080f1a]"],
+:root [class~="bg-slate-950"],
+:root [class~="bg-slate-900"],
+:root [class~="bg-slate-800"] {
+  background-color: var(--syd-card-bg) !important;
+  border-color: var(--syd-border-color) !important;
+}
+
+/* Secondary/dark action buttons must become readable on light palettes. */
+button[class~="bg-slate-950"], button[class~="bg-slate-900"],
+button[class~="bg-slate-800"], button[class~="bg-slate-700"],
+button[class~="bg-gray-900"], button[class~="bg-gray-800"],
+button[class~="bg-[#0a0f1d]"], button[class~="bg-[#0b1329]"],
+button[class~="bg-[#0f1a2e]"], button[class~="bg-[#15243b]"],
+button[class~="bg-[#1a2b42]"], button[class~="bg-[#1e314b]"] {
+  background-color: var(--syd-card-hover) !important;
+  border-color: var(--syd-border-color) !important;
+  color: var(--syd-text-primary) !important;
+}
+
+/* Main actions with legacy palette classes consistently use the configured
+   button color and its computed contrasting foreground. */
+button[class~="bg-indigo-500"], button[class~="bg-indigo-600"],
+button[class~="bg-violet-500"], button[class~="bg-violet-600"],
+button[class~="bg-fuchsia-500"], button[class~="bg-pink-500"],
+button[class~="bg-rose-500"], button[class~="bg-emerald-500"],
+button[class~="bg-green-500"], button[class~="bg-yellow-500"],
+button[class~="bg-orange-500"], button[class~="bg-amber-500"] {
+  background-color: var(--syd-btn-bg) !important;
+  border-color: var(--syd-btn-bg) !important;
+  color: var(--syd-btn-text) !important;
+}
+
+/* Hard-coded gradient actions receive the selected button palette and a
+   contrast-safe text color instead of retaining the default cyan gradient. */
+button[class*="from-sky-"], button[class*="from-blue-"],
+button[class*="from-cyan-"], button[class*="from-indigo-"],
+button[class*="from-violet-"], button[class*="from-purple-"],
+button[class*="from-emerald-"], button[class*="from-green-"],
+button[class*="from-amber-"], button[class*="from-rose-"] {
+  background-image: linear-gradient(135deg, var(--syd-btn-bg), color-mix(in srgb, var(--syd-btn-bg) 78%, #000)) !important;
+  color: var(--syd-btn-text) !important;
+}
+
+/* Light theme: neutral dark text utilities in old views must not remain white. */
+:root[data-is-light="true"] [class~="text-white"],
+:root[data-is-light="true"] [class~="text-slate-50"],
+:root[data-is-light="true"] [class~="text-slate-100"],
+:root[data-is-light="true"] [class~="text-slate-200"],
+:root[data-is-light="true"] [class~="text-gray-50"],
+:root[data-is-light="true"] [class~="text-gray-100"],
+:root[data-is-light="true"] [class~="text-gray-200"] {
+  color: var(--syd-text-primary) !important;
+}
+:root[data-is-light="true"] [class~="text-slate-300"],
+:root[data-is-light="true"] [class~="text-slate-400"],
+:root[data-is-light="true"] [class~="text-slate-500"],
+:root[data-is-light="true"] [class~="text-gray-300"],
+:root[data-is-light="true"] [class~="text-gray-400"],
+:root[data-is-light="true"] [class~="text-gray-500"] {
+  color: var(--syd-text-secondary) !important;
+}
+
+/* Root and app shell were hard-coded dark, overriding every selected theme. */
+:root [class~="bg-[#0a0f1d]"] { background-color: var(--syd-body-bg) !important; }

@@ -10,10 +10,18 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.10.17';
+export let CURRENT_APP_VERSION = '2.11.0';
 export const CURRENT_RELEASE_DATE = '2026-11-08';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.11.0',
+    releaseDate: '2026-11-08',
+    title: 'Temas globales y animaciones renovadas',
+    summary: 'Mejora la coherencia de los temas heredados y renueva las animaciones de la barra lateral.',
+    highlights: ['🎨 Temas coherentes en vistas y modales.', '🔘 Botones legibles en tema claro.', '✨ Iconos laterales con animaciones contextuales.'],
+    isImportant: true,
+  },
   {
     version: '2.10.17',
     releaseDate: '2026-11-08',
