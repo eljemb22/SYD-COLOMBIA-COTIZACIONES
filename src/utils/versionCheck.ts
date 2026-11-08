@@ -10,10 +10,18 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.11.0';
+export let CURRENT_APP_VERSION = '2.11.1';
 export const CURRENT_RELEASE_DATE = '2026-11-08';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.11.1',
+    releaseDate: '2026-11-08',
+    title: 'Corrección de actualización portable',
+    summary: 'El portable reemplaza y vuelve a abrir el ejecutable actualizado de forma más segura, con recuperación automática y registro de diagnóstico.',
+    highlights: ['🔄 Reinicio limpio de la versión portable nueva.', '🛟 Recuperación de la versión previa si el nuevo ejecutable no inicia.', '🧾 Registro de actualización guardado en los datos de la aplicación.'],
+    isImportant: true,
+  },
   {
     version: '2.11.0',
     releaseDate: '2026-11-08',

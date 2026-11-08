@@ -344,9 +344,9 @@ function startPortableUpdate() {
     '-Source', update.stagingPath,
     '-Destination', targetPath,
     '-ExpectedSha256', update.sha256,
-    '-RestartArgsJson', JSON.stringify(process.argv.slice(1)),
     '-ManifestPath', update.manifestPath || path.join(app.getPath('userData'), 'portable-update.json'),
     '-HelperPath', helperPath,
+    '-LogPath', path.join(app.getPath('userData'), 'portable-update.log'),
   ], { detached: true, stdio: 'ignore', windowsHide: true });
   helper.once('error', (error) => {
     try { fs.rmSync(helperPath, { force: true }); } catch (_) {}

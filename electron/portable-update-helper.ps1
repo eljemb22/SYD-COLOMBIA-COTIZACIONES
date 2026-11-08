@@ -3,18 +3,20 @@ param(
   [Parameter(Mandatory = $true)][string]$Source,
   [Parameter(Mandatory = $true)][string]$Destination,
   [Parameter(Mandatory = $true)][string]$ExpectedSha256,
-  [Parameter(Mandatory = $true)][string]$RestartArgsJson,
   [Parameter(Mandatory = $true)][string]$ManifestPath,
-  [Parameter(Mandatory = $true)][string]$HelperPath
+  [Parameter(Mandatory = $true)][string]$HelperPath,
+  [Parameter(Mandatory = $true)][string]$LogPath
 )
 
 $ErrorActionPreference = 'Stop'
 $backupPath = "$Destination.syd-backup-$([Guid]::NewGuid().ToString('N'))"
 $replacementComplete = $false
-$restartArgs = @()
-if ($RestartArgsJson) {
-  $parsedArgs = ConvertFrom-Json -InputObject $RestartArgsJson
-  if ($null -ne $parsedArgs) { $restartArgs = @($parsedArgs) }
+function Write-UpdateLog([string]$Message) {
+  try {
+    $logDirectory = Split-Path -Parent $LogPath
+    if ($logDirectory) { New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null }
+    Add-Content -LiteralPath $LogPath -Value "[$([DateTime]::Now.ToString('o'))] $Message" -Encoding UTF8
+  } catch {}
 }
 
 function Show-UpdateError([string]$Message) {
@@ -30,6 +32,7 @@ function Show-UpdateError([string]$Message) {
 }
 
 try {
+  Write-UpdateLog "Inicio de actualización. Origen='$Source'; destino='$Destination'; pid='$ProcessId'."
   try { Wait-Process -Id $ProcessId -Timeout 120 -ErrorAction Stop } catch {
     if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) {
       throw 'La aplicación no terminó a tiempo para reemplazar el ejecutable.'
@@ -44,6 +47,7 @@ try {
 
   $actualHash = (Get-FileHash -LiteralPath $Source -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($actualHash -ne $ExpectedSha256.ToLowerInvariant()) { throw 'La huella SHA-256 del archivo descargado no coincide.' }
+  Write-UpdateLog 'Descarga y SHA-256 verificados; esperando permisos de reemplazo.'
 
   for ($attempt = 0; $attempt -lt 120; $attempt++) {
     try {
@@ -55,6 +59,7 @@ try {
         throw
       }
       $replacementComplete = $true
+      Write-UpdateLog 'Ejecutable reemplazado; iniciando portable actualizado sin argumentos heredados.'
       break
     } catch {
       if ($attempt -ge 119) { throw }
@@ -63,14 +68,11 @@ try {
   }
 
   if (-not $replacementComplete) { throw 'Windows no permitió reemplazar el ejecutable.' }
-  if ($restartArgs.Count -gt 0) {
-    $newProcess = Start-Process -FilePath $Destination -ArgumentList $restartArgs -WorkingDirectory (Split-Path -Parent $Destination) -PassThru
-  } else {
-    $newProcess = Start-Process -FilePath $Destination -WorkingDirectory (Split-Path -Parent $Destination) -PassThru
-  }
-  Start-Sleep -Seconds 10
+  $newProcess = Start-Process -FilePath $Destination -WorkingDirectory (Split-Path -Parent $Destination) -PassThru
+  Start-Sleep -Seconds 20
   $newProcess.Refresh()
-  if ($newProcess.HasExited) { throw 'La nueva versión se cerró durante el inicio.' }
+  if ($newProcess.HasExited) { throw "La nueva versión se cerró durante el inicio (código $($newProcess.ExitCode))." }
+  Write-UpdateLog "La versión nueva sigue en ejecución (pid=$($newProcess.Id))."
 
   Remove-Item -LiteralPath $backupPath -Force -ErrorAction SilentlyContinue
   Remove-Item -LiteralPath $ManifestPath -Force -ErrorAction SilentlyContinue
@@ -78,23 +80,22 @@ try {
   exit 0
 } catch {
   $failureMessage = $_.Exception.Message
+  Write-UpdateLog "Fallo: $failureMessage"
   if (Test-Path -LiteralPath $backupPath -PathType Leaf) {
     try {
       if (Test-Path -LiteralPath $Destination -PathType Leaf) { Remove-Item -LiteralPath $Destination -Force }
       [IO.File]::Move($backupPath, $Destination)
     } catch {
       $failureMessage = "$failureMessage`r`nNo se pudo restaurar automáticamente la copia anterior: $($_.Exception.Message)"
+      Write-UpdateLog "Error al restaurar respaldo: $($_.Exception.Message)"
     }
   }
   Show-UpdateError $failureMessage
   if (Test-Path -LiteralPath $Destination -PathType Leaf) {
     try {
-      if ($restartArgs.Count -gt 0) {
-        Start-Process -FilePath $Destination -ArgumentList $restartArgs -WorkingDirectory (Split-Path -Parent $Destination) | Out-Null
-      } else {
-        Start-Process -FilePath $Destination -WorkingDirectory (Split-Path -Parent $Destination) | Out-Null
-      }
-    } catch {}
+      Start-Process -FilePath $Destination -WorkingDirectory (Split-Path -Parent $Destination) | Out-Null
+      Write-UpdateLog 'Se intentó abrir de nuevo el portable (versión restaurada si hubo rollback).'
+    } catch { Write-UpdateLog "No se pudo reiniciar el portable: $($_.Exception.Message)" }
   }
   Remove-Item -LiteralPath $HelperPath -Force -ErrorAction SilentlyContinue
   exit 1
