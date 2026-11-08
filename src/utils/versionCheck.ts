@@ -10,10 +10,25 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.10.14';
-export const CURRENT_RELEASE_DATE = '2026-11-06';
+export let CURRENT_APP_VERSION = '2.10.15';
+export const CURRENT_RELEASE_DATE = '2026-11-07';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.10.15',
+    releaseDate: '2026-11-07',
+    title: 'OAuth estable y actualización del instalador desde GitLab',
+    summary:
+      'Se separan los puertos locales del instalador y el portable y se verifica que cada ventana OAuth regrese a la instancia que la inició. GitLab distribuye el instalador y sirve como respaldo de actualización NSIS.',
+    highlights: [
+      '🔐 La autorización de Google vuelve a la instancia correcta aunque se ejecuten portable e instalador al mismo tiempo.',
+      '🔁 El retorno OAuth tolera reintentos HTTP y amplía el tiempo para completar el consentimiento.',
+      '📦 GitLab publica portable, instalador NSIS y los archivos que requiere electron-updater.',
+      '🌐 El instalador intenta GitHub y consulta GitLab como respaldo si la primera fuente falla.',
+      '🛡️ El arranque valida la identidad del servidor local para detectar colisiones de puerto.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.10.14',
     releaseDate: '2026-11-06',

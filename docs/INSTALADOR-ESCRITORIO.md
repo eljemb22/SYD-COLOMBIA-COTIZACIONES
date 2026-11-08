@@ -25,12 +25,20 @@ SYD Colombia (React + Vite + Express empaquetado con Electron).
 ### Google Drive / Gmail
 
 Google solo autoriza OAuth desde orígenes `http://` o `https://`, no desde `app://`.
-Por eso, al pulsar **Conectar con Google**, la app abre una **ventana auxiliar
-interna** en `http://localhost:3000`, obtiene el token y lo devuelve a la ventana
-principal. El usuario no tiene que copiar nada.
+Por eso, al pulsar **Conectar con Google**, la app abre el navegador del sistema
+en una página auxiliar localhost, obtiene el token y lo devuelve a la instancia
+que inició el acceso. El instalador usa el puerto 3000 y el portable el 3001,
+para que se puedan ejecutar simultáneamente sin cruzar la respuesta OAuth.
 
-El origen `http://localhost:3000` debe seguir registrado en Google Cloud Console
-para el Client ID:
+Estos dos orígenes deben estar registrados en **Orígenes de JavaScript autorizados**
+del cliente OAuth tipo Aplicación web en Google Cloud Console:
+
+```
+http://localhost:3000
+http://localhost:3001
+```
+
+El Client ID es:
 
 ```
 56938552577-gtbfqhu57eb56b689kg11e4a7vqv8i1p.apps.googleusercontent.com
@@ -167,8 +175,9 @@ npm run electron:dev
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| "No se pudo iniciar el motor interno" | Puerto 3000 ocupado | Cierra el otro programa o la otra copia de SYD Colombia y reintenta |
-| `origin_mismatch` al conectar Google | Origen no autorizado | Registra `http://localhost:3000` en el cliente OAuth tipo **Aplicación web** |
+| "No se pudo iniciar el motor interno" | Puerto local ocupado o responde otra instancia | Cierra el proceso que ocupa el puerto y vuelve a abrir la app |
+| `origin_mismatch` al conectar Google | Origen no autorizado | Registra `http://localhost:3000` y `http://localhost:3001` en el cliente OAuth tipo **Aplicación web** |
+| HTTP 410 al volver de Google | Se perdió el puente local o la autorización regresó a otra instancia | Actualiza a 2.10.15 o posterior; verifica que ambas direcciones localhost estén autorizadas |
 | No sincroniza entre PCs | Google no conectado en alguna PC | Conectar la misma cuenta de Google en todas |
 | Ventana en blanco | El motor interno no arrancó | Revisar `%APPDATA%\SYD Colombia\server.log` |
 | SmartScreen / "app no reconocida" | Ejecutable sin firma digital | **Más información → Ejecutar de todas formas** |

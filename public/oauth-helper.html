@@ -126,6 +126,7 @@
         var errorBox = document.getElementById('error');
         var retryButton = document.getElementById('reintentar');
         var description = document.getElementById('descripcion');
+        var resultSent = false;
 
         function displayError(message) {
           spinner.classList.add('hidden');
@@ -144,6 +145,8 @@
         }
 
         function sendResult(payload) {
+          if (resultSent) return true;
+          resultSent = true;
           try {
             if (window.sydOAuthHelper && typeof window.sydOAuthHelper.sendResult === 'function') {
               window.sydOAuthHelper.sendResult(payload);
@@ -152,28 +155,37 @@
           } catch (_) {}
 
           if (callbackUrl) {
-            fetch(callbackUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'omit',
-              body: JSON.stringify(payload),
-            })
-              .then(function (response) {
-                if (!response.ok) throw new Error('Respuesta HTTP ' + response.status);
-                if (payload && payload.error) {
-                  displayError(String(payload.error));
-                  return;
-                }
-                spinner.classList.add('hidden');
-                errorBox.classList.add('hidden');
-                retryButton.classList.add('hidden');
-                status.classList.remove('hidden');
-                status.textContent = 'Conexion completada. Ya puedes volver a SYD Colombia.';
-                description.textContent = 'Autenticacion autorizada.';
+            var attempt = 0;
+            function deliver() {
+              attempt += 1;
+              fetch(callbackUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'omit',
+                body: JSON.stringify(payload),
               })
-              .catch(function (error) {
-                displayError('No se pudo devolver la respuesta a SYD Colombia: ' + (error.message || error));
-              });
+                .then(function (response) {
+                  if (!response.ok) throw new Error('Respuesta HTTP ' + response.status);
+                  if (payload && payload.error) {
+                    displayError(String(payload.error));
+                    return;
+                  }
+                  spinner.classList.add('hidden');
+                  errorBox.classList.add('hidden');
+                  retryButton.classList.add('hidden');
+                  status.classList.remove('hidden');
+                  status.textContent = 'Conexion completada. Ya puedes volver a SYD Colombia.';
+                  description.textContent = 'Autenticacion autorizada.';
+                })
+                .catch(function (error) {
+                  if (attempt < 3 && !/HTTP 410/.test(error.message || '')) {
+                    setTimeout(deliver, attempt * 700);
+                    return;
+                  }
+                  displayError('No se pudo devolver la respuesta a SYD Colombia: ' + (error.message || error));
+                });
+            }
+            deliver();
             return true;
           }
 
@@ -202,6 +214,7 @@
         var tokenClient = null;
 
         function requestToken() {
+          resultSent = false;
           errorBox.classList.add('hidden');
           retryButton.classList.add('hidden');
           spinner.classList.remove('hidden');

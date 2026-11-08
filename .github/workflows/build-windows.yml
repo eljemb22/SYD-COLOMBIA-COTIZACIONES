@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       gitlab_tag:
-        description: Etiqueta de GitHub cuya release portable se copiará a GitLab
+        description: Etiqueta de GitHub cuya release portable e instalador se copiarán a GitLab
         required: true
         type: string
 
@@ -38,7 +38,7 @@ jobs:
           ELECTRON_PUBLISH: always
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish portable update mirror to GitLab
+      - name: Publish portable, installer and update feed to GitLab
         shell: pwsh
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
@@ -60,7 +60,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download portable from GitHub and publish it to GitLab
+      - name: Download release assets from GitHub and publish them to GitLab
         shell: pwsh
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
@@ -80,4 +80,15 @@ jobs:
           if (-not $asset) { throw "La release $tag de GitHub no contiene el portable." }
           $portablePath = Join-Path $env:RUNNER_TEMP $asset.name
           Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $portablePath -TimeoutSec 600
-          .\scripts\publish-gitlab-release.ps1 -Token $env:GITLAB_TOKEN -PackageToken $env:GITLAB_PACKAGE_TOKEN -Tag $tag -PortablePath $portablePath
+          $installer = $release.assets | Where-Object { $_.name -in @("SYD Colombia Setup $version.exe", "SYD-Colombia-Setup-$version.exe") } | Select-Object -First 1
+          $latestYml = $release.assets | Where-Object { $_.name -eq 'latest.yml' } | Select-Object -First 1
+          if (-not $installer -or -not $latestYml) { throw "La release $tag no contiene el instalador NSIS y latest.yml requeridos para actualizar desde GitLab." }
+          $blockmap = $release.assets | Where-Object { $_.name -eq "$($installer.name).blockmap" } | Select-Object -First 1
+          if (-not $blockmap) { throw "La release $tag no contiene $($installer.name).blockmap." }
+          $installerPath = Join-Path $env:RUNNER_TEMP $installer.name
+          $latestYmlPath = Join-Path $env:RUNNER_TEMP $latestYml.name
+          $blockmapPath = Join-Path $env:RUNNER_TEMP $blockmap.name
+          Invoke-WebRequest -Uri $installer.browser_download_url -OutFile $installerPath -TimeoutSec 600
+          Invoke-WebRequest -Uri $latestYml.browser_download_url -OutFile $latestYmlPath -TimeoutSec 60
+          Invoke-WebRequest -Uri $blockmap.browser_download_url -OutFile $blockmapPath -TimeoutSec 60
+          .\scripts\publish-gitlab-release.ps1 -Token $env:GITLAB_TOKEN -PackageToken $env:GITLAB_PACKAGE_TOKEN -Tag $tag -PortablePath $portablePath -InstallerPath $installerPath -LatestYmlPath $latestYmlPath -BlockmapPath $blockmapPath

@@ -21,7 +21,11 @@ const { pipeline } = require('stream/promises');
 
 const { validateIpcPayload } = require('./security.cjs');
 
-const APP_PORT = parseInt(process.env.SYD_PORT || '3000', 10);
+// El instalador y el portable pueden ejecutarse simultáneamente. Deben usar
+// puertos distintos para que el OAuth localhost vuelva al proceso correcto.
+const IS_PORTABLE_ENV = process.platform === 'win32' && Boolean(process.env.PORTABLE_EXECUTABLE_DIR);
+const APP_PORT = parseInt(process.env.SYD_PORT || (IS_PORTABLE_ENV ? '3001' : '3000'), 10);
+const SERVER_INSTANCE_TOKEN = crypto.randomBytes(24).toString('hex');
 // Canal interno invisible: 127.0.0.1 evita resoluciones IPv6 ambiguas.
 const INTERNAL_URL = `http://127.0.0.1:${APP_PORT}`;
 // Origen OAuth: debe coincidir exactamente con el autorizado en Google Cloud.
@@ -32,12 +36,21 @@ const APP_ORIGIN = `${APP_SCHEME}://${APP_HOST}`;
 const IS_PACKAGED = app.isPackaged;
 const IS_PORTABLE = process.platform === 'win32' && Boolean(process.env.PORTABLE_EXECUTABLE_DIR);
 const GITHUB_LATEST_RELEASE_API = 'https://api.github.com/repos/eljemb22/SYD-COLOMBIA-COTIZACIONES/releases/latest';
+const GITHUB_INSTALLER_FEED = {
+  provider: 'github', owner: 'eljemb22', repo: 'SYD-COLOMBIA-COTIZACIONES', releaseType: 'release',
+};
+const GITLAB_INSTALLER_FEED = {
+  provider: 'generic',
+  url: 'https://gitlab.com/api/v4/projects/88650289/packages/generic/syd-colombia-installer-update/latest/',
+};
 const DEFAULT_UPDATE_CONFIG = { gitlabProjectPath: '' };
 
 // electron-updater es opcional: si no esta disponible (entorno dev), se omite.
 let autoUpdater = null;
 let hasDownloadedUpdate = false;
 let updateCheckPromise = null;
+let updaterCheckInProgress = false;
+let activeInstallerUpdateSource = 'github';
 let cachedPortableRelease = null;
 let cachedPortableReleaseCheckedAt = 0;
 let pendingPortableUpdate = null;
@@ -351,9 +364,29 @@ function startPortableUpdate() {
 function checkPackagedUpdate() {
   if (!autoUpdater) return Promise.reject(new Error('El actualizador NSIS no está disponible.'));
   if (updateCheckPromise) return updateCheckPromise;
-  updateCheckPromise = autoUpdater.checkForUpdates();
+  updaterCheckInProgress = true;
+  updateCheckPromise = (async () => {
+    try {
+      if (activeInstallerUpdateSource !== 'github') {
+        autoUpdater.setFeedURL(GITHUB_INSTALLER_FEED);
+        activeInstallerUpdateSource = 'github';
+      }
+      return await autoUpdater.checkForUpdates();
+    } catch (githubError) {
+      try {
+        autoUpdater.setFeedURL(GITLAB_INSTALLER_FEED);
+        activeInstallerUpdateSource = 'gitlab';
+        return await autoUpdater.checkForUpdates();
+      } catch (gitlabError) {
+        const githubMessage = githubError && githubError.message ? githubError.message : String(githubError);
+        const gitlabMessage = gitlabError && gitlabError.message ? gitlabError.message : String(gitlabError);
+        throw new Error(`Falló la actualización desde GitHub (${githubMessage}) y GitLab (${gitlabMessage}).`);
+      }
+    }
+  })();
   return updateCheckPromise.finally(() => {
     updateCheckPromise = null;
+    updaterCheckInProgress = false;
   });
 }
 
@@ -445,6 +478,7 @@ function startServer() {
   process.env.NODE_ENV = 'production';
   process.env.DEFAULT_APP_PORT = String(APP_PORT);
   process.env.SYD_APP_ROOT = resolveAppRoot();
+  process.env.SYD_SERVER_INSTANCE_TOKEN = SERVER_INSTANCE_TOKEN;
 
   try {
     require(serverScript);
@@ -469,9 +503,9 @@ function waitForServer(retries = 60, onReady) {
       return;
     }
     setTimeout(() => {
-      const req = http.get(`${INTERNAL_URL}/api/version`, (res) => {
+      const req = http.get(`${INTERNAL_URL}/api/instance-check/${SERVER_INSTANCE_TOKEN}`, (res) => {
         res.resume();
-        if (res.statusCode && res.statusCode < 500) {
+        if (res.statusCode === 204) {
           serverReady = true;
           onReady();
         } else {
@@ -602,6 +636,9 @@ function setupAutoUpdater() {
       sendUpdateEvent({ type: 'downloaded', version: info && info.version });
     });
     autoUpdater.on('error', (err) => {
+      // El error individual puede ser solo el fallo de GitHub antes de que
+      // checkPackagedUpdate pruebe GitLab; se informa el resultado combinado.
+      if (updaterCheckInProgress) return;
       const msg = err && err.message ? err.message : String(err);
       // 404 = no hay releases publicadas; no es un error real para el usuario.
       if (msg.includes('404')) {
@@ -709,6 +746,7 @@ let oauthResolveRef = null;
 let oauthRejectRef = null;
 const externalOAuthCallbacks = new Map();
 globalThis.__sydOAuthCallbacks = externalOAuthCallbacks;
+globalThis.__sydOAuthCompletedNonces = new Map();
 
 function startExternalBrowserOAuth(payload) {
   const { clientId = '', scopes = '' } = payload;
@@ -728,11 +766,13 @@ function startExternalBrowserOAuth(payload) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       externalOAuthCallbacks.delete(nonce);
-      reject(new Error('No se recibió la respuesta de Google en 5 minutos. Revisa el navegador e intenta de nuevo.'));
-    }, 5 * 60 * 1000);
+      console.warn('[OAuth] La autorización no regresó antes del límite de 10 minutos.');
+      reject(new Error('No se recibió la respuesta de Google en 10 minutos. Revisa el navegador e intenta de nuevo.'));
+    }, 10 * 60 * 1000);
 
     externalOAuthCallbacks.set(nonce, (result) => {
       clearTimeout(timeout);
+      console.info('[OAuth] La respuesta del navegador volvió a la instancia que inició la solicitud.');
       if (result && result.error) {
         reject(new Error(String(result.error)));
         return;

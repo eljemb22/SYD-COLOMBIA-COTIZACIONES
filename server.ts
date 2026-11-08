@@ -17,7 +17,7 @@ async function startServer() {
     10
   );
   const SERVER_BOOT_TIME = Date.now();
-  const APP_VERSION = '2.10.2';
+  const APP_VERSION = '2.10.15';
 
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -31,6 +31,14 @@ async function startServer() {
 
   app.use(express.json({ limit: '25mb' }));
   app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
+  // Electron verifica que el puerto local pertenece a esta instancia y no a
+  // otra copia de SYD Colombia que ya esté ejecutándose.
+  app.get('/api/instance-check/:token', (req, res) => {
+    const expectedToken = process.env.SYD_SERVER_INSTANCE_TOKEN || '';
+    if (expectedToken && req.params.token === expectedToken) return res.sendStatus(204);
+    return res.sendStatus(404);
+  });
 
   // Puente de un solo uso para devolver el resultado OAuth del navegador externo
   // al proceso principal de Electron. El nonce aleatorio vence tras cada intento.
@@ -48,8 +56,21 @@ async function startServer() {
     const callbacks = (globalThis as any).__sydOAuthCallbacks as
       | Map<string, (result: any) => void>
       | undefined;
+    const completed = (globalThis as any).__sydOAuthCompletedNonces as
+      | Map<string, number>
+      | undefined;
+    const now = Date.now();
+    if (completed) {
+      for (const [usedNonce, expiresAt] of completed) {
+        if (expiresAt <= now) completed.delete(usedNonce);
+      }
+      // El navegador puede repetir el POST si se perdió la respuesta HTTP.
+      // Contestar éxito evita que ese reintento legítimo muestre un falso 410.
+      if (completed.has(nonce)) return res.sendStatus(204);
+    }
     const deliver = callbacks?.get(nonce);
     if (!callbacks || !deliver) {
+      console.warn('[OAuth] Callback sin solicitud activa (expirada o de otra instancia).');
       return res.status(410).send('La solicitud OAuth ya venció o fue utilizada.');
     }
 
@@ -59,6 +80,7 @@ async function startServer() {
     }
 
     callbacks.delete(nonce);
+    completed?.set(nonce, now + 2 * 60 * 1000);
     try {
       deliver(result);
       return res.sendStatus(204);
