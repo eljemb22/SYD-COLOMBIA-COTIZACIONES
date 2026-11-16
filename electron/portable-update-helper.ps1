@@ -10,6 +10,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $backupPath = "$Destination.syd-backup-$([Guid]::NewGuid().ToString('N'))"
+$confirmationPath = "$Destination.syd-update-confirm-$([Guid]::NewGuid().ToString('N')).json"
 $replacementComplete = $false
 function Write-UpdateLog([string]$Message) {
   try {
@@ -68,13 +69,26 @@ try {
   }
 
   if (-not $replacementComplete) { throw 'Windows no permitió reemplazar el ejecutable.' }
-  $newProcess = Start-Process -FilePath $Destination -WorkingDirectory (Split-Path -Parent $Destination) -PassThru
-  Start-Sleep -Seconds 20
-  $newProcess.Refresh()
-  if ($newProcess.HasExited) { throw "La nueva versión se cerró durante el inicio (código $($newProcess.ExitCode))." }
-  Write-UpdateLog "La versión nueva sigue en ejecución (pid=$($newProcess.Id))."
+  # Un portable de Electron puede cerrar el proceso cargador después de extraer
+  # la app real. Por eso no se usa HasExited: la nueva app confirma su propio
+  # arranque escribiendo un archivo de un solo uso junto al ejecutable.
+  Start-Process -FilePath $Destination -WorkingDirectory (Split-Path -Parent $Destination) -ArgumentList "--syd-portable-update-confirmation=`"$confirmationPath`"" | Out-Null
+  $confirmed = $false
+  for ($attempt = 0; $attempt -lt 120; $attempt++) {
+    if (Test-Path -LiteralPath $confirmationPath -PathType Leaf) {
+      $confirmation = Get-Content -LiteralPath $confirmationPath -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue
+      if ($confirmation -and $confirmation.confirmed -eq $true) {
+        $confirmed = $true
+        break
+      }
+    }
+    Start-Sleep -Milliseconds 500
+  }
+  if (-not $confirmed) { throw 'La versión actualizada no confirmó su inicio a tiempo.' }
+  Write-UpdateLog 'La versión nueva confirmó su inicio correctamente.'
 
   Remove-Item -LiteralPath $backupPath -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $confirmationPath -Force -ErrorAction SilentlyContinue
   Remove-Item -LiteralPath $ManifestPath -Force -ErrorAction SilentlyContinue
   Remove-Item -LiteralPath $HelperPath -Force -ErrorAction SilentlyContinue
   exit 0
@@ -98,5 +112,6 @@ try {
     } catch { Write-UpdateLog "No se pudo reiniciar el portable: $($_.Exception.Message)" }
   }
   Remove-Item -LiteralPath $HelperPath -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $confirmationPath -Force -ErrorAction SilentlyContinue
   exit 1
 }

@@ -10,10 +10,22 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.11.2';
+export let CURRENT_APP_VERSION = '2.11.3';
 export const CURRENT_RELEASE_DATE = '2026-11-16';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.11.3',
+    releaseDate: '2026-11-16',
+    title: 'Actualización portable en el mismo ejecutable',
+    summary: 'El portable reemplaza el archivo que abriste y solo elimina el respaldo cuando la nueva versión confirma que inició correctamente.',
+    highlights: [
+      '🔁 La actualización conserva la misma ruta y el mismo nombre del portable.',
+      '✅ La versión nueva confirma su inicio antes de finalizar el reemplazo.',
+      '🛟 Si no logra iniciar, se restaura el ejecutable anterior automáticamente.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.11.2',
     releaseDate: '2026-11-16',

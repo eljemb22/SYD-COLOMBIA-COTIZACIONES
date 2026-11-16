@@ -45,6 +45,21 @@ const GITLAB_INSTALLER_FEED = {
 };
 const DEFAULT_UPDATE_CONFIG = { gitlabProjectPath: '' };
 
+function confirmPortableUpdatedLaunch() {
+  if (!IS_PORTABLE) return;
+  const argument = process.argv.find((value) => String(value).startsWith('--syd-portable-update-confirmation='));
+  if (!argument) return;
+  const confirmationPath = String(argument).slice('--syd-portable-update-confirmation='.length).replace(/^"|"$/g, '');
+  const portableDir = path.resolve(process.env.PORTABLE_EXECUTABLE_DIR || '');
+  const resolvedPath = path.resolve(confirmationPath);
+  if (!portableDir || path.dirname(resolvedPath).toLowerCase() !== portableDir.toLowerCase() || !/^\.syd-update-confirm-[a-f\d]+\.json$/i.test(path.basename(resolvedPath))) {
+    return;
+  }
+  try {
+    fs.writeFileSync(resolvedPath, JSON.stringify({ confirmed: true, pid: process.pid, startedAt: new Date().toISOString() }), { flag: 'wx' });
+  } catch (_) {}
+}
+
 // electron-updater es opcional: si no esta disponible (entorno dev), se omite.
 let autoUpdater = null;
 let hasDownloadedUpdate = false;
@@ -1031,6 +1046,7 @@ ipcMain.handle('syd:recovery:restart', (_event, details = {}) => {
 app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
     setupLogging();
+    confirmPortableUpdatedLaunch();
     registerAppProtocol();
     startServer();
     if (serverStarted) {
