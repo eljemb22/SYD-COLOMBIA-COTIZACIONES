@@ -1748,6 +1748,7 @@ export default function App() {
               tenderClients={tenderClients}
               onUpdateTenderClient={handleUpdateTenderClient}
               equipments={equipments}
+              documents={documents}
               currentUser={currentUser}
               onNavigateToTab={(tab) => setActiveTab(tab as ActiveTab)}
               customLetterheadUrl={customLetterheadUrl}

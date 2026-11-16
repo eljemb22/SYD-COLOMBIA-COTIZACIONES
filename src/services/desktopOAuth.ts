@@ -29,6 +29,8 @@ export interface DesktopOAuthBridge {
     scopes: string;
     externalBrowser?: boolean;
   }) => Promise<DesktopOAuthTokenResponse | null>;
+  /** Recarga la ventana de escritorio tras un error de interfaz. */
+  recoverFromError?: (details?: { message?: string }) => Promise<{ ok: boolean; reason?: string }>;
 }
 
 declare global {

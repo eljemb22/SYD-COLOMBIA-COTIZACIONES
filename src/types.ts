@@ -789,10 +789,29 @@ export interface SalesOrderRecord {
   attachedInvoiceFile?: any;
   attachedDeliveryReceipt?: any;
   notes?: string;
+  dispatchSupportNotices?: DispatchSupportNoticeRecord[];
   renewedFromSalesOrderNumber?: string;
   renewedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DispatchSupportNoticeRecord {
+  id: string;
+  lotReference: string;
+  milestonePercent?: number;
+  sentAt: string;
+  recipients: string[];
+  gmailMessageId: string;
+  mode: 'technical_visit' | 'documents_only';
+  items: Array<{
+    salesOrderItemId: string;
+    name: string;
+    quantity: number;
+    serialNumbers: string[];
+    requiresTechnicalVisit: boolean;
+    documentLinks: Array<{ label: string; url: string }>;
+  }>;
 }
 
 export type SalesInvoicePaymentStatus = 'Pendiente Radicación' | 'Radicada en Cliente' | 'Pagada' | 'Vencida';

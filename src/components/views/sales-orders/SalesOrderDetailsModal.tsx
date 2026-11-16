@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { resolveItemManufacturerBrand } from '../../../utils/equipmentBrandResolver';
 import {
@@ -19,9 +19,11 @@ import {
   ExternalLink,
   ShoppingCart,
   Plus,
+  Mail,
 } from 'lucide-react';
-import { SalesOrderRecord, SalesInvoiceRecord, SalesOrderStatus, AuthUser, OCTrackingContract } from '../../../types';
+import { SalesOrderRecord, SalesInvoiceRecord, SalesOrderStatus, AuthUser, OCTrackingContract, TechnicalDocument, DispatchSupportNoticeRecord } from '../../../types';
 import { formatCOP, isValidOCNumber } from '../../../utils/formatters';
+import { DispatchSupportNoticeModal } from './DispatchSupportNoticeModal';
 
 interface SalesOrderDetailsModalProps {
   isOpen: boolean;
@@ -37,6 +39,8 @@ interface SalesOrderDetailsModalProps {
   onNavigateToOC?: () => void;
   currentUser?: AuthUser | null;
   contracts?: OCTrackingContract[];
+  documents?: TechnicalDocument[];
+  onSaveDispatchNotice?: (notice: DispatchSupportNoticeRecord) => Promise<void>;
 }
 
 export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
@@ -53,7 +57,10 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
   onNavigateToOC,
   currentUser,
   contracts = [],
+  documents = [],
+  onSaveDispatchNotice,
 }) => {
+  const [dispatchNoticeOpen, setDispatchNoticeOpen] = useState(false);
   if (!isOpen || !order) return null;
 
   const getStatusBadge = (st: SalesOrderStatus) => {
@@ -131,6 +138,9 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setDispatchNoticeOpen(true)} className="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center gap-2" title="Preparar un aviso técnico consolidado por lote">
+              <Mail className="w-4 h-4" /> Aviso de despacho
+            </button>
             <button
               onClick={() => onPrint(order)}
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-slate-700 transition-colors"
@@ -528,6 +538,9 @@ export const SalesOrderDetailsModal: React.FC<SalesOrderDetailsModalProps> = ({
           </button>
         </div>
       </div>
+      {dispatchNoticeOpen && onSaveDispatchNotice && (
+        <DispatchSupportNoticeModal order={order} contracts={contracts} documents={documents} onClose={() => setDispatchNoticeOpen(false)} onSent={onSaveDispatchNotice} />
+      )}
     </div>,
     document.body
   );

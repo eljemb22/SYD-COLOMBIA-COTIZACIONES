@@ -163,7 +163,19 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
       this.recoveryAttempts = 0;
     }
 
-    // Reset error boundary state so React remounts the children with a fresh clean key
+    // Reinicia el renderer completo para liberar estados de React o memoria que
+    // pudieron quedar inconsistentes. En web se usa la recarga normal.
+    const desktop = typeof window !== 'undefined' ? window.sydDesktop : undefined;
+    if (desktop?.recoverFromError) {
+      desktop.recoverFromError({ message: this.state.errorMessage }).catch(() => window.location.reload());
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+      return;
+    }
+
+    // Fallback para entornos sin ventana: remonta los hijos con una clave nueva.
     this.setState((prev) => ({
       hasError: false,
       errorMessage: '',

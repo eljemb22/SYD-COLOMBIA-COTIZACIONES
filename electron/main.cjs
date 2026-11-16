@@ -425,6 +425,43 @@ protocol.registerSchemesAsPrivileged([
 let mainWindow = null;
 let serverStarted = false;
 let serverReady = false;
+const rendererRecoveryAttempts = [];
+
+function canRecoverRenderer() {
+  const now = Date.now();
+  while (rendererRecoveryAttempts.length && now - rendererRecoveryAttempts[0] > 2 * 60 * 1000) {
+    rendererRecoveryAttempts.shift();
+  }
+  if (rendererRecoveryAttempts.length >= 3) return false;
+  rendererRecoveryAttempts.push(now);
+  return true;
+}
+
+function logRecoveryIncident(source, details = {}) {
+  try {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      source,
+      reason: String(details.reason || details.message || 'Error sin detalle').slice(0, 500),
+    };
+    fs.appendFileSync(path.join(app.getPath('userData'), 'recovery.log'), `${JSON.stringify(entry)}\n`);
+  } catch (_) {}
+}
+
+function recoverRenderer(source, details = {}) {
+  logRecoveryIncident(source, details);
+  if (!mainWindow || mainWindow.isDestroyed()) return { ok: false, reason: 'window-unavailable' };
+  if (!canRecoverRenderer()) {
+    dialog.showErrorBox('SYD Colombia', 'La aplicación detectó varios errores consecutivos y detuvo los reinicios automáticos para evitar un ciclo. Cierra y vuelve a abrir la aplicación.');
+    return { ok: false, reason: 'recovery-limit' };
+  }
+  setTimeout(() => {
+    try {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.reloadIgnoringCache();
+    } catch (_) {}
+  }, 250);
+  return { ok: true };
+}
 
 /** Raiz de la aplicacion (contiene dist/ y public/) */
 function resolveAppRoot() {
@@ -728,6 +765,15 @@ function createWindow() {
     mainWindow = null;
   });
 
+  // Un fallo del proceso que pinta la interfaz o un bloqueo no deben cerrar
+  // la aplicación. Se registra el incidente y se recarga una ventana limpia.
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    recoverRenderer('render-process-gone', details || {});
+  });
+  mainWindow.on('unresponsive', () => {
+    recoverRenderer('window-unresponsive', { reason: 'La interfaz dejó de responder.' });
+  });
+
   mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
 
   // Verificar actualizaciones del binario en segundo plano (solo en builds empaquetados).
@@ -975,6 +1021,11 @@ ipcMain.handle('syd:update:install', (_event, payload) => {
   } catch (e) {
     return { ok: false, reason: e && e.message ? e.message : String(e) };
   }
+});
+
+ipcMain.handle('syd:recovery:restart', (_event, details = {}) => {
+  const message = details && typeof details.message === 'string' ? details.message : '';
+  return recoverRenderer('renderer-error-boundary', { message });
 });
 
 app.whenReady().then(() => {

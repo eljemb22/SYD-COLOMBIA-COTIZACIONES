@@ -36,4 +36,5 @@ contextBridge.exposeInMainWorld('sydDesktop', {
   checkForUpdates: () => ipcRenderer.invoke('syd:update:check'),
   downloadUpdate: () => ipcRenderer.invoke('syd:update:download'),
   quitAndInstall: () => ipcRenderer.invoke('syd:update:install'),
+  recoverFromError: (details) => ipcRenderer.invoke('syd:recovery:restart', details || {}),
 });

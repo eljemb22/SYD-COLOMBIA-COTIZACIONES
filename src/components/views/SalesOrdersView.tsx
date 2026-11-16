@@ -58,6 +58,8 @@ import {
   SalesInvoicePaymentStatus,
   SavedQuote,
   AuthUser,
+  TechnicalDocument,
+  DispatchSupportNoticeRecord,
 } from '../../types';
 import {
   markSalesOrderAsDeleted,
@@ -313,6 +315,7 @@ interface SalesOrdersViewProps {
   onClearInitialQuoteToConvert?: () => void;
   initialTenderToConvert?: TenderClientProject | null;
   onClearInitialTenderToConvert?: () => void;
+  documents?: TechnicalDocument[];
 }
 
 export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
@@ -334,6 +337,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
   onClearInitialQuoteToConvert,
   initialTenderToConvert,
   onClearInitialTenderToConvert,
+  documents = [],
 }) => {
   // Helper to compute invoicing breakdown for any sales order (initialized at top to eliminate any TDZ ReferenceError)
   const getOrderInvoicingData = (order: SalesOrderRecord) => computeOrderInvoicingData(order, salesInvoices);
@@ -3527,6 +3531,16 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
         onNavigateToOC={() => onNavigateToTab?.('seguimiento_oc')}
         currentUser={currentUser}
         contracts={contracts}
+        documents={documents}
+        onSaveDispatchNotice={async (notice: DispatchSupportNoticeRecord) => {
+          if (!viewingOrder) return;
+          const updatedOrder = { ...viewingOrder, dispatchSupportNotices: [...(viewingOrder.dispatchSupportNotices || []), notice], updatedAt: new Date().toISOString() };
+          const updatedOrders = deduplicatedSalesOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o);
+          onUpdateSalesOrders(updatedOrders);
+          setViewingOrder(updatedOrder);
+          try { await saveSingleSalesOrderToFirestore(updatedOrder); }
+          catch (e) { console.warn('Aviso enviado; no se pudo sincronizar el historial en la nube:', e); }
+        }}
       />
 
       <SalesOrderPrintModal

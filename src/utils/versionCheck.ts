@@ -10,10 +10,22 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.11.1';
-export const CURRENT_RELEASE_DATE = '2026-11-08';
+export let CURRENT_APP_VERSION = '2.11.2';
+export const CURRENT_RELEASE_DATE = '2026-11-16';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.11.2',
+    releaseDate: '2026-11-16',
+    title: 'Avisos técnicos por despacho y recuperación automática',
+    summary: 'Incorpora avisos consolidados a soporte por lote de despacho y recuperación segura de la aplicación ante errores de interfaz.',
+    highlights: [
+      '✉️ Un correo técnico por lote con equipos, seriales y enlaces a documentos.',
+      '📋 Validación de serial, DIAN, ficha técnica y manual antes del envío.',
+      '🛟 Detección de fallos, saneamiento local y reinicio controlado de la aplicación.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.11.1',
     releaseDate: '2026-11-08',
