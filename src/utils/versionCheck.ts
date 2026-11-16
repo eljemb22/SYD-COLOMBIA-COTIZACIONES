@@ -10,10 +10,22 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.11.3';
+export let CURRENT_APP_VERSION = '2.11.4';
 export const CURRENT_RELEASE_DATE = '2026-11-16';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.11.4',
+    releaseDate: '2026-11-16',
+    title: 'Publicación completa de actualizaciones',
+    summary: 'Cada versión se publica en una sola release con portable, instalador y archivos de actualización verificados.',
+    highlights: [
+      '📦 Una única release por versión, sin publicaciones duplicadas.',
+      '✅ El portable, instalador y feed de actualización se cargan juntos.',
+      '🔗 Se valida la existencia de todos los archivos antes de publicar.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.11.3',
     releaseDate: '2026-11-16',
