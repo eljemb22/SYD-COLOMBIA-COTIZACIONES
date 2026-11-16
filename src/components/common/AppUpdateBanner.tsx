@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, ArrowRight, Zap, RefreshCw, X, ShieldCheck, DownloadCloud } from 'lucide-react';
 import {
   CURRENT_APP_VERSION,
@@ -25,61 +25,16 @@ export const AppUpdateBanner: React.FC<AppUpdateBannerProps> = ({ onOpenDetails 
   const [isDismissed, setIsDismissed] = useState(false);
 
   const desktop = (window as any).sydDesktop;
-  const ipcOffRef = useRef<(() => void) | null>(null);
-
-  // Clean up IPC listener on unmount
   useEffect(() => {
-    // La app de escritorio usa DesktopUpdateBanner, conectado a electron-updater.
-    // Este banner queda reservado para actualizaciones de la versión web.
+    // La aplicación de escritorio tiene un único flujo: DesktopUpdateBanner.
+    // Este componente es solo para la versión web y nunca debe reiniciar un .exe.
     if (desktop) return;
 
-    return () => {
-      if (ipcOffRef.current) {
-        ipcOffRef.current();
-        ipcOffRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
     // Initial active release check
     const info = getActiveReleaseInfo();
     setReleaseInfo(info);
     if (info && info.version) {
       setTargetVersion(info.version);
-    }
-
-    // If desktop .exe, register IPC listener for real update events
-    if (desktop && desktop.onUpdateEvent) {
-      ipcOffRef.current = desktop.onUpdateEvent((payload: any) => {
-        if (!payload || !payload.type) return;
-        switch (payload.type) {
-          case 'available':
-            setUpdateAvailable(true);
-            setTargetVersion(payload.version || targetVersion);
-            setReleaseInfo((prev) => prev || { version: payload.version || '', title: 'Nueva Actualización SYD Colombia', summary: 'Nuevas mejoras y optimizaciones disponibles.', highlights: ['Mejoras de rendimiento y sincronización.'], releaseDate: new Date().toISOString().split('T')[0], isImportant: true });
-            setIsInstalling(false);
-            break;
-          case 'progress':
-            setInstallProgress(Math.round(payload.percent || 0));
-            setInstallStatusText(`Descargando actualización... ${Math.round(payload.percent || 0)}%`);
-            break;
-          case 'downloaded':
-            setInstallProgress(100);
-            setInstallStatusText('Actualización descargada. Reiniciando e instalando...');
-            setUpdateAvailable(false);
-            setTimeout(() => {
-              desktop.quitAndInstall();
-            }, 1000);
-            break;
-          case 'error':
-            if (payload.message && payload.message.includes('404')) return;
-            setInstallStatusText('Error al verificar actualización.');
-            break;
-          default:
-            break;
-        }
-      });
     }
 
     // Auto-check online on mount

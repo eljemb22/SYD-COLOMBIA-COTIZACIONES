@@ -10,10 +10,22 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.11.4';
+export let CURRENT_APP_VERSION = '2.11.5';
 export const CURRENT_RELEASE_DATE = '2026-11-16';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.11.5',
+    releaseDate: '2026-11-16',
+    title: 'Reinicio portable controlado',
+    summary: 'Se elimina el reinicio automático duplicado y se limpia cualquier actualización ya aplicada al iniciar.',
+    highlights: [
+      '🔘 La actualización solo se aplica al pulsar el botón de reinicio.',
+      '🧹 La aplicación nueva elimina de forma segura los archivos temporales pendientes.',
+      '🛡️ Se impide iniciar dos actualizaciones al mismo tiempo.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.11.4',
     releaseDate: '2026-11-16',

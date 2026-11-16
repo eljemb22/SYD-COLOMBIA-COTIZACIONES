@@ -70,6 +70,7 @@ let cachedPortableRelease = null;
 let cachedPortableReleaseCheckedAt = 0;
 let pendingPortableUpdate = null;
 let portableDownloadPromise = null;
+let portableUpdateStarting = false;
 try {
   autoUpdater = require('electron-updater').autoUpdater;
 } catch (_) {
@@ -243,6 +244,22 @@ function readPendingPortableUpdate() {
   }
 }
 
+function clearCompletedPortableUpdate() {
+  if (!IS_PORTABLE) return;
+  try {
+    const manifestPath = path.join(app.getPath('userData'), 'portable-update.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const targetPath = getPortableTargetPath();
+    // El ejecutable nuevo ya inició: no debe conservar una actualización pendiente
+    // que pueda volver a solicitar un reinicio al abrir la aplicación.
+    if (manifest.targetPath === targetPath && compareVersions(app.getVersion(), manifest.version) >= 0) {
+      if (manifest.stagingPath) fs.rmSync(manifest.stagingPath, { force: true });
+      fs.rmSync(manifestPath, { force: true });
+      pendingPortableUpdate = null;
+    }
+  } catch (_) {}
+}
+
 async function downloadPortableUpdate() {
   if (portableDownloadPromise) return portableDownloadPromise;
   portableDownloadPromise = (async () => {
@@ -341,6 +358,7 @@ async function downloadPortableUpdate() {
 }
 
 function startPortableUpdate() {
+  if (portableUpdateStarting) return { ok: true, restarting: true };
   const update = pendingPortableUpdate || readPendingPortableUpdate();
   if (!update) throw new Error('Primero descarga la actualización portable.');
   const targetPath = getPortableTargetPath();
@@ -371,6 +389,7 @@ function startPortableUpdate() {
     try { fs.rmSync(helperPath, { force: true }); } catch (_) {}
     throw new Error('No se pudo iniciar el proceso de actualización de Windows.');
   }
+  portableUpdateStarting = true;
   helper.unref();
   setTimeout(() => app.quit(), 150);
   return { ok: true, restarting: true };
@@ -1046,6 +1065,7 @@ ipcMain.handle('syd:recovery:restart', (_event, details = {}) => {
 app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
     setupLogging();
+    clearCompletedPortableUpdate();
     confirmPortableUpdatedLaunch();
     registerAppProtocol();
     startServer();
