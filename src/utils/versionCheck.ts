@@ -10,10 +10,23 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.11.9';
+export let CURRENT_APP_VERSION = '2.11.10';
 export const CURRENT_RELEASE_DATE = '2026-11-16';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.11.10',
+    releaseDate: '2026-11-16',
+    title: 'Documentación completa vinculada a los avisos de despacho',
+    summary: 'La ventana de Documentación reúne los enlaces por equipo despachado y muestra qué documentos faltan antes de notificar a Soporte Técnico. El correo incluye todos los enlaces disponibles del equipo.',
+    highlights: [
+      '📦 Nueva sección Documentación de despachos dentro de Documentación.',
+      '🔗 Enlaces directos por equipo para ficha técnica, manual, DIAN y demás documentos asociados.',
+      '✅ Indicador de serial, enlace DIAN, ficha técnica y manual pendientes o completos.',
+      '📨 El aviso de soporte incluye todos los documentos compartibles asociados al equipo.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.11.9',
     releaseDate: '2026-11-16',
@@ -848,4 +861,5 @@ export async function broadcastAppUpdateRelease(release: Partial<AppRelease>): P
     return false;
   }
 }
+
 
