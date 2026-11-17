@@ -17,7 +17,7 @@ async function startServer() {
     10
   );
   const SERVER_BOOT_TIME = Date.now();
-  const APP_VERSION = '2.11.9';
+  const APP_VERSION = '2.11.10';
 
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -887,3 +887,4 @@ Devuelve un JSON estrictamente con esta estructura:
 }
 
 startServer();
+
