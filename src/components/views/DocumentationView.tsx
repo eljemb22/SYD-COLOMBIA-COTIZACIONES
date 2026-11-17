@@ -43,6 +43,7 @@ import { ContractsDocumentationTab } from './documentation/ContractsDocumentatio
 import { MasterCatalogDocumentationTab } from './documentation/MasterCatalogDocumentationTab';
 import { EquipmentLifeSheetGenerator } from './documentation/EquipmentLifeSheetGenerator';
 import { MaintenanceScheduleManager } from './documentation/MaintenanceScheduleManager';
+import { DispatchDocumentationTab } from './documentation/DispatchDocumentationTab';
 import { analyzeCloudUrl, isHttpUrl, extractGoogleDriveId } from '../../utils/cloudLinkUtils';
 import { googleWorkspaceService } from '../../services/googleWorkspaceService';
 import { PdfCanvasViewer } from '../gmail/PdfCanvasViewer';
@@ -52,7 +53,8 @@ export type DocumentationViewTab =
   | 'catalog_master'
   | 'technical_sheet'
   | 'life_sheet'
-  | 'maintenance_schedule';
+  | 'maintenance_schedule'
+  | 'dispatch_support';
 
 interface DocumentationViewProps {
   documents: TechnicalDocument[];
@@ -72,6 +74,7 @@ interface DocumentationViewProps {
   currentUser?: AuthUser | null;
   onNavigateToOCTracking?: () => void;
   onNavigateToInvoicing?: () => void;
+  onNavigateToSupportNotices?: () => void;
 }
 
 // Convert base64 dataURI to Blob
@@ -111,6 +114,7 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
   currentUser,
   onNavigateToOCTracking,
   onNavigateToInvoicing,
+  onNavigateToSupportNotices,
 }) => {
   const isReadOnly = currentUser?.role === 'viewer' && !currentUser?.permissions?.canEditDocuments;
 
@@ -586,6 +590,19 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
             </button>
 
             <button
+              id="tab-dispatch-support-documents"
+              onClick={() => setViewTab('dispatch_support')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                viewTab === 'dispatch_support'
+                  ? 'bg-sky-400 text-slate-950 shadow-md font-black'
+                  : 'text-sky-300 hover:text-white bg-sky-950/40 border border-sky-500/30'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>📦 Documentación de despachos</span>
+            </button>
+
+            <button
               id="tab-technical-sheets-quick"
               onClick={() => setViewTab('technical_sheet')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
@@ -644,6 +661,8 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
                 placeholder={
                   viewTab === 'contracts'
                     ? 'Buscar en Contratos y OCs: cliente, proceso, número de OC, equipo, marca o serial...'
+                    : viewTab === 'dispatch_support'
+                      ? 'Buscar OV, cliente, equipo, código o serial...'
                     : 'Buscar en Catálogo General: nombre del equipo, código, registro INVIMA, ficha técnica o manual...'
                 }
                 value={searchQuery}
@@ -693,6 +712,15 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
           onOpenQuickTechSheet={() => setViewTab('technical_sheet')}
           onOpenLifeSheet={() => setViewTab('life_sheet')}
           searchQuery={searchQuery}
+        />
+      )}
+
+      {viewTab === 'dispatch_support' && (
+        <DispatchDocumentationTab
+          salesOrders={salesOrders}
+          contracts={contractsInternal}
+          documents={documents}
+          onOpenSupportNotices={onNavigateToSupportNotices}
         />
       )}
 
@@ -1159,3 +1187,4 @@ export const DocumentationView: React.FC<DocumentationViewProps> = ({
     </div>
   );
 };
+
