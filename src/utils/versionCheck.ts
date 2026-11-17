@@ -10,10 +10,22 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.11.7';
+export let CURRENT_APP_VERSION = '2.11.8';
 export const CURRENT_RELEASE_DATE = '2026-11-16';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.11.8',
+    releaseDate: '2026-11-16',
+    title: 'Ventana de avisos de despacho a soporte',
+    summary: 'Se incorpora una bandeja propia en Órdenes de Venta para seleccionar órdenes despachadas, revisar enlaces de documentación y notificar a soporte por Gmail.',
+    highlights: [
+      '📨 Nueva sección «Avisos a soporte» con órdenes que registran despacho.',
+      '☑️ Selección individual de equipos para cada aviso por lote.',
+      '🔗 Enlaces de Drive visibles y verificables antes de enviar el correo.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.11.7',
     releaseDate: '2026-11-16',
