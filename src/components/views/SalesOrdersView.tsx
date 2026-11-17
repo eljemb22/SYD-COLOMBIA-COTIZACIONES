@@ -2544,6 +2544,14 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
+                          onClick={() => { setViewingOrder(order); setIsDetailsModalOpen(true); }}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-sky-200 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 transition-colors cursor-pointer"
+                          title="Preparar correo de notificación para soporte técnico"
+                        >
+                          <BellRing className="w-3.5 h-3.5" /> Avisar a soporte
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => {
                             setPrintingOrder(order);
                             setIsPrintModalOpen(true);
@@ -3010,6 +3018,14 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => { setViewingOrder(order); setIsDetailsModalOpen(true); }}
+                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold text-sky-200 bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 transition-colors cursor-pointer"
+                                title="Preparar correo de notificación para soporte técnico"
+                              >
+                                <BellRing className="w-3.5 h-3.5" /> Avisar soporte
+                              </button>
                               {!invData.isFullyInvoiced && order.status !== 'Facturada' && (order.items?.length || 0) > 0 && (
                                 <button
                                   type="button"

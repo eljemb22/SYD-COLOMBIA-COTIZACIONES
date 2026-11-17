@@ -10,10 +10,22 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.11.5';
+export let CURRENT_APP_VERSION = '2.11.6';
 export const CURRENT_RELEASE_DATE = '2026-11-16';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.11.6',
+    releaseDate: '2026-11-16',
+    title: 'Acceso visible al aviso para soporte',
+    summary: 'Se agrega una acción identificable directamente en las tarjetas y filas de Órdenes de Venta para abrir el aviso técnico del despacho.',
+    highlights: [
+      '📨 Botón «Avisar a soporte» visible desde la OV.',
+      '📋 Acceso directo al formulario de aviso por lote.',
+      '🧭 Ya no es necesario encontrar el ícono compacto de gestión para ubicar la función.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.11.5',
     releaseDate: '2026-11-16',
