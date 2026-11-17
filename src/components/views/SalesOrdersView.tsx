@@ -348,7 +348,7 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
     computeOrderInvoicingData(order, salesInvoices).isFullyInvoiced;
 
   // Main subtab selection
-  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'invoices' | 'traceability' | 'support-notices'>('orders');
+  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'invoices' | 'traceability'>('orders');
   const [supportNoticeOrder, setSupportNoticeOrder] = useState<SalesOrderRecord | null>(null);
 
   // Permission enforcement
@@ -1608,48 +1608,10 @@ export const SalesOrdersView: React.FC<SalesOrdersViewProps> = ({
             Trazabilidad entre Ventanas
           </button>
 
-          <button
-            onClick={() => setActiveSubTab('support-notices')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
-              activeSubTab === 'support-notices'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
-            }`}
-          >
-            <BellRing className="w-4 h-4" /> Avisos a soporte
-          </button>
         </div>
       </div>
 
       {/* SUBTAB 1: Órdenes de Venta (OV) */}
-      {activeSubTab === 'support-notices' && (
-        <section className="space-y-4">
-          <div className="rounded-2xl border border-sky-500/25 bg-sky-500/5 p-4">
-            <h2 className="text-base font-black text-white flex items-center gap-2"><BellRing className="w-5 h-5 text-sky-300" /> Avisos de despacho al soporte técnico</h2>
-            <p className="text-sm text-slate-300 mt-1">Selecciona una OV con despacho registrado, revisa los equipos y sus documentos de Drive y decide cuáles notificar por Gmail. El correo solo se envía cuando confirmas.</p>
-          </div>
-          {deduplicatedSalesOrders.filter(order => Boolean(order.dispatchDate || order.actualDeliveryDate || order.deliveryDate || ['Entregada', 'Entregada Parcial', 'Entregada Total', 'Entregada al Cliente', 'Listo para Facturar', 'Facturada'].includes(order.status))).length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-700 p-8 text-center text-slate-400">Aún no hay Órdenes de Venta con despacho registrado.</div>
-          ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-950 text-slate-300"><tr><th className="p-3">OV</th><th className="p-3">Cliente</th><th className="p-3">Despacho</th><th className="p-3">Equipos</th><th className="p-3">Avisos enviados</th><th className="p-3 text-right">Acción</th></tr></thead>
-                <tbody>{deduplicatedSalesOrders.filter(order => Boolean(order.dispatchDate || order.actualDeliveryDate || order.deliveryDate || ['Entregada', 'Entregada Parcial', 'Entregada Total', 'Entregada al Cliente', 'Listo para Facturar', 'Facturada'].includes(order.status)).map(order => (
-                  <tr key={order.id} className="border-t border-slate-800 text-slate-200">
-                    <td className="p-3 font-bold text-amber-300">{order.salesOrderNumber || 'Sin número'}</td>
-                    <td className="p-3">{order.clientName}</td>
-                    <td className="p-3">{order.dispatchDate || order.actualDeliveryDate || order.deliveryDate || 'Registrado'}</td>
-                    <td className="p-3">{order.items.length}</td>
-                    <td className="p-3">{order.dispatchSupportNotices?.length || 0}</td>
-                    <td className="p-3 text-right"><button type="button" onClick={() => setSupportNoticeOrder(order)} className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-xs font-bold text-white hover:bg-sky-500"><Mail className="w-4 h-4" /> Preparar aviso</button></td>
-                  </tr>
-                )))}</tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      )}
-
       {activeSubTab === 'orders' && (
         <div className="space-y-4">
           {/* Sticky Controls Container: Lifecycle Filter + Search & Filter bar */}

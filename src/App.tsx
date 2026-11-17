@@ -10,6 +10,7 @@ import { EquipmentCatalogView } from './components/views/EquipmentCatalogView';
 import { TendersView } from './components/views/TendersView';
 import { OCTrackingView } from './components/views/OCTrackingView';
 import { SalesOrdersView } from './components/views/SalesOrdersView';
+import { DispatchSupportView } from './components/views/DispatchSupportView';
 import { DocumentationView } from './components/views/DocumentationView';
 import { GmailPurchasingHubView } from './components/views/GmailPurchasingHubView';
 import { FloatingAlertsWidget } from './components/alerts/FloatingAlertsWidget';
@@ -1757,6 +1758,16 @@ export default function App() {
               onClearInitialQuoteToConvert={handleClearInitialQuoteToConvert}
               initialTenderToConvert={initialTenderToConvert}
               onClearInitialTenderToConvert={handleClearInitialTenderToConvert}
+            />
+          )}
+
+          {activeTab === 'avisos_soporte' && (
+            <DispatchSupportView
+              salesOrders={salesOrders}
+              onUpdateSalesOrders={handleUpdateSalesOrders}
+              contracts={ocContracts}
+              documents={documents}
+              currentUser={currentUser}
             />
           )}
 

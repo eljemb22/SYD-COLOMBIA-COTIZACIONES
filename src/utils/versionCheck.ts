@@ -10,17 +10,29 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.11.8';
+export let CURRENT_APP_VERSION = '2.11.9';
 export const CURRENT_RELEASE_DATE = '2026-11-16';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
   {
+    version: '2.11.9',
+    releaseDate: '2026-11-16',
+    title: 'Avisos a Soporte como ventana independiente',
+    summary: 'La bandeja de despacho aparece en el menú lateral, maneja órdenes con datos parciales con más seguridad y evita que un error de interfaz provoque reinicios automáticos en bucle.',
+    highlights: [
+      '🧭 Acceso propio desde el menú izquierdo, separado de Órdenes de Venta.',
+      '📨 Prepara el correo por lote y conserva el historial en la orden.',
+      '🛡️ Los errores de interfaz ya no disparan una autoreparación que solo reinicia la app.',
+    ],
+    isImportant: true,
+  },
+  {
     version: '2.11.8',
     releaseDate: '2026-11-16',
     title: 'Ventana de avisos de despacho a soporte',
-    summary: 'Se incorpora una bandeja propia en Órdenes de Venta para seleccionar órdenes despachadas, revisar enlaces de documentación y notificar a soporte por Gmail.',
+    summary: 'Se incorpora la primera bandeja de avisos de despacho, con selección de órdenes, revisión de enlaces de documentación y notificación a soporte por Gmail.',
     highlights: [
-      '📨 Nueva sección «Avisos a soporte» con órdenes que registran despacho.',
+      '📨 Primera versión de la bandeja de avisos a soporte.',
       '☑️ Selección individual de equipos para cada aviso por lote.',
       '🔗 Enlaces de Drive visibles y verificables antes de enviar el correo.',
     ],

@@ -10,6 +10,7 @@ export type ActiveTab =
   | 'documentacion'
   | 'seguimiento_oc'
   | 'ordenes_venta'
+  | 'avisos_soporte'
   | 'gmail_compras';
 
 export type UserRole = 'admin' | 'viewer';

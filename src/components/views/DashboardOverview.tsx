@@ -505,6 +505,20 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         'Cargar una cotización previa reemplaza la cotización activa en el editor con los datos guardados.',
       ],
     },
+    avisos_soporte: {
+      title: 'Avisos de despacho a Soporte Técnico',
+      subtitle: 'Selecciona equipos despachados y comparte la documentación por Gmail',
+      icon: Mail,
+      steps: [
+        '1. Abre la bandeja desde el menú izquierdo para revisar las OVs despachadas.',
+        '2. Prepara un aviso por lote y selecciona únicamente los equipos que correspondan.',
+        '3. Verifica seriales, documentos técnicos y enlaces de Drive antes de enviar.',
+        '4. Indica si requiere visita técnica; solo se envía el correo cuando confirmas.',
+      ],
+      tips: [
+        'Conecta Gmail desde la ventana 5.1. Los avisos enviados quedan registrados en la OV.',
+      ],
+    },
     gmail_compras: {
       title: 'Ventana 5.1: Conexión Gmail & Órdenes de Compra',
       subtitle: 'Detección automática de correos del departamento de compras y envío de solicitudes oficiales',

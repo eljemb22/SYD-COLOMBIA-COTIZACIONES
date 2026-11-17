@@ -12,22 +12,26 @@ const link = (d: any): string => {
 };
 
 export const DispatchSupportNoticeModal: React.FC<Props> = ({ order, contracts, documents, onClose, onSent }) => {
+  const items = Array.isArray(order?.items) ? order.items.filter(Boolean) : [];
+  const safeContracts = Array.isArray(contracts) ? contracts : [];
+  const safeDocuments = Array.isArray(documents) ? documents : [];
   const [to, setTo] = useState(''); const [lot, setLot] = useState('Despacho 1'); const [percent, setPercent] = useState('');
-  const [selected, setSelected] = useState<string[]>(order.items.map(i => i.id)); const [visit, setVisit] = useState<Record<string, boolean>>(() => Object.fromEntries(order.items.map(i => [i.id, !!(order.contractNumber || order.contractId)])));
+  const [selected, setSelected] = useState<string[]>(items.map(i => i.id).filter(Boolean)); const [visit, setVisit] = useState<Record<string, boolean>>(() => Object.fromEntries(items.filter(i => i.id).map(i => [i.id, !!(order.contractNumber || order.contractId)])));
   const [dianNA, setDianNA] = useState<Record<string, boolean>>({});
   const [sending, setSending] = useState(false); const [error, setError] = useState('');
   const rows = useMemo(() => selected.map(id => order.items.find(i => i.id === id)!).filter(Boolean).map((item: SalesOrderItem) => {
-    const docs = documents.filter(d => (d.equipmentId && d.equipmentId === item.equipmentId) || (d.equipmentCode && norm(d.equipmentCode) === norm(item.code)) || norm(d.equipmentName) === norm(item.name));
+    const docs = safeDocuments.filter(d => d && ((d.equipmentId && d.equipmentId === item.equipmentId) || (d.equipmentCode && norm(d.equipmentCode) === norm(item.code)) || norm(d.equipmentName) === norm(item.name)));
     const ficha = docs.find(d => /ficha/i.test(d.docType || d.type || ''));
     const manual = docs.find(d => /manual/i.test(d.docType || d.type || ''));
-    const serials = (item.assignedSerialNumbers || item.serialNumbers || []).map((s: any) => typeof s === 'string' ? s : s?.serialNumber).filter(Boolean);
-    const ocSerials = contracts.flatMap(c => c.items || []).filter(ci => (ci.salesOrderItemId && ci.salesOrderItemId === item.id) || (ci.equipmentId && ci.equipmentId === item.equipmentId) || (ci.code && norm(ci.code) === norm(item.code))).flatMap(ci => ci.serialNumbers || ci.serializedUnits || []);
+    const serialValue = Array.isArray(item.assignedSerialNumbers) ? item.assignedSerialNumbers : Array.isArray(item.serialNumbers) ? item.serialNumbers : [];
+    const serials = serialValue.map((s: any) => typeof s === 'string' ? s : s?.serialNumber).filter(Boolean);
+    const ocSerials = safeContracts.flatMap(c => Array.isArray(c?.items) ? c.items : []).filter(ci => ci && ((ci.salesOrderItemId && ci.salesOrderItemId === item.id) || (ci.equipmentId && ci.equipmentId === item.equipmentId) || (ci.code && norm(ci.code) === norm(item.code)))).flatMap(ci => Array.isArray(ci.serialNumbers) ? ci.serialNumbers : Array.isArray(ci.serializedUnits) ? ci.serializedUnits : []);
     const dianDocs = ocSerials.flatMap((s: any) => [...(s.individualDocs || []), ...(s.documents || [])]).filter((d: any) => /dian|aduan|manifiesto/i.test(`${d.docType || ''} ${d.title || ''}`));
     const links = [ficha, manual].filter(Boolean).map(d => ({label: /ficha/i.test(d!.docType || d!.type || '') ? 'Ficha técnica' : 'Manual', url: link(d)})).filter(d => d.url);
     dianDocs.forEach((d: any) => { const url = link(d); if (url) links.push({label:'Documento DIAN',url}); });
     const hasDian = ocSerials.length > 0 && ocSerials.every((s: any) => s.dianDeclarationNumber || s.dianImportDeclaration || dianDocs.some((d: any) => d.fileUrl || d.driveFileId));
     return { item, docs, serials, links, hasDian, missing: [!serials.length && !item.equipmentId ? '' : (!serials.length ? 'serial' : ''), !hasDian && !dianNA[item.id] ? 'DIAN o marcar N/A' : '', !links.some(d => d.label === 'Ficha técnica') ? 'ficha técnica' : '', !links.some(d => d.label === 'Manual') ? 'manual' : ''].filter(Boolean) };
-  }), [selected, order, documents, contracts, dianNA]);
+  }), [selected, order, safeDocuments, safeContracts, dianNA]);
   const send = async () => {
     setError(''); const recipients = to.split(/[;,\s]+/).map(s => s.trim()).filter(Boolean);
     if (!recipients.length || recipients.some(e => !/^\S+@\S+\.\S+$/.test(e))) return setError('Ingresa correos válidos del equipo técnico.');
@@ -47,11 +51,12 @@ export const DispatchSupportNoticeModal: React.FC<Props> = ({ order, contracts, 
     <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-auto p-5 text-slate-100 shadow-2xl">
       <div className="flex items-start justify-between gap-4"><div><h2 id="support-dispatch-title" className="font-bold text-lg">Notificar despacho a soporte técnico</h2><p className="text-sm text-slate-400 mt-1">OV {order.salesOrderNumber} · {order.clientName}. Selecciona los equipos para este correo y revisa los enlaces de Drive antes de enviar.</p></div><button type="button" onClick={onClose} aria-label="Cerrar" className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"><X/></button></div>
       <div className="grid md:grid-cols-3 gap-3 my-4"><label className="text-xs text-slate-400">Correos de soporte<input className="mt-1 block w-full bg-slate-800 p-2 rounded text-sm text-slate-100" placeholder="soporte@empresa.com" value={to} onChange={e=>setTo(e.target.value)}/></label><label className="text-xs text-slate-400">Lote / referencia<input className="mt-1 block w-full bg-slate-800 p-2 rounded text-sm text-slate-100" value={lot} onChange={e=>setLot(e.target.value)} placeholder="Despacho 1"/></label><label className="text-xs text-slate-400">Hito del contrato (%)<input className="mt-1 block w-full bg-slate-800 p-2 rounded text-sm text-slate-100" type="number" min="0" max="100" value={percent} onChange={e=>setPercent(e.target.value)} placeholder="Opcional"/></label></div>
-      <div className="space-y-3">{order.items.map(i=>{
+      <div className="space-y-3">{items.map(i=>{
         const row = rows.find(r => r.item.id === i.id);
-        const linkedDocs = documents.filter(d => (d.equipmentId && d.equipmentId === i.equipmentId) || (d.equipmentCode && norm(d.equipmentCode) === norm(i.code)) || norm(d.equipmentName) === norm(i.name));
+        const linkedDocs = safeDocuments.filter(d => d && ((d.equipmentId && d.equipmentId === i.equipmentId) || (d.equipmentCode && norm(d.equipmentCode) === norm(i.code)) || norm(d.equipmentName) === norm(i.name)));
         const driveLinks = [...(row?.links || []), ...linkedDocs.map(d => ({label: d.title || d.docType || d.type || d.fileName || 'Documento', url: link(d)})).filter(d => d.url && !(row?.links || []).some(existing => existing.url === d.url))];
-        const serialList = (i.assignedSerialNumbers || i.serialNumbers || []).map((s:any)=>typeof s==='string'?s:s?.serialNumber).filter(Boolean);
+        const serialsForDisplay = Array.isArray(i.assignedSerialNumbers) ? i.assignedSerialNumbers : Array.isArray(i.serialNumbers) ? i.serialNumbers : [];
+        const serialList = serialsForDisplay.map((s:any)=>typeof s==='string'?s:s?.serialNumber).filter(Boolean);
         return <div key={i.id} className={`rounded-xl border p-3 ${selected.includes(i.id)?'border-sky-500/50 bg-sky-500/5':'border-slate-700 bg-slate-950/40'}`}>
           <div className="flex flex-wrap items-start gap-3"><input aria-label={`Incluir ${i.name} en correo`} type="checkbox" checked={selected.includes(i.id)} onChange={e=>setSelected(s=>e.target.checked?[...s,i.id]:s.filter(x=>x!==i.id))} className="mt-1 h-4 w-4 accent-sky-500"/><div className="min-w-[220px] flex-1"><div className="font-semibold">{i.name} · {i.brand} {i.model}</div><div className="text-xs text-slate-400">Seriales: {serialList.join(', ') || 'Pendiente de asignar'}</div><div className="mt-2 flex flex-wrap gap-2">{driveLinks.length ? driveLinks.map((doc,index)=><a key={`${doc.url}-${index}`} href={doc.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs text-sky-200 hover:bg-sky-500/20"><span>{doc.label}</span><span aria-hidden="true">↗</span></a>) : <span className="text-xs text-amber-300">No se encontraron enlaces de Drive para este equipo.</span>}</div></div><label className="flex items-center gap-1.5 text-xs text-slate-300"><input type="checkbox" checked={!!visit[i.id]} onChange={e=>setVisit(s=>({...s,[i.id]:e.target.checked}))}/> Requiere visita técnica</label><label className="flex items-center gap-1.5 text-xs text-slate-300"><input type="checkbox" checked={!!dianNA[i.id]} onChange={e=>setDianNA(s=>({...s,[i.id]:e.target.checked}))}/> DIAN no aplica</label></div>
         </div>;

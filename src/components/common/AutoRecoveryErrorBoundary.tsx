@@ -80,34 +80,16 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
   };
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[AutoRecovery] Fallo capturado por el sistema de auto-reparación:', error, errorInfo);
-    this.recoveryAttempts += 1;
-
-    // Track consecutive crashes in sessionStorage to stop infinite refresh loops
-    let recentCrashes = 0;
-    try {
-      const crashData = sessionStorage.getItem('syd_consecutive_crash_count');
-      recentCrashes = crashData ? parseInt(crashData, 10) || 0 : 0;
-      recentCrashes += 1;
-      sessionStorage.setItem('syd_consecutive_crash_count', String(recentCrashes));
-    } catch (_) {}
-
-    // If crashing repeatedly (more than 2 consecutive times), do not auto-loop indefinitely
-    if (recentCrashes > 2 || this.recoveryAttempts > 2) {
-      console.warn('[AutoRecovery] Múltiples anomalías consecutivas. Deteniendo auto-reinicio cíclico.');
-      this.performDataSelfRepair(error);
-      this.setState({
-        repairPhase: 'ready_reboot',
-        repairLogs: [
-          '[AVISO] Se detectaron múltiples reinicios consecutivos.',
-          '[ESTABILIZACIÓN] Catálogos y datos locales sanitizados y protegidos.',
-          '[LISTO] Presione "Reiniciar Aplicación" o abra la pantalla inicial.',
-        ],
-      });
-      return;
-    }
-
-    this.startSelfHealingProcess(error);
+    console.error('[AutoRecovery] Error de interfaz capturado. No se reiniciará automáticamente porque eso no corrige errores de código.', error, errorInfo);
+    this.clearAllTimers();
+    this.setState({
+      repairPhase: 'ready_reboot',
+      repairLogs: [
+        '[ERROR DE INTERFAZ] La aplicación detuvo esta pantalla para evitar más fallos.',
+        '[DATOS] No se modificaron ni borraron datos del usuario.',
+        '[ACCIÓN] Revisa el error y usa el reintento manual después de corregir la causa.',
+      ],
+    });
   }
 
   private startSelfHealingProcess = (error?: Error) => {
@@ -153,9 +135,9 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
 
   public executeImmediateRecovery = (isManual: boolean = false) => {
     this.clearAllTimers();
-    this.performDataSelfRepair();
 
-    // Only clear consecutive crash counter upon explicit user manual action
+    // A UI exception is not evidence of damaged local data: retry without
+    // changing or deleting the user's records.
     if (isManual) {
       try {
         sessionStorage.removeItem('syd_consecutive_crash_count');
@@ -282,23 +264,23 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                    Sistema de Auto-Reparación y Reinicio
+                    Error de la aplicación
                   </h1>
                   <span className="bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10px] uppercase font-black px-2 py-0.5 rounded-full">
-                    100% Automático
+                    Se requiere atención
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                  El sistema detectó una anomalía, ha protegido tus datos y está restaurando y reiniciando la aplicación de forma automática.
+                  La aplicación encontró un error al mostrar esta pantalla. No se reiniciará sola ni modificará tus datos.
                 </p>
               </div>
             </div>
 
             {/* Countdown Badge */}
             <div className="flex flex-col items-center justify-center bg-[#0a1220] border border-[#334d6e] rounded-2xl px-4 py-2 shrink-0">
-              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Reinicio en</span>
+              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Estado</span>
               <span className="text-2xl sm:text-3xl font-black text-[var(--syd-accent)] font-mono animate-pulse">
-                0{countdown}s
+                Pausada
               </span>
             </div>
           </div>
@@ -336,8 +318,8 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
               }`}
             >
               <Wrench className={`w-4 h-4 mx-auto mb-1 ${repairPhase === 'repairing' ? 'text-sky-400 animate-pulse' : repairPhase === 'restoring' ? 'text-emerald-400' : 'text-slate-400'}`} />
-              <span className="font-bold block text-[11px]">2. Auto-Reparación</span>
-              <span className="text-[10px] text-slate-400">{repairPhase === 'repairing' ? 'Sanitizando...' : repairPhase === 'restoring' ? 'Sanitizado ✓' : 'En cola'}</span>
+              <span className="font-bold block text-[11px]">2. Datos del usuario</span>
+              <span className="text-[10px] text-slate-400">Sin cambios</span>
             </div>
 
             <div
@@ -348,8 +330,8 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
               }`}
             >
               <CheckCircle2 className={`w-4 h-4 mx-auto mb-1 ${repairPhase === 'restoring' ? 'text-emerald-400 animate-bounce' : 'text-slate-400'}`} />
-              <span className="font-bold block text-[11px]">3. Re-inicio</span>
-              <span className="text-[10px] text-slate-400">{repairPhase === 'restoring' ? 'Reiniciando...' : 'Esperando'}</span>
+              <span className="font-bold block text-[11px]">3. Reintento</span>
+              <span className="text-[10px] text-slate-400">Manual</span>
             </div>
           </div>
 
@@ -360,7 +342,7 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
                 <Database className="w-3.5 h-3.5 text-sky-400" />
                 <span>LOG DEL PROTOCOLO DE RECUPERACIÓN AUTOMÁTICA</span>
               </div>
-              <span className="text-emerald-400">Progreso 100%</span>
+              <span className="text-amber-300">Requiere corrección</span>
             </div>
             {repairLogs.map((log, idx) => (
               <div key={idx} className="text-slate-300 flex items-start gap-1.5 leading-relaxed">
@@ -369,8 +351,8 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
               </div>
             ))}
             <div className="text-sky-400 font-bold flex items-center gap-2 pt-1">
-              <RefreshCw className="w-3 h-3 animate-spin" />
-              <span>Ejecutando restauración y reinicio automático ({countdown}s)...</span>
+              <AlertTriangle className="w-3 h-3" />
+              <span>La autoreparación no puede corregir este error de interfaz automáticamente.</span>
             </div>
           </div>
 
@@ -378,8 +360,8 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 pt-2 border-t border-[#20324c]">
             <span className="text-[11px] text-center sm:text-left">
               {repairPhase === 'ready_reboot'
-                ? 'Sistema estabilizado. Haga clic abajo para ingresar.'
-                : 'Restauración y sanitización en curso...'}
+                ? 'La aplicación quedó detenida en esta pantalla. Reintenta manualmente después de corregir el error.'
+                : 'Se está registrando el error.'}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -388,7 +370,7 @@ export class AutoRecoveryErrorBoundary extends React.Component<Props, State> {
                 className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-sky-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Entrar a la Aplicación Ahora</span>
+                <span>Reintentar aplicación</span>
               </button>
             </div>
           </div>

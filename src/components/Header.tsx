@@ -67,6 +67,10 @@ const TAB_TITLES: Record<ActiveTab, { title: string; subtitle: string }> = {
     title: 'Órdenes de Venta & Facturación a Clientes (OV)',
     subtitle: 'Despachos de equipos médicos por OV, remisiones firmadas, actas de entrega y radicación de facturas SYD',
   },
+  avisos_soporte: {
+    title: 'Avisos a Soporte Técnico',
+    subtitle: 'Equipos despachados, documentación y notificaciones por correo',
+  },
   gmail_compras: {
     title: 'Centro de Integración Gmail & Órdenes de Compra',
     subtitle: 'Conexión de cuenta de correo, detección de OCs del departamento de compras y envío de plantillas oficiales',
