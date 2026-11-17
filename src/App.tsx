@@ -1716,6 +1716,7 @@ export default function App() {
               currentUser={currentUser}
               onNavigateToOCTracking={() => setActiveTab('seguimiento_oc')}
               onNavigateToInvoicing={() => setActiveTab('ordenes_venta')}
+              onNavigateToSupportNotices={() => setActiveTab('avisos_soporte')}
             />
           )}
 
@@ -2001,3 +2002,4 @@ export default function App() {
     </div>
   );
 }
+
