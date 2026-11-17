@@ -42,9 +42,7 @@ try {
 
   if (-not (Test-Path -LiteralPath $Source -PathType Leaf)) { throw 'No se encontró el archivo descargado.' }
   if (-not (Test-Path -LiteralPath $Destination -PathType Leaf)) { throw 'No se encontró el portable original.' }
-  if ((Split-Path -Parent ([IO.Path]::GetFullPath($Source))) -ine (Split-Path -Parent ([IO.Path]::GetFullPath($Destination)))) {
-    throw 'El archivo actualizado no está en la misma carpeta del portable.'
-  }
+  if (-not (Test-Path -LiteralPath $Source -PathType Leaf)) { throw 'No se encontró el archivo de actualización en la carpeta temporal.' }
 
   $actualHash = (Get-FileHash -LiteralPath $Source -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($actualHash -ne $ExpectedSha256.ToLowerInvariant()) { throw 'La huella SHA-256 del archivo descargado no coincide.' }

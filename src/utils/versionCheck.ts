@@ -10,10 +10,22 @@ export interface AppRelease {
   isImportant?: boolean;
 }
 
-export let CURRENT_APP_VERSION = '2.11.6';
+export let CURRENT_APP_VERSION = '2.11.7';
 export const CURRENT_RELEASE_DATE = '2026-11-16';
 
 export const APP_RELEASES_HISTORY: AppRelease[] = [
+  {
+    version: '2.11.7',
+    releaseDate: '2026-11-16',
+    title: 'Actualización portable sin archivo visible junto a la app',
+    summary: 'El paquete verificado se descarga a la carpeta temporal del usuario y, al confirmar el reinicio, reemplaza el mismo portable en su ubicación original.',
+    highlights: [
+      '📥 El archivo de actualización ya no aparece junto al portable durante la descarga.',
+      '🔁 Al confirmar, se reemplaza el ejecutable que ya usas y vuelve a abrirse.',
+      '🧹 Se mantiene la verificación y recuperación automática si el reemplazo falla.',
+    ],
+    isImportant: true,
+  },
   {
     version: '2.11.6',
     releaseDate: '2026-11-16',

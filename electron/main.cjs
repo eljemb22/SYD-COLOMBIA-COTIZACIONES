@@ -234,7 +234,7 @@ function readPendingPortableUpdate() {
       !/^\d+(?:\.\d+){1,3}$/.test(String(manifest.version || '')) ||
       !fs.existsSync(manifest.stagingPath) ||
       path.extname(path.resolve(manifest.stagingPath)).toLowerCase() !== '.exe' ||
-      path.dirname(path.resolve(manifest.stagingPath)).toLowerCase() !== path.dirname(targetPath).toLowerCase()
+      path.dirname(path.resolve(manifest.stagingPath)).toLowerCase() !== path.resolve(app.getPath('temp'), 'syd-portable-updates').toLowerCase()
     ) {
       return null;
     }
@@ -279,9 +279,11 @@ async function downloadPortableUpdate() {
     }
 
     const targetPath = getPortableTargetPath();
-    const targetDir = path.dirname(targetPath);
     const manifestPath = path.join(app.getPath('userData'), 'portable-update.json');
-    const stagingPath = path.join(targetDir, `.${path.basename(targetPath, '.exe')}.update-${release.version}-${crypto.randomUUID()}.exe`);
+    const stagingDir = path.join(app.getPath('temp'), 'syd-portable-updates');
+    fs.mkdirSync(stagingDir, { recursive: true });
+    const stagingPath = path.join(stagingDir, `${path.basename(targetPath, '.exe')}.update-${release.version}-${crypto.randomUUID()}.exe`);
+    const targetDir = path.dirname(targetPath);
     const probePath = path.join(targetDir, `.syd-write-check-${crypto.randomUUID()}.tmp`);
     try {
       fs.writeFileSync(probePath, 'SYD update write check', { flag: 'wx' });
